@@ -29,3 +29,16 @@ impl StorageWrapper {
 pub struct World {
     storages: HashMap<ComponentTypeId, StorageWrapper>,
 }
+
+impl World {
+    
+}
+
+/*
+    Comp<Velocity>,
+    CompMut<Position>,
+    Res<Score>,
+    ResMut<Score>,
+*/
+
+// pub struct WorldFetcher
