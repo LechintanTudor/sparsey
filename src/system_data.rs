@@ -4,6 +4,7 @@ pub trait SystemData {
     fn fetch(world: &World, resources: &Resources) -> Self;
 }
 
+/*
 pub struct Comp<T>
 where
     T: Component;
@@ -31,3 +32,4 @@ where
 }
 
 pub struct Res;
+*/
