@@ -1,13 +1,9 @@
 pub trait Resource
-where 
+where
     Self: 'static,
-{}
-
-impl<T> Resource for T
-where 
-    T: 'static,
-{}
-
-pub struct Resources {
-    
+{
 }
+
+impl<T> Resource for T where T: 'static {}
+
+pub struct Resources {}

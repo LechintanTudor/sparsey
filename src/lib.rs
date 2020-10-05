@@ -1,11 +1,13 @@
 pub use self::{
-    entity::*, resources::*, sparse_array::*, sparse_set::*, storage::*, system_data::*, world::*,
+    entity::*, group::*, resources::*, sparse_array::*, sparse_set::*, storage::*, view::*,
+    world::*,
 };
 
 mod entity;
+mod group;
 mod resources;
 mod sparse_array;
 mod sparse_set;
 mod storage;
-mod system_data;
+mod view;
 mod world;
