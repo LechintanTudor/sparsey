@@ -32,6 +32,8 @@ impl Group {
 }
 
 impl PartialOrd for Group {
+    /// A group is considered greater than other group if it is less restrictive.
+    /// If neither group is contained withing the other, the groups are uncomparable.
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.len().cmp(&other.len()) {
             Ordering::Equal => {
