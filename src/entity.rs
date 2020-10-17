@@ -8,10 +8,7 @@ pub struct Entity {
 
 impl Entity {
     pub(crate) fn new(index: u32, generation: u32) -> Self {
-        Self {
-            index,
-            generation,
-        }
+        Self { index, generation }
     }
 
     pub fn invalid() -> Self {

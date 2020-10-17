@@ -1,8 +1,5 @@
 use crate::{Component, GenericStorage, Storage};
-use std::{
-    any::{Any, TypeId},
-    collections::HashMap,
-};
+use std::{any::TypeId, collections::HashMap};
 
 type ComponentTypeId = TypeId;
 
@@ -26,8 +23,25 @@ impl StorageWrapper {
     }
 }
 
+#[derive(Default)]
 pub struct World {
-    storages: HashMap<ComponentTypeId, StorageWrapper>,
+    // storages: HashMap<ComponentTypeId, RefCell<StorageWrapper>>,
+}
+
+impl World {
+    pub fn insert_storage<T>(&mut self)
+    where
+        T: Component,
+    {
+        /*
+        self.storages.insert(
+            TypeId::of::<T>(),
+            RefCell::new(StorageWrapper {
+                storage: Box::new(Storage::<T>::default()),
+            }),
+        );
+        */
+    }
 }
 
 impl World {}

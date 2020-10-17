@@ -1,5 +1,5 @@
 use crate::Component;
-use std::{any::TypeId, collections::BTreeSet, cmp::Ordering};
+use std::{any::TypeId, cmp::Ordering, collections::BTreeSet};
 
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct Group {
@@ -11,7 +11,7 @@ impl Group {
         Default::default()
     }
 
-    pub fn contains<T>(&self) -> bool 
+    pub fn contains<T>(&self) -> bool
     where
         T: Component,
     {

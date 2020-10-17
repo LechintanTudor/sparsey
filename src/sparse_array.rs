@@ -80,7 +80,6 @@ where
 {
     type Output = T;
 
-    #[track_caller]
     fn index(&self, index: usize) -> &Self::Output {
         self.get(index).unwrap()
     }

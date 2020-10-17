@@ -15,18 +15,13 @@ fn main() {
             .with::<D>()
             .with::<E>()
             .build(),
-
         Group::builder()
             .with::<B>()
             .with::<C>()
             .with::<D>()
             .with::<E>()
             .build(),
-
-        Group::builder()
-            .with::<C>()
-            .with::<E>()
-            .build(),
+        Group::builder().with::<C>().with::<E>().build(),
     ];
 
     groups.sort_by(|g1, g2| g1.partial_cmp(g2).expect("Incompatible groups"));
