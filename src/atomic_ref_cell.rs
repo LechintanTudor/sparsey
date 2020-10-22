@@ -215,3 +215,31 @@ impl Drop for BorrowMutGuard<'_> {
         self.borrow.store(0, Ordering::Release);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn multiple_shared_borrows() {
+        let value = AtomicRefCell::new(100);
+        let _b1 = value.borrow();
+        let _b2 = value.borrow();
+    }
+
+    #[test]
+    #[should_panic]
+    fn unique_exclusive_borrows() {
+        let value = AtomicRefCell::new(100);
+        let _b1 = value.borrow_mut();
+        let _b2 = value.borrow_mut();
+    }
+
+    #[test]
+    #[should_panic]
+    fn mixed_borrows() {
+        let value = AtomicRefCell::new(100);
+        let _b1 = value.borrow();
+        let _b2 = value.borrow_mut();
+    }
+}
