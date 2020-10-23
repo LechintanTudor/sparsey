@@ -1,28 +1,38 @@
-pub const INVALID_INDEX: u32 = u32::MAX;
+pub const INVALID_ID: u32 = u32::MAX;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Entity {
-    index: u32,
-    generation: u32,
+    id: u32,
+    gen: u32,
 }
 
 impl Entity {
-    pub(crate) fn new(index: u32, generation: u32) -> Self {
-        Self { index, generation }
+    pub const INVALID: Self = Self::invalid();
+
+    pub(crate) const fn new(id: u32, gen: u32) -> Self {
+        Self { id, gen }
     }
 
-    pub fn invalid() -> Self {
+    pub const fn invalid() -> Self {
         Self {
-            index: INVALID_INDEX,
-            generation: 0,
+            id: INVALID_ID,
+            gen: 0,
         }
     }
 
-    pub fn index(&self) -> u32 {
-        self.index
+    pub fn id(&self) -> u32 {
+        self.id
     }
 
-    pub fn generation(&self) -> u32 {
-        self.generation
+    pub fn gen(&self) -> u32 {
+        self.gen
+    }
+
+    pub fn index(&self) -> usize {
+        self.id as _
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.id != INVALID_ID
     }
 }

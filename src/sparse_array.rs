@@ -1,112 +1,96 @@
-use std::{
-    iter,
-    ops::{Index, IndexMut},
-};
+use crate::Entity;
+use std::{hint::unreachable_unchecked, iter, mem};
 
-const PAGE_SIZE: usize = 32;
+pub const PAGE_SIZE: usize = 32;
+pub type EntityPage = Option<Box<[Entity; PAGE_SIZE]>>;
 
-#[derive(Clone, Debug)]
-pub struct SparseArray<T>
-where
-    T: Copy + Clone,
-{
-    pages: Vec<Option<Box<[T; PAGE_SIZE]>>>,
+#[derive(Clone, Default, Debug)]
+pub struct SparseArray {
+    pages: Vec<EntityPage>,
 }
 
-impl<T> Default for SparseArray<T>
-where
-    T: Copy + Clone,
-{
-    fn default() -> Self {
-        Self {
-            pages: Default::default(),
-        }
-    }
-}
-
-impl<T> SparseArray<T>
-where
-    T: Copy + Clone,
-{
+impl SparseArray {
     pub fn clear(&mut self) {
-        self.pages.clear();
+        self.pages.clear()
     }
 
-    pub fn clear_pages(&mut self) {
-        self.pages.iter_mut().for_each(|p| *p = None);
+    pub fn insert(&mut self, entity: Entity, value: Entity) {
+        *self.get_mut_or_allocate(entity) = value;
     }
 
-    pub fn get_mut_or_extend(&mut self, index: usize, default: T) -> &mut T {
-        let page_index = index / PAGE_SIZE;
-        let index_in_page = index % PAGE_SIZE;
+    pub fn remove(&mut self, entity: Entity) -> Option<Entity> {
+        self.get_mut(entity)
+            .map(|e| mem::replace(e, Entity::INVALID))
+    }
 
-        if page_index >= self.pages.len() {
-            let extra_empty = page_index - self.pages.len();
-            self.pages.reserve(extra_empty + 1);
-            self.pages.extend(iter::repeat(None).take(extra_empty));
-            self.pages.push(Some(Box::new([default; PAGE_SIZE])));
-            &mut self.pages.last_mut().unwrap().as_mut().unwrap()[index_in_page]
-        } else {
-            if self.pages[page_index].is_none() {
-                self.pages[page_index] = Some(Box::new([default; PAGE_SIZE]));
-            }
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.get(entity).unwrap_or(&Entity::INVALID).is_valid()
+    }
 
-            &mut self.pages[page_index].as_mut().unwrap()[index_in_page]
+    pub fn get(&self, entity: Entity) -> Option<&Entity> {
+        self.pages
+            .get(page_index(entity))
+            .and_then(|page| page.as_ref())
+            .map(|page| &page[local_index(entity)])
+    }
+
+    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut Entity> {
+        self.pages
+            .get_mut(page_index(entity))
+            .and_then(|page| page.as_mut())
+            .map(|page| &mut page[local_index(entity)])
+    }
+
+    pub fn get_mut_or_allocate(&mut self, entity: Entity) -> &mut Entity {
+        self.allocate_at(entity.index() as usize);
+        unsafe { self.get_mut_unchecked(entity) }
+    }
+
+    pub unsafe fn get_unchecked(&self, entity: Entity) -> &Entity {
+        match self.pages.get_unchecked(page_index(entity)) {
+            Some(page) => page.get_unchecked(local_index(entity)),
+            None => unreachable_unchecked(),
         }
     }
 
-    pub fn insert(&mut self, index: usize, value: T, default: T) {
-        *self.get_mut_or_extend(index, default) = value;
+    pub unsafe fn get_mut_unchecked(&mut self, entity: Entity) -> &mut Entity {
+        match self.pages.get_unchecked_mut(page_index(entity)) {
+            Some(page) => page.get_unchecked_mut(local_index(entity)),
+            None => unreachable_unchecked(),
+        }
     }
 
-    pub fn get(&self, index: usize) -> Option<&T> {
-        self.pages
-            .get(index / PAGE_SIZE)
-            .and_then(|page| page.as_ref())
-            .and_then(|page| Some(&page[index % PAGE_SIZE]))
-    }
+    pub fn allocate_at(&mut self, index: usize) {
+        let page_index = index / PAGE_SIZE;
 
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-        self.pages
-            .get_mut(index / PAGE_SIZE)
-            .and_then(|page| page.as_mut())
-            .and_then(|page| Some(&mut page[index % PAGE_SIZE]))
-    }
-}
+        if page_index < self.pages.len() {
+            let page = &mut self.pages[page_index];
 
-impl<T> Index<usize> for SparseArray<T>
-where
-    T: Copy + Clone,
-{
-    type Output = T;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        self.get(index).unwrap()
+            if page.is_none() {
+                *page = default_page();
+            }
+        } else {
+            let extra_uninit_pages = page_index - self.pages.len();
+            self.pages.reserve(extra_uninit_pages + 1);
+            self.pages
+                .extend(iter::repeat(uninit_page()).take(extra_uninit_pages));
+            self.pages.push(default_page())
+        }
     }
 }
 
-impl<T> IndexMut<usize> for SparseArray<T>
-where
-    T: Copy + Clone,
-{
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        self.get_mut(index).unwrap()
-    }
+fn page_index(entity: Entity) -> usize {
+    entity.index() as usize / PAGE_SIZE
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+fn local_index(entity: Entity) -> usize {
+    entity.index() as usize % PAGE_SIZE
+}
 
-    #[test]
-    fn insert() {
-        let mut array = SparseArray::<i32>::default();
-        array.insert(100, 0, -1);
-        array.insert(200, 1, -1);
-        array.insert(300, 2, -1);
+fn uninit_page() -> EntityPage {
+    None
+}
 
-        assert_eq!(array.get(100), Some(&0));
-        assert_eq!(array.get(200), Some(&1));
-        assert_eq!(array.get(300), Some(&2));
-    }
+fn default_page() -> EntityPage {
+    Some(Box::new([Entity::INVALID; PAGE_SIZE]))
 }

@@ -1,15 +1,62 @@
-use crate::Component;
+use crate::{Component, Entity, SparseArray, SparseSet};
 
-pub trait IterView {}
+pub trait IterView<'a> {
+    type Component: Component;
+    type Output: 'a;
 
-impl<T> IterView for &T where T: Component {}
+    fn from_option(option: Option<&'a Self::Component>) -> Option<Self::Output>;
+}
 
-impl<T> IterView for &mut T where T: Component {}
+impl<'a, T> IterView<'a> for &'a T
+where
+    T: Component,
+{
+    type Component = T;
+    type Output = &'a T;
 
-impl<T> IterView for Option<&T> where T: Component {}
+    fn from_option(option: Option<&'a Self::Component>) -> Option<Self::Output> {
+        option
+    }
+}
 
-impl<T> IterView for Option<&mut T> where T: Component {}
+impl<'a, T> IterView<'a> for Option<&'a T>
+where
+    T: Component,
+{
+    type Component = T;
+    type Output = Option<&'a T>;
 
-pub struct Iterator2 {}
+    fn from_option(option: Option<&'a Self::Component>) -> Option<Self::Output> {
+        Some(option)
+    }
+}
 
-// world.iter
+pub struct Iterator2<'a, A, B>
+where
+    A: IterView<'a>,
+    B: IterView<'a>,
+{
+    dense: &'a [Entity],
+    c0: (&'a SparseArray, &'a [A::Component]),
+    c1: (&'a SparseArray, &'a [B::Component]),
+    current_index: usize,
+}
+
+impl<'a, A, B> Iterator for Iterator2<'a, A, B>
+where
+    A: IterView<'a>,
+    B: IterView<'a>,
+{
+    type Item = (A::Output, B::Output);
+
+    // TODO: Check for INVALID_INDEX
+    fn next(&mut self) -> Option<Self::Item> {
+        let entity = *self.dense.get(self.current_index)?;
+        self.current_index += 1;
+
+        Some((
+            A::from_option(self.c0.0.get(entity).map(|e| &self.c0.1[e.index()]))?,
+            B::from_option(self.c1.0.get(entity).map(|e| &self.c1.1[e.index()]))?,
+        ))
+    }
+}
