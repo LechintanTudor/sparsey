@@ -41,6 +41,16 @@ impl SparseArray {
             .map(|page| &mut page[local_index(entity)])
     }
 
+    pub fn get_valid(&self, entity: Entity) -> Option<&Entity> {
+        self.get(entity)
+            .and_then(|e| if e.is_valid() { Some(e) } else { None })
+    }
+
+    pub fn get_valid_mut(&mut self, entity: Entity) -> Option<&mut Entity> {
+        self.get_mut(entity)
+            .and_then(|e| if e.is_valid() { Some(e) } else { None })
+    }
+
     pub fn get_mut_or_allocate(&mut self, entity: Entity) -> &mut Entity {
         self.allocate_at(entity.index() as usize);
         unsafe { self.get_mut_unchecked(entity) }
