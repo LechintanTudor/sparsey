@@ -1,3 +1,4 @@
+use crate::{Entity, SparseArray, SparseSet};
 use std::{
     cell::UnsafeCell,
     ops::{Deref, DerefMut},
@@ -87,6 +88,15 @@ impl<'a, T> Ref<'a, T> {
             value: f(self.value),
         }
     }
+
+    pub fn map_split<U, V, F>(self, f: F) -> (Ref<'a, U>, Ref<'a, V>)
+    where
+        U: ?Sized,
+        V: ?Sized,
+        F: FnOnce(&T) -> (&U, &V),
+    {
+        todo!()
+    }
 }
 
 impl<T> Clone for Ref<'_, T>
@@ -130,6 +140,15 @@ impl<'a, T> RefMut<'a, T> {
             guard: self.guard,
             value: f(self.value),
         }
+    }
+
+    pub fn map_split<U, V, F>(self, f: F) -> (RefMut<'a, U>, RefMut<'a, V>)
+    where
+        U: ?Sized,
+        V: ?Sized,
+        F: FnOnce(&mut T) -> (&mut U, &mut V),
+    {
+        todo!()
     }
 }
 

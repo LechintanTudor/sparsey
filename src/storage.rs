@@ -1,5 +1,8 @@
 use crate::SparseSet;
-use std::any::Any;
+use std::{
+    any::Any,
+    ops::{Deref, DerefMut},
+};
 
 pub trait Component
 where
@@ -24,6 +27,26 @@ where
         Self {
             storage: Default::default(),
         }
+    }
+}
+
+impl<T> Deref for Storage<T>
+where
+    T: Component,
+{
+    type Target = SparseSet<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.storage
+    }
+}
+
+impl<T> DerefMut for Storage<T>
+where
+    T: Component,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.storage
     }
 }
 

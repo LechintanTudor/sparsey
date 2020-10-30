@@ -85,11 +85,11 @@ impl<T> SparseSet<T> {
         &self.dense
     }
 
-    pub fn split_for_iteration(&self) -> (&SparseArray, &[Entity], &[T]) {
+    pub fn split(&self) -> (&SparseArray, &[Entity], &[T]) {
         (&self.sparse, &self.dense, &self.data)
     }
 
-    pub fn split_for_iteration_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
+    pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
         (&self.sparse, &self.dense, &mut self.data)
     }
 }
