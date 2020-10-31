@@ -1,10 +1,17 @@
 use crate::{Entity, SparseArray, SparseSet};
+use paste::paste;
 
-fn shortest_dense<'a>(d1: &'a [Entity], d2: &'a [Entity]) -> &'a [Entity] {
-    if d1.len() < d2.len() {
-        d1
-    } else {
-        d2
+fn shortest_dense<'a>(d1: Option<&'a [Entity]>, d2: Option<&'a [Entity]>) -> Option<&'a [Entity]> {
+    match d1 {
+        Some(d1) => match d2 {
+            Some(d2) => if d1.len() < d2.len() {
+                Some(d1)
+            } else {
+                Some(d2)
+            }
+            None => Some(d1)
+        } 
+        None => d2
     }
 }
 
@@ -19,7 +26,13 @@ macro_rules! find_shortest_dense_inner {
 
 macro_rules! find_shortest_dense {
     ($($x:expr),+) => {
-        find_shortest_dense_inner!($($x.1),+)
+        find_shortest_dense_inner!($(
+            if $x.1 {
+                Some($x.0.1)
+            } else {
+                None
+            }
+        ),+)
     };
 }
 
@@ -61,6 +74,7 @@ impl<'a, T> SparseSetLike<'a> for &'a mut SparseSet<T> {
 }
 
 pub trait IterView<'a> {
+    const STRICT: bool;
     type SparseSet: SparseSetLike<'a>;
     type Output: 'a;
 
@@ -68,6 +82,7 @@ pub trait IterView<'a> {
 }
 
 impl<'a, T> IterView<'a> for &'a T {
+    const STRICT: bool = true;
     type SparseSet = &'a SparseSet<T>;
     type Output = Self;
 
@@ -77,6 +92,7 @@ impl<'a, T> IterView<'a> for &'a T {
 }
 
 impl<'a, T> IterView<'a> for &'a mut T {
+    const STRICT: bool = true;
     type SparseSet = &'a mut SparseSet<T>;
     type Output = Self;
 
@@ -86,6 +102,7 @@ impl<'a, T> IterView<'a> for &'a mut T {
 }
 
 impl<'a, T> IterView<'a> for Option<&'a T> {
+    const STRICT: bool = false;
     type SparseSet = &'a SparseSet<T>;
     type Output = Self;
 
@@ -95,6 +112,7 @@ impl<'a, T> IterView<'a> for Option<&'a T> {
 }
 
 impl<'a, T> IterView<'a> for Option<&'a mut T> {
+    const STRICT: bool = false;
     type SparseSet = &'a mut SparseSet<T>;
     type Output = Self;
 
@@ -103,7 +121,7 @@ impl<'a, T> IterView<'a> for Option<&'a mut T> {
     }
 }
 
-unsafe fn fetch<'a, T>(
+pub unsafe fn fetch<'a, T>(
     sparse: &SparseArray,
     values: <T::SparseSet as SparseSetLike<'a>>::Slice,
     entity: Entity,
@@ -118,62 +136,80 @@ where
     )
 }
 
-pub struct Iterator2<'a, A, B>
-where
-    A: IterView<'a>,
-    B: IterView<'a>,
-{
-    dense: &'a [Entity],
-    c0: (&'a SparseArray, <A::SparseSet as SparseSetLike<'a>>::Slice),
-    c1: (&'a SparseArray, <B::SparseSet as SparseSetLike<'a>>::Slice),
-    current_index: usize,
-}
+#[allow(unused_macros)]
+macro_rules! impl_iter {
+    ($ident:ident, $($comp:ident),+) => {
+        paste! {
+            pub struct $ident<'a, $($comp),+>
+            where
+                $($comp: $crate::IterView<'a>,)+
+            {
+                dense: &'a [Entity],
+                index: usize,
+                $([<set_ $comp:lower>]: (&'a SparseArray, <$comp::SparseSet as $crate::SparseSetLike<'a>>::Slice),)+
+            }
 
-impl<'a, A, B> Iterator2<'a, A, B>
-where
-    A: IterView<'a>,
-    B: IterView<'a>,
-{
-    pub fn new(c0: A::SparseSet, c1: B::SparseSet) -> Self {
-        let c0 = <A::SparseSet as SparseSetLike<'a>>::split(c0);
-        let c1 = <B::SparseSet as SparseSetLike<'a>>::split(c1);
+            impl<'a, $($comp),+> $ident<'a, $($comp),+> 
+            where
+                $($comp: $crate::IterView<'a>,)+
+            {
+                pub fn new($([<set_ $comp:lower>]: $comp::SparseSet),+) -> Self {
+                    $(
+                        let [<set_ $comp:lower>] = <$comp::SparseSet as $crate::SparseSetLike<'a>>::split([<set_ $comp:lower>]);
+                    )+
 
-        let dense = find_shortest_dense!(c0, c1);
+                    let dense = find_shortest_dense!($((
+                        [<set_ $comp:lower>],
+                        $comp::STRICT,
+                    )),+).expect("Iterators must have at least one strict view");
 
-        Self {
-            dense,
-            c0: (c0.0, c0.2),
-            c1: (c1.0, c1.2),
-            current_index: 0,
-        }
-    }
-}
+                    Self {
+                        dense,
+                        index: 0,
+                        $(
+                            [<set_ $comp:lower>]: ([<set_ $comp:lower>].0, [<set_ $comp:lower>].2),
+                        )+
+                    }
+                }
+            }
 
-impl<'a, A, B> Iterator for Iterator2<'a, A, B>
-where
-    A: IterView<'a>,
-    B: IterView<'a>,
-{
-    type Item = (A::Output, B::Output);
+            impl<'a, $($comp),+> Iterator for $ident<'a, $($comp),+> 
+            where
+                $($comp: $crate::IterView<'a>,)+
+            {
+                type Item = ($($comp::Output,)+);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let entity = *self.dense.get(self.current_index)?;
-            self.current_index += 1;
+                fn next(&mut self) -> Option<Self::Item> {
+                    loop {
+                        let entity = *self.dense.get(self.index)?;
+                        self.index += 1;
 
-            let current_item = (|| unsafe {
-                Some((
-                    fetch::<A>(self.c0.0, self.c0.1, entity)?,
-                    fetch::<B>(self.c1.0, self.c1.1, entity)?,
-                ))
-            })();
+                        let current_item = (|| unsafe {
+                            Some((
+                                $(
+                                    $crate::fetch::<$comp>(self.[<set_ $comp:lower>].0, self.[<set_ $comp:lower>].1, entity)?,
+                                )+
+                            ))
+                        })();
 
-            if current_item.is_some() {
-                return current_item;
+                        if current_item.is_some() {
+                            return current_item;
+                        }
+                    }
+                }
             }
         }
-    }
+    };
 }
+
+impl_iter!(Iterator1, A);
+impl_iter!(Iterator2, A, B);
+impl_iter!(Iterator3, A, B, C);
+impl_iter!(Iterator4, A, B, C, D);
+impl_iter!(Iterator5, A, B, C, D, E);
+impl_iter!(Iterator6, A, B, C, D, E, F);
+impl_iter!(Iterator7, A, B, C, D, E, F, G);
+impl_iter!(Iterator8, A, B, C, D, E, F, G, H);
 
 #[cfg(test)]
 mod tests {
