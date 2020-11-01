@@ -1,4 +1,4 @@
-use crate::{Entity, SparseArray, SparseSet};
+use crate::{Entities, Entity, SparseArray, SparseSet};
 
 pub trait SparseSetLike<'a> {
     type Ref: 'a;
@@ -37,6 +37,20 @@ impl<'a, T> SparseSetLike<'a> for &'a mut SparseSet<T> {
     }
 }
 
+impl<'a> SparseSetLike<'a> for &'a Entities {
+    type Ref = Entity;
+    type Slice = ();
+
+    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Slice) {
+        let (sparse, dense, _) = self.split();
+        (sparse, dense, ())
+    }
+
+    unsafe fn fetch(_values: Self::Slice, entity: Entity) -> Self::Ref {
+        entity
+    }
+}
+
 pub trait View<'a> {
     const STRICT: bool;
     type SparseSet: SparseSetLike<'a>;
@@ -72,6 +86,16 @@ impl<'a, T> View<'a> for Option<&'a T> {
 
     fn fetch(value: Option<<Self::SparseSet as SparseSetLike<'a>>::Ref>) -> Option<Self::Output> {
         Some(value)
+    }
+}
+
+impl<'a> View<'a> for Entity {
+    const STRICT: bool = true;
+    type SparseSet = &'a Entities;
+    type Output = Self;
+
+    fn fetch(value: Option<<Self::SparseSet as SparseSetLike<'a>>::Ref>) -> Option<Self::Output> {
+        value
     }
 }
 

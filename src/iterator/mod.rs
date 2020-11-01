@@ -1,15 +1,12 @@
-pub use {
-    code_gen::*,
-    view::*,
-};
+pub use {code_gen::*, view::*};
 
 mod code_gen;
 mod view;
 
 #[cfg(test)]
 mod tests {
-    use crate::{Entity, SparseSet};
     use super::*;
+    use crate::{Entity, SparseSet};
 
     #[test]
     fn iterator2() {

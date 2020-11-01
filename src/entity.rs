@@ -9,7 +9,7 @@ pub struct Entity {
 impl Entity {
     pub const INVALID: Self = Self::invalid();
 
-    pub(crate) const fn new(id: u32, gen: u32) -> Self {
+    pub const fn new(id: u32, gen: u32) -> Self {
         Self { id, gen }
     }
 

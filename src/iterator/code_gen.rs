@@ -4,14 +4,16 @@ use paste::paste;
 fn shortest_dense<'a>(d1: Option<&'a [Entity]>, d2: Option<&'a [Entity]>) -> Option<&'a [Entity]> {
     match d1 {
         Some(d1) => match d2 {
-            Some(d2) => if d1.len() < d2.len() {
-                Some(d1)
-            } else {
-                Some(d2)
+            Some(d2) => {
+                if d1.len() <= d2.len() {
+                    Some(d1)
+                } else {
+                    Some(d2)
+                }
             }
-            None => Some(d1)
-        } 
-        None => d2
+            None => Some(d1),
+        },
+        None => d2,
     }
 }
 
@@ -48,7 +50,7 @@ macro_rules! impl_iter {
                 $([<set_ $comp:lower>]: (&'a SparseArray, <$comp::SparseSet as $crate::iterator::SparseSetLike<'a>>::Slice),)+
             }
 
-            impl<'a, $($comp),+> $ident<'a, $($comp),+> 
+            impl<'a, $($comp),+> $ident<'a, $($comp),+>
             where
                 $($comp: $crate::iterator::View<'a>,)+
             {
@@ -72,7 +74,7 @@ macro_rules! impl_iter {
                 }
             }
 
-            impl<'a, $($comp),+> Iterator for $ident<'a, $($comp),+> 
+            impl<'a, $($comp),+> Iterator for $ident<'a, $($comp),+>
             where
                 $($comp: $crate::iterator::View<'a>,)+
             {
