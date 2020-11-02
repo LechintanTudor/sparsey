@@ -1,8 +1,5 @@
-use crate::SparseSet;
-use std::{
-    any::Any,
-    ops::{Deref, DerefMut},
-};
+use crate::{Entities, SparseSet};
+use std::any::Any;
 
 pub trait Component
 where
@@ -12,54 +9,29 @@ where
 
 impl<T> Component for T where T: Send + Sync + 'static {}
 
-pub struct Storage<T>
+pub trait Storage
 where
-    T: Component,
+    Self: 'static,
 {
-    storage: SparseSet<T>,
-}
-
-impl<T> Default for Storage<T>
-where
-    T: Component,
-{
-    fn default() -> Self {
-        Self {
-            storage: Default::default(),
-        }
-    }
-}
-
-impl<T> Deref for Storage<T>
-where
-    T: Component,
-{
-    type Target = SparseSet<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.storage
-    }
-}
-
-impl<T> DerefMut for Storage<T>
-where
-    T: Component,
-{
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.storage
-    }
-}
-
-pub trait GenericStorage {
     fn as_any(&self) -> &dyn Any;
 
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-impl<T> GenericStorage for Storage<T>
+impl<T> Storage for SparseSet<T>
 where
     T: Component,
 {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+impl Storage for Entities {
     fn as_any(&self) -> &dyn Any {
         self
     }

@@ -72,6 +72,23 @@ macro_rules! impl_iter {
                         )+
                     }
                 }
+
+                pub fn from_split_sets($([<set_ $comp:lower>]: (&'a SparseArray, &'a [Entity], 
+                    <$comp::SparseSet as $crate::iterator::SparseSetLike<'a>>::Slice)),+) -> Self 
+                {
+                    let dense = find_shortest_dense!($((
+                        [<set_ $comp:lower>],
+                        $comp::STRICT,
+                    )),+).expect("Iterators must have at least one strict view");
+
+                    Self {
+                        dense,
+                        index: 0,
+                        $(
+                            [<set_ $comp:lower>]: ([<set_ $comp:lower>].0, [<set_ $comp:lower>].2),
+                        )+
+                    }
+                }
             }
 
             impl<'a, $($comp),+> Iterator for $ident<'a, $($comp),+>
