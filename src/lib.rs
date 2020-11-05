@@ -1,6 +1,6 @@
 pub use self::{
-    atomic_ref_cell::*, entities::*, entity::*, group::*, iterator::*, sparse_array::*,
-    sparse_set::*, storage::*, registry::*,
+    atomic_ref_cell::*, entities::*, entity::*, group::*, iterator::*, registry::*,
+    sparse_array::*, sparse_set::*, storage::*,
 };
 
 mod atomic_ref_cell;

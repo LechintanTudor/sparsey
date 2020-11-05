@@ -39,7 +39,7 @@ macro_rules! find_shortest_dense {
 }
 
 macro_rules! impl_iter {
-    ($ident:ident, $($comp:ident),+) => {
+    ($ident:ident, $($comp:ty),+) => {
         paste! {
             pub struct $ident<'a, $($comp),+>
             where
@@ -73,8 +73,8 @@ macro_rules! impl_iter {
                     }
                 }
 
-                pub fn from_split_sets($([<set_ $comp:lower>]: (&'a SparseArray, &'a [Entity], 
-                    <$comp::SparseSet as $crate::iterator::SparseSetLike<'a>>::Slice)),+) -> Self 
+                pub fn from_split_sets($([<set_ $comp:lower>]: (&'a SparseArray, &'a [Entity],
+                    <$comp::SparseSet as $crate::iterator::SparseSetLike<'a>>::Slice)),+) -> Self
                 {
                     let dense = find_shortest_dense!($((
                         [<set_ $comp:lower>],
