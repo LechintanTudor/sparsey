@@ -1,4 +1,7 @@
-use crate::{Entity, SparseArray};
+use crate::{
+    entity::Entity,
+    storage::{SparseArray, SparseSetLike},
+};
 use std::mem;
 
 pub struct SparseSet<T> {
@@ -24,7 +27,7 @@ impl<T> SparseSet<T> {
         if sparse_entity.is_valid() {
             Some(mem::replace(&mut self.data[sparse_entity.index()], value))
         } else {
-            *sparse_entity = Entity::new(self.dense.len() as u32, sparse_entity.gen());
+            *sparse_entity = Entity::from_id_and_gen(self.dense.len() as u32, sparse_entity.gen());
             self.dense.push(entity);
             self.data.push(value);
             None
@@ -49,30 +52,6 @@ impl<T> SparseSet<T> {
         }
     }
 
-    pub fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains(entity)
-    }
-
-    pub fn get(&self, entity: Entity) -> Option<&T> {
-        let sparse_entity = *self.sparse.get(entity)?;
-
-        if sparse_entity.is_valid() {
-            Some(&self.data[sparse_entity.index()])
-        } else {
-            None
-        }
-    }
-
-    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        let sparse_entity = *self.sparse.get(entity)?;
-
-        if sparse_entity.is_valid() {
-            Some(&mut self.data[sparse_entity.index()])
-        } else {
-            None
-        }
-    }
-
     pub fn as_slice(&self) -> &[T] {
         self.as_ref()
     }
@@ -84,13 +63,35 @@ impl<T> SparseSet<T> {
     pub fn dense(&self) -> &[Entity] {
         &self.dense
     }
+}
 
-    pub fn split(&self) -> (&SparseArray, &[Entity], &[T]) {
+impl<T> SparseSetLike<T> for SparseSet<T> {
+    fn split(&self) -> (&SparseArray, &[Entity], &[T]) {
         (&self.sparse, &self.dense, &self.data)
     }
 
-    pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
+    fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
         (&self.sparse, &self.dense, &mut self.data)
+    }
+
+    fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    fn get(&self, entity: Entity) -> Option<&T> {
+        let index = self.sparse.get(entity)?.index();
+
+        unsafe { Some(self.data.get_unchecked(index)) }
+    }
+
+    fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
+        let index = self.sparse.get(entity)?.index();
+
+        unsafe { Some(self.data.get_unchecked_mut(index)) }
+    }
+
+    fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains(entity)
     }
 }
 
@@ -113,33 +114,33 @@ mod tests {
     #[test]
     fn insert() {
         let mut set = SparseSet::<u32>::default();
-        set.insert(Entity::new(100, 0), 10);
-        set.insert(Entity::new(200, 0), 20);
-        set.insert(Entity::new(300, 0), 30);
+        set.insert(Entity::new(1), 10);
+        set.insert(Entity::new(2), 20);
+        set.insert(Entity::new(3), 30);
 
-        assert_eq!(set.insert(Entity::new(100, 0), 11), Some(10));
-        assert_eq!(set.insert(Entity::new(200, 0), 21), Some(20));
-        assert_eq!(set.insert(Entity::new(300, 0), 31), Some(30));
+        assert_eq!(set.insert(Entity::new(1), 11), Some(10));
+        assert_eq!(set.insert(Entity::new(2), 21), Some(20));
+        assert_eq!(set.insert(Entity::new(3), 31), Some(30));
 
-        assert_eq!(set.get(Entity::new(100, 0)), Some(&11));
-        assert_eq!(set.get(Entity::new(200, 0)), Some(&21));
-        assert_eq!(set.get(Entity::new(300, 0)), Some(&31));
+        assert_eq!(set.get(Entity::new(1)), Some(&11));
+        assert_eq!(set.get(Entity::new(2)), Some(&21));
+        assert_eq!(set.get(Entity::new(3)), Some(&31));
     }
 
     #[test]
     fn remove() {
         let mut set = SparseSet::<u32>::default();
-        set.insert(Entity::new(0, 0), 10);
-        set.insert(Entity::new(1, 0), 20);
-        set.insert(Entity::new(2, 0), 30);
+        set.insert(Entity::new(0), 10);
+        set.insert(Entity::new(1), 20);
+        set.insert(Entity::new(2), 30);
 
-        assert_eq!(set.remove(Entity::new(0, 0)), Some(10));
-        assert_eq!(set.remove(Entity::new(0, 0)), None);
+        assert_eq!(set.remove(Entity::new(0)), Some(10));
+        assert_eq!(set.remove(Entity::new(0)), None);
 
-        assert_eq!(set.remove(Entity::new(1, 0)), Some(20));
-        assert_eq!(set.remove(Entity::new(1, 0)), None);
+        assert_eq!(set.remove(Entity::new(1)), Some(20));
+        assert_eq!(set.remove(Entity::new(1)), None);
 
-        assert_eq!(set.remove(Entity::new(2, 0)), Some(30));
-        assert_eq!(set.remove(Entity::new(2, 0)), None);
+        assert_eq!(set.remove(Entity::new(2)), Some(30));
+        assert_eq!(set.remove(Entity::new(2)), None);
     }
 }

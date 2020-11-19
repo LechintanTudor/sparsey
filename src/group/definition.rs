@@ -1,4 +1,4 @@
-use crate::Component;
+use crate::registry::Component;
 use std::any::TypeId;
 
 pub trait GroupDefinition {

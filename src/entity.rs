@@ -7,17 +7,14 @@ pub struct Entity {
 }
 
 impl Entity {
-    pub const INVALID: Self = Self::invalid();
+    pub const INVALID: Self = Self::new(INVALID_ID);
 
-    pub const fn new(id: u32, gen: u32) -> Self {
-        Self { id, gen }
+    pub const fn new(id: u32) -> Self {
+        Self { id, gen: 0 }
     }
 
-    pub const fn invalid() -> Self {
-        Self {
-            id: INVALID_ID,
-            gen: 0,
-        }
+    pub const fn from_id_and_gen(id: u32, gen: u32) -> Self {
+        Self { id, gen }
     }
 
     pub fn id(&self) -> u32 {

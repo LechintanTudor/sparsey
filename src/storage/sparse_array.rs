@@ -1,4 +1,4 @@
-use crate::Entity;
+use crate::entity::Entity;
 use std::{hint::unreachable_unchecked, iter, mem};
 
 pub const PAGE_SIZE: usize = 32;
@@ -24,7 +24,7 @@ impl SparseArray {
     }
 
     pub fn contains(&self, entity: Entity) -> bool {
-        self.get(entity).unwrap_or(&Entity::INVALID).is_valid()
+        self.get_valid(entity).is_some()
     }
 
     pub fn get(&self, entity: Entity) -> Option<&Entity> {

@@ -42,7 +42,7 @@ impl Group {
             } else {
                 (other, self)
             };
-    
+
             g1.components.iter().fold(0, |overlaps, component| {
                 if g2.contains(component) {
                     overlaps + 1

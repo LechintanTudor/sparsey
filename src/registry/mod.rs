@@ -1,4 +1,5 @@
-pub use self::{view::*, world::*};
+pub use self::{borrow::*, component::*, world::*};
 
-mod view;
+mod borrow;
+mod component;
 mod world;

@@ -1,13 +1,8 @@
-use crate::{Entities, SparseSet};
+use crate::{
+    registry::Component,
+    storage::{Entities, SparseSet},
+};
 use std::any::Any;
-
-pub trait Component
-where
-    Self: Send + Sync + 'static,
-{
-}
-
-impl<T> Component for T where T: Send + Sync + 'static {}
 
 pub trait Storage
 where

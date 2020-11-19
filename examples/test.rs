@@ -1,4 +1,4 @@
-use ecstasy::*;
+use ecstasy::{prelude::*, storage::SparseSet};
 
 #[derive(Copy, Clone, Debug)]
 struct Position(f32, f32);
@@ -7,42 +7,32 @@ struct Position(f32, f32);
 struct Velocity(f32, f32);
 
 #[derive(Copy, Clone, Debug)]
-struct Immovable;
+struct Acceleration(f32, f32);
 
 fn main() {
-    let mut entities = Entities::default();
-    let e1 = entities.create();
-    let e2 = entities.create();
-    let e3 = entities.create();
-    let e4 = entities.create();
+    let mut p = SparseSet::<Position>::default();
+    p.insert(Entity::new(2), Position(2.0, 2.0));
+    p.insert(Entity::new(1), Position(1.0, 1.0));
+    p.insert(Entity::new(0), Position(0.0, 0.0));
 
-    let mut positions = SparseSet::<Position>::default();
-    positions.insert(e4, Position(4.0, 4.0));
-    positions.insert(e3, Position(3.0, 3.0));
-    positions.insert(e2, Position(2.0, 2.0));
-    positions.insert(e1, Position(1.0, 1.0));
+    let mut v = SparseSet::<Velocity>::default();
+    v.insert(Entity::new(0), Velocity(0.0, 0.0));
+    v.insert(Entity::new(1), Velocity(1.0, 1.0));
+    v.insert(Entity::new(2), Velocity(2.0, 2.0));
 
-    let mut velocities = SparseSet::<Velocity>::default();
-    velocities.insert(e4, Velocity(4.0, 4.0));
-    velocities.insert(e3, Velocity(3.0, 3.0));
-    velocities.insert(e2, Velocity(2.0, 2.0));
-    velocities.insert(e1, Velocity(1.0, 1.0));
+    let mut a = SparseSet::<Acceleration>::default();
+    a.insert(Entity::new(1), Acceleration(1.0, 1.0));
+    a.insert(Entity::new(2), Acceleration(2.0, 2.0));
 
-    let mut immovables = SparseSet::<Immovable>::default();
-    immovables.insert(e2, Immovable);
-    immovables.insert(e3, Immovable);
+    for (pos, vel, acc) in (&mut p, &mut v, maybe(&a)).iter() {
+        if let Some(acc) = acc {
+            vel.0 += acc.0;
+            vel.1 += acc.1;
+        }
 
-    let iterator = Iterator4::<Entity, &mut Position, &Velocity, Option<&Immovable>>::new(
-        &entities,
-        &mut positions,
-        &velocities,
-        &immovables,
-    );
+        pos.0 += vel.0;
+        pos.1 += vel.1;
 
-    for (entity, position, velocity, immovable) in iterator {
-        println!(
-            "{:?}, {:?}, {:?}, {:?}",
-            entity, position, velocity, immovable
-        )
+        println!("{:?}", pos);
     }
 }

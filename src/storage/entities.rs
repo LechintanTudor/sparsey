@@ -1,4 +1,7 @@
-use crate::{Entity, SparseArray, SparseSet};
+use crate::{
+    entity::Entity,
+    storage::{SparseArray, SparseSet, SparseSetLike},
+};
 
 #[derive(Default, Debug)]
 struct EntityAllocator {
@@ -9,11 +12,11 @@ struct EntityAllocator {
 impl EntityAllocator {
     fn allocate(&mut self) -> Entity {
         match self.removed.pop() {
-            Some(entity) => Entity::new(entity.id(), entity.gen() + 1),
+            Some(entity) => Entity::from_id_and_gen(entity.id(), entity.gen() + 1),
             None => {
                 let index = self.index;
                 self.index += 1;
-                Entity::new(index as u32, 0)
+                Entity::new(index as u32)
             }
         }
     }
