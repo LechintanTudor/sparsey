@@ -110,3 +110,68 @@ where
         Some(V::get(self.view, entity))
     }
 }
+
+pub struct Not<'a, V>
+where
+    V: StorageView<'a>,
+{
+    view: V,
+    phantom: PhantomData<&'a ()>,
+}
+
+pub fn not<'a, V>(view: V) -> Not<'a, V>
+where
+    V: StorageView<'a>,
+{
+    Not {
+        view,
+        phantom: PhantomData,
+    }
+}
+
+impl<'a, V> StorageView<'a> for Not<'a, V>
+where
+    V: StorageView<'a>,
+{
+    const STRICT: bool = false;
+    type Output = Void<V::Output>;
+    type Component = V::Component;
+    type Data = V::Data;
+
+    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+        V::split(self.view)
+    }
+
+    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+        V::get_component(data, entity)
+    }
+
+    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
+        if V::get_from_component(component).is_some() {
+            None
+        } else {
+            Some(Void::default())
+        }
+    }
+
+    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
+        if V::get(self.view, entity).is_some() {
+            None
+        } else {
+            Some(Void::default())
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Void<T> {
+    phantom: PhantomData<T>,
+}
+
+impl<T> Default for Void<T> {
+    fn default() -> Self {
+        Self {
+            phantom: PhantomData,
+        }
+    }
+}

@@ -52,14 +52,43 @@ pub struct CompMut<'a, T> {
     set: RefMut<'a, SparseSet<T>>,
 }
 
-impl<'a, T> StorageView<'a> for &'a mut CompMut<'a, T> {
+impl<'a, T> StorageView<'a> for &'a CompMut<'a, T> {
+    const STRICT: bool = true;
+    type Output = &'a T;
+    type Component = &'a T;
+    type Data = *const T;
+
+    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+        <&'a SparseSet<T> as StorageView<'a>>::split(&self.set)
+    }
+
+    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+        <&'a SparseSet<T> as StorageView<'a>>::get_component(data, entity)
+    }
+
+    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
+        <&'a SparseSet<T> as StorageView<'a>>::get_from_component(component)
+    }
+
+    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
+        <&'a SparseSet<T> as StorageView<'a>>::get(&self.set, entity)
+    }
+}
+
+impl<'a, 'b, T> StorageView<'a> for &'a mut CompMut<'b, T>
+where
+    'b: 'a,
+{
     const STRICT: bool = true;
     type Output = &'a mut T;
     type Component = &'a mut T;
     type Data = *mut T;
 
     unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        <&'a mut SparseSet<T> as StorageView<'a>>::split(&mut self.set)
+        let set = &mut *self.set as *mut _;
+        drop(self);
+
+        <&'a mut SparseSet<T> as StorageView<'a>>::split(&mut *set)
     }
 
     unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
@@ -71,7 +100,10 @@ impl<'a, T> StorageView<'a> for &'a mut CompMut<'a, T> {
     }
 
     unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
-        <&'a mut SparseSet<T> as StorageView<'a>>::get(&mut self.set, entity)
+        let set = &mut *self.set as *mut _;
+        drop(self);
+
+        <&'a mut SparseSet<T> as StorageView<'a>>::get(&mut *set, entity)
     }
 }
 

@@ -1,7 +1,7 @@
 pub use crate::{
     data::{
         query::Query,
-        view::{maybe, StorageView},
+        view::{maybe, not, StorageView},
     },
     entity::Entity,
     registry::{BorrowFromWorld, Comp, CompMut, Component, World},
