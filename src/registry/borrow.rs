@@ -31,8 +31,8 @@ impl<'a, T> StorageView<'a> for &'a Comp<'a, T> {
     type Component = &'a T;
     type Data = *const T;
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        <&'a SparseSet<T> as StorageView<'a>>::split(&self.set)
+    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+        <&'a SparseSet<T> as StorageView<'a>>::split_for_iteration(&self.set)
     }
 
     unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
@@ -43,8 +43,8 @@ impl<'a, T> StorageView<'a> for &'a Comp<'a, T> {
         <&'a SparseSet<T> as StorageView<'a>>::get_from_component(component)
     }
 
-    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
-        <&'a SparseSet<T> as StorageView<'a>>::get(&self.set, entity)
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        <&'a SparseSet<T> as StorageView<'a>>::get_output(&self.set, entity)
     }
 }
 
@@ -58,8 +58,8 @@ impl<'a, T> StorageView<'a> for &'a CompMut<'a, T> {
     type Component = &'a T;
     type Data = *const T;
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        <&'a SparseSet<T> as StorageView<'a>>::split(&self.set)
+    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+        <&'a SparseSet<T> as StorageView<'a>>::split_for_iteration(&self.set)
     }
 
     unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
@@ -70,8 +70,8 @@ impl<'a, T> StorageView<'a> for &'a CompMut<'a, T> {
         <&'a SparseSet<T> as StorageView<'a>>::get_from_component(component)
     }
 
-    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
-        <&'a SparseSet<T> as StorageView<'a>>::get(&self.set, entity)
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        <&'a SparseSet<T> as StorageView<'a>>::get_output(&self.set, entity)
     }
 }
 
@@ -84,11 +84,11 @@ where
     type Component = &'a mut T;
     type Data = *mut T;
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
         let set = &mut *self.set as *mut _;
         drop(self);
 
-        <&'a mut SparseSet<T> as StorageView<'a>>::split(&mut *set)
+        <&'a mut SparseSet<T> as StorageView<'a>>::split_for_iteration(&mut *set)
     }
 
     unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
@@ -99,11 +99,11 @@ where
         <&'a mut SparseSet<T> as StorageView<'a>>::get_from_component(component)
     }
 
-    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
         let set = &mut *self.set as *mut _;
         drop(self);
 
-        <&'a mut SparseSet<T> as StorageView<'a>>::get(&mut *set, entity)
+        <&'a mut SparseSet<T> as StorageView<'a>>::get_output(&mut *set, entity)
     }
 }
 

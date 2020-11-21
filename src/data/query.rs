@@ -24,7 +24,7 @@ macro_rules! impl_query {
             fn get(self, entity: Entity) -> Option<Self::Item> {
                 unsafe {
                     Some((
-                        $(self.$idx.get(entity)?,)+
+                        $(self.$idx.get_output(entity)?,)+
                     ))
                 }
             }

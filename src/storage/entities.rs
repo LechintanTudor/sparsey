@@ -1,7 +1,4 @@
-use crate::{
-    entity::Entity,
-    storage::{SparseArray, SparseSet, SparseSetLike},
-};
+use crate::{entity::Entity, storage::SparseSet};
 
 #[derive(Default, Debug)]
 struct EntityAllocator {
@@ -43,9 +40,5 @@ impl Entities {
         if self.entities.remove(entity).is_some() {
             self.allocator.remove(entity)
         }
-    }
-
-    pub fn split(&self) -> (&SparseArray, &[Entity], &[()]) {
-        self.entities.split()
     }
 }

@@ -1,6 +1,7 @@
 use crate::{
+    data::view::StorageView,
     entity::Entity,
-    storage::{SparseArray, SparseSetLike},
+    storage::{SparseArray, SparseSetView, SparseSetViewMut},
 };
 use std::mem;
 
@@ -59,39 +60,61 @@ impl<T> SparseSet<T> {
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self.as_mut()
     }
-
-    pub fn dense(&self) -> &[Entity] {
-        &self.dense
-    }
 }
 
-impl<T> SparseSetLike<T> for SparseSet<T> {
-    fn split(&self) -> (&SparseArray, &[Entity], &[T]) {
-        (&self.sparse, &self.dense, &self.data)
+impl<T> SparseSetView for SparseSet<T> {
+    type Component = T;
+
+    fn sparse(&self) -> &SparseArray {
+        &self.sparse
     }
 
-    fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
-        (&self.sparse, &self.dense, &mut self.data)
+    fn dense(&self) -> &[Entity] {
+        &self.dense
+    }
+
+    fn data(&self) -> &[Self::Component] {
+        &self.data
     }
 
     fn len(&self) -> usize {
         self.data.len()
     }
 
+    fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains(entity)
+    }
+
     fn get(&self, entity: Entity) -> Option<&T> {
         let index = self.sparse.get(entity)?.index();
-
         unsafe { Some(self.data.get_unchecked(index)) }
+    }
+
+    fn split(&self) -> (&SparseArray, &[Entity], &[Self::Component]) {
+        (&self.sparse, &self.dense, &self.data)
+    }
+
+    unsafe fn get_unchecked(&self, entity: Entity) -> &Self::Component {
+        self.data.get_unchecked(entity.index())
+    }
+}
+
+impl<T> SparseSetViewMut for SparseSet<T> {
+    fn data_mut(&mut self) -> &mut [Self::Component] {
+        &mut self.data
     }
 
     fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
         let index = self.sparse.get(entity)?.index();
-
         unsafe { Some(self.data.get_unchecked_mut(index)) }
     }
 
-    fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains(entity)
+    fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
+        (&self.sparse, &self.dense, &mut self.data)
+    }
+
+    unsafe fn get_unchecked_mut(&mut self, entity: Entity) -> &mut Self::Component {
+        self.data.get_unchecked_mut(entity.index())
     }
 }
 
@@ -104,6 +127,54 @@ impl<T> AsRef<[T]> for SparseSet<T> {
 impl<T> AsMut<[T]> for SparseSet<T> {
     fn as_mut(&mut self) -> &mut [T] {
         &mut self.data
+    }
+}
+
+impl<'a, T> StorageView<'a> for &'a SparseSet<T> {
+    const STRICT: bool = true;
+    type Output = &'a T;
+    type Component = &'a T;
+    type Data = *const T;
+
+    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+        let (sparse, dense, data) = SparseSetView::split(self);
+        (sparse, dense, data.as_ptr())
+    }
+
+    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+        &*data.add(entity.index())
+    }
+
+    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
+        component
+    }
+
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        SparseSetView::get(self, entity)
+    }
+}
+
+impl<'a, T> StorageView<'a> for &'a mut SparseSet<T> {
+    const STRICT: bool = true;
+    type Output = &'a mut T;
+    type Component = &'a mut T;
+    type Data = *mut T;
+
+    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+        let (sparse, dense, data) = SparseSetViewMut::split_mut(self);
+        (sparse, dense, data.as_mut_ptr())
+    }
+
+    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+        &mut *data.add(entity.index())
+    }
+
+    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
+        component
+    }
+
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        SparseSetViewMut::get_mut(self, entity)
     }
 }
 

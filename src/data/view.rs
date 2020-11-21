@@ -1,7 +1,4 @@
-use crate::{
-    entity::Entity,
-    storage::{SparseArray, SparseSet, SparseSetLike},
-};
+use crate::{entity::Entity, storage::SparseArray};
 use std::marker::PhantomData;
 
 pub trait StorageView<'a> {
@@ -10,61 +7,13 @@ pub trait StorageView<'a> {
     type Component: 'a;
     type Data: 'a + Copy;
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data);
+    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data);
 
     unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component;
 
     unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output>;
 
-    unsafe fn get(self, entity: Entity) -> Option<Self::Output>;
-}
-
-impl<'a, T> StorageView<'a> for &'a SparseSet<T> {
-    const STRICT: bool = true;
-    type Output = &'a T;
-    type Component = &'a T;
-    type Data = *const T;
-
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        let (sparse, dense, data) = SparseSetLike::split(self);
-        (sparse, dense, data.as_ptr())
-    }
-
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
-        &*data.add(entity.index())
-    }
-
-    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
-        component
-    }
-
-    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
-        SparseSetLike::get(self, entity)
-    }
-}
-
-impl<'a, T> StorageView<'a> for &'a mut SparseSet<T> {
-    const STRICT: bool = true;
-    type Output = &'a mut T;
-    type Component = &'a mut T;
-    type Data = *mut T;
-
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        let (sparse, dense, data) = SparseSetLike::split_mut(self);
-        (sparse, dense, data.as_mut_ptr())
-    }
-
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
-        &mut *data.add(entity.index())
-    }
-
-    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
-        component
-    }
-
-    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
-        SparseSetLike::get_mut(self, entity)
-    }
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output>;
 }
 
 pub struct Maybe<'a, V>
@@ -94,8 +43,8 @@ where
     type Component = V::Component;
     type Data = V::Data;
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        V::split(self.view)
+    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+        V::split_for_iteration(self.view)
     }
 
     unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
@@ -106,8 +55,8 @@ where
         Some(V::get_from_component(component))
     }
 
-    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
-        Some(V::get(self.view, entity))
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        Some(V::get_output(self.view, entity))
     }
 }
 
@@ -138,8 +87,8 @@ where
     type Component = V::Component;
     type Data = V::Data;
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        V::split(self.view)
+    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
+        V::split_for_iteration(self.view)
     }
 
     unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
@@ -154,8 +103,8 @@ where
         }
     }
 
-    unsafe fn get(self, entity: Entity) -> Option<Self::Output> {
-        if V::get(self.view, entity).is_some() {
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        if V::get_output(self.view, entity).is_some() {
             None
         } else {
             Some(Void::default())

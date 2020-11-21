@@ -5,7 +5,7 @@ fn split<'a, V>(view: V) -> (&'a SparseArray, Option<&'a [Entity]>, V::Data)
 where
     V: StorageView<'a>,
 {
-    let (sparse, dense, data) = unsafe { view.split() };
+    let (sparse, dense, data) = unsafe { view.split_for_iteration() };
 
     if V::STRICT {
         (sparse, Some(dense), data)
