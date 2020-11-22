@@ -21,16 +21,33 @@ fn main() {
 
     world.push((Position(0.0, 0.0), Velocity(1.0, 1.0)));
     world.push((Position(1.0, 1.0), Velocity(3.0, 3.0), Immobile));
-    world.push((Position(2.0, 2.0), Velocity(0.0, 0.0), Acceleration(0.5, 0.5)));
+    world.push((
+        Position(2.0, 2.0),
+        Velocity(0.0, 0.0),
+        Acceleration(0.5, 0.5),
+    ));
 
-    let (mut poss, mut vels, accels, immobs) = <(
-        CompMut<Position>,
-        CompMut<Velocity>,
-        Comp<Acceleration>,
-        Comp<Immobile>,
-    )>::borrow(&world);
+    let (entities, mut positions, mut velocities, accelerations, immobiles) =
+        <(
+            Entities,
+            CompMut<Position>,
+            CompMut<Velocity>,
+            Comp<Acceleration>,
+            Comp<Immobile>,
+        )>::borrow(&world);
 
-    for (pos, vel, accel, _) in (&mut poss, &mut vels, maybe(&accels), not(&immobs)).iter() {
-        println!("{:?}, {:?}, {:?}", pos, vel, accel);
+    for (entity, position, velocity, acceleration, _) in (
+        &entities,
+        &mut positions,
+        &mut velocities,
+        maybe(&accelerations),
+        not(&immobiles),
+    )
+        .iter()
+    {
+        println!(
+            "{:?}: {:?}, {:?}, {:?}",
+            entity, position, velocity, acceleration
+        );
     }
 }

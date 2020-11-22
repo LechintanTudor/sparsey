@@ -118,26 +118,11 @@ where
     }
 }
 
-pub struct RawView<'a, T> {
-    pub(crate) set: Ref<'a, SparseSet<T>>,
-}
-
-impl<'a, T> BorrowFromWorld<'a> for RawView<'a, T> 
-where
-    T: Component,
-{
-    fn borrow(world: &'a World) -> Self {
-        Self {
-            set: world.borrow_raw().unwrap(),
-        }
-    }
-}
-
-pub struct  RawViewMut<'a, T> {
+pub struct RawViewMut<'a, T> {
     pub(crate) set: RefMut<'a, SparseSet<T>>,
 }
 
-impl<'a, T> BorrowFromWorld<'a> for RawViewMut<'a, T> 
+impl<'a, T> BorrowFromWorld<'a> for RawViewMut<'a, T>
 where
     T: Component,
 {

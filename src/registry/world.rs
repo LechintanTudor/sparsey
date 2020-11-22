@@ -2,7 +2,7 @@ use crate::{
     atomic_ref_cell::{AtomicRefCell, Ref, RefMut},
     entity::Entity,
     registry::{borrow::BorrowFromWorld, Component, ComponentSource},
-    storage::{Entities, SparseSet, Storage},
+    storage::{EntityStorage, SparseSet, Storage},
 };
 use std::{any::TypeId, collections::HashMap};
 
@@ -11,7 +11,7 @@ type ComponentTypeId = TypeId;
 #[derive(Default)]
 pub struct World {
     storages: HashMap<ComponentTypeId, AtomicRefCell<Box<dyn Storage>>>,
-    entities: Entities,
+    entities: EntityStorage,
 }
 
 impl World {
@@ -35,16 +35,6 @@ impl World {
         })
     }
 
-    pub(crate) fn borrow_raw<T>(&self) -> Option<Ref<SparseSet<T>>>
-    where
-        T: Component,
-    {
-        self.storages.get(&TypeId::of::<T>()).map(|s| {
-            s.borrow()
-                .map(|s| s.as_any().downcast_ref::<SparseSet<T>>().unwrap())
-        })
-    }
-
     pub(crate) fn borrow_raw_mut<T>(&self) -> Option<RefMut<SparseSet<T>>>
     where
         T: Component,
@@ -53,6 +43,10 @@ impl World {
             s.borrow_mut()
                 .map(|s| s.as_any_mut().downcast_mut::<SparseSet<T>>().unwrap())
         })
+    }
+
+    pub(crate) fn entities(&self) -> &EntityStorage {
+        &self.entities
     }
 
     pub fn register<T>(&mut self)
@@ -64,7 +58,7 @@ impl World {
             .or_insert_with(|| AtomicRefCell::new(Box::new(SparseSet::<T>::default())));
     }
 
-    pub fn push<'a, C>(&'a mut self, components: C) -> Entity 
+    pub fn push<'a, C>(&'a mut self, components: C) -> Entity
     where
         C: ComponentSource<'a>,
     {
@@ -76,13 +70,13 @@ impl World {
 
     pub fn remove<'a, C>(&'a mut self, entity: Entity) -> Option<C>
     where
-        C: ComponentSource<'a>,   
+        C: ComponentSource<'a>,
     {
         let mut target = C::Target::borrow(self);
         C::remove(&mut target, entity)
     }
 
-    pub fn delete<'a, C>(&'a mut self, entity: Entity) 
+    pub fn delete<'a, C>(&'a mut self, entity: Entity)
     where
         C: ComponentSource<'a>,
     {

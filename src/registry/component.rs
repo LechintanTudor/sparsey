@@ -1,6 +1,6 @@
 use crate::{
     entity::Entity,
-    registry::{RawViewMut, BorrowFromWorld},
+    registry::{BorrowFromWorld, RawViewMut},
 };
 
 pub trait Component
@@ -11,7 +11,7 @@ where
 
 impl<T> Component for T where T: Send + Sync + 'static {}
 
-pub trait ComponentSource<'a> 
+pub trait ComponentSource<'a>
 where
     Self: Sized,
 {
@@ -26,7 +26,7 @@ where
 
 macro_rules! impl_component_source {
     ($(($ty:ident, $idx:tt)),+) => {
-        impl<'a, $($ty,)+> ComponentSource<'a> for ($($ty,)+) 
+        impl<'a, $($ty,)+> ComponentSource<'a> for ($($ty,)+)
         where
             $($ty: Component,)+
         {
