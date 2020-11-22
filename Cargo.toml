@@ -10,7 +10,3 @@ paste = "1"
 [[example]]
 name = "test"
 path = "examples/test.rs"
-
-[[example]]
-name = "test2"
-path = "examples/test2.rs"
