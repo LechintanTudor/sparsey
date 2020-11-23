@@ -85,10 +85,7 @@ where
     type Data = *mut T;
 
     unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        let set = &mut *self.set as *mut _;
-        drop(self);
-
-        <&'a mut SparseSet<T> as StorageView<'a>>::split_for_iteration(&mut *set)
+        <&'a mut SparseSet<T> as StorageView<'a>>::split_for_iteration(&mut *self.set)
     }
 
     unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
@@ -100,10 +97,7 @@ where
     }
 
     unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        let set = &mut *self.set as *mut _;
-        drop(self);
-
-        <&'a mut SparseSet<T> as StorageView<'a>>::get_output(&mut *set, entity)
+        <&'a mut SparseSet<T> as StorageView<'a>>::get_output(&mut *self.set, entity)
     }
 }
 
