@@ -1,8 +1,8 @@
-use crate::entity::Entity;
+use crate::entity::{Entity, IndexEntity};
 use std::{hint::unreachable_unchecked, iter, mem};
 
 pub const PAGE_SIZE: usize = 32;
-pub type EntityPage = Option<Box<[Entity; PAGE_SIZE]>>;
+pub type EntityPage = Option<Box<[IndexEntity; PAGE_SIZE]>>;
 
 #[derive(Clone, Default, Debug)]
 pub struct SparseArray {
@@ -14,58 +14,69 @@ impl SparseArray {
         self.pages.clear()
     }
 
-    pub fn insert(&mut self, entity: Entity, value: Entity) {
-        *self.get_mut_or_allocate(entity) = value;
+    pub fn insert(&mut self, entity: Entity) -> IndexEntity {
+        let dest = self.get_mut_or_allocate(entity.index());
+        let prev = *dest;
+        *dest = IndexEntity::new(entity.id(), entity.gen());
+        prev
     }
 
-    pub fn remove(&mut self, entity: Entity) -> Option<Entity> {
+    pub fn remove(&mut self, entity: Entity) -> Option<IndexEntity> {
         self.get_mut(entity)
-            .map(|e| mem::replace(e, Entity::INVALID))
+            .map(|e| mem::replace(e, IndexEntity::INVALID))
+    }
+
+    pub fn delete(&mut self, entity: Entity) {
+        self.get_mut(entity).map(|e| *e = IndexEntity::INVALID);
     }
 
     pub fn contains(&self, entity: Entity) -> bool {
-        self.get_valid(entity).is_some()
+        self.get(entity).is_some()
     }
 
-    pub fn get(&self, entity: Entity) -> Option<&Entity> {
+    pub fn get(&self, entity: Entity) -> Option<&IndexEntity> {
         self.pages
             .get(page_index(entity))
             .and_then(|page| page.as_ref())
             .map(|page| &page[local_index(entity)])
+            .and_then(|e| {
+                if e.gen() == entity.gen() {
+                    Some(e)
+                } else {
+                    None
+                }
+            })
     }
 
-    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut Entity> {
+    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut IndexEntity> {
         self.pages
             .get_mut(page_index(entity))
             .and_then(|page| page.as_mut())
             .map(|page| &mut page[local_index(entity)])
+            .and_then(|e| {
+                if e.gen() == entity.gen() {
+                    Some(e)
+                } else {
+                    None
+                }
+            })
     }
 
-    pub fn get_valid(&self, entity: Entity) -> Option<&Entity> {
-        self.get(entity)
-            .and_then(|e| if e.is_valid() { Some(e) } else { None })
+    pub fn get_mut_or_allocate(&mut self, index: usize) -> &mut IndexEntity {
+        self.allocate_at(index);
+        unsafe { self.get_unchecked_mut(index) }
     }
 
-    pub fn get_valid_mut(&mut self, entity: Entity) -> Option<&mut Entity> {
-        self.get_mut(entity)
-            .and_then(|e| if e.is_valid() { Some(e) } else { None })
-    }
-
-    pub fn get_mut_or_allocate(&mut self, entity: Entity) -> &mut Entity {
-        self.allocate_at(entity.index() as usize);
-        unsafe { self.get_mut_unchecked(entity) }
-    }
-
-    pub unsafe fn get_unchecked(&self, entity: Entity) -> &Entity {
-        match self.pages.get_unchecked(page_index(entity)) {
-            Some(page) => page.get_unchecked(local_index(entity)),
+    pub unsafe fn get_unchecked(&self, index: usize) -> &IndexEntity {
+        match self.pages.get_unchecked(index / PAGE_SIZE) {
+            Some(page) => page.get_unchecked(index % PAGE_SIZE),
             None => unreachable_unchecked(),
         }
     }
 
-    pub unsafe fn get_mut_unchecked(&mut self, entity: Entity) -> &mut Entity {
-        match self.pages.get_unchecked_mut(page_index(entity)) {
-            Some(page) => page.get_unchecked_mut(local_index(entity)),
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut IndexEntity {
+        match self.pages.get_unchecked_mut(index / PAGE_SIZE) {
+            Some(page) => page.get_unchecked_mut(index % PAGE_SIZE),
             None => unreachable_unchecked(),
         }
     }
@@ -102,5 +113,5 @@ fn uninit_page() -> EntityPage {
 }
 
 fn default_page() -> EntityPage {
-    Some(Box::new([Entity::INVALID; PAGE_SIZE]))
+    Some(Box::new([IndexEntity::INVALID; PAGE_SIZE]))
 }

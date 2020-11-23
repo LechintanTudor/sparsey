@@ -45,7 +45,7 @@ unsafe fn get_output<'a, V>(
 where
     V: StorageView<'a>,
 {
-    V::get_from_component(sparse.get_valid(entity).map(|&e| V::get_component(data, e)))
+    V::get_from_component(sparse.get(entity).map(|&e| V::get_component(data, e)))
 }
 
 macro_rules! find_shortest_dense {

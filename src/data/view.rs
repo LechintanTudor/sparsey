@@ -1,4 +1,7 @@
-use crate::{entity::Entity, storage::SparseArray};
+use crate::{
+    entity::{Entity, IndexEntity},
+    storage::SparseArray,
+};
 use std::marker::PhantomData;
 
 pub trait StorageView<'a> {
@@ -9,11 +12,11 @@ pub trait StorageView<'a> {
 
     unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data);
 
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component;
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output>;
+
+    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component;
 
     unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output>;
-
-    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output>;
 }
 
 pub struct Maybe<'a, V>
@@ -47,16 +50,16 @@ where
         V::split_for_iteration(self.view)
     }
 
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        Some(V::get_output(self.view, entity))
+    }
+
+    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
         V::get_component(data, entity)
     }
 
     unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
         Some(V::get_from_component(component))
-    }
-
-    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        Some(V::get_output(self.view, entity))
     }
 }
 
@@ -91,20 +94,20 @@ where
         V::split_for_iteration(self.view)
     }
 
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
-        V::get_component(data, entity)
-    }
-
-    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
-        if V::get_from_component(component).is_some() {
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        if V::get_output(self.view, entity).is_some() {
             None
         } else {
             Some(Void::default())
         }
     }
 
-    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        if V::get_output(self.view, entity).is_some() {
+    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
+        V::get_component(data, entity)
+    }
+
+    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
+        if V::get_from_component(component).is_some() {
             None
         } else {
             Some(Void::default())

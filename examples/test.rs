@@ -27,14 +27,13 @@ fn main() {
         Acceleration(0.5, 0.5),
     ));
 
-    let (entities, mut positions, mut velocities, accelerations, immobiles) =
-        <(
-            Entities,
-            CompMut<Position>,
-            CompMut<Velocity>,
-            Comp<Acceleration>,
-            Comp<Immobile>,
-        )>::borrow(&world);
+    let (entities, mut positions, mut velocities, accelerations, immobiles) = <(
+        Entities,
+        CompMut<Position>,
+        CompMut<Velocity>,
+        Comp<Acceleration>,
+        Comp<Immobile>,
+    )>::borrow(&world);
 
     for (entity, position, velocity, acceleration, _) in (
         &entities,

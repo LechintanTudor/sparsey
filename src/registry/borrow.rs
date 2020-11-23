@@ -1,7 +1,7 @@
 use crate::{
     atomic_ref_cell::{Ref, RefMut},
     data::view::*,
-    entity::Entity,
+    entity::{Entity, IndexEntity},
     registry::{Component, World},
     storage::{SparseArray, SparseSet},
 };
@@ -35,16 +35,16 @@ impl<'a, T> StorageView<'a> for &'a Comp<'a, T> {
         <&'a SparseSet<T> as StorageView<'a>>::split_for_iteration(&self.set)
     }
 
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        <&'a SparseSet<T> as StorageView<'a>>::get_output(&self.set, entity)
+    }
+
+    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
         <&'a SparseSet<T> as StorageView<'a>>::get_component(data, entity)
     }
 
     unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
         <&'a SparseSet<T> as StorageView<'a>>::get_from_component(component)
-    }
-
-    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        <&'a SparseSet<T> as StorageView<'a>>::get_output(&self.set, entity)
     }
 }
 
@@ -62,16 +62,16 @@ impl<'a, T> StorageView<'a> for &'a CompMut<'a, T> {
         <&'a SparseSet<T> as StorageView<'a>>::split_for_iteration(&self.set)
     }
 
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        <&'a SparseSet<T> as StorageView<'a>>::get_output(&self.set, entity)
+    }
+
+    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
         <&'a SparseSet<T> as StorageView<'a>>::get_component(data, entity)
     }
 
     unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
         <&'a SparseSet<T> as StorageView<'a>>::get_from_component(component)
-    }
-
-    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        <&'a SparseSet<T> as StorageView<'a>>::get_output(&self.set, entity)
     }
 }
 
@@ -88,16 +88,16 @@ where
         <&'a mut SparseSet<T> as StorageView<'a>>::split_for_iteration(&mut *self.set)
     }
 
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
+        <&'a mut SparseSet<T> as StorageView<'a>>::get_output(&mut *self.set, entity)
+    }
+
+    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
         <&'a mut SparseSet<T> as StorageView<'a>>::get_component(data, entity)
     }
 
     unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
         <&'a mut SparseSet<T> as StorageView<'a>>::get_from_component(component)
-    }
-
-    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        <&'a mut SparseSet<T> as StorageView<'a>>::get_output(&mut *self.set, entity)
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::{
     data::view::StorageView,
-    entity::Entity,
+    entity::{Entity, IndexEntity},
     registry::{BorrowFromWorld, World},
     storage::{SparseArray, SparseSet, SparseSetView},
 };
@@ -15,11 +15,11 @@ struct EntityAllocator {
 impl EntityAllocator {
     fn allocate(&mut self) -> Entity {
         match self.removed.pop() {
-            Some(entity) => Entity::from_id_and_gen(entity.id(), entity.gen() + 1),
+            Some(entity) => Entity::new(entity.id(), entity.gen() + 1),
             None => {
                 let index = self.index;
                 self.index += 1;
-                Entity::new(index as u32)
+                Entity::with_id(index as u32)
             }
         }
     }
@@ -80,7 +80,7 @@ impl<'a> StorageView<'a> for &'a Entities<'a> {
         (sparse, dense, dense.as_ptr())
     }
 
-    unsafe fn get_component(data: Self::Data, entity: Entity) -> Self::Component {
+    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
         &*data.add(entity.index())
     }
 
