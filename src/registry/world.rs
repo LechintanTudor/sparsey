@@ -1,6 +1,6 @@
 use crate::{
     entity::Entity,
-    group::WorldLayout,
+    group::WorldLayoutDescriptor,
     registry::*,
     storage::{AbstractStorage, EntityStorage, SparseSet},
 };
@@ -20,12 +20,12 @@ pub struct World {
 impl World {
     pub fn new<L>() -> Self
     where
-        L: WorldLayout,
+        L: WorldLayoutDescriptor,
     {
         Self {
             entities: Default::default(),
             storages: Default::default(),
-            groups: Groups::new(L::groups()),
+            groups: Groups::new(L::world_layout()),
         }
     }
 
@@ -86,15 +86,18 @@ impl World {
             .map(|c| c.group_index())
             .collect::<HashSet<_>>();
 
+        let mut storages = Vec::new();
+
         for group_data in group_indexes
             .iter()
-            .map(|&i| unsafe { self.groups.borrow_mut_unchecked(i) })
+            .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
         {
-            let mut storages = group_data
-                .components()
-                .iter()
-                .map(|&c| self.storages.borrow_raw_mut(c).unwrap())
-                .collect::<Vec<_>>();
+            storages.extend(
+                group_data
+                    .components()
+                    .iter()
+                    .map(|&c| self.storages.borrow_raw_mut(c).unwrap()),
+            );
 
             let (_, subgroup_ends, subgroup_lengths) = group_data.split();
             let mut previous_end = 0_usize;
@@ -113,6 +116,8 @@ impl World {
 
                 previous_end = group_end;
             }
+
+            storages.clear()
         }
     }
 
@@ -129,7 +134,7 @@ impl World {
 
         for group_data in group_indexes
             .iter()
-            .map(|&i| unsafe { self.groups.borrow_mut_unchecked(i) })
+            .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
         {
             let mut storages = group_data
                 .components()
@@ -159,7 +164,7 @@ impl World {
                         }
 
                         ungroup_length += 1;
-                    },
+                    }
                     RemoveGroupStatus::MissingComponents => break,
                 }
 
@@ -168,14 +173,12 @@ impl World {
 
             if let Some(ungroup_start) = ungroup_start {
                 let subgroup_ends = &subgroup_ends[ungroup_start..(ungroup_start + ungroup_length)];
-                let subgroup_lengths = &mut subgroup_lengths[ungroup_start..(ungroup_start + ungroup_length)];
+                let subgroup_lengths =
+                    &mut subgroup_lengths[ungroup_start..(ungroup_start + ungroup_length)];
 
-                for (&group_end, group_len) in subgroup_ends
-                    .iter()
-                    .zip(subgroup_lengths.iter_mut())
-                    .rev()
+                for (&group_end, group_len) in
+                    subgroup_ends.iter().zip(subgroup_lengths.iter_mut()).rev()
                 {
-                    // println!("Ethan");
                     unsafe {
                         ungroup_components(&mut storages[..group_end], group_len, entity);
                     }

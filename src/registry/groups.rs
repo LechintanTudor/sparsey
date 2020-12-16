@@ -1,4 +1,4 @@
-use crate::group::{Group, GroupSet};
+use crate::group::{GroupLayout, WorldLayout};
 use atomic_refcell::AtomicRefCell;
 use std::{any::TypeId, collections::HashMap};
 
@@ -7,19 +7,24 @@ type ComponentTypeId = TypeId;
 #[derive(Debug)]
 pub struct Groups {
     indexes: HashMap<ComponentTypeId, SubgroupIndex>,
-    groups: Box<[AtomicRefCell<GroupData>]>,
+    groups: Box<[AtomicRefCell<Group>]>,
 }
 
 impl Groups {
-    pub fn new(group_set: GroupSet) -> Groups {
+    pub fn new(world_layout: WorldLayout) -> Groups {
         let mut indexes = HashMap::<ComponentTypeId, SubgroupIndex>::new();
-        let mut groups = Vec::<AtomicRefCell<GroupData>>::new();
+        let mut groups = Vec::<AtomicRefCell<Group>>::new();
 
-        for (i, group) in group_set.into_groups().into_vec().into_iter().enumerate() {
-            let group = GroupData::new(group);
+        for (i, layout) in world_layout
+            .into_group_layouts()
+            .into_vec()
+            .into_iter()
+            .enumerate()
+        {
+            let group = Group::new(layout);
 
             for (j, components) in group
-                .subgroup_ends
+                .subgroup_arities
                 .iter()
                 .map(|&i| &group.components[..i])
                 .enumerate()
@@ -42,11 +47,11 @@ impl Groups {
         self.indexes.get(&component)
     }
 
-    pub unsafe fn borrow_unchecked(&self, index: usize) -> &GroupData {
+    pub unsafe fn get_unchecked(&self, index: usize) -> &Group {
         &*self.groups.get_unchecked(index).as_ptr()
     }
 
-    pub unsafe fn borrow_mut_unchecked(&self, index: usize) -> &mut GroupData {
+    pub unsafe fn get_mut_unchecked(&self, index: usize) -> &mut Group {
         &mut *self.groups.get_unchecked(index).as_ptr()
     }
 }
@@ -75,20 +80,20 @@ impl SubgroupIndex {
 }
 
 #[derive(Debug)]
-pub struct GroupData {
+pub struct Group {
     components: Box<[TypeId]>,
-    subgroup_ends: Box<[usize]>,
+    subgroup_arities: Box<[usize]>,
     subgroup_lengths: Box<[usize]>,
 }
 
-impl GroupData {
-    pub fn new(group: Group) -> Self {
-        let (components, subgroup_ends) = group.into_components_and_subgroup_ends();
-        let subgroup_lengths = vec![0; subgroup_ends.len()].into_boxed_slice();
+impl Group {
+    pub fn new(layout: GroupLayout) -> Self {
+        let (components, subgroup_arities) = layout.into_components_and_arities();
+        let subgroup_lengths = vec![0; subgroup_arities.len()].into_boxed_slice();
 
         Self {
             components,
-            subgroup_ends,
+            subgroup_arities,
             subgroup_lengths,
         }
     }
@@ -96,7 +101,7 @@ impl GroupData {
     pub fn split(&mut self) -> (&[TypeId], &[usize], &mut [usize]) {
         (
             &self.components,
-            &self.subgroup_ends,
+            &self.subgroup_arities,
             &mut self.subgroup_lengths,
         )
     }
@@ -105,8 +110,8 @@ impl GroupData {
         &self.components
     }
 
-    pub fn subgroup_ends(&self) -> &[usize] {
-        &self.subgroup_ends
+    pub fn subgroup_arities(&self) -> &[usize] {
+        &self.subgroup_arities
     }
 
     pub fn subgroup_lengths(&self) -> &[usize] {
@@ -114,6 +119,6 @@ impl GroupData {
     }
 
     pub fn subgroup_count(&self) -> usize {
-        self.subgroup_ends.len()
+        self.subgroup_arities.len()
     }
 }

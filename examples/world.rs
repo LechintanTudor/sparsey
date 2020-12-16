@@ -18,15 +18,7 @@ struct D;
 #[derive(Debug)]
 struct E;
 
-type WorldLayout = (
-    (
-        (A, B), 
-        (A, B, C)
-    ), 
-    (
-        (D, E),
-    ),
-);
+type WorldLayout = (((A, B), (A, B, C)), ((D, E),));
 
 fn main() {
     let mut world = World::new::<WorldLayout>();
@@ -66,8 +58,8 @@ fn print_sets(world: &World) {
 
     println!("\nGroups:");
     unsafe {
-        println!("{:?}", world.groups.borrow_unchecked(0).subgroup_lengths());
-        println!("{:?}", world.groups.borrow_unchecked(1).subgroup_lengths());
+        println!("{:?}", world.groups.get_unchecked(0).subgroup_lengths());
+        println!("{:?}", world.groups.get_unchecked(1).subgroup_lengths());
     }
 
     println!();

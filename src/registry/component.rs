@@ -69,4 +69,14 @@ impl_component_source!(4, (A, 0), (B, 1), (C, 2), (D, 3));
 impl_component_source!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
 impl_component_source!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
 impl_component_source!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-impl_component_source!(8, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+impl_component_source!(
+    8,
+    (A, 0),
+    (B, 1),
+    (C, 2),
+    (D, 3),
+    (E, 4),
+    (F, 5),
+    (G, 6),
+    (H, 7)
+);
