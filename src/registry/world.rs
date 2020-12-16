@@ -1,114 +1,279 @@
 use crate::{
-    atomic_ref_cell::{AtomicRefCell, Ref, RefMut},
     entity::Entity,
-    registry::{borrow::BorrowFromWorld, Component, ComponentSource},
-    storage::{EntityStorage, SparseSet, Storage},
+    group::WorldLayout,
+    registry::*,
+    storage::{AbstractStorage, EntityStorage, SparseSet},
 };
-use std::{any::TypeId, collections::HashMap};
+use atomic_refcell::{AtomicRef, AtomicRefMut};
+use std::{
+    collections::HashSet,
+    hint::unreachable_unchecked,
+    ops::{Deref, DerefMut},
+};
 
-type ComponentTypeId = TypeId;
-
-#[derive(Default)]
 pub struct World {
-    storages: HashMap<ComponentTypeId, AtomicRefCell<Box<dyn Storage>>>,
     entities: EntityStorage,
+    storages: Storages,
+    pub groups: Groups,
 }
 
 impl World {
-    pub fn borrow<T>(&self) -> Option<Ref<SparseSet<T>>>
+    pub fn new<L>() -> Self
     where
-        T: Component,
+        L: WorldLayout,
     {
-        self.storages.get(&TypeId::of::<T>()).map(|s| {
-            s.borrow()
-                .map(|s| s.as_any().downcast_ref::<SparseSet<T>>().unwrap())
-        })
-    }
-
-    pub fn borrow_mut<T>(&self) -> Option<RefMut<SparseSet<T>>>
-    where
-        T: Component,
-    {
-        self.storages.get(&TypeId::of::<T>()).map(|s| {
-            s.borrow_mut()
-                .map(|s| s.as_any_mut().downcast_mut::<SparseSet<T>>().unwrap())
-        })
-    }
-
-    pub(crate) fn borrow_raw_mut<T>(&self) -> Option<RefMut<SparseSet<T>>>
-    where
-        T: Component,
-    {
-        self.storages.get(&TypeId::of::<T>()).map(|s| {
-            s.borrow_mut()
-                .map(|s| s.as_any_mut().downcast_mut::<SparseSet<T>>().unwrap())
-        })
-    }
-
-    pub(crate) fn entities(&self) -> &EntityStorage {
-        &self.entities
+        Self {
+            entities: Default::default(),
+            storages: Default::default(),
+            groups: Groups::new(L::groups()),
+        }
     }
 
     pub fn register<T>(&mut self)
     where
         T: Component,
     {
-        self.storages
-            .entry(TypeId::of::<T>())
-            .or_insert_with(|| AtomicRefCell::new(Box::new(SparseSet::<T>::default())));
+        self.storages.register::<T>()
     }
 
-    pub fn push<'a, C>(&'a mut self, components: C) -> Entity
+    pub fn borrow<T>(&self) -> Option<AtomicRef<SparseSet<T>>>
+    where
+        T: Component,
+    {
+        self.storages.borrow::<T>()
+    }
+
+    pub fn borrow_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
+    where
+        T: Component,
+    {
+        self.storages.borrow_mut::<T>()
+    }
+
+    pub(crate) fn borrow_raw_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
+    where
+        T: Component,
+    {
+        self.storages.borrow_mut::<T>()
+    }
+
+    pub(crate) fn entities(&self) -> &EntityStorage {
+        &self.entities
+    }
+
+    pub fn create<'a, C>(&'a mut self, components: C) -> Entity
     where
         C: ComponentSource<'a>,
     {
         let entity = self.entities.create();
-        let mut target = C::Target::borrow(self);
-        C::insert(&mut target, entity, components);
+        self.insert(entity, components);
         entity
+    }
+
+    pub fn insert<'a, C>(&'a mut self, entity: Entity, components: C)
+    where
+        C: ComponentSource<'a>,
+    {
+        {
+            let mut target = <C::Target as BorrowFromWorld>::borrow(self);
+            C::insert(&mut target, entity, components);
+        }
+
+        let group_indexes = C::components()
+            .as_ref()
+            .iter()
+            .flat_map(|&c| self.groups.get_subgroup_index(c))
+            .map(|c| c.group_index())
+            .collect::<HashSet<_>>();
+
+        for group_data in group_indexes
+            .iter()
+            .map(|&i| unsafe { self.groups.borrow_mut_unchecked(i) })
+        {
+            let mut storages = group_data
+                .components()
+                .iter()
+                .map(|&c| self.storages.borrow_raw_mut(c).unwrap())
+                .collect::<Vec<_>>();
+
+            let (_, subgroup_ends, subgroup_lengths) = group_data.split();
+            let mut previous_end = 0_usize;
+
+            for (&group_end, group_len) in subgroup_ends.iter().zip(subgroup_lengths.iter_mut()) {
+                let status =
+                    insert_group_status(&storages[previous_end..group_end], *group_len, entity);
+
+                match status {
+                    InsertGroupStatus::Grouped => {}
+                    InsertGroupStatus::NeedsGrouping => unsafe {
+                        group_components(&mut storages[..group_end], group_len, entity);
+                    },
+                    InsertGroupStatus::MissingComponents => break,
+                }
+
+                previous_end = group_end;
+            }
+        }
     }
 
     pub fn remove<'a, C>(&'a mut self, entity: Entity) -> Option<C>
     where
         C: ComponentSource<'a>,
     {
-        let mut target = C::Target::borrow(self);
-        C::remove(&mut target, entity)
-    }
+        let group_indexes = C::components()
+            .as_ref()
+            .iter()
+            .flat_map(|&c| self.groups.get_subgroup_index(c))
+            .map(|c| c.group_index())
+            .collect::<HashSet<_>>();
 
-    pub fn delete<'a, C>(&'a mut self, entity: Entity)
-    where
-        C: ComponentSource<'a>,
-    {
-        let mut target = C::Target::borrow(self);
-        C::delete(&mut target, entity);
+        for group_data in group_indexes
+            .iter()
+            .map(|&i| unsafe { self.groups.borrow_mut_unchecked(i) })
+        {
+            let mut storages = group_data
+                .components()
+                .iter()
+                .map(|&c| self.storages.borrow_raw_mut(c).unwrap())
+                .collect::<Vec<_>>();
+
+            let (_, subgroup_ends, subgroup_lengths) = group_data.split();
+            let mut previous_end = 0_usize;
+
+            let mut ungroup_start = Option::<usize>::None;
+            let mut ungroup_length = 0;
+
+            for (i, (&group_end, group_len)) in subgroup_ends
+                .iter()
+                .zip(subgroup_lengths.iter_mut())
+                .enumerate()
+            {
+                let status =
+                    remove_group_status(&storages[previous_end..group_end], *group_len, entity);
+
+                match status {
+                    RemoveGroupStatus::Ungrouped => break,
+                    RemoveGroupStatus::NeedsUngrouping => {
+                        if ungroup_start.is_none() {
+                            ungroup_start = Some(i);
+                        }
+
+                        ungroup_length += 1;
+                    },
+                    RemoveGroupStatus::MissingComponents => break,
+                }
+
+                previous_end = group_end;
+            }
+
+            if let Some(ungroup_start) = ungroup_start {
+                let subgroup_ends = &subgroup_ends[ungroup_start..(ungroup_start + ungroup_length)];
+                let subgroup_lengths = &mut subgroup_lengths[ungroup_start..(ungroup_start + ungroup_length)];
+
+                for (&group_end, group_len) in subgroup_ends
+                    .iter()
+                    .zip(subgroup_lengths.iter_mut())
+                    .rev()
+                {
+                    // println!("Ethan");
+                    unsafe {
+                        ungroup_components(&mut storages[..group_end], group_len, entity);
+                    }
+                }
+            }
+        }
+
+        let mut target = <C::Target as BorrowFromWorld>::borrow(self);
+        C::remove(&mut target, entity)
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+enum InsertGroupStatus {
+    Grouped,
+    NeedsGrouping,
+    MissingComponents,
+}
 
-    #[test]
-    fn borrow() {
-        let mut world = World::default();
-        world.register::<u16>();
-        world.register::<u32>();
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum RemoveGroupStatus {
+    Ungrouped,
+    NeedsUngrouping,
+    MissingComponents,
+}
 
-        let _u16_ref1 = world.borrow::<u16>().unwrap();
-        let _u16_ref2 = world.borrow::<u16>().unwrap();
+fn insert_group_status<S>(storages: &[S], group_len: usize, entity: Entity) -> InsertGroupStatus
+where
+    S: Deref<Target = dyn AbstractStorage>,
+{
+    let mut status = InsertGroupStatus::Grouped;
 
-        let _u32_ref1 = world.borrow::<u32>().unwrap();
-        let _u32_ref2 = world.borrow::<u32>().unwrap();
+    for storage in storages.iter().map(|s| s.deref()) {
+        match storage.get_index_entity(entity) {
+            Some(index_entity) => {
+                if index_entity.index() >= group_len {
+                    status = InsertGroupStatus::NeedsGrouping;
+                }
+            }
+            None => return InsertGroupStatus::MissingComponents,
+        }
     }
 
-    #[test]
-    #[should_panic]
-    fn borrow_mut() {
-        let mut world = World::default();
-        world.register::<u16>();
+    status
+}
 
-        let _u16_ref1 = world.borrow_mut::<u16>().unwrap();
-        let _u16_ref2 = world.borrow_mut::<u16>().unwrap();
+fn remove_group_status<S>(storages: &[S], group_len: usize, entity: Entity) -> RemoveGroupStatus
+where
+    S: Deref<Target = dyn AbstractStorage>,
+{
+    let mut status = RemoveGroupStatus::Ungrouped;
+
+    for storage in storages.iter().map(|s| s.deref()) {
+        match storage.get_index_entity(entity) {
+            Some(index_entity) => {
+                if index_entity.index() < group_len {
+                    status = RemoveGroupStatus::NeedsUngrouping;
+                }
+            }
+            None => return RemoveGroupStatus::MissingComponents,
+        }
+    }
+
+    status
+}
+
+unsafe fn group_components<S>(storages: &mut [S], group_len: &mut usize, entity: Entity)
+where
+    S: DerefMut<Target = dyn AbstractStorage>,
+{
+    for storage in storages.iter_mut().map(|s| s.deref_mut()) {
+        let index = match storage.get_index_entity(entity) {
+            Some(index_entity) => index_entity.index(),
+            None => unreachable_unchecked(),
+        };
+
+        storage.swap(index, *group_len);
+    }
+
+    *group_len += 1;
+}
+
+unsafe fn ungroup_components<S>(storages: &mut [S], group_len: &mut usize, entity: Entity)
+where
+    S: DerefMut<Target = dyn AbstractStorage>,
+{
+    if *group_len > 0 {
+        let last_index = *group_len - 1;
+
+        for storage in storages.iter_mut().map(|s| s.deref_mut()) {
+            let index = match storage.get_index_entity(entity) {
+                Some(index_entity) => index_entity.index(),
+                None => unreachable_unchecked(),
+            };
+
+            storage.swap(index, last_index);
+        }
+
+        *group_len -= 1;
     }
 }

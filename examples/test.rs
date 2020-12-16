@@ -13,15 +13,15 @@ struct Acceleration(f32, f32);
 struct Immobile;
 
 fn main() {
-    let mut world = World::default();
+    let mut world = World::new::<()>();
     world.register::<Position>();
     world.register::<Velocity>();
     world.register::<Acceleration>();
     world.register::<Immobile>();
 
-    world.push((Position(0.0, 0.0), Velocity(1.0, 1.0)));
-    world.push((Position(1.0, 1.0), Velocity(3.0, 3.0), Immobile));
-    world.push((
+    world.create((Position(0.0, 0.0), Velocity(1.0, 1.0)));
+    world.create((Position(1.0, 1.0), Velocity(3.0, 3.0), Immobile));
+    world.create((
         Position(2.0, 2.0),
         Velocity(0.0, 0.0),
         Acceleration(0.5, 0.5),

@@ -1,5 +1,5 @@
 use crate::entity::{Entity, IndexEntity};
-use std::{hint::unreachable_unchecked, iter, mem};
+use std::{hint::unreachable_unchecked, iter, mem, ptr};
 
 pub const PAGE_SIZE: usize = 32;
 pub type EntityPage = Option<Box<[IndexEntity; PAGE_SIZE]>>;
@@ -40,7 +40,7 @@ impl SparseArray {
             .and_then(|page| page.as_ref())
             .map(|page| &page[local_index(entity)])
             .and_then(|e| {
-                if e.gen() == entity.gen() {
+                if e.is_valid() && e.gen() == entity.gen() {
                     Some(e)
                 } else {
                     None
@@ -54,7 +54,7 @@ impl SparseArray {
             .and_then(|page| page.as_mut())
             .map(|page| &mut page[local_index(entity)])
             .and_then(|e| {
-                if e.gen() == entity.gen() {
+                if e.is_valid() && e.gen() == entity.gen() {
                     Some(e)
                 } else {
                     None
@@ -97,6 +97,12 @@ impl SparseArray {
                 .extend(iter::repeat(uninit_page()).take(extra_uninit_pages));
             self.pages.push(default_page())
         }
+    }
+
+    pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+        let p1 = self.get_unchecked_mut(a) as *mut _;
+        let p2 = self.get_unchecked_mut(b) as *mut _;
+        ptr::swap_nonoverlapping(p1, p2, 1);
     }
 }
 

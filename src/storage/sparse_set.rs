@@ -1,9 +1,9 @@
 use crate::{
     data::view::StorageView,
     entity::{Entity, IndexEntity},
-    storage::{SparseArray, SparseSetView, SparseSetViewMut},
+    storage::{AbstractStorage, SparseArray, SparseSetView, SparseSetViewMut},
 };
-use std::mem;
+use std::{any::Any, mem, ptr};
 
 pub struct SparseSet<T> {
     sparse: SparseArray,
@@ -56,6 +56,28 @@ impl<T> SparseSet<T> {
         }
 
         Some(self.data.swap_remove(sparse_entity.index()))
+    }
+
+    pub fn swap(&mut self, a: usize, b: usize) {
+        if a < self.len() && b < self.len() && a != b {
+            unsafe {
+                let index_a = self.dense.get_unchecked(a).index();
+                let index_b = self.dense.get_unchecked(b).index();
+                self.sparse.swap_unchecked(index_a, index_b);
+
+                ptr::swap_nonoverlapping(
+                    self.dense.as_mut_ptr().add(a),
+                    self.dense.as_mut_ptr().add(b),
+                    1,
+                );
+
+                ptr::swap_nonoverlapping(
+                    self.data.as_mut_ptr().add(a),
+                    self.data.as_mut_ptr().add(b),
+                    1,
+                )
+            }
+        }
     }
 
     pub fn as_slice(&self) -> &[T] {
@@ -180,6 +202,27 @@ impl<'a, T> StorageView<'a> for &'a mut SparseSet<T> {
 
     unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
         component
+    }
+}
+
+impl<T> AbstractStorage for SparseSet<T>
+where
+    T: 'static,
+{
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
+        self.sparse.get(entity)
+    }
+
+    fn swap(&mut self, i1: usize, i2: usize) {
+        SparseSet::swap(self, i1, i2);
     }
 }
 

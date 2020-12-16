@@ -1,17 +1,17 @@
 use crate::{
-    atomic_ref_cell::{Ref, RefMut},
     data::view::*,
     entity::{Entity, IndexEntity},
     registry::{Component, World},
     storage::{SparseArray, SparseSet},
 };
+use atomic_refcell::{AtomicRef, AtomicRefMut};
 
 pub trait BorrowFromWorld<'a> {
     fn borrow(world: &'a World) -> Self;
 }
 
 pub struct Comp<'a, T> {
-    set: Ref<'a, SparseSet<T>>,
+    set: AtomicRef<'a, SparseSet<T>>,
 }
 
 impl<'a, T> BorrowFromWorld<'a> for Comp<'a, T>
@@ -49,7 +49,7 @@ impl<'a, T> StorageView<'a> for &'a Comp<'a, T> {
 }
 
 pub struct CompMut<'a, T> {
-    set: RefMut<'a, SparseSet<T>>,
+    set: AtomicRefMut<'a, SparseSet<T>>,
 }
 
 impl<'a, T> StorageView<'a> for &'a CompMut<'a, T> {
@@ -113,7 +113,7 @@ where
 }
 
 pub struct RawViewMut<'a, T> {
-    pub(crate) set: RefMut<'a, SparseSet<T>>,
+    pub set: AtomicRefMut<'a, SparseSet<T>>,
 }
 
 impl<'a, T> BorrowFromWorld<'a> for RawViewMut<'a, T>

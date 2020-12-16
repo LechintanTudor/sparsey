@@ -5,8 +5,17 @@ authors = ["Tudor Lechintan <lechintantudor02@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+atomic_refcell = "0.1.6"
 paste = "1"
 
 [[example]]
 name = "test"
 path = "examples/test.rs"
+
+[[example]]
+name = "groups"
+path = "examples/groups.rs"
+
+[[example]]
+name = "world"
+path = "examples/world.rs"
