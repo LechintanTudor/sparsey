@@ -68,6 +68,12 @@ impl Storages {
         })
     }
 
+    pub unsafe fn get_raw_unchecked(&self, component: TypeId) -> Option<&dyn AbstractStorage> {
+        self.storages
+            .get(&component)
+            .map(|s| (*s.as_ptr()).as_ref())
+    }
+
     pub unsafe fn get_mut_unchecked<T>(&self) -> Option<&mut SparseSet<T>>
     where
         T: Component,
@@ -78,5 +84,14 @@ impl Storages {
                 None => unreachable_unchecked(),
             }
         })
+    }
+
+    pub unsafe fn get_mut_raw_unchecked(
+        &self,
+        component: TypeId,
+    ) -> Option<&mut dyn AbstractStorage> {
+        self.storages
+            .get(&component)
+            .map(|s| (*s.as_ptr()).as_mut())
     }
 }

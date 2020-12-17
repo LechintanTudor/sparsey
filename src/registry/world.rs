@@ -2,14 +2,10 @@ use crate::{
     entity::Entity,
     group::WorldLayoutDescriptor,
     registry::*,
-    storage::{AbstractStorage, EntityStorage, SparseSet},
+    storage::{EntityStorage, RawStorageView, SparseSet},
 };
 use atomic_refcell::{AtomicRef, AtomicRefMut};
-use std::{
-    collections::HashSet,
-    hint::unreachable_unchecked,
-    ops::{Deref, DerefMut},
-};
+use std::{collections::HashSet, hint::unreachable_unchecked};
 
 pub struct World {
     entities: EntityStorage,
@@ -22,11 +18,14 @@ impl World {
     where
         L: WorldLayoutDescriptor,
     {
-        Self {
+        let mut world = Self {
             entities: Default::default(),
             storages: Default::default(),
             groups: Groups::new(L::world_layout()),
-        }
+        };
+
+        L::register_components(&mut world);
+        world
     }
 
     pub fn register<T>(&mut self)
@@ -86,18 +85,18 @@ impl World {
             .map(|c| c.group_index())
             .collect::<HashSet<_>>();
 
-        let mut storages = Vec::new();
+        let mut storages = Vec::<RawStorageView>::new();
 
         for group_data in group_indexes
             .iter()
             .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
         {
-            storages.extend(
-                group_data
-                    .components()
-                    .iter()
-                    .map(|&c| self.storages.borrow_raw_mut(c).unwrap()),
-            );
+            storages.extend(group_data.components().iter().map(|&c| unsafe {
+                self.storages
+                    .get_mut_raw_unchecked(c)
+                    .unwrap()
+                    .as_raw_storage_view()
+            }));
 
             let (_, subgroup_ends, subgroup_lengths) = group_data.split();
             let mut previous_end = 0_usize;
@@ -139,7 +138,12 @@ impl World {
             let mut storages = group_data
                 .components()
                 .iter()
-                .map(|&c| self.storages.borrow_raw_mut(c).unwrap())
+                .map(|&c| unsafe {
+                    self.storages
+                        .get_mut_raw_unchecked(c)
+                        .unwrap()
+                        .as_raw_storage_view()
+                })
                 .collect::<Vec<_>>();
 
             let (_, subgroup_ends, subgroup_lengths) = group_data.split();
@@ -205,13 +209,14 @@ enum RemoveGroupStatus {
     MissingComponents,
 }
 
-fn insert_group_status<S>(storages: &[S], group_len: usize, entity: Entity) -> InsertGroupStatus
-where
-    S: Deref<Target = dyn AbstractStorage>,
-{
+fn insert_group_status(
+    storages: &[RawStorageView],
+    group_len: usize,
+    entity: Entity,
+) -> InsertGroupStatus {
     let mut status = InsertGroupStatus::Grouped;
 
-    for storage in storages.iter().map(|s| s.deref()) {
+    for storage in storages.iter() {
         match storage.get_index_entity(entity) {
             Some(index_entity) => {
                 if index_entity.index() >= group_len {
@@ -225,13 +230,14 @@ where
     status
 }
 
-fn remove_group_status<S>(storages: &[S], group_len: usize, entity: Entity) -> RemoveGroupStatus
-where
-    S: Deref<Target = dyn AbstractStorage>,
-{
+fn remove_group_status(
+    storages: &[RawStorageView],
+    group_len: usize,
+    entity: Entity,
+) -> RemoveGroupStatus {
     let mut status = RemoveGroupStatus::Ungrouped;
 
-    for storage in storages.iter().map(|s| s.deref()) {
+    for storage in storages.iter() {
         match storage.get_index_entity(entity) {
             Some(index_entity) => {
                 if index_entity.index() < group_len {
@@ -245,11 +251,8 @@ where
     status
 }
 
-unsafe fn group_components<S>(storages: &mut [S], group_len: &mut usize, entity: Entity)
-where
-    S: DerefMut<Target = dyn AbstractStorage>,
-{
-    for storage in storages.iter_mut().map(|s| s.deref_mut()) {
+unsafe fn group_components(storages: &mut [RawStorageView], group_len: &mut usize, entity: Entity) {
+    for storage in storages.iter_mut() {
         let index = match storage.get_index_entity(entity) {
             Some(index_entity) => index_entity.index(),
             None => unreachable_unchecked(),
@@ -261,14 +264,15 @@ where
     *group_len += 1;
 }
 
-unsafe fn ungroup_components<S>(storages: &mut [S], group_len: &mut usize, entity: Entity)
-where
-    S: DerefMut<Target = dyn AbstractStorage>,
-{
+unsafe fn ungroup_components(
+    storages: &mut [RawStorageView],
+    group_len: &mut usize,
+    entity: Entity,
+) {
     if *group_len > 0 {
         let last_index = *group_len - 1;
 
-        for storage in storages.iter_mut().map(|s| s.deref_mut()) {
+        for storage in storages.iter_mut() {
             let index = match storage.get_index_entity(entity) {
                 Some(index_entity) => index_entity.index(),
                 None => unreachable_unchecked(),

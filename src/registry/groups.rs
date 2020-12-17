@@ -43,6 +43,12 @@ impl Groups {
         }
     }
 
+    pub fn iter_components(&mut self) -> impl Iterator<Item = &TypeId> {
+        self.groups
+            .iter()
+            .flat_map(|g| unsafe { (&*g.as_ptr()).components.iter() })
+    }
+
     pub fn get_subgroup_index(&self, component: ComponentTypeId) -> Option<&SubgroupIndex> {
         self.indexes.get(&component)
     }

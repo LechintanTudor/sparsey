@@ -1,7 +1,7 @@
 use crate::{
     data::view::StorageView,
     entity::{Entity, IndexEntity},
-    storage::{AbstractStorage, SparseArray, SparseSetView, SparseSetViewMut},
+    storage::{AbstractStorage, RawStorageView, SparseArray, SparseSetView, SparseSetViewMut},
 };
 use std::{any::Any, mem, ptr};
 
@@ -86,6 +86,10 @@ impl<T> SparseSet<T> {
 
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         self.as_mut()
+    }
+
+    pub unsafe fn split_raw(&mut self) -> (&mut SparseArray, &mut [Entity], &mut [T]) {
+        (&mut self.sparse, &mut self.dense, &mut self.data)
     }
 }
 
@@ -217,12 +221,8 @@ where
         self
     }
 
-    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.sparse.get(entity)
-    }
-
-    fn swap(&mut self, i1: usize, i2: usize) {
-        SparseSet::swap(self, i1, i2);
+    fn as_raw_storage_view(&mut self) -> RawStorageView {
+        RawStorageView::new(self)
     }
 }
 
