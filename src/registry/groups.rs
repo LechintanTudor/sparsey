@@ -1,6 +1,6 @@
 use crate::group::{GroupLayout, WorldLayout};
 use atomic_refcell::AtomicRefCell;
-use std::{any::TypeId, collections::HashMap};
+use std::{any::TypeId, collections::HashMap, slice::SliceIndex};
 
 type ComponentTypeId = TypeId;
 
@@ -41,12 +41,6 @@ impl Groups {
             indexes,
             groups: groups.into(),
         }
-    }
-
-    pub fn iter_components(&mut self) -> impl Iterator<Item = &TypeId> {
-        self.groups
-            .iter()
-            .flat_map(|g| unsafe { (&*g.as_ptr()).components.iter() })
     }
 
     pub fn get_subgroup_index(&self, component: ComponentTypeId) -> Option<&SubgroupIndex> {
@@ -110,6 +104,19 @@ impl Group {
             &self.subgroup_arities,
             &mut self.subgroup_lengths,
         )
+    }
+
+    pub fn iter_subgroups_mut<I>(
+        &mut self,
+        range: I,
+    ) -> impl DoubleEndedIterator<Item = (usize, &mut usize)>
+    where
+        I: SliceIndex<[usize], Output = [usize]> + Clone,
+    {
+        (&self.subgroup_arities[range.clone()])
+            .iter()
+            .zip((&mut self.subgroup_lengths[range]).iter_mut())
+            .map(|(a, l)| (*a, l))
     }
 
     pub fn components(&self) -> &[TypeId] {

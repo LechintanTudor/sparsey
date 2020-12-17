@@ -87,33 +87,31 @@ impl World {
 
         let mut storages = Vec::<RawStorageView>::new();
 
-        for group_data in group_indexes
+        for group in group_indexes
             .iter()
             .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
         {
-            storages.extend(group_data.components().iter().map(|&c| unsafe {
+            storages.extend(group.components().iter().map(|&c| unsafe {
                 self.storages
                     .get_mut_raw_unchecked(c)
                     .unwrap()
                     .as_raw_storage_view()
             }));
 
-            let (_, subgroup_ends, subgroup_lengths) = group_data.split();
-            let mut previous_end = 0_usize;
+            let mut previous_arity = 0_usize;
 
-            for (&group_end, group_len) in subgroup_ends.iter().zip(subgroup_lengths.iter_mut()) {
-                let status =
-                    insert_group_status(&storages[previous_end..group_end], *group_len, entity);
+            for (arity, len) in group.iter_subgroups_mut(..) {
+                let status = group_insert_status(&storages[previous_arity..arity], *len, entity);
 
                 match status {
-                    InsertGroupStatus::Grouped => {}
                     InsertGroupStatus::NeedsGrouping => unsafe {
-                        group_components(&mut storages[..group_end], group_len, entity);
+                        group_components(&mut storages[..arity], len, entity);
                     },
                     InsertGroupStatus::MissingComponents => break,
+                    InsertGroupStatus::Grouped => (),
                 }
 
-                previous_end = group_end;
+                previous_arity = arity;
             }
 
             storages.clear()
@@ -131,63 +129,52 @@ impl World {
             .map(|c| c.group_index())
             .collect::<HashSet<_>>();
 
-        for group_data in group_indexes
+        let mut storages = Vec::<RawStorageView>::new();
+
+        for group in group_indexes
             .iter()
             .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
         {
-            let mut storages = group_data
-                .components()
-                .iter()
-                .map(|&c| unsafe {
-                    self.storages
-                        .get_mut_raw_unchecked(c)
-                        .unwrap()
-                        .as_raw_storage_view()
-                })
-                .collect::<Vec<_>>();
+            storages.extend(group.components().iter().map(|&c| unsafe {
+                self.storages
+                    .get_mut_raw_unchecked(c)
+                    .unwrap()
+                    .as_raw_storage_view()
+            }));
 
-            let (_, subgroup_ends, subgroup_lengths) = group_data.split();
-            let mut previous_end = 0_usize;
-
+            let mut previous_arity = 0_usize;
             let mut ungroup_start = Option::<usize>::None;
-            let mut ungroup_length = 0;
+            let mut ungroup_len = 0;
 
-            for (i, (&group_end, group_len)) in subgroup_ends
-                .iter()
-                .zip(subgroup_lengths.iter_mut())
-                .enumerate()
-            {
-                let status =
-                    remove_group_status(&storages[previous_end..group_end], *group_len, entity);
+            for (i, (arity, len)) in group.iter_subgroups_mut(..).enumerate() {
+                let status = group_remove_status(&storages[previous_arity..arity], *len, entity);
 
                 match status {
-                    RemoveGroupStatus::Ungrouped => break,
                     RemoveGroupStatus::NeedsUngrouping => {
                         if ungroup_start.is_none() {
                             ungroup_start = Some(i);
                         }
 
-                        ungroup_length += 1;
+                        ungroup_len += 1;
                     }
+                    RemoveGroupStatus::Ungrouped => break,
                     RemoveGroupStatus::MissingComponents => break,
                 }
 
-                previous_end = group_end;
+                previous_arity = arity;
             }
 
             if let Some(ungroup_start) = ungroup_start {
-                let subgroup_ends = &subgroup_ends[ungroup_start..(ungroup_start + ungroup_length)];
-                let subgroup_lengths =
-                    &mut subgroup_lengths[ungroup_start..(ungroup_start + ungroup_length)];
+                let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
-                for (&group_end, group_len) in
-                    subgroup_ends.iter().zip(subgroup_lengths.iter_mut()).rev()
-                {
+                for (arity, len) in group.iter_subgroups_mut(ungroup_range).rev() {
                     unsafe {
-                        ungroup_components(&mut storages[..group_end], group_len, entity);
+                        ungroup_components(&mut storages[..arity], len, entity);
                     }
                 }
             }
+
+            storages.clear();
         }
 
         let mut target = <C::Target as BorrowFromWorld>::borrow(self);
@@ -209,7 +196,7 @@ enum RemoveGroupStatus {
     MissingComponents,
 }
 
-fn insert_group_status(
+fn group_insert_status(
     storages: &[RawStorageView],
     group_len: usize,
     entity: Entity,
@@ -230,7 +217,7 @@ fn insert_group_status(
     status
 }
 
-fn remove_group_status(
+fn group_remove_status(
     storages: &[RawStorageView],
     group_len: usize,
     entity: Entity,
