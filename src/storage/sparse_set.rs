@@ -1,7 +1,7 @@
 use crate::{
     data::view::StorageView,
     entity::{Entity, IndexEntity},
-    storage::{AbstractStorage, RawStorageView, SparseArray, SparseSetView, SparseSetViewMut},
+    storage::{AbstractStorage, RawStorageView, SparseArray},
 };
 use std::{any::Any, mem, ptr};
 
@@ -58,106 +58,79 @@ impl<T> SparseSet<T> {
         Some(self.data.swap_remove(sparse_entity.index()))
     }
 
-    pub fn swap(&mut self, a: usize, b: usize) {
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains(entity)
+    }
+
+    pub fn get(&self, entity: Entity) -> Option<&T> {
+        let index = self.sparse.get(entity)?.index();
+        unsafe { Some(self.data.get_unchecked(index)) }
+    }
+
+    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
+        let index = self.sparse.get(entity)?.index();
+        unsafe { Some(self.data.get_unchecked_mut(index)) }
+    }
+
+    pub fn swap(&mut self, a: usize, b: usize) -> bool {
         if a < self.len() && b < self.len() && a != b {
             unsafe {
-                let index_a = self.dense.get_unchecked(a).index();
-                let index_b = self.dense.get_unchecked(b).index();
-                self.sparse.swap_unchecked(index_a, index_b);
-
-                ptr::swap_nonoverlapping(
-                    self.dense.as_mut_ptr().add(a),
-                    self.dense.as_mut_ptr().add(b),
-                    1,
-                );
-
-                ptr::swap_nonoverlapping(
-                    self.data.as_mut_ptr().add(a),
-                    self.data.as_mut_ptr().add(b),
-                    1,
-                )
+                self.swap_unchecked(a, b);
             }
+            true
+        } else {
+            false
         }
     }
 
-    pub fn as_slice(&self) -> &[T] {
-        self.as_ref()
+    pub fn sparse(&self) -> &SparseArray {
+        &self.sparse
     }
 
-    pub fn as_mut_slice(&mut self) -> &mut [T] {
-        self.as_mut()
+    pub fn dense(&self) -> &[Entity] {
+        &self.dense
+    }
+
+    pub fn data(&self) -> &[T] {
+        &self.data
+    }
+
+    pub fn data_mut(&mut self) -> &mut [T] {
+        &mut self.data
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn split(&self) -> (&SparseArray, &[Entity], &[T]) {
+        (&self.sparse, &self.dense, &self.data)
+    }
+
+    pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
+        (&self.sparse, &self.dense, &mut self.data)
     }
 
     pub unsafe fn split_raw(&mut self) -> (&mut SparseArray, &mut [Entity], &mut [T]) {
         (&mut self.sparse, &mut self.dense, &mut self.data)
     }
-}
 
-impl<T> SparseSetView for SparseSet<T> {
-    type Component = T;
+    pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+        let index_a = self.dense.get_unchecked(a).index();
+        let index_b = self.dense.get_unchecked(b).index();
+        self.sparse.swap_unchecked(index_a, index_b);
 
-    fn sparse(&self) -> &SparseArray {
-        &self.sparse
-    }
+        ptr::swap_nonoverlapping(
+            self.dense.as_mut_ptr().add(a),
+            self.dense.as_mut_ptr().add(b),
+            1,
+        );
 
-    fn dense(&self) -> &[Entity] {
-        &self.dense
-    }
-
-    fn data(&self) -> &[Self::Component] {
-        &self.data
-    }
-
-    fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains(entity)
-    }
-
-    fn get(&self, entity: Entity) -> Option<&T> {
-        let index = self.sparse.get(entity)?.index();
-        unsafe { Some(self.data.get_unchecked(index)) }
-    }
-
-    fn split(&self) -> (&SparseArray, &[Entity], &[Self::Component]) {
-        (&self.sparse, &self.dense, &self.data)
-    }
-
-    unsafe fn get_unchecked(&self, entity: Entity) -> &Self::Component {
-        self.data.get_unchecked(entity.index())
-    }
-}
-
-impl<T> SparseSetViewMut for SparseSet<T> {
-    fn data_mut(&mut self) -> &mut [Self::Component] {
-        &mut self.data
-    }
-
-    fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        let index = self.sparse.get(entity)?.index();
-        unsafe { Some(self.data.get_unchecked_mut(index)) }
-    }
-
-    fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
-        (&self.sparse, &self.dense, &mut self.data)
-    }
-
-    unsafe fn get_unchecked_mut(&mut self, entity: Entity) -> &mut Self::Component {
-        self.data.get_unchecked_mut(entity.index())
-    }
-}
-
-impl<T> AsRef<[T]> for SparseSet<T> {
-    fn as_ref(&self) -> &[T] {
-        &self.data
-    }
-}
-
-impl<T> AsMut<[T]> for SparseSet<T> {
-    fn as_mut(&mut self) -> &mut [T] {
-        &mut self.data
+        ptr::swap_nonoverlapping(
+            self.data.as_mut_ptr().add(a),
+            self.data.as_mut_ptr().add(b),
+            1,
+        )
     }
 }
 
@@ -168,12 +141,12 @@ impl<'a, T> StorageView<'a> for &'a SparseSet<T> {
     type Data = *const T;
 
     unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        let (sparse, dense, data) = SparseSetView::split(self);
+        let (sparse, dense, data) = self.split();
         (sparse, dense, data.as_ptr())
     }
 
     unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        SparseSetView::get(self, entity)
+        self.get(entity)
     }
 
     unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
@@ -192,12 +165,12 @@ impl<'a, T> StorageView<'a> for &'a mut SparseSet<T> {
     type Data = *mut T;
 
     unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        let (sparse, dense, data) = SparseSetViewMut::split_mut(self);
+        let (sparse, dense, data) = self.split_mut();
         (sparse, dense, data.as_mut_ptr())
     }
 
     unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        SparseSetViewMut::get_mut(self, entity)
+        self.get_mut(entity)
     }
 
     unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {

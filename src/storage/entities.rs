@@ -2,7 +2,7 @@ use crate::{
     data::view::StorageView,
     entity::{Entity, IndexEntity},
     registry::{BorrowFromWorld, World},
-    storage::{SparseArray, SparseSet, SparseSetView},
+    storage::{SparseArray, SparseSet},
 };
 use std::ops::Deref;
 
