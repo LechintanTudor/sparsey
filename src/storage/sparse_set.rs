@@ -1,7 +1,7 @@
 use crate::{
     data::view::StorageView,
     entity::{Entity, IndexEntity},
-    storage::{AbstractStorage, RawStorageView, SparseArray},
+    storage::{AbstractStorage, AbstractStorageViewMut, SparseArray},
 };
 use std::{any::Any, mem, ptr};
 
@@ -194,8 +194,8 @@ where
         self
     }
 
-    fn as_raw_storage_view(&mut self) -> RawStorageView {
-        RawStorageView::new(self)
+    fn as_storage_view_mut(&mut self) -> AbstractStorageViewMut {
+        AbstractStorageViewMut::new(self)
     }
 }
 

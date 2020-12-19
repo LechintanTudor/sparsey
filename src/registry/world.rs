@@ -2,7 +2,7 @@ use crate::{
     entity::Entity,
     group::WorldLayoutDescriptor,
     registry::*,
-    storage::{EntityStorage, RawStorageView, SparseSet},
+    storage::{EntityStorage, AbstractStorageViewMut, SparseSet},
 };
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::{collections::HashSet, hint::unreachable_unchecked};
@@ -85,7 +85,7 @@ impl World {
             .map(|c| c.group_index())
             .collect::<HashSet<_>>();
 
-        let mut storages = Vec::<RawStorageView>::new();
+        let mut storages = Vec::<AbstractStorageViewMut>::new();
 
         for group in group_indexes
             .iter()
@@ -95,7 +95,7 @@ impl World {
                 self.storages
                     .get_mut_raw_unchecked(c)
                     .unwrap()
-                    .as_raw_storage_view()
+                    .as_storage_view_mut()
             }));
 
             let mut previous_arity = 0_usize;
@@ -129,7 +129,7 @@ impl World {
             .map(|c| c.group_index())
             .collect::<HashSet<_>>();
 
-        let mut storages = Vec::<RawStorageView>::new();
+        let mut storages = Vec::<AbstractStorageViewMut>::new();
 
         for group in group_indexes
             .iter()
@@ -139,7 +139,7 @@ impl World {
                 self.storages
                     .get_mut_raw_unchecked(c)
                     .unwrap()
-                    .as_raw_storage_view()
+                    .as_storage_view_mut()
             }));
 
             let mut previous_arity = 0_usize;
@@ -197,7 +197,7 @@ enum RemoveGroupStatus {
 }
 
 fn group_insert_status(
-    storages: &[RawStorageView],
+    storages: &[AbstractStorageViewMut],
     group_len: usize,
     entity: Entity,
 ) -> InsertGroupStatus {
@@ -218,7 +218,7 @@ fn group_insert_status(
 }
 
 fn group_remove_status(
-    storages: &[RawStorageView],
+    storages: &[AbstractStorageViewMut],
     group_len: usize,
     entity: Entity,
 ) -> RemoveGroupStatus {
@@ -238,7 +238,7 @@ fn group_remove_status(
     status
 }
 
-unsafe fn group_components(storages: &mut [RawStorageView], group_len: &mut usize, entity: Entity) {
+unsafe fn group_components(storages: &mut [AbstractStorageViewMut], group_len: &mut usize, entity: Entity) {
     for storage in storages.iter_mut() {
         let index = match storage.get_index_entity(entity) {
             Some(index_entity) => index_entity.index(),
@@ -252,7 +252,7 @@ unsafe fn group_components(storages: &mut [RawStorageView], group_len: &mut usiz
 }
 
 unsafe fn ungroup_components(
-    storages: &mut [RawStorageView],
+    storages: &mut [AbstractStorageViewMut],
     group_len: &mut usize,
     entity: Entity,
 ) {

@@ -12,17 +12,17 @@ where
 
     fn as_mut_any(&mut self) -> &mut dyn Any;
 
-    fn as_raw_storage_view(&mut self) -> RawStorageView;
+    fn as_storage_view_mut(&mut self) -> AbstractStorageViewMut;
 }
 
-pub struct RawStorageView<'a> {
+pub struct AbstractStorageViewMut<'a> {
     sparse: &'a mut SparseArray,
     dense: &'a mut [Entity],
     data: *mut (),
     component_size: usize,
 }
 
-impl<'a> RawStorageView<'a> {
+impl<'a> AbstractStorageViewMut<'a> {
     pub fn new<T>(set: &'a mut SparseSet<T>) -> Self {
         let (sparse, dense, data) = unsafe { set.split_raw() };
 
