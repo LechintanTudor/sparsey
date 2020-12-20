@@ -12,6 +12,15 @@ struct Acceleration(f32, f32);
 #[derive(Copy, Clone, Debug)]
 struct Immobile;
 
+macro_rules! concat_tuples {
+    (($($a:tt),*), ($($b:tt),*)) => {
+        (
+            $($a,)*
+            $($b,)*
+        )
+    };
+}
+
 fn main() {
     let mut world = World::new::<()>();
     world.register::<Position>();
@@ -35,18 +44,20 @@ fn main() {
         Comp<Immobile>,
     )>::borrow(&world);
 
-    for (entity, position, velocity, acceleration, _) in (
-        &entities,
-        &mut positions,
-        &mut velocities,
-        maybe(&accelerations),
-        not(&immobiles),
-    )
-        .iter()
-    {
-        println!(
-            "{:?}: {:?}, {:?}, {:?}",
-            entity, position, velocity, acceleration
-        );
-    }
+    // for (entity, position, velocity, acceleration, _) in (
+    //     &entities,
+    //     &mut positions,
+    //     &mut velocities,
+    //     maybe(&accelerations),
+    //     not(&immobiles),
+    // )
+    //     .iter()
+    // {
+    //     println!(
+    //         "{:?}: {:?}, {:?}, {:?}",
+    //         entity, position, velocity, acceleration
+    //     );
+    // }
+
+    let c = concat_tuples!((10, 20, 30), ("HEYO", 40));
 }

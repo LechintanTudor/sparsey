@@ -1,4 +1,5 @@
-pub use self::{descriptor::*, layout::*};
+pub use self::{descriptor::*, group::*, layout::*};
 
 mod descriptor;
+mod group;
 mod layout;

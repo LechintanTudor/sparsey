@@ -2,7 +2,7 @@ use crate::{
     entity::Entity,
     group::WorldLayoutDescriptor,
     registry::*,
-    storage::{EntityStorage, AbstractStorageViewMut, SparseSet},
+    storage::{AbstractStorageViewMut, EntityStorage, SparseSet},
 };
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::{collections::HashSet, hint::unreachable_unchecked};
@@ -238,7 +238,11 @@ fn group_remove_status(
     status
 }
 
-unsafe fn group_components(storages: &mut [AbstractStorageViewMut], group_len: &mut usize, entity: Entity) {
+unsafe fn group_components(
+    storages: &mut [AbstractStorageViewMut],
+    group_len: &mut usize,
+    entity: Entity,
+) {
     for storage in storages.iter_mut() {
         let index = match storage.get_index_entity(entity) {
             Some(index_entity) => index_entity.index(),

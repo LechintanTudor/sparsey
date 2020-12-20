@@ -1,5 +1,4 @@
 use crate::{
-    data::view::StorageView,
     entity::{Entity, IndexEntity},
     storage::{AbstractStorage, AbstractStorageViewMut, SparseArray},
 };
@@ -131,54 +130,6 @@ impl<T> SparseSet<T> {
             self.data.as_mut_ptr().add(b),
             1,
         )
-    }
-}
-
-impl<'a, T> StorageView<'a> for &'a SparseSet<T> {
-    const STRICT: bool = true;
-    type Output = &'a T;
-    type Component = &'a T;
-    type Data = *const T;
-
-    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        let (sparse, dense, data) = self.split();
-        (sparse, dense, data.as_ptr())
-    }
-
-    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        self.get(entity)
-    }
-
-    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
-        &*data.add(entity.index())
-    }
-
-    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
-        component
-    }
-}
-
-impl<'a, T> StorageView<'a> for &'a mut SparseSet<T> {
-    const STRICT: bool = true;
-    type Output = &'a mut T;
-    type Component = &'a mut T;
-    type Data = *mut T;
-
-    unsafe fn split_for_iteration(self) -> (&'a SparseArray, &'a [Entity], Self::Data) {
-        let (sparse, dense, data) = self.split_mut();
-        (sparse, dense, data.as_mut_ptr())
-    }
-
-    unsafe fn get_output(self, entity: Entity) -> Option<Self::Output> {
-        self.get_mut(entity)
-    }
-
-    unsafe fn get_component(data: Self::Data, entity: IndexEntity) -> Self::Component {
-        &mut *data.add(entity.index())
-    }
-
-    unsafe fn get_from_component(component: Option<Self::Component>) -> Option<Self::Output> {
-        component
     }
 }
 
