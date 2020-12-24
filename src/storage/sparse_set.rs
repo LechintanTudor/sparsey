@@ -2,12 +2,70 @@ use crate::{
     entity::{Entity, IndexEntity},
     storage::{AbstractStorage, AbstractStorageViewMut, SparseArray},
 };
-use std::{any::Any, mem, ptr};
+use std::{
+    any::Any,
+    mem,
+    ops::{Deref, DerefMut},
+    ptr,
+};
+
+pub const COMPONENT_FLAG_NONE: ComponentFlags = 0;
+pub const COMPONENT_FLAG_CHANGED: ComponentFlags = 1;
+pub const COMPONENT_FLAG_ADDED: ComponentFlags = 1 << 1;
+
+pub type ComponentFlags = u8;
+
+pub struct ComponentRefMut<'a, T>
+where
+    T: 'static,
+{
+    data: &'a mut T,
+    flags: &'a mut ComponentFlags,
+}
+
+impl<'a, T> ComponentRefMut<'a, T>
+where
+    T: 'static,
+{
+    pub fn new(data: &'a mut T, flags: &'a mut ComponentFlags) -> Self {
+        Self { data, flags }
+    }
+
+    pub fn flags(component_ref: &ComponentRefMut<'a, T>) -> ComponentFlags {
+        *component_ref.flags
+    }
+
+    pub fn into_component(component_ref: ComponentRefMut<'a, T>) -> &'a mut T {
+        component_ref.data
+    }
+}
+
+impl<T> Deref for ComponentRefMut<'_, T>
+where
+    T: 'static,
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<T> DerefMut for ComponentRefMut<'_, T>
+where
+    T: 'static,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        *self.flags |= COMPONENT_FLAG_CHANGED;
+        self.data
+    }
+}
 
 pub struct SparseSet<T> {
     sparse: SparseArray,
     dense: Vec<Entity>,
     data: Vec<T>,
+    flags: Vec<ComponentFlags>,
 }
 
 impl<T> Default for SparseSet<T> {
@@ -16,6 +74,7 @@ impl<T> Default for SparseSet<T> {
             sparse: Default::default(),
             dense: Default::default(),
             data: Default::default(),
+            flags: Default::default(),
         }
     }
 }
@@ -29,12 +88,19 @@ impl<T> SparseSet<T> {
         let sparse_entity = self.sparse.get_mut_or_allocate(entity.index());
 
         if sparse_entity.is_valid() {
+            if sparse_entity.id() == entity.id() {
+                self.flags[sparse_entity.index()] |= COMPONENT_FLAG_CHANGED;
+            } else {
+                self.flags[sparse_entity.index()] = COMPONENT_FLAG_ADDED;
+            }
+
             *sparse_entity = IndexEntity::new(sparse_entity.id(), entity.gen());
             Some(mem::replace(&mut self.data[sparse_entity.index()], value))
         } else {
             *sparse_entity = IndexEntity::new(self.dense.len() as u32, entity.gen());
             self.dense.push(entity);
             self.data.push(value);
+            self.flags.push(COMPONENT_FLAG_ADDED);
             None
         }
     }
@@ -48,6 +114,7 @@ impl<T> SparseSet<T> {
 
         let last_index = self.dense.last()?.index();
         self.dense.swap_remove(sparse_entity.index());
+        self.flags.swap_remove(sparse_entity.index());
 
         unsafe {
             *self.sparse.get_unchecked_mut(last_index) = sparse_entity;
@@ -55,6 +122,14 @@ impl<T> SparseSet<T> {
         }
 
         Some(self.data.swap_remove(sparse_entity.index()))
+    }
+
+    pub fn clear_flags(&mut self) {
+        self.flags.iter_mut().for_each(|f| *f = COMPONENT_FLAG_NONE);
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
     }
 
     pub fn contains(&self, entity: Entity) -> bool {
@@ -66,9 +141,14 @@ impl<T> SparseSet<T> {
         unsafe { Some(self.data.get_unchecked(index)) }
     }
 
-    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
+    pub fn get_mut(&mut self, entity: Entity) -> Option<ComponentRefMut<T>> {
         let index = self.sparse.get(entity)?.index();
-        unsafe { Some(self.data.get_unchecked_mut(index)) }
+        unsafe {
+            Some(ComponentRefMut::new(
+                self.data.get_unchecked_mut(index),
+                self.flags.get_unchecked_mut(index),
+            ))
+        }
     }
 
     pub fn swap(&mut self, a: usize, b: usize) -> bool {
@@ -82,36 +162,24 @@ impl<T> SparseSet<T> {
         }
     }
 
-    pub fn sparse(&self) -> &SparseArray {
-        &self.sparse
+    pub fn split(&self) -> (&SparseArray, &[Entity], &[T], &[ComponentFlags]) {
+        (&self.sparse, &self.dense, &self.data, &self.flags)
     }
 
-    pub fn dense(&self) -> &[Entity] {
-        &self.dense
-    }
-
-    pub fn data(&self) -> &[T] {
-        &self.data
-    }
-
-    pub fn data_mut(&mut self) -> &mut [T] {
-        &mut self.data
-    }
-
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    pub fn split(&self) -> (&SparseArray, &[Entity], &[T]) {
-        (&self.sparse, &self.dense, &self.data)
-    }
-
-    pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T]) {
-        (&self.sparse, &self.dense, &mut self.data)
-    }
-
-    pub unsafe fn split_raw(&mut self) -> (&mut SparseArray, &mut [Entity], &mut [T]) {
-        (&mut self.sparse, &mut self.dense, &mut self.data)
+    pub unsafe fn split_mut(
+        &mut self,
+    ) -> (
+        &mut SparseArray,
+        &mut [Entity],
+        &mut [T],
+        &mut [ComponentFlags],
+    ) {
+        (
+            &mut self.sparse,
+            &mut self.dense,
+            &mut self.data,
+            &mut self.flags,
+        )
     }
 
     pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
@@ -129,7 +197,13 @@ impl<T> SparseSet<T> {
             self.data.as_mut_ptr().add(a),
             self.data.as_mut_ptr().add(b),
             1,
-        )
+        );
+
+        ptr::swap_nonoverlapping(
+            self.flags.as_mut_ptr().add(a),
+            self.flags.as_mut_ptr().add(b),
+            1,
+        );
     }
 }
 

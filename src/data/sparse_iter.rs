@@ -1,11 +1,11 @@
-use crate::{data::ComponentView, entity::Entity, storage::SparseArray};
+use crate::{data::IterableView, entity::Entity, storage::SparseArray};
 use paste::paste;
 
-unsafe fn split<'a, V>(view: V) -> (&'a SparseArray, &'a [Entity], V::Data)
+unsafe fn split<'a, V>(view: V) -> (&'a SparseArray, &'a [Entity], V::Data, V::Flags)
 where
-    V: ComponentView<'a>,
+    V: IterableView<'a>,
 {
-    view.split_for_iteration()
+    view.split()
 }
 
 fn shortest_dense<'a>(a: &'a [Entity], b: &'a [Entity]) -> &'a [Entity] {
@@ -17,24 +17,22 @@ fn shortest_dense<'a>(a: &'a [Entity], b: &'a [Entity]) -> &'a [Entity] {
 }
 
 fn strip_dense<'a, V>(
-    split_view: (&'a SparseArray, &'a [Entity], V::Data),
-) -> (&'a SparseArray, V::Data)
+    split_view: (&'a SparseArray, &'a [Entity], V::Data, V::Flags),
+) -> (&'a SparseArray, V::Data, V::Flags)
 where
-    V: ComponentView<'a>,
+    V: IterableView<'a>,
 {
-    (split_view.0, split_view.2)
+    (split_view.0, split_view.2, split_view.3)
 }
 
 unsafe fn get_output<'a, V>(
-    (sparse, data): (&'a SparseArray, V::Data),
+    (sparse, data, flags): (&'a SparseArray, V::Data, V::Flags),
     entity: Entity,
 ) -> Option<V::Output>
 where
-    V: ComponentView<'a>,
+    V: IterableView<'a>,
 {
-    sparse
-        .get(entity)
-        .map(|e| V::get_from_data(data, e.index()))
+    V::get(data, flags, sparse.get(entity)?.index())
 }
 
 macro_rules! shortest_dense {
@@ -51,16 +49,16 @@ macro_rules! impl_sparse_iter {
         paste! {
             pub struct $ident<'a, $($comp,)+>
             where
-                $($comp: ComponentView<'a>,)+
+                $($comp: IterableView<'a>,)+
             {
                 dense: &'a [Entity],
                 current_index: usize,
-                $([<set_ $comp:lower>]: (&'a SparseArray, $comp::Data),)+
+                $([<set_ $comp:lower>]: (&'a SparseArray, $comp::Data, $comp::Flags),)+
             }
 
             impl<'a, $($comp,)+> $ident<'a, $($comp,)+>
             where
-                $($comp: ComponentView<'a>,)+
+                $($comp: IterableView<'a>,)+
             {
                 pub fn new($([<set_ $comp:lower>]: $comp,)+) -> Self {
                     $(let [<set_ $comp:lower>] = unsafe { split([<set_ $comp:lower>]) };)+
@@ -81,7 +79,7 @@ macro_rules! impl_sparse_iter {
 
             impl<'a, $($comp,)+> Iterator for $ident<'a, $($comp,)+>
             where
-                $($comp: ComponentView<'a>,)+
+                $($comp: IterableView<'a>,)+
             {
                 type Item = ($($comp::Output,)+);
 

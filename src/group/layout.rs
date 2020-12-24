@@ -28,6 +28,7 @@ impl SubgroupLayoutBuilder {
         );
 
         let initial_len = self.components.len();
+        self.components.sort_unstable();
         self.components.dedup();
 
         assert_eq!(

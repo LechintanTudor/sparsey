@@ -1,8 +1,8 @@
 use crate::{
     entity::{Entity, IndexEntity},
-    storage::{SparseArray, SparseSet},
+    storage::{ComponentFlags, SparseArray, SparseSet, COMPONENT_FLAG_NONE},
 };
-use std::{any::Any, mem, ptr};
+use std::{any::Any, mem, ptr, slice};
 
 pub trait AbstractStorage
 where
@@ -19,19 +19,26 @@ pub struct AbstractStorageViewMut<'a> {
     sparse: &'a mut SparseArray,
     dense: &'a mut [Entity],
     data: *mut (),
+    flags: *mut ComponentFlags,
     component_size: usize,
 }
 
 impl<'a> AbstractStorageViewMut<'a> {
     pub fn new<T>(set: &'a mut SparseSet<T>) -> Self {
-        let (sparse, dense, data) = unsafe { set.split_raw() };
+        let (sparse, dense, data, flags) = unsafe { set.split_mut() };
 
         Self {
             sparse,
             dense,
             data: data.as_mut_ptr() as _,
             component_size: mem::size_of::<T>(),
+            flags: flags.as_mut_ptr(),
         }
+    }
+
+    pub fn clear_flags(&mut self) {
+        let flags = unsafe { slice::from_raw_parts_mut(self.flags, self.len()) };
+        flags.iter_mut().for_each(|f| *f = COMPONENT_FLAG_NONE);
     }
 
     pub fn len(&self) -> usize {
@@ -60,6 +67,8 @@ impl<'a> AbstractStorageViewMut<'a> {
                     self.data.add(b * self.component_size),
                     self.component_size,
                 );
+
+                ptr::swap_nonoverlapping(self.flags.add(a), self.flags.add(b), 1);
             }
         }
     }

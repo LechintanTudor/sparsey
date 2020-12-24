@@ -24,7 +24,7 @@ impl Storages {
     where
         T: Component,
     {
-        self.borrow_raw(TypeId::of::<T>()).map(|s| {
+        self.borrow_abstract(TypeId::of::<T>()).map(|s| {
             AtomicRef::map(s, |s| match s.as_any().downcast_ref::<SparseSet<T>>() {
                 Some(s) => s,
                 None => unsafe { unreachable_unchecked() },
@@ -36,7 +36,7 @@ impl Storages {
     where
         T: Component,
     {
-        self.borrow_raw_mut(TypeId::of::<T>()).map(|s| {
+        self.borrow_abstract_mut(TypeId::of::<T>()).map(|s| {
             AtomicRefMut::map(s, |s| match s.as_mut_any().downcast_mut::<SparseSet<T>>() {
                 Some(s) => s,
                 None => unsafe { unreachable_unchecked() },
@@ -44,13 +44,16 @@ impl Storages {
         })
     }
 
-    pub fn borrow_raw(&self, component: TypeId) -> Option<AtomicRef<dyn AbstractStorage>> {
+    pub fn borrow_abstract(&self, component: TypeId) -> Option<AtomicRef<dyn AbstractStorage>> {
         self.storages
             .get(&component)
             .map(|s| AtomicRef::map(s.borrow(), |s| s.as_ref()))
     }
 
-    pub fn borrow_raw_mut(&self, component: TypeId) -> Option<AtomicRefMut<dyn AbstractStorage>> {
+    pub fn borrow_abstract_mut(
+        &self,
+        component: TypeId,
+    ) -> Option<AtomicRefMut<dyn AbstractStorage>> {
         self.storages
             .get(&component)
             .map(|s| AtomicRefMut::map(s.borrow_mut(), |s| s.as_mut()))
@@ -68,12 +71,6 @@ impl Storages {
         })
     }
 
-    pub unsafe fn get_raw_unchecked(&self, component: TypeId) -> Option<&dyn AbstractStorage> {
-        self.storages
-            .get(&component)
-            .map(|s| (*s.as_ptr()).as_ref())
-    }
-
     pub unsafe fn get_mut_unchecked<T>(&self) -> Option<&mut SparseSet<T>>
     where
         T: Component,
@@ -86,7 +83,13 @@ impl Storages {
         })
     }
 
-    pub unsafe fn get_mut_raw_unchecked(
+    pub unsafe fn get_abstract_unchecked(&self, component: TypeId) -> Option<&dyn AbstractStorage> {
+        self.storages
+            .get(&component)
+            .map(|s| (*s.as_ptr()).as_ref())
+    }
+
+    pub unsafe fn get_abstract_mut_unchecked(
         &self,
         component: TypeId,
     ) -> Option<&mut dyn AbstractStorage> {

@@ -1,42 +1,11 @@
 use crate::{
-    entity::{Entity, IndexEntity},
     registry::{Component, World},
-    storage::{SparseArray, SparseSet},
+    storage::SparseSet,
 };
-use atomic_refcell::{AtomicRef, AtomicRefMut};
+use atomic_refcell::AtomicRefMut;
 
 pub trait BorrowFromWorld<'a> {
     fn borrow(world: &'a World) -> Self;
-}
-
-pub struct Comp<'a, T> {
-    set: AtomicRef<'a, SparseSet<T>>,
-}
-
-impl<'a, T> BorrowFromWorld<'a> for Comp<'a, T>
-where
-    T: Component,
-{
-    fn borrow(world: &'a World) -> Self {
-        Self {
-            set: world.borrow().unwrap(),
-        }
-    }
-}
-
-pub struct CompMut<'a, T> {
-    set: AtomicRefMut<'a, SparseSet<T>>,
-}
-
-impl<'a, T> BorrowFromWorld<'a> for CompMut<'a, T>
-where
-    T: Component,
-{
-    fn borrow(world: &'a World) -> Self {
-        Self {
-            set: world.borrow_mut().unwrap(),
-        }
-    }
 }
 
 pub struct RawViewMut<'a, T> {
@@ -75,3 +44,7 @@ impl_borrow_from_world!(A, B, C, D, E);
 impl_borrow_from_world!(A, B, C, D, E, F);
 impl_borrow_from_world!(A, B, C, D, E, F, G);
 impl_borrow_from_world!(A, B, C, D, E, F, G, H);
+impl_borrow_from_world!(A, B, C, D, E, F, G, H, I);
+impl_borrow_from_world!(A, B, C, D, E, F, G, H, I, J);
+impl_borrow_from_world!(A, B, C, D, E, F, G, H, I, J, K);
+impl_borrow_from_world!(A, B, C, D, E, F, G, H, I, J, K, L);

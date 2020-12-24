@@ -1,7 +1,7 @@
 use crate::{
-    entity::{Entity, IndexEntity},
+    entity::Entity,
     registry::{BorrowFromWorld, World},
-    storage::{SparseArray, SparseSet},
+    storage::SparseSet,
 };
 use std::ops::Deref;
 

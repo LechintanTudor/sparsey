@@ -4,13 +4,13 @@ use crate::{
     registry::*,
     storage::{AbstractStorageViewMut, EntityStorage, SparseSet},
 };
-use atomic_refcell::{AtomicRef, AtomicRefMut};
-use std::{collections::HashSet, hint::unreachable_unchecked};
+use atomic_refcell::AtomicRefMut;
+use std::{any::TypeId, collections::HashSet, hint::unreachable_unchecked};
 
 pub struct World {
     entities: EntityStorage,
     storages: Storages,
-    pub groups: Groups,
+    groups: Groups,
 }
 
 impl World {
@@ -35,18 +35,24 @@ impl World {
         self.storages.register::<T>()
     }
 
-    pub fn borrow<T>(&self) -> Option<AtomicRef<SparseSet<T>>>
+    pub unsafe fn get_comp<T>(&self) -> Option<Comp<T>>
     where
         T: Component,
     {
-        self.storages.borrow::<T>()
+        Some(Comp::new(
+            self.storages.get_unchecked::<T>()?,
+            self.groups.get_parent_group(TypeId::of::<T>()),
+        ))
     }
 
-    pub fn borrow_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
+    pub unsafe fn get_comp_mut<T>(&self) -> Option<CompMut<T>>
     where
         T: Component,
     {
-        self.storages.borrow_mut::<T>()
+        Some(CompMut::new(
+            self.storages.get_mut_unchecked::<T>()?,
+            self.groups.get_parent_group(TypeId::of::<T>()),
+        ))
     }
 
     pub(crate) fn borrow_raw_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
@@ -93,7 +99,7 @@ impl World {
         {
             storages.extend(group.components().iter().map(|&c| unsafe {
                 self.storages
-                    .get_mut_raw_unchecked(c)
+                    .get_abstract_mut_unchecked(c)
                     .unwrap()
                     .as_storage_view_mut()
             }));
@@ -137,7 +143,7 @@ impl World {
         {
             storages.extend(group.components().iter().map(|&c| unsafe {
                 self.storages
-                    .get_mut_raw_unchecked(c)
+                    .get_abstract_mut_unchecked(c)
                     .unwrap()
                     .as_storage_view_mut()
             }));

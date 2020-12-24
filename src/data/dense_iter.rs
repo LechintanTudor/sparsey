@@ -1,5 +1,12 @@
-use crate::{data::ComponentView, entity::Entity};
+use crate::{data::IterableView, entity::Entity};
 use paste::paste;
+
+unsafe fn get<'a, V>((data, flags): (V::Data, V::Flags), index: usize) -> Option<V::Output>
+where
+    V: IterableView<'a>,
+{
+    V::get(data, flags, index)
+}
 
 macro_rules! first_dense {
     ($x:expr) => {
@@ -15,26 +22,33 @@ macro_rules! impl_dense_iter {
         paste! {
             pub struct $ident<'a, $($comp,)+>
             where
-                $($comp: ComponentView<'a>,)+
+                $($comp: IterableView<'a>,)+
             {
                 dense: &'a [Entity],
                 current_index: usize,
-                $([<data_ $comp:lower>]: $comp::Data,)+
+                $([<set_ $comp:lower>]: ($comp::Data, $comp::Flags),)+
             }
 
             impl<'a, $($comp,)+> $ident<'a, $($comp,)+>
             where
-                $($comp: ComponentView<'a>,)+
+                $($comp: IterableView<'a>,)+
             {
                 #[allow(unused_variables)]
                 pub unsafe fn new_unchecked($([<view_ $comp:lower>]: $comp),+, group_len: usize) -> Self {
-                    $(let (_, [<dense_ $comp:lower>], [<data_ $comp:lower>]) = [<view_ $comp:lower>].split_for_iteration();)+
+                    $(
+                        let (
+                            _,
+                            [<dense_ $comp:lower>],
+                            [<data_ $comp:lower>],
+                            [<flags_ $comp:lower>],
+                        ) = [<view_ $comp:lower>].split();
+                    )+
                     let dense = &first_dense!($([<dense_ $comp:lower>]),+)[..group_len];
 
                     Self {
                         dense,
                         current_index: 0,
-                        $([<data_ $comp:lower>],)+
+                        $([<set_ $comp:lower>]: ([<data_ $comp:lower>], [<flags_ $comp:lower>]),)+
                     }
                 }
 
@@ -45,17 +59,21 @@ macro_rules! impl_dense_iter {
 
             impl<'a, $($comp,)+> Iterator for $ident<'a, $($comp,)+>
             where
-                $($comp: ComponentView<'a>,)+
+                $($comp: IterableView<'a>,)+
             {
                 type Item = ($($comp::Output,)+);
 
                 fn next(&mut self) -> Option<Self::Item> {
+                    if self.current_index >= self.dense.len() {
+                        return None;
+                    }
+
                     let index = self.current_index;
                     self.current_index += 1;
 
                     unsafe {
                         Some((
-                            $($comp::get_from_data(self.[<data_ $comp:lower>], index),)+
+                            $(get::<$comp>(self.[<set_ $comp:lower>], index)?,)+
                         ))
                     }
                 }
