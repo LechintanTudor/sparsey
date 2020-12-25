@@ -1,5 +1,5 @@
 use crate::{
-    data::{ParentGroup, ParentGroupInfo},
+    data::ParentGroup,
     group::{Group, WorldLayout},
 };
 use std::{any::TypeId, cell::UnsafeCell, collections::HashMap};
@@ -49,7 +49,7 @@ impl Groups {
         self.indexes.get(&component)
     }
 
-    pub fn get_parent_group(&self, component: ComponentTypeId) -> ParentGroup {
+    pub fn get_parent_group(&self, component: ComponentTypeId) -> Option<ParentGroup> {
         match self.get_subgroup_index(component) {
             Some(subgroup) => unsafe {
                 let group = self.get_unchecked(subgroup.group_index);
@@ -57,9 +57,9 @@ impl Groups {
                     .subgroup_lengths()
                     .get_unchecked(subgroup.subgroup_index);
 
-                ParentGroup::Some(ParentGroupInfo::new(group, subgroup_len))
+                Some(ParentGroup::new(group, subgroup_len))
             },
-            None => ParentGroup::None,
+            None => None,
         }
     }
 

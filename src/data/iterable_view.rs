@@ -1,19 +1,12 @@
 use crate::{entity::Entity, group::Group, storage::SparseArray};
 
 #[derive(Copy, Clone, Debug)]
-pub enum ParentGroup<'a> {
-    Some(ParentGroupInfo<'a>),
-    None,
-    Entities,
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct ParentGroupInfo<'a> {
+pub struct ParentGroup<'a> {
     group: &'a Group,
     subgroup_len: usize,
 }
 
-impl<'a> ParentGroupInfo<'a> {
+impl<'a> ParentGroup<'a> {
     pub fn new(group: &'a Group, subgroup_len: usize) -> Self {
         Self {
             group,
@@ -35,7 +28,7 @@ pub trait IterableView<'a> {
     type Flags: 'a + Copy;
     type Output: 'a;
 
-    unsafe fn parent_group(&self) -> ParentGroup<'a>;
+    unsafe fn parent_group(&self) -> Option<ParentGroup<'a>>;
 
     unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags);
 
