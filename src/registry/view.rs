@@ -22,11 +22,11 @@ where
     T: 'static,
 {
     set: &'a SparseSet<T>,
-    group: Option<ParentGroup<'a>>,
+    group: Option<ParentGroup>,
 }
 
 impl<'a, T> Comp<'a, T> {
-    pub unsafe fn new(set: &'a SparseSet<T>, group: Option<ParentGroup<'a>>) -> Self {
+    pub unsafe fn new(set: &'a SparseSet<T>, group: Option<ParentGroup>) -> Self {
         Self { set, group }
     }
 }
@@ -36,7 +36,7 @@ impl<'a, T> IterableView<'a> for Comp<'a, T> {
     type Flags = *const ComponentFlags;
     type Output = &'a T;
 
-    unsafe fn parent_group(&self) -> Option<ParentGroup<'a>> {
+    fn parent_group(&self) -> Option<ParentGroup> {
         self.group
     }
 
@@ -75,11 +75,11 @@ where
     T: 'static,
 {
     set: &'a mut SparseSet<T>,
-    group: Option<ParentGroup<'a>>,
+    group: Option<ParentGroup>,
 }
 
 impl<'a, T> CompMut<'a, T> {
-    pub unsafe fn new(set: &'a mut SparseSet<T>, group: Option<ParentGroup<'a>>) -> Self {
+    pub unsafe fn new(set: &'a mut SparseSet<T>, group: Option<ParentGroup>) -> Self {
         Self { set, group }
     }
 }
@@ -89,7 +89,7 @@ impl<'a, T> IterableView<'a> for &'a CompMut<'a, T> {
     type Flags = *const ComponentFlags;
     type Output = &'a T;
 
-    unsafe fn parent_group(&self) -> Option<ParentGroup<'a>> {
+    fn parent_group(&self) -> Option<ParentGroup> {
         self.group
     }
 
@@ -108,7 +108,7 @@ impl<'a, T> IterableView<'a> for &'a mut CompMut<'a, T> {
     type Flags = *mut ComponentFlags;
     type Output = ComponentRefMut<'a, T>;
 
-    unsafe fn parent_group(&self) -> Option<ParentGroup<'a>> {
+    fn parent_group(&self) -> Option<ParentGroup> {
         self.group
     }
 

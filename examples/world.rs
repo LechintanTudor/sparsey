@@ -35,7 +35,7 @@ fn main() {
         let (mut a, mut b, mut c, d, e) =
             <(CompMut<A>, CompMut<B>, CompMut<C>, CompMut<D>, CompMut<E>)>::get_from_world(&world);
 
-        let group_iter = DenseIter3::new_unchecked(&mut a, &mut b, &mut c, 2);
+        let group_iter = DenseIter3::new(&mut a, &mut b, &mut c).unwrap();
 
         for (a, b, c) in group_iter {
             println!("{:?}, {:?}, {:?}", *a, *b, *c);

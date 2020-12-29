@@ -1,4 +1,4 @@
-use crate::{data::IterableView, entity::Entity};
+use crate::{data::{IterableView, ParentGroup}, entity::Entity};
 use paste::paste;
 
 unsafe fn get<'a, V>((data, flags): (V::Data, V::Flags), index: usize) -> Option<V::Output>
@@ -8,7 +8,19 @@ where
     V::get(data, flags, index)
 }
 
-macro_rules! first_dense {
+fn get_parent_group(groups: &[ParentGroup]) -> Option<ParentGroup> {
+    let (first, other) = groups.split_first()?;
+
+    for group in other.iter() {
+        if group != first {
+            return None;
+        }
+    }
+
+    Some(*first)
+}
+
+macro_rules! first_of {
     ($x:expr) => {
         $x
     };
@@ -33,8 +45,21 @@ macro_rules! impl_dense_iter {
             where
                 $($comp: IterableView<'a>,)+
             {
+
+                pub fn new($([<view_ $comp:lower>]: $comp),+) -> Option<Self> {
+                    let parent_group = get_parent_group(&[
+                        $([<view_ $comp:lower>].parent_group()?,)+
+                    ])?;
+
+                    let subgroup_len = parent_group.subgroup_len();
+                    
+                    unsafe {
+                        Some(Self::new_unchecked($([<view_ $comp:lower>]),+, subgroup_len))
+                    }
+                }
+
                 #[allow(unused_variables)]
-                pub unsafe fn new_unchecked($([<view_ $comp:lower>]: $comp),+, group_len: usize) -> Self {
+                pub unsafe fn new_unchecked($([<view_ $comp:lower>]: $comp),+, subgroup_len: usize) -> Self {
                     $(
                         let (
                             _,
@@ -43,7 +68,7 @@ macro_rules! impl_dense_iter {
                             [<flags_ $comp:lower>],
                         ) = [<view_ $comp:lower>].split();
                     )+
-                    let dense = &first_dense!($([<dense_ $comp:lower>]),+)[..group_len];
+                    let dense = &first_of!($([<dense_ $comp:lower>]),+)[..subgroup_len];
 
                     Self {
                         dense,

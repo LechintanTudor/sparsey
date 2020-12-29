@@ -1,12 +1,15 @@
+use super::GroupLayout;
+use std::{any::TypeId, slice::SliceIndex, sync::atomic::{AtomicUsize, Ordering}};
+
+static CURRENT_GROUP_ID: AtomicUsize = AtomicUsize::new(0);
+
 #[derive(Debug)]
 pub struct Group {
+    id: usize,
     components: Box<[TypeId]>,
     subgroup_arities: Box<[usize]>,
     subgroup_lengths: Box<[usize]>,
 }
-
-use super::GroupLayout;
-use std::{any::TypeId, slice::SliceIndex};
 
 impl Group {
     pub fn new(layout: GroupLayout) -> Self {
@@ -14,6 +17,7 @@ impl Group {
         let subgroup_lengths = vec![0; subgroup_arities.len()].into_boxed_slice();
 
         Self {
+            id: CURRENT_GROUP_ID.fetch_add(1, Ordering::Relaxed),
             components,
             subgroup_arities,
             subgroup_lengths,
@@ -39,6 +43,10 @@ impl Group {
             .iter()
             .zip((&mut self.subgroup_lengths[range]).iter_mut())
             .map(|(a, l)| (*a, l))
+    }
+
+    pub fn id(&self) -> usize {
+        self.id
     }
 
     pub fn components(&self) -> &[TypeId] {

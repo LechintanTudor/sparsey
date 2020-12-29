@@ -57,7 +57,7 @@ impl Groups {
                     .subgroup_lengths()
                     .get_unchecked(subgroup.subgroup_index);
 
-                Some(ParentGroup::new(group, subgroup_len))
+                Some(ParentGroup::new(group.id(), subgroup.subgroup_index, subgroup_len))
             },
             None => None,
         }
