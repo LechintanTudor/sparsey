@@ -1,5 +1,7 @@
-pub use self::{dense_iter::*, iterable_view::*, sparse_iter::*};
+pub use self::{dense_iter::*, iter::*, iterable_view::*, query::*, sparse_iter::*};
 
-pub mod dense_iter;
-pub mod iterable_view;
-pub mod sparse_iter;
+mod dense_iter;
+mod iter;
+mod iterable_view;
+mod query;
+mod sparse_iter;

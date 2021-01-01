@@ -31,14 +31,14 @@ fn main() {
     let e1 = world.create((A, B, C));
     let e2 = world.create((A, B, C, D, E));
 
-    unsafe {
-        let (mut a, mut b, mut c, d, e) =
-            <(CompMut<A>, CompMut<B>, CompMut<C>, CompMut<D>, CompMut<E>)>::get_from_world(&world);
+    let (mut a, mut b, mut c, d, e) = unsafe {
+        <(CompMut<A>, CompMut<B>, CompMut<C>, CompMut<D>, CompMut<E>)>::get_from_world(&world)
+    };
 
-        let group_iter = DenseIter3::new(&mut a, &mut b, &mut c).unwrap();
-
-        for (a, b, c) in group_iter {
-            println!("{:?}, {:?}, {:?}", *a, *b, *c);
-        }
+    {
+        let i1 = (&mut a, &mut b, &mut c).join();
     }
+
+    // TODO: Fix borrow-checker erors
+    // let i2 = (&mut a, &mut b, &mut c).join();
 }

@@ -1,5 +1,9 @@
 use super::GroupLayout;
-use std::{any::TypeId, slice::SliceIndex, sync::atomic::{AtomicUsize, Ordering}};
+use std::{
+    any::TypeId,
+    slice::SliceIndex,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 static CURRENT_GROUP_ID: AtomicUsize = AtomicUsize::new(0);
 

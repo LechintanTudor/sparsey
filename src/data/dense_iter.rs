@@ -1,4 +1,4 @@
-use crate::{data::{IterableView, ParentGroup}, entity::Entity};
+use crate::{data::IterableView, entity::Entity};
 use paste::paste;
 
 unsafe fn get<'a, V>((data, flags): (V::Data, V::Flags), index: usize) -> Option<V::Output>
@@ -6,18 +6,6 @@ where
     V: IterableView<'a>,
 {
     V::get(data, flags, index)
-}
-
-fn get_parent_group(groups: &[ParentGroup]) -> Option<ParentGroup> {
-    let (first, other) = groups.split_first()?;
-
-    for group in other.iter() {
-        if group != first {
-            return None;
-        }
-    }
-
-    Some(*first)
 }
 
 macro_rules! first_of {
@@ -45,21 +33,13 @@ macro_rules! impl_dense_iter {
             where
                 $($comp: IterableView<'a>,)+
             {
-
-                pub fn new($([<view_ $comp:lower>]: $comp),+) -> Option<Self> {
-                    let parent_group = get_parent_group(&[
-                        $([<view_ $comp:lower>].parent_group()?,)+
-                    ])?;
-
-                    let subgroup_len = parent_group.subgroup_len();
-                    
-                    unsafe {
-                        Some(Self::new_unchecked($([<view_ $comp:lower>]),+, subgroup_len))
-                    }
-                }
-
                 #[allow(unused_variables)]
-                pub unsafe fn new_unchecked($([<view_ $comp:lower>]: $comp),+, subgroup_len: usize) -> Self {
+                pub unsafe fn new_unchecked($([<view_ $comp:lower>]: $comp),+) -> Self {
+                    let subgroup_len = first_of!($([<view_ $comp:lower>]),+)
+                        .parent_group()
+                        .unwrap()
+                        .subgroup_len();
+
                     $(
                         let (
                             _,
@@ -68,6 +48,7 @@ macro_rules! impl_dense_iter {
                             [<flags_ $comp:lower>],
                         ) = [<view_ $comp:lower>].split();
                     )+
+
                     let dense = &first_of!($([<dense_ $comp:lower>]),+)[..subgroup_len];
 
                     Self {
@@ -107,15 +88,15 @@ macro_rules! impl_dense_iter {
     };
 }
 
-impl_dense_iter!(DenseIter1, A);
-impl_dense_iter!(DenseIter2, A, B);
-impl_dense_iter!(DenseIter3, A, B, C);
-impl_dense_iter!(DenseIter4, A, B, C, D);
-impl_dense_iter!(DenseIter5, A, B, C, D, E);
-impl_dense_iter!(DenseIter6, A, B, C, D, E, F);
-impl_dense_iter!(DenseIter7, A, B, C, D, E, F, G);
-impl_dense_iter!(DenseIter8, A, B, C, D, E, F, G, H);
-impl_dense_iter!(DenseIter9, A, B, C, D, E, F, G, H, I);
-impl_dense_iter!(DenseIter10, A, B, C, D, E, F, G, H, I, J);
-impl_dense_iter!(DenseIter11, A, B, C, D, E, F, G, H, I, J, K);
-impl_dense_iter!(DenseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+#[rustfmt::skip] impl_dense_iter!(DenseIter1, A);
+#[rustfmt::skip] impl_dense_iter!(DenseIter2, A, B);
+#[rustfmt::skip] impl_dense_iter!(DenseIter3, A, B, C);
+#[rustfmt::skip] impl_dense_iter!(DenseIter4, A, B, C, D);
+#[rustfmt::skip] impl_dense_iter!(DenseIter5, A, B, C, D, E);
+#[rustfmt::skip] impl_dense_iter!(DenseIter6, A, B, C, D, E, F);
+#[rustfmt::skip] impl_dense_iter!(DenseIter7, A, B, C, D, E, F, G);
+#[rustfmt::skip] impl_dense_iter!(DenseIter8, A, B, C, D, E, F, G, H);
+#[rustfmt::skip] impl_dense_iter!(DenseIter9, A, B, C, D, E, F, G, H, I);
+#[rustfmt::skip] impl_dense_iter!(DenseIter10, A, B, C, D, E, F, G, H, I, J);
+#[rustfmt::skip] impl_dense_iter!(DenseIter11, A, B, C, D, E, F, G, H, I, J, K);
+#[rustfmt::skip] impl_dense_iter!(DenseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
