@@ -1,6 +1,6 @@
 use crate::{
     entity::Entity,
-    registry::{BorrowFromWorld, RawViewMut},
+    registry::{BorrowFromWorld, SparseSetMut},
 };
 use std::any::TypeId;
 
@@ -34,7 +34,7 @@ macro_rules! impl_component_source {
         where
             $($ty: Component,)+
         {
-            type Target = ($(RawViewMut<'a, $ty>,)+);
+            type Target = ($(SparseSetMut<'a, $ty>,)+);
             type Components = [TypeId; $len];
 
             fn components() -> Self::Components {
@@ -42,12 +42,12 @@ macro_rules! impl_component_source {
             }
 
             fn insert(target: &mut Self::Target, entity: Entity, components: Self) {
-                $(target.$idx.set.insert(entity, components.$idx);)+
+                $(target.$idx.0.insert(entity, components.$idx);)+
             }
 
             fn remove(target: &mut Self::Target, entity: Entity) -> Option<Self> {
                 let components = (
-                    $(target.$idx.set.remove(entity),)+
+                    $(target.$idx.0.remove(entity),)+
                 );
 
                 Some((
@@ -56,7 +56,7 @@ macro_rules! impl_component_source {
             }
 
             fn delete(target: &mut Self::Target, entity: Entity) {
-                $(target.$idx.set.remove(entity);)+
+                $(target.$idx.0.remove(entity);)+
             }
         }
     };
@@ -69,14 +69,4 @@ impl_component_source!(4, (A, 0), (B, 1), (C, 2), (D, 3));
 impl_component_source!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
 impl_component_source!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
 impl_component_source!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-impl_component_source!(
-    8,
-    (A, 0),
-    (B, 1),
-    (C, 2),
-    (D, 3),
-    (E, 4),
-    (F, 5),
-    (G, 6),
-    (H, 7)
-);
+impl_component_source!(8, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));

@@ -35,27 +35,31 @@ impl World {
         self.storages.register::<T>()
     }
 
-    pub unsafe fn get_comp<T>(&self) -> Option<Comp<T>>
+    pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
     where
         T: Component,
     {
-        Some(Comp::new(
-            self.storages.get_unchecked::<T>()?,
-            self.groups.get_parent_group(TypeId::of::<T>()),
-        ))
+        unsafe {
+            Some(Comp::new(
+                self.storages.borrow::<T>()?,
+                self.groups.get_parent_group(TypeId::of::<T>()),
+            ))
+        }
     }
 
-    pub unsafe fn get_comp_mut<T>(&self) -> Option<CompMut<T>>
+    pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
     where
         T: Component,
     {
-        Some(CompMut::new(
-            self.storages.get_mut_unchecked::<T>()?,
-            self.groups.get_parent_group(TypeId::of::<T>()),
-        ))
+        unsafe {
+            Some(CompMut::new(
+                self.storages.borrow_mut::<T>()?,
+                self.groups.get_parent_group(TypeId::of::<T>()),
+            ))
+        }
     }
 
-    pub(crate) fn borrow_raw_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
+    pub(crate) unsafe fn borrow_sparse_set_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
     where
         T: Component,
     {

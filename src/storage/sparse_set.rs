@@ -166,7 +166,11 @@ impl<T> SparseSet<T> {
         (&self.sparse, &self.dense, &self.data, &self.flags)
     }
 
-    pub unsafe fn split_mut(
+    pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [T], &mut [ComponentFlags]) {
+        (&self.sparse, &self.dense, &mut self.data, &mut self.flags)
+    }
+
+    pub unsafe fn split_raw(
         &mut self,
     ) -> (
         &mut SparseArray,

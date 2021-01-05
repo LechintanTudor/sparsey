@@ -1,26 +1,7 @@
-use crate::{
-    registry::{Component, World},
-    storage::SparseSet,
-};
-use atomic_refcell::AtomicRefMut;
+use crate::registry::World;
 
 pub trait BorrowFromWorld<'a> {
     fn borrow(world: &'a World) -> Self;
-}
-
-pub struct RawViewMut<'a, T> {
-    pub set: AtomicRefMut<'a, SparseSet<T>>,
-}
-
-impl<'a, T> BorrowFromWorld<'a> for RawViewMut<'a, T>
-where
-    T: Component,
-{
-    fn borrow(world: &'a World) -> Self {
-        Self {
-            set: world.borrow_raw_mut().unwrap(),
-        }
-    }
 }
 
 macro_rules! impl_borrow_from_world {

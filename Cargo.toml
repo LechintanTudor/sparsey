@@ -9,9 +9,5 @@ atomic_refcell = "0.1.6"
 paste = "1"
 
 [[example]]
-name = "iterator"
-path = "examples/iterator.rs"
-
-[[example]]
 name = "world"
 path = "examples/world.rs"

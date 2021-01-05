@@ -25,7 +25,7 @@ pub struct AbstractStorageViewMut<'a> {
 
 impl<'a> AbstractStorageViewMut<'a> {
     pub fn new<T>(set: &'a mut SparseSet<T>) -> Self {
-        let (sparse, dense, data, flags) = unsafe { set.split_mut() };
+        let (sparse, dense, data, flags) = unsafe { set.split_raw() };
 
         Self {
             sparse,

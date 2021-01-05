@@ -31,14 +31,16 @@ fn main() {
     let e1 = world.create((A, B, C));
     let e2 = world.create((A, B, C, D, E));
 
-    let (mut a, mut b, mut c, d, e) = unsafe {
-        <(CompMut<A>, CompMut<B>, CompMut<C>, CompMut<D>, CompMut<E>)>::get_from_world(&world)
-    };
+    let (mut a, mut b, mut c, d, e) =
+        <(CompMut<A>, CompMut<B>, CompMut<C>, CompMut<D>, CompMut<E>)>::borrow(&world);
 
-    {
-        let i1 = (&mut a, &mut b, &mut c).join();
+    for (a, b, c) in (&mut a, &mut b, &mut c).join() {
+        println!("{:?}, {:?}, {:?}", *a, *b, *c);
     }
 
-    // TODO: Fix borrow-checker erors
-    // let i2 = (&mut a, &mut b, &mut c).join();
+    println!();
+
+    for (a, b, c, d, e) in (&mut a, &mut b, &mut c, &d, &e).join() {
+        println!("{:?}, {:?}, {:?}, {:?}, {:?}", *a, *b, *c, *d, *e);
+    }
 }
