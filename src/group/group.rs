@@ -1,9 +1,7 @@
-use super::GroupLayout;
-use std::{
-    any::TypeId,
-    slice::SliceIndex,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use crate::group::GroupLayout;
+use std::any::TypeId;
+use std::slice::SliceIndex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 static CURRENT_GROUP_ID: AtomicUsize = AtomicUsize::new(0);
 

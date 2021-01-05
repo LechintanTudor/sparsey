@@ -1,4 +1,7 @@
-use crate::{data::IterableView, entity::Entity};
+pub use self::impls::*;
+
+use crate::data::IterableView;
+use crate::entity::Entity;
 use paste::paste;
 
 unsafe fn get<'a, V>((data, flags): (V::Data, V::Flags), index: usize) -> Option<V::Output>
@@ -88,15 +91,20 @@ macro_rules! impl_dense_iter {
     };
 }
 
-#[rustfmt::skip] impl_dense_iter!(DenseIter1, A);
-#[rustfmt::skip] impl_dense_iter!(DenseIter2, A, B);
-#[rustfmt::skip] impl_dense_iter!(DenseIter3, A, B, C);
-#[rustfmt::skip] impl_dense_iter!(DenseIter4, A, B, C, D);
-#[rustfmt::skip] impl_dense_iter!(DenseIter5, A, B, C, D, E);
-#[rustfmt::skip] impl_dense_iter!(DenseIter6, A, B, C, D, E, F);
-#[rustfmt::skip] impl_dense_iter!(DenseIter7, A, B, C, D, E, F, G);
-#[rustfmt::skip] impl_dense_iter!(DenseIter8, A, B, C, D, E, F, G, H);
-#[rustfmt::skip] impl_dense_iter!(DenseIter9, A, B, C, D, E, F, G, H, I);
-#[rustfmt::skip] impl_dense_iter!(DenseIter10, A, B, C, D, E, F, G, H, I, J);
-#[rustfmt::skip] impl_dense_iter!(DenseIter11, A, B, C, D, E, F, G, H, I, J, K);
-#[rustfmt::skip] impl_dense_iter!(DenseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_dense_iter!(DenseIter1, A);
+    impl_dense_iter!(DenseIter2, A, B);
+    impl_dense_iter!(DenseIter3, A, B, C);
+    impl_dense_iter!(DenseIter4, A, B, C, D);
+    impl_dense_iter!(DenseIter5, A, B, C, D, E);
+    impl_dense_iter!(DenseIter6, A, B, C, D, E, F);
+    impl_dense_iter!(DenseIter7, A, B, C, D, E, F, G);
+    impl_dense_iter!(DenseIter8, A, B, C, D, E, F, G, H);
+    impl_dense_iter!(DenseIter9, A, B, C, D, E, F, G, H, I);
+    impl_dense_iter!(DenseIter10, A, B, C, D, E, F, G, H, I, J);
+    impl_dense_iter!(DenseIter11, A, B, C, D, E, F, G, H, I, J, K);
+    impl_dense_iter!(DenseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+}

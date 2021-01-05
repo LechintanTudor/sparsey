@@ -1,13 +1,8 @@
-use crate::{
-    entity::{Entity, IndexEntity},
-    storage::{AbstractStorage, AbstractStorageViewMut, SparseArray},
-};
-use std::{
-    any::Any,
-    mem,
-    ops::{Deref, DerefMut},
-    ptr,
-};
+use crate::entity::{Entity, IndexEntity};
+use crate::storage::{AbstractStorage, AbstractStorageViewMut, SparseArray};
+use std::any::Any;
+use std::ops::{Deref, DerefMut};
+use std::{mem, ptr};
 
 pub const COMPONENT_FLAG_NONE: ComponentFlags = 0;
 pub const COMPONENT_FLAG_CHANGED: ComponentFlags = 1;

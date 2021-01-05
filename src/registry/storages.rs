@@ -1,9 +1,9 @@
-use crate::{
-    registry::Component,
-    storage::{AbstractStorage, SparseSet},
-};
+use crate::registry::Component;
+use crate::storage::{AbstractStorage, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
-use std::{any::TypeId, collections::HashMap, hint::unreachable_unchecked};
+use std::any::TypeId;
+use std::collections::HashMap;
+use std::hint::unreachable_unchecked;
 
 #[derive(Default)]
 pub struct Storages {

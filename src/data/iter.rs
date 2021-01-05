@@ -1,4 +1,6 @@
-use super::{dense_iter::*, iterable_view::*, sparse_iter::*};
+use crate::data::dense_iter::*;
+use crate::data::sparse_iter::*;
+use crate::data::{IterableView, ParentGroup};
 use paste::paste;
 
 fn is_grouped(groups: &[ParentGroup]) -> bool {

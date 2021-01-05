@@ -1,5 +1,6 @@
 use crate::entity::{Entity, IndexEntity};
-use std::{hint::unreachable_unchecked, iter, mem, ptr};
+use std::hint::unreachable_unchecked;
+use std::{iter, mem, ptr};
 
 pub const PAGE_SIZE: usize = 32;
 pub type EntityPage = Option<Box<[IndexEntity; PAGE_SIZE]>>;

@@ -1,11 +1,13 @@
-use crate::{
-    entity::Entity,
-    group::WorldLayoutDescriptor,
-    registry::*,
-    storage::{AbstractStorageViewMut, EntityStorage, SparseSet},
+use crate::entity::Entity;
+use crate::group::WorldLayoutDescriptor;
+use crate::registry::{
+    BorrowFromWorld, Comp, CompMut, Component, ComponentSource, Groups, Storages,
 };
+use crate::storage::{AbstractStorageViewMut, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
-use std::{any::TypeId, collections::HashSet, hint::unreachable_unchecked};
+use std::any::TypeId;
+use std::collections::HashSet;
+use std::hint::unreachable_unchecked;
 
 pub struct World {
     entities: EntityStorage,

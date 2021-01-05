@@ -1,8 +1,8 @@
-use crate::{
-    data::ParentGroup,
-    group::{Group, WorldLayout},
-};
-use std::{any::TypeId, cell::UnsafeCell, collections::HashMap};
+use crate::data::ParentGroup;
+use crate::group::{Group, WorldLayout};
+use std::any::TypeId;
+use std::cell::UnsafeCell;
+use std::collections::HashMap;
 
 type ComponentTypeId = TypeId;
 

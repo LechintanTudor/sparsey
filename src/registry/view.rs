@@ -1,9 +1,7 @@
-use super::{BorrowFromWorld, Component, World};
-use crate::{
-    data::{IterableView, ParentGroup},
-    entity::Entity,
-    storage::{ComponentFlags, ComponentRefMut, SparseArray, SparseSet},
-};
+use crate::data::{IterableView, ParentGroup};
+use crate::entity::Entity;
+use crate::registry::{BorrowFromWorld, Component, World};
+use crate::storage::{ComponentFlags, ComponentRefMut, SparseArray, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 
 pub struct Comp<'a, T>
@@ -20,7 +18,7 @@ impl<'a, T> Comp<'a, T> {
     }
 }
 
-impl<'a, T> BorrowFromWorld<'a> for Comp<'a, T> 
+impl<'a, T> BorrowFromWorld<'a> for Comp<'a, T>
 where
     T: Component,
 {
@@ -119,8 +117,6 @@ where
     T: Component,
 {
     fn borrow(world: &'a World) -> Self {
-        unsafe {
-            Self(world.borrow_sparse_set_mut().unwrap())
-        }
+        unsafe { Self(world.borrow_sparse_set_mut().unwrap()) }
     }
 }

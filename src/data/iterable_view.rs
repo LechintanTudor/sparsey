@@ -1,4 +1,5 @@
-use crate::{entity::Entity, storage::SparseArray};
+use crate::entity::Entity;
+use crate::storage::SparseArray;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct ParentGroup {

@@ -1,4 +1,5 @@
-use super::{iter::*, IterableView};
+use crate::data::iter::*;
+use crate::data::IterableView;
 use paste::paste;
 
 pub trait Query<'a> {

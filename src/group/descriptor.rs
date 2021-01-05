@@ -1,4 +1,4 @@
-use super::{GroupLayout, SubgroupLayout, WorldLayout};
+use crate::group::{GroupLayout, SubgroupLayout, WorldLayout};
 use crate::registry::{Component, World};
 use std::any::TypeId;
 

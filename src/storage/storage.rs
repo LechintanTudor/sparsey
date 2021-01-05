@@ -1,8 +1,7 @@
-use crate::{
-    entity::{Entity, IndexEntity},
-    storage::{ComponentFlags, SparseArray, SparseSet, COMPONENT_FLAG_NONE},
-};
-use std::{any::Any, mem, ptr, slice};
+use crate::entity::{Entity, IndexEntity};
+use crate::storage::{ComponentFlags, SparseArray, SparseSet, COMPONENT_FLAG_NONE};
+use std::any::Any;
+use std::{mem, ptr, slice};
 
 pub trait AbstractStorage
 where
