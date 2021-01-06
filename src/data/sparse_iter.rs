@@ -1,4 +1,4 @@
-use crate::data::IterableView;
+use crate::data::{self, IterableView};
 use crate::entity::Entity;
 use crate::storage::SparseArray;
 use paste::paste;
@@ -25,16 +25,6 @@ where
     V: IterableView<'a>,
 {
     (split_view.0, split_view.2, split_view.3)
-}
-
-unsafe fn get_output<'a, V>(
-    (sparse, data, flags): (&'a SparseArray, V::Data, V::Flags),
-    entity: Entity,
-) -> Option<V::Output>
-where
-    V: IterableView<'a>,
-{
-    V::get(data, flags, sparse.get(entity)?.index())
 }
 
 macro_rules! shortest_dense {
@@ -92,7 +82,13 @@ macro_rules! impl_sparse_iter {
 
                         let item = (|| unsafe {
                             Some((
-                                $(get_output::<$comp>(self.[<set_ $comp:lower>], entity)?,)+
+                                $(
+                                    data::get_output::<$comp>(
+                                        self.[<set_ $comp:lower>].1,
+                                        self.[<set_ $comp:lower>].2,
+                                        self.[<set_ $comp:lower>].0.get(entity)?.index(),
+                                    )?,
+                                )+
                             ))
                         })();
 

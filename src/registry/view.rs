@@ -41,8 +41,12 @@ impl<'a, T> IterableView<'a> for &'a Comp<'a, T> {
         (sparse, dense, data.as_ptr(), flags.as_ptr())
     }
 
-    unsafe fn get(data: Self::Data, _: Self::Flags, index: usize) -> Option<Self::Output> {
-        Some(&*data.add(index))
+    unsafe fn matches_flags(_flags: Self::Flags, _index: usize) -> bool {
+        true
+    }
+
+    unsafe fn get(data: Self::Data, _: Self::Flags, index: usize) -> Self::Output {
+        &*data.add(index)
     }
 }
 
@@ -83,8 +87,12 @@ impl<'a, T> IterableView<'a> for &'a CompMut<'a, T> {
         (sparse, dense, data.as_ptr(), flags.as_ptr())
     }
 
-    unsafe fn get(data: Self::Data, _: Self::Flags, index: usize) -> Option<Self::Output> {
-        Some(&*data.add(index))
+    unsafe fn matches_flags(_flags: Self::Flags, _index: usize) -> bool {
+        true
+    }
+
+    unsafe fn get(data: Self::Data, _: Self::Flags, index: usize) -> Self::Output {
+        &*data.add(index)
     }
 }
 
@@ -102,11 +110,12 @@ impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T> {
         (sparse, dense, data.as_mut_ptr(), flags.as_mut_ptr())
     }
 
-    unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
-        Some(ComponentRefMut::new(
-            &mut *data.add(index),
-            &mut *flags.add(index),
-        ))
+    unsafe fn matches_flags(_flags: Self::Flags, _index: usize) -> bool {
+        true
+    }
+
+    unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Self::Output {
+        ComponentRefMut::new(&mut *data.add(index), &mut *flags.add(index))
     }
 }
 

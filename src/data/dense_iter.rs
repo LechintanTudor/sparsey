@@ -1,15 +1,8 @@
 pub use self::impls::*;
 
-use crate::data::IterableView;
+use crate::data::{self, IterableView};
 use crate::entity::Entity;
 use paste::paste;
-
-unsafe fn get<'a, V>((data, flags): (V::Data, V::Flags), index: usize) -> Option<V::Output>
-where
-    V: IterableView<'a>,
-{
-    V::get(data, flags, index)
-}
 
 macro_rules! first_of {
     ($x:expr) => {
@@ -82,7 +75,13 @@ macro_rules! impl_dense_iter {
 
                     unsafe {
                         Some((
-                            $(get::<$comp>(self.[<set_ $comp:lower>], index)?,)+
+                            $(
+                                data::get_output::<$comp>(
+                                    self.[<set_ $comp:lower>].0,
+                                    self.[<set_ $comp:lower>].1,
+                                    index,
+                                )?,
+                            )+
                         ))
                     }
                 }
