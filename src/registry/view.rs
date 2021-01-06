@@ -1,4 +1,4 @@
-use crate::data::{IterableView, ParentGroup};
+use crate::data::{IterableView, ParentGroup, UnfilteredIterableView};
 use crate::entity::Entity;
 use crate::registry::{BorrowFromWorld, Component, World};
 use crate::storage::{ComponentFlags, ComponentRefMut, SparseArray, SparseSet};
@@ -45,10 +45,16 @@ impl<'a, T> IterableView<'a> for &'a Comp<'a, T> {
         true
     }
 
+    unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
+        *flags.add(index)
+    }
+
     unsafe fn get(data: Self::Data, _: Self::Flags, index: usize) -> Self::Output {
         &*data.add(index)
     }
 }
+
+unsafe impl<'a, T> UnfilteredIterableView<'a> for &'a Comp<'a, T> {}
 
 pub struct CompMut<'a, T>
 where
@@ -91,10 +97,16 @@ impl<'a, T> IterableView<'a> for &'a CompMut<'a, T> {
         true
     }
 
+    unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
+        *flags.add(index)
+    }
+
     unsafe fn get(data: Self::Data, _: Self::Flags, index: usize) -> Self::Output {
         &*data.add(index)
     }
 }
+
+unsafe impl<'a, T> UnfilteredIterableView<'a> for &'a CompMut<'a, T> {}
 
 impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T> {
     type Data = *mut T;
@@ -114,10 +126,16 @@ impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T> {
         true
     }
 
+    unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
+        *flags.add(index)
+    }
+
     unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Self::Output {
         ComponentRefMut::new(&mut *data.add(index), &mut *flags.add(index))
     }
 }
+
+unsafe impl<'a: 'b, 'b, T> UnfilteredIterableView<'b> for &'b mut CompMut<'a, T> {}
 
 pub struct SparseSetMut<'a, T>(pub(crate) AtomicRefMut<'a, SparseSet<T>>);
 
