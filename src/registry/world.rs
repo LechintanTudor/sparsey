@@ -37,6 +37,10 @@ impl World {
         self.storages.register::<T>()
     }
 
+    pub fn maintain(&mut self) {
+        self.storages.clear_flags();
+    }
+
     pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
     where
         T: Component,

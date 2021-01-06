@@ -210,6 +210,10 @@ impl<T> AbstractStorage for SparseSet<T>
 where
     T: 'static,
 {
+    fn clear_flags(&mut self) {
+        self.flags.iter_mut().for_each(|f| *f = 0);
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

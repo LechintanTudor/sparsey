@@ -11,6 +11,12 @@ pub struct Storages {
 }
 
 impl Storages {
+    pub fn clear_flags(&mut self) {
+        self.storages
+            .values_mut()
+            .for_each(|s| s.get_mut().clear_flags());
+    }
+
     pub fn register<T>(&mut self)
     where
         T: Component,

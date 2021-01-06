@@ -31,16 +31,25 @@ fn main() {
     let e1 = world.create((A, B, C));
     let e2 = world.create((A, B, C, D, E));
 
-    let (mut a, mut b, mut c, d, e) =
-        <(CompMut<A>, CompMut<B>, CompMut<C>, CompMut<D>, CompMut<E>)>::borrow(&world);
+    {
+        println!("Before maintain:");
 
-    for (a, b, c) in (&mut a, &mut b, &mut c).join() {
-        println!("{:?}, {:?}, {:?}", *a, *b, *c);
+        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow(&world);
+
+        for (a, b) in (added(&mut a), &mut b).join() {
+            println!("{:?}, {:?}", *a, *b);
+        }
     }
 
-    println!();
+    world.maintain();
 
-    for (a, b, c, d, e) in (&mut a, &mut b, &mut c, &d, &e).join() {
-        println!("{:?}, {:?}, {:?}, {:?}, {:?}", *a, *b, *c, *d, *e);
+    {
+        println!("\nAfter maintain:");
+
+        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow(&world);
+
+        for (a, b) in (added(&mut a), &mut b).join() {
+            println!("{:?}, {:?}", *a, *b);
+        }
     }
 }
