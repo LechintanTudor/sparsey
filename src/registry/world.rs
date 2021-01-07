@@ -2,7 +2,7 @@ use crate::group::WorldLayoutDescriptor;
 use crate::registry::{
     BorrowFromWorld, Comp, CompMut, Component, ComponentSource, Groups, Storages,
 };
-use crate::storage::{AbstractStorageViewMut, Entity, EntityStorage, SparseSet};
+use crate::storage::{AbstractSparseSetViewMut, Entity, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::collections::HashSet;
@@ -100,7 +100,7 @@ impl World {
             .map(|c| c.group_index())
             .collect::<HashSet<_>>();
 
-        let mut storages = Vec::<AbstractStorageViewMut>::new();
+        let mut storages = Vec::<AbstractSparseSetViewMut>::new();
 
         for group in group_indexes
             .iter()
@@ -110,7 +110,7 @@ impl World {
                 self.storages
                     .get_abstract_mut_unchecked(c)
                     .unwrap()
-                    .as_storage_view_mut()
+                    .as_abstract_view_mut()
             }));
 
             let mut previous_arity = 0_usize;
@@ -144,7 +144,7 @@ impl World {
             .map(|c| c.group_index())
             .collect::<HashSet<_>>();
 
-        let mut storages = Vec::<AbstractStorageViewMut>::new();
+        let mut storages = Vec::<AbstractSparseSetViewMut>::new();
 
         for group in group_indexes
             .iter()
@@ -154,7 +154,7 @@ impl World {
                 self.storages
                     .get_abstract_mut_unchecked(c)
                     .unwrap()
-                    .as_storage_view_mut()
+                    .as_abstract_view_mut()
             }));
 
             let mut previous_arity = 0_usize;
@@ -212,7 +212,7 @@ enum RemoveGroupStatus {
 }
 
 fn group_insert_status(
-    storages: &[AbstractStorageViewMut],
+    storages: &[AbstractSparseSetViewMut],
     group_len: usize,
     entity: Entity,
 ) -> InsertGroupStatus {
@@ -233,7 +233,7 @@ fn group_insert_status(
 }
 
 fn group_remove_status(
-    storages: &[AbstractStorageViewMut],
+    storages: &[AbstractSparseSetViewMut],
     group_len: usize,
     entity: Entity,
 ) -> RemoveGroupStatus {
@@ -254,7 +254,7 @@ fn group_remove_status(
 }
 
 unsafe fn group_components(
-    storages: &mut [AbstractStorageViewMut],
+    storages: &mut [AbstractSparseSetViewMut],
     group_len: &mut usize,
     entity: Entity,
 ) {
@@ -271,7 +271,7 @@ unsafe fn group_components(
 }
 
 unsafe fn ungroup_components(
-    storages: &mut [AbstractStorageViewMut],
+    storages: &mut [AbstractSparseSetViewMut],
     group_len: &mut usize,
     entity: Entity,
 ) {

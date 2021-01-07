@@ -1,4 +1,6 @@
-use crate::storage::{AbstractStorage, AbstractStorageViewMut, Entity, IndexEntity, SparseArray};
+use crate::storage::{
+    AbstractSparseSet, AbstractSparseSetViewMut, Entity, IndexEntity, SparseArray,
+};
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};
@@ -205,7 +207,7 @@ impl<T> SparseSet<T> {
     }
 }
 
-impl<T> AbstractStorage for SparseSet<T>
+impl<T> AbstractSparseSet for SparseSet<T>
 where
     T: 'static,
 {
@@ -221,8 +223,8 @@ where
         self
     }
 
-    fn as_storage_view_mut(&mut self) -> AbstractStorageViewMut {
-        AbstractStorageViewMut::new(self)
+    fn as_abstract_view_mut(&mut self) -> AbstractSparseSetViewMut {
+        AbstractSparseSetViewMut::new(self)
     }
 }
 

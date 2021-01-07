@@ -18,7 +18,16 @@ struct D;
 #[derive(Debug)]
 struct E;
 
-type WorldLayout = (((A, B), (A, B, C)), ((D, E),));
+#[rustfmt::skip]
+type WorldLayout = (
+    (
+        (A, B), 
+        (A, B, C), 
+    ),
+    (
+        (D, E),
+    )
+);
 
 fn main() {
     let mut world = World::new::<WorldLayout>();

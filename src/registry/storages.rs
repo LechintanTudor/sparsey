@@ -1,5 +1,5 @@
 use crate::registry::Component;
-use crate::storage::{AbstractStorage, SparseSet};
+use crate::storage::{AbstractSparseSet, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -7,7 +7,7 @@ use std::hint::unreachable_unchecked;
 
 #[derive(Default)]
 pub struct Storages {
-    storages: HashMap<TypeId, AtomicRefCell<Box<dyn AbstractStorage>>>,
+    storages: HashMap<TypeId, AtomicRefCell<Box<dyn AbstractSparseSet>>>,
 }
 
 impl Storages {
@@ -50,7 +50,7 @@ impl Storages {
         })
     }
 
-    pub fn borrow_abstract(&self, component: TypeId) -> Option<AtomicRef<dyn AbstractStorage>> {
+    pub fn borrow_abstract(&self, component: TypeId) -> Option<AtomicRef<dyn AbstractSparseSet>> {
         self.storages
             .get(&component)
             .map(|s| AtomicRef::map(s.borrow(), |s| s.as_ref()))
@@ -59,7 +59,7 @@ impl Storages {
     pub fn borrow_abstract_mut(
         &self,
         component: TypeId,
-    ) -> Option<AtomicRefMut<dyn AbstractStorage>> {
+    ) -> Option<AtomicRefMut<dyn AbstractSparseSet>> {
         self.storages
             .get(&component)
             .map(|s| AtomicRefMut::map(s.borrow_mut(), |s| s.as_mut()))
@@ -89,7 +89,10 @@ impl Storages {
         })
     }
 
-    pub unsafe fn get_abstract_unchecked(&self, component: TypeId) -> Option<&dyn AbstractStorage> {
+    pub unsafe fn get_abstract_unchecked(
+        &self,
+        component: TypeId,
+    ) -> Option<&dyn AbstractSparseSet> {
         self.storages
             .get(&component)
             .map(|s| (*s.as_ptr()).as_ref())
@@ -98,7 +101,7 @@ impl Storages {
     pub unsafe fn get_abstract_mut_unchecked(
         &self,
         component: TypeId,
-    ) -> Option<&mut dyn AbstractStorage> {
+    ) -> Option<&mut dyn AbstractSparseSet> {
         self.storages
             .get(&component)
             .map(|s| (*s.as_ptr()).as_mut())

@@ -4,7 +4,7 @@ use crate::storage::{
 use std::any::Any;
 use std::{mem, ptr, slice};
 
-pub trait AbstractStorage
+pub trait AbstractSparseSet
 where
     Self: 'static,
 {
@@ -14,10 +14,10 @@ where
 
     fn as_mut_any(&mut self) -> &mut dyn Any;
 
-    fn as_storage_view_mut(&mut self) -> AbstractStorageViewMut;
+    fn as_abstract_view_mut(&mut self) -> AbstractSparseSetViewMut;
 }
 
-pub struct AbstractStorageViewMut<'a> {
+pub struct AbstractSparseSetViewMut<'a> {
     sparse: &'a mut SparseArray,
     dense: &'a mut [Entity],
     data: *mut (),
@@ -25,7 +25,7 @@ pub struct AbstractStorageViewMut<'a> {
     component_size: usize,
 }
 
-impl<'a> AbstractStorageViewMut<'a> {
+impl<'a> AbstractSparseSetViewMut<'a> {
     pub fn new<T>(set: &'a mut SparseSet<T>) -> Self {
         let (sparse, dense, data, flags) = unsafe { set.split_raw() };
 
