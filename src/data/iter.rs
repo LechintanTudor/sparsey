@@ -1,3 +1,5 @@
+pub use self::impls::*;
+
 use crate::data::dense_iter::*;
 use crate::data::sparse_iter::*;
 use crate::data::{IterableView, ParentGroup};
@@ -75,15 +77,20 @@ macro_rules! impl_iter {
     };
 }
 
-#[rustfmt::skip] impl_iter!(Iter1, SparseIter1, DenseIter1, A);
-#[rustfmt::skip] impl_iter!(Iter2, SparseIter2, DenseIter2, A, B);
-#[rustfmt::skip] impl_iter!(Iter3, SparseIter3, DenseIter3, A, B, C);
-#[rustfmt::skip] impl_iter!(Iter4, SparseIter4, DenseIter4, A, B, C, D);
-#[rustfmt::skip] impl_iter!(Iter5, SparseIter5, DenseIter5, A, B, C, D, E);
-#[rustfmt::skip] impl_iter!(Iter6, SparseIter6, DenseIter6, A, B, C, D, E, F);
-#[rustfmt::skip] impl_iter!(Iter7, SparseIter7, DenseIter7, A, B, C, D, E, F, G);
-#[rustfmt::skip] impl_iter!(Iter8, SparseIter8, DenseIter8, A, B, C, D, E, F, G, H);
-#[rustfmt::skip] impl_iter!(Iter9, SparseIter9, DenseIter9, A, B, C, D, E, F, G, H, I);
-#[rustfmt::skip] impl_iter!(Iter10, SparseIter10, DenseIter10, A, B, C, D, E, F, G, H, I, J);
-#[rustfmt::skip] impl_iter!(Iter11, SparseIter11, DenseIter11, A, B, C, D, E, F, G, H, I, J, K);
-#[rustfmt::skip] impl_iter!(Iter12, SparseIter12, DenseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_iter!(Iter1, SparseIter1, DenseIter1, A);
+    impl_iter!(Iter2, SparseIter2, DenseIter2, A, B);
+    impl_iter!(Iter3, SparseIter3, DenseIter3, A, B, C);
+    impl_iter!(Iter4, SparseIter4, DenseIter4, A, B, C, D);
+    impl_iter!(Iter5, SparseIter5, DenseIter5, A, B, C, D, E);
+    impl_iter!(Iter6, SparseIter6, DenseIter6, A, B, C, D, E, F);
+    impl_iter!(Iter7, SparseIter7, DenseIter7, A, B, C, D, E, F, G);
+    impl_iter!(Iter8, SparseIter8, DenseIter8, A, B, C, D, E, F, G, H);
+    impl_iter!(Iter9, SparseIter9, DenseIter9, A, B, C, D, E, F, G, H, I);
+    impl_iter!(Iter10, SparseIter10, DenseIter10, A, B, C, D, E, F, G, H, I, J);
+    impl_iter!(Iter11, SparseIter11, DenseIter11, A, B, C, D, E, F, G, H, I, J, K);
+    impl_iter!(Iter12, SparseIter12, DenseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+}

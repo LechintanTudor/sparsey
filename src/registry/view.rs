@@ -1,7 +1,6 @@
 use crate::data::{IterableView, ParentGroup, UnfilteredIterableView};
-use crate::entity::Entity;
 use crate::registry::{BorrowFromWorld, Component, World};
-use crate::storage::{ComponentFlags, ComponentRefMut, SparseArray, SparseSet};
+use crate::storage::{ComponentFlags, ComponentRefMut, Entity, SparseArray, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 
 pub struct Comp<'a, T>

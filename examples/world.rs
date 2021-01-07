@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 
+use ecstasy::data::filter::*;
 use ecstasy::prelude::*;
 
 #[derive(Debug)]

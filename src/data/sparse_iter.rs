@@ -1,6 +1,7 @@
+pub use self::impls::*;
+
 use crate::data::{self, IterableView};
-use crate::entity::Entity;
-use crate::storage::SparseArray;
+use crate::storage::{Entity, SparseArray};
 use paste::paste;
 
 unsafe fn split<'a, V>(view: V) -> (&'a SparseArray, &'a [Entity], V::Data, V::Flags)
@@ -102,15 +103,20 @@ macro_rules! impl_sparse_iter {
     };
 }
 
-#[rustfmt::skip] impl_sparse_iter!(SparseIter1, A);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter2, A, B);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter3, A, B, C);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter4, A, B, C, D);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter5, A, B, C, D, E);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter6, A, B, C, D, E, F);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter7, A, B, C, D, E, F, G);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter8, A, B, C, D, E, F, G, H);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter9, A, B, C, D, E, F, G, H, I);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter10, A, B, C, D, E, F, G, H, I, J);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter11, A, B, C, D, E, F, G, H, I, J, K);
-#[rustfmt::skip] impl_sparse_iter!(SparseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_sparse_iter!(SparseIter1, A);
+    impl_sparse_iter!(SparseIter2, A, B);
+    impl_sparse_iter!(SparseIter3, A, B, C);
+    impl_sparse_iter!(SparseIter4, A, B, C, D);
+    impl_sparse_iter!(SparseIter5, A, B, C, D, E);
+    impl_sparse_iter!(SparseIter6, A, B, C, D, E, F);
+    impl_sparse_iter!(SparseIter7, A, B, C, D, E, F, G);
+    impl_sparse_iter!(SparseIter8, A, B, C, D, E, F, G, H);
+    impl_sparse_iter!(SparseIter9, A, B, C, D, E, F, G, H, I);
+    impl_sparse_iter!(SparseIter10, A, B, C, D, E, F, G, H, I, J);
+    impl_sparse_iter!(SparseIter11, A, B, C, D, E, F, G, H, I, J, K);
+    impl_sparse_iter!(SparseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+}

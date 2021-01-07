@@ -1,7 +1,7 @@
 pub use self::impls::*;
 
 use crate::data::{self, IterableView};
-use crate::entity::Entity;
+use crate::storage::Entity;
 use paste::paste;
 
 macro_rules! first_of {

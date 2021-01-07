@@ -1,5 +1,4 @@
-use crate::entity::{Entity, IndexEntity};
-use crate::storage::{AbstractStorage, AbstractStorageViewMut, SparseArray};
+use crate::storage::{AbstractStorage, AbstractStorageViewMut, Entity, IndexEntity, SparseArray};
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};

@@ -1,5 +1,6 @@
-use crate::entity::{Entity, IndexEntity};
-use crate::storage::{ComponentFlags, SparseArray, SparseSet, COMPONENT_FLAG_NONE};
+use crate::storage::{
+    ComponentFlags, Entity, IndexEntity, SparseArray, SparseSet, COMPONENT_FLAG_NONE,
+};
 use std::any::Any;
 use std::{mem, ptr, slice};
 

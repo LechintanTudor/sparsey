@@ -1,9 +1,8 @@
-use crate::entity::Entity;
 use crate::group::WorldLayoutDescriptor;
 use crate::registry::{
     BorrowFromWorld, Comp, CompMut, Component, ComponentSource, Groups, Storages,
 };
-use crate::storage::{AbstractStorageViewMut, EntityStorage, SparseSet};
+use crate::storage::{AbstractStorageViewMut, Entity, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::collections::HashSet;

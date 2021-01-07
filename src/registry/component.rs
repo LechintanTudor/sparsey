@@ -1,5 +1,7 @@
-use crate::entity::Entity;
+pub use self::impls::*;
+
 use crate::registry::{BorrowFromWorld, SparseSetMut};
+use crate::storage::Entity;
 use std::any::TypeId;
 
 pub trait Component
@@ -60,21 +62,16 @@ macro_rules! impl_component_source {
     };
 }
 
-impl_component_source!(1, (A, 0));
-impl_component_source!(2, (A, 0), (B, 1));
-impl_component_source!(3, (A, 0), (B, 1), (C, 2));
-impl_component_source!(4, (A, 0), (B, 1), (C, 2), (D, 3));
-impl_component_source!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-impl_component_source!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-impl_component_source!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-impl_component_source!(
-    8,
-    (A, 0),
-    (B, 1),
-    (C, 2),
-    (D, 3),
-    (E, 4),
-    (F, 5),
-    (G, 6),
-    (H, 7)
-);
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_component_source!(1, (A, 0));
+    impl_component_source!(2, (A, 0), (B, 1));
+    impl_component_source!(3, (A, 0), (B, 1), (C, 2));
+    impl_component_source!(4, (A, 0), (B, 1), (C, 2), (D, 3));
+    impl_component_source!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_component_source!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_component_source!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_component_source!(8, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+}

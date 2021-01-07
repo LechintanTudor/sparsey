@@ -4,6 +4,8 @@ pub use self::iterable_view::*;
 pub use self::query::*;
 pub use self::sparse_iter::*;
 
+pub mod filter;
+
 mod dense_iter;
 mod iter;
 mod iterable_view;

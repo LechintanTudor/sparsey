@@ -1,6 +1,5 @@
-use crate::entity::Entity;
 use crate::registry::{BorrowFromWorld, World};
-use crate::storage::SparseSet;
+use crate::storage::{Entity, SparseSet};
 use std::ops::Deref;
 
 #[derive(Default, Debug)]

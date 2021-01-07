@@ -1,4 +1,4 @@
-use crate::entity::{Entity, IndexEntity};
+use crate::storage::{Entity, IndexEntity};
 use std::hint::unreachable_unchecked;
 use std::{iter, mem, ptr};
 
@@ -40,13 +40,7 @@ impl SparseArray {
             .get(page_index(entity))
             .and_then(|page| page.as_ref())
             .map(|page| &page[local_index(entity)])
-            .and_then(|e| {
-                if e.is_valid() && e.gen() == entity.gen() {
-                    Some(e)
-                } else {
-                    None
-                }
-            })
+            .filter(|e| e.is_valid() && e.gen() == entity.gen())
     }
 
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut IndexEntity> {
@@ -54,13 +48,7 @@ impl SparseArray {
             .get_mut(page_index(entity))
             .and_then(|page| page.as_mut())
             .map(|page| &mut page[local_index(entity)])
-            .and_then(|e| {
-                if e.is_valid() && e.gen() == entity.gen() {
-                    Some(e)
-                } else {
-                    None
-                }
-            })
+            .filter(|e| e.is_valid() && e.gen() == entity.gen())
     }
 
     pub fn get_mut_or_allocate(&mut self, index: usize) -> &mut IndexEntity {
