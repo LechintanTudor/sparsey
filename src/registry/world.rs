@@ -1,7 +1,5 @@
 use crate::group::WorldLayoutDescriptor;
-use crate::registry::{
-    BorrowFromWorld, Comp, CompMut, Component, ComponentSource, Groups, Storages,
-};
+use crate::registry::{BorrowFromWorld, Comp, CompMut, Component, ComponentSet, Groups, Storages};
 use crate::storage::{AbstractSparseSetViewMut, Entity, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
@@ -77,7 +75,7 @@ impl World {
 
     pub fn create<'a, C>(&'a mut self, components: C) -> Entity
     where
-        C: ComponentSource<'a>,
+        C: ComponentSet<'a>,
     {
         let entity = self.entities.create();
         self.insert(entity, components);
@@ -86,7 +84,7 @@ impl World {
 
     pub fn insert<'a, C>(&'a mut self, entity: Entity, components: C)
     where
-        C: ComponentSource<'a>,
+        C: ComponentSet<'a>,
     {
         {
             let mut target = <C::Target as BorrowFromWorld>::borrow(self);
@@ -135,7 +133,7 @@ impl World {
 
     pub fn remove<'a, C>(&'a mut self, entity: Entity) -> Option<C>
     where
-        C: ComponentSource<'a>,
+        C: ComponentSet<'a>,
     {
         let group_indexes = C::components()
             .as_ref()

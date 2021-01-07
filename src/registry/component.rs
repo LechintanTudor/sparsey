@@ -12,7 +12,7 @@ where
 
 impl<T> Component for T where T: Send + Sync + 'static {}
 
-pub trait ComponentSource<'a>
+pub trait ComponentSet<'a>
 where
     Self: Sized,
 {
@@ -28,9 +28,9 @@ where
     fn delete(target: &mut Self::Target, entity: Entity);
 }
 
-macro_rules! impl_component_source {
+macro_rules! impl_component_set {
     ($len:tt, $(($ty:ident, $idx:tt)),+) => {
-        impl<'a, $($ty,)+> ComponentSource<'a> for ($($ty,)+)
+        impl<'a, $($ty,)+> ComponentSet<'a> for ($($ty,)+)
         where
             $($ty: Component,)+
         {
@@ -66,12 +66,24 @@ macro_rules! impl_component_source {
 mod impls {
     use super::*;
 
-    impl_component_source!(1, (A, 0));
-    impl_component_source!(2, (A, 0), (B, 1));
-    impl_component_source!(3, (A, 0), (B, 1), (C, 2));
-    impl_component_source!(4, (A, 0), (B, 1), (C, 2), (D, 3));
-    impl_component_source!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_component_source!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_component_source!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_component_source!(8, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_component_set!(1, (A, 0));
+    impl_component_set!(2, (A, 0), (B, 1));
+    impl_component_set!(3, (A, 0), (B, 1), (C, 2));
+    impl_component_set!(4, (A, 0), (B, 1), (C, 2), (D, 3));
+    impl_component_set!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_component_set!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_component_set!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_component_set!(8, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+
+    impl_component_set!(9, (A, 0), (B, 1), (C, 2), (D, 3), 
+        (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+
+    impl_component_set!(10, (A, 0), (B, 1), (C, 2), (D, 3), 
+        (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+
+    impl_component_set!(11, (A, 0), (B, 1), (C, 2), (D, 3), 
+        (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+
+    impl_component_set!(12, (A, 0), (B, 1), (C, 2), (D, 3), 
+        (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));  
 }
