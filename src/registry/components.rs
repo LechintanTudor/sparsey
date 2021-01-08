@@ -6,13 +6,13 @@ use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
 
 #[derive(Default)]
-pub struct Storages {
-    storages: HashMap<TypeId, AtomicRefCell<Box<dyn AbstractSparseSet>>>,
+pub struct Components {
+    sets: HashMap<TypeId, AtomicRefCell<Box<dyn AbstractSparseSet>>>,
 }
 
-impl Storages {
+impl Components {
     pub fn clear_flags(&mut self) {
-        self.storages
+        self.sets
             .values_mut()
             .for_each(|s| s.get_mut().clear_flags());
     }
@@ -21,7 +21,7 @@ impl Storages {
     where
         T: Component,
     {
-        self.storages
+        self.sets
             .entry(TypeId::of::<T>())
             .or_insert_with(|| AtomicRefCell::new(Box::new(SparseSet::<T>::default())));
     }
@@ -51,7 +51,7 @@ impl Storages {
     }
 
     pub fn borrow_abstract(&self, component: TypeId) -> Option<AtomicRef<dyn AbstractSparseSet>> {
-        self.storages
+        self.sets
             .get(&component)
             .map(|s| AtomicRef::map(s.borrow(), |s| s.as_ref()))
     }
@@ -60,7 +60,7 @@ impl Storages {
         &self,
         component: TypeId,
     ) -> Option<AtomicRefMut<dyn AbstractSparseSet>> {
-        self.storages
+        self.sets
             .get(&component)
             .map(|s| AtomicRefMut::map(s.borrow_mut(), |s| s.as_mut()))
     }
@@ -69,7 +69,7 @@ impl Storages {
     where
         T: Component,
     {
-        self.storages.get(&TypeId::of::<T>()).map(|s| {
+        self.sets.get(&TypeId::of::<T>()).map(|s| {
             match (*s.as_ptr()).as_any().downcast_ref::<SparseSet<T>>() {
                 Some(s) => s,
                 None => unreachable_unchecked(),
@@ -81,7 +81,7 @@ impl Storages {
     where
         T: Component,
     {
-        self.storages.get(&TypeId::of::<T>()).map(|s| {
+        self.sets.get(&TypeId::of::<T>()).map(|s| {
             match (*s.as_ptr()).as_mut_any().downcast_mut::<SparseSet<T>>() {
                 Some(s) => s,
                 None => unreachable_unchecked(),
@@ -93,17 +93,13 @@ impl Storages {
         &self,
         component: TypeId,
     ) -> Option<&dyn AbstractSparseSet> {
-        self.storages
-            .get(&component)
-            .map(|s| (*s.as_ptr()).as_ref())
+        self.sets.get(&component).map(|s| (*s.as_ptr()).as_ref())
     }
 
     pub unsafe fn get_abstract_mut_unchecked(
         &self,
         component: TypeId,
     ) -> Option<&mut dyn AbstractSparseSet> {
-        self.storages
-            .get(&component)
-            .map(|s| (*s.as_ptr()).as_mut())
+        self.sets.get(&component).map(|s| (*s.as_ptr()).as_mut())
     }
 }

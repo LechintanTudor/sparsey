@@ -1,5 +1,7 @@
 use crate::group::WorldLayoutDescriptor;
-use crate::registry::{BorrowFromWorld, Comp, CompMut, Component, ComponentSet, Groups, Storages};
+use crate::registry::{
+    BorrowFromWorld, Comp, CompMut, Component, ComponentSet, Components, Groups,
+};
 use crate::storage::{AbstractSparseSetViewMut, Entity, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
@@ -8,7 +10,7 @@ use std::hint::unreachable_unchecked;
 
 pub struct World {
     entities: EntityStorage,
-    storages: Storages,
+    components: Components,
     groups: Groups,
 }
 
@@ -19,7 +21,7 @@ impl World {
     {
         let mut world = Self {
             entities: Default::default(),
-            storages: Default::default(),
+            components: Default::default(),
             groups: Groups::new(L::world_layout()),
         };
 
@@ -31,11 +33,11 @@ impl World {
     where
         T: Component,
     {
-        self.storages.register::<T>()
+        self.components.register::<T>()
     }
 
     pub fn maintain(&mut self) {
-        self.storages.clear_flags();
+        self.components.clear_flags();
     }
 
     pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
@@ -44,7 +46,7 @@ impl World {
     {
         unsafe {
             Some(Comp::new(
-                self.storages.borrow::<T>()?,
+                self.components.borrow::<T>()?,
                 self.groups.get_parent_group(TypeId::of::<T>()),
             ))
         }
@@ -56,7 +58,7 @@ impl World {
     {
         unsafe {
             Some(CompMut::new(
-                self.storages.borrow_mut::<T>()?,
+                self.components.borrow_mut::<T>()?,
                 self.groups.get_parent_group(TypeId::of::<T>()),
             ))
         }
@@ -66,7 +68,7 @@ impl World {
     where
         T: Component,
     {
-        self.storages.borrow_mut::<T>()
+        self.components.borrow_mut::<T>()
     }
 
     pub(crate) fn entities(&self) -> &EntityStorage {
@@ -105,7 +107,7 @@ impl World {
             .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
         {
             storages.extend(group.components().iter().map(|&c| unsafe {
-                self.storages
+                self.components
                     .get_abstract_mut_unchecked(c)
                     .unwrap()
                     .as_abstract_view_mut()
@@ -149,7 +151,7 @@ impl World {
             .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
         {
             storages.extend(group.components().iter().map(|&c| unsafe {
-                self.storages
+                self.components
                     .get_abstract_mut_unchecked(c)
                     .unwrap()
                     .as_abstract_view_mut()
