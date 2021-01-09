@@ -1,4 +1,4 @@
-use crate::registry::{BorrowFromWorld, World};
+use crate::registry::{BorrowWorld, World};
 use crate::storage::{Entity, SparseSet};
 use std::ops::Deref;
 
@@ -57,8 +57,8 @@ impl Deref for Entities<'_> {
     }
 }
 
-impl<'a> BorrowFromWorld<'a> for Entities<'a> {
-    fn borrow(world: &'a World) -> Self {
+impl<'a> BorrowWorld<'a> for Entities<'a> {
+    fn borrow_world(world: &'a World) -> Self {
         Self {
             storage: world.entities(),
         }

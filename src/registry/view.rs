@@ -1,5 +1,5 @@
 use crate::data::{IterableView, ParentGroup, UnfilteredIterableView};
-use crate::registry::{BorrowFromWorld, Component, World};
+use crate::registry::{BorrowWorld, Component, World};
 use crate::storage::{ComponentFlags, ComponentRefMut, Entity, SparseArray, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 
@@ -17,11 +17,11 @@ impl<'a, T> Comp<'a, T> {
     }
 }
 
-impl<'a, T> BorrowFromWorld<'a> for Comp<'a, T>
+impl<'a, T> BorrowWorld<'a> for Comp<'a, T>
 where
     T: Component,
 {
-    fn borrow(world: &'a World) -> Self {
+    fn borrow_world(world: &'a World) -> Self {
         world.borrow_comp().unwrap()
     }
 }
@@ -69,11 +69,11 @@ impl<'a, T> CompMut<'a, T> {
     }
 }
 
-impl<'a, T> BorrowFromWorld<'a> for CompMut<'a, T>
+impl<'a, T> BorrowWorld<'a> for CompMut<'a, T>
 where
     T: Component,
 {
-    fn borrow(world: &'a World) -> Self {
+    fn borrow_world(world: &'a World) -> Self {
         world.borrow_comp_mut().unwrap()
     }
 }
@@ -138,11 +138,11 @@ unsafe impl<'a: 'b, 'b, T> UnfilteredIterableView<'b> for &'b mut CompMut<'a, T>
 
 pub struct SparseSetMut<'a, T>(pub(crate) AtomicRefMut<'a, SparseSet<T>>);
 
-impl<'a, T> BorrowFromWorld<'a> for SparseSetMut<'a, T>
+impl<'a, T> BorrowWorld<'a> for SparseSetMut<'a, T>
 where
     T: Component,
 {
-    fn borrow(world: &'a World) -> Self {
+    fn borrow_world(world: &'a World) -> Self {
         unsafe { Self(world.borrow_sparse_set_mut().unwrap()) }
     }
 }

@@ -44,7 +44,7 @@ fn main() {
     {
         println!("Before maintain:");
 
-        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow(&world);
+        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
 
         for (a, b) in (added(&mut a), &mut b).join() {
             println!("{:?}, {:?}", *a, *b);
@@ -56,7 +56,7 @@ fn main() {
     {
         println!("\nAfter maintain:");
 
-        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow(&world);
+        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
 
         for (a, b) in (added(&mut a), &mut b).join() {
             println!("{:?}, {:?}", *a, *b);

@@ -1,6 +1,6 @@
 pub use self::impls::*;
 
-use crate::registry::{BorrowFromWorld, SparseSetMut};
+use crate::registry::{BorrowWorld, SparseSetMut};
 use crate::storage::Entity;
 use std::any::TypeId;
 
@@ -16,7 +16,7 @@ pub trait ComponentSet<'a>
 where
     Self: Sized,
 {
-    type Target: BorrowFromWorld<'a>;
+    type Target: BorrowWorld<'a>;
     type Components: AsRef<[TypeId]>;
 
     fn components() -> Self::Components;
