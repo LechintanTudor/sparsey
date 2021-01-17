@@ -1,17 +1,19 @@
-use crate::group::WorldLayoutDescriptor;
+use crate::group::WorldLayout;
 use crate::registry::{
     BorrowWorld, Comp, CompMut, Component, ComponentSet, Components, GroupedComponents,
 };
 use crate::storage::{AbstractSparseSetViewMut, Entity, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
+use std::any::TypeId;
 use std::collections::HashSet;
 use std::hint::unreachable_unchecked;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::num::NonZeroU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 
-static CURRENT_WORLD_ID: AtomicUsize = AtomicUsize::new(0);
+static CURRENT_WORLD_ID: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub struct WorldId(usize);
+pub struct WorldId(NonZeroU64);
 
 pub struct World {
     entities: EntityStorage,
@@ -21,54 +23,60 @@ pub struct World {
 }
 
 impl World {
-    pub fn new<L>() -> Self
-    where
-        L: WorldLayoutDescriptor,
-    {
-        let world = Self {
+    pub fn new(world_layout: WorldLayout) -> Self {
+        Self {
             entities: Default::default(),
             components: Default::default(),
-            grouped_components: Default::default(),
-            id: WorldId(CURRENT_WORLD_ID.fetch_add(1, Ordering::Relaxed)),
-        };
-
-        world
+            grouped_components: GroupedComponents::new(world_layout),
+            id: WorldId(NonZeroU64::new(CURRENT_WORLD_ID.fetch_add(1, Ordering::Relaxed)).unwrap()),
+        }
     }
 
     pub fn id(&self) -> WorldId {
         self.id
     }
 
-    pub fn register<T>(&mut self)
+    pub fn register<C>(&mut self)
     where
-        T: Component,
+        C: Component,
     {
-        self.components.register::<T>()
+        if !self.grouped_components.contains(TypeId::of::<C>()) {
+            self.components.register::<C>();
+        }
     }
 
     pub fn maintain(&mut self) {
-        self.components.clear_flags();
+        todo!()
     }
 
     pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
     where
         T: Component,
     {
-        unsafe { Some(Comp::new(self.components.borrow::<T>()?, None)) }
+        match self.grouped_components.borrow::<T>() {
+            Some(set) => Some(Comp::ungrouped(set)),
+            None => Some(Comp::ungrouped(self.components.borrow::<T>()?)),
+        }
     }
 
     pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
     where
         T: Component,
     {
-        unsafe { Some(CompMut::new(self.components.borrow_mut::<T>()?, None)) }
+        match self.grouped_components.borrow_mut::<T>() {
+            Some(set) => Some(CompMut::ungrouped(set)),
+            None => Some(CompMut::ungrouped(self.components.borrow_mut::<T>()?)),
+        }
     }
 
     pub(crate) unsafe fn borrow_sparse_set_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
     where
         T: Component,
     {
-        self.components.borrow_mut::<T>()
+        match self.grouped_components.borrow_mut::<T>() {
+            Some(set) => Some(set),
+            None => Some(self.components.borrow_mut::<T>()?),
+        }
     }
 
     pub(crate) fn entities(&self) -> &EntityStorage {

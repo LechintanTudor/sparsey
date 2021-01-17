@@ -30,12 +30,12 @@ type WorldLayout = (
 );
 
 fn main() {
-    let mut world = World::new::<WorldLayout>();
-    world.register::<A>();
-    world.register::<B>();
-    world.register::<C>();
-    world.register::<D>();
-    world.register::<E>();
+    // let mut world = World::new::<WorldLayout>();
+    // world.register::<A>();
+    // world.register::<B>();
+    // world.register::<C>();
+    // world.register::<D>();
+    // world.register::<E>();
 
     // let e0 = world.create((A, B));
     // let e1 = world.create((A, B, C));

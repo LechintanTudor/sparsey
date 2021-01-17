@@ -12,7 +12,14 @@ where
 }
 
 impl<'a, T> Comp<'a, T> {
-    pub(crate) unsafe fn new(set: AtomicRef<'a, SparseSet<T>>, group: Option<ParentGroup>) -> Self {
+    pub(crate) fn ungrouped(set: AtomicRef<'a, SparseSet<T>>) -> Self {
+        Self { set, group: None }
+    }
+
+    pub(crate) unsafe fn grouped(
+        set: AtomicRef<'a, SparseSet<T>>,
+        group: Option<ParentGroup>,
+    ) -> Self {
         Self { set, group }
     }
 }
@@ -64,7 +71,11 @@ where
 }
 
 impl<'a, T> CompMut<'a, T> {
-    pub unsafe fn new(set: AtomicRefMut<'a, SparseSet<T>>, group: Option<ParentGroup>) -> Self {
+    pub(crate) fn ungrouped(set: AtomicRefMut<'a, SparseSet<T>>) -> Self {
+        Self { set, group: None }
+    }
+
+    pub unsafe fn grouped(set: AtomicRefMut<'a, SparseSet<T>>, group: Option<ParentGroup>) -> Self {
         Self { set, group }
     }
 }

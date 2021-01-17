@@ -64,42 +64,4 @@ impl Components {
             .get(&component)
             .map(|s| AtomicRefMut::map(s.borrow_mut(), |s| s.as_mut()))
     }
-
-    pub unsafe fn get_unchecked<T>(&self) -> Option<&SparseSet<T>>
-    where
-        T: Component,
-    {
-        self.sets.get(&TypeId::of::<T>()).map(|s| {
-            match (*s.as_ptr()).as_any().downcast_ref::<SparseSet<T>>() {
-                Some(s) => s,
-                None => unreachable_unchecked(),
-            }
-        })
-    }
-
-    pub unsafe fn get_mut_unchecked<T>(&self) -> Option<&mut SparseSet<T>>
-    where
-        T: Component,
-    {
-        self.sets.get(&TypeId::of::<T>()).map(|s| {
-            match (*s.as_ptr()).as_mut_any().downcast_mut::<SparseSet<T>>() {
-                Some(s) => s,
-                None => unreachable_unchecked(),
-            }
-        })
-    }
-
-    pub unsafe fn get_abstract_unchecked(
-        &self,
-        component: TypeId,
-    ) -> Option<&dyn AbstractSparseSet> {
-        self.sets.get(&component).map(|s| (*s.as_ptr()).as_ref())
-    }
-
-    pub unsafe fn get_abstract_mut_unchecked(
-        &self,
-        component: TypeId,
-    ) -> Option<&mut dyn AbstractSparseSet> {
-        self.sets.get(&component).map(|s| (*s.as_ptr()).as_mut())
-    }
 }
