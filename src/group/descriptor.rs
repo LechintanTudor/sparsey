@@ -1,23 +1,16 @@
-use crate::group::{GroupLayout, SubgroupLayout, WorldLayout};
-use crate::registry::{Component, World};
-use std::any::TypeId;
+use crate::group::{GroupLayout, LayoutComponent, SubgroupLayout, WorldLayout};
+use crate::registry::Component;
 
 pub trait SubgroupLayoutDescriptor {
     fn subgroup_layout() -> SubgroupLayout;
-
-    fn register_components(world: &mut World);
 }
 
 pub trait GroupLayoutDescriptor {
     fn group_layout() -> GroupLayout;
-
-    fn register_components(world: &mut World);
 }
 
 pub trait WorldLayoutDescriptor {
     fn world_layout() -> WorldLayout;
-
-    fn register_components(world: &mut World);
 }
 
 macro_rules! impl_subgroup_layout_descriptor {
@@ -28,12 +21,8 @@ macro_rules! impl_subgroup_layout_descriptor {
         {
             fn subgroup_layout() -> SubgroupLayout {
                 let mut subgroup_layout = SubgroupLayout::builder();
-                $(subgroup_layout.add(TypeId::of::<$comp>());)+
+                $(subgroup_layout.add(LayoutComponent::new::<$comp>());)+
                 subgroup_layout.build()
-            }
-
-            fn register_components(world: &mut World) {
-                $(world.register::<$comp>();)+
             }
         }
     };
@@ -50,10 +39,6 @@ macro_rules! impl_group_layout_descriptor {
                 $(group_layout.add($subgroup_layout::subgroup_layout());)+
                 group_layout.build()
             }
-
-            fn register_components(world: &mut World) {
-                $($subgroup_layout::register_components(world);)+
-            }
         }
     };
 }
@@ -69,11 +54,6 @@ macro_rules! impl_world_layout_descriptor {
                 let mut world_layout = WorldLayout::builder();
                 $(world_layout.add($group_layout::group_layout());)*
                 world_layout.build()
-            }
-
-            #[allow(unused_variables)]
-            fn register_components(world: &mut World) {
-                $($group_layout::register_components(world);)*
             }
         }
     };

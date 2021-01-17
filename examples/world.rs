@@ -37,29 +37,29 @@ fn main() {
     world.register::<D>();
     world.register::<E>();
 
-    let e0 = world.create((A, B));
-    let e1 = world.create((A, B, C));
-    let e2 = world.create((A, B, C, D, E));
+    // let e0 = world.create((A, B));
+    // let e1 = world.create((A, B, C));
+    // let e2 = world.create((A, B, C, D, E));
 
-    {
-        println!("Before maintain:");
+    // {
+    //     println!("Before maintain:");
 
-        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
+    //     let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
 
-        for (a, b) in (added(&mut a), &mut b).join() {
-            println!("{:?}, {:?}", *a, *b);
-        }
-    }
+    //     for (a, b) in (added(&mut a), &mut b).join() {
+    //         println!("{:?}, {:?}", *a, *b);
+    //     }
+    // }
 
-    world.maintain();
+    // world.maintain();
 
-    {
-        println!("\nAfter maintain:");
+    // {
+    //     println!("\nAfter maintain:");
 
-        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
+    //     let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
 
-        for (a, b) in (added(&mut a), &mut b).join() {
-            println!("{:?}, {:?}", *a, *b);
-        }
-    }
+    //     for (a, b) in (added(&mut a), &mut b).join() {
+    //         println!("{:?}, {:?}", *a, *b);
+    //     }
+    // }
 }

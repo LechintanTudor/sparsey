@@ -1,8 +1,7 @@
-use std::any::TypeId;
+use crate::group::LayoutComponent;
 
-#[derive(Debug)]
 pub struct SubgroupLayout {
-    components: Box<[TypeId]>,
+    components: Vec<LayoutComponent>,
 }
 
 impl SubgroupLayout {
@@ -13,11 +12,11 @@ impl SubgroupLayout {
 
 #[derive(Default)]
 pub struct SubgroupLayoutBuilder {
-    components: Vec<TypeId>,
+    components: Vec<LayoutComponent>,
 }
 
 impl SubgroupLayoutBuilder {
-    pub fn add(&mut self, component: TypeId) {
+    pub fn add(&mut self, component: LayoutComponent) {
         self.components.push(component);
     }
 
@@ -43,9 +42,8 @@ impl SubgroupLayoutBuilder {
     }
 }
 
-#[derive(Debug)]
 pub struct GroupLayout {
-    components: Box<[TypeId]>,
+    components: Box<[LayoutComponent]>,
     subgroup_arities: Box<[usize]>,
 }
 
@@ -54,28 +52,32 @@ impl GroupLayout {
         Default::default()
     }
 
-    pub fn into_components_and_arities(self) -> (Box<[TypeId]>, Box<[usize]>) {
-        (self.components, self.subgroup_arities)
+    pub fn components(&self) -> &[LayoutComponent] {
+        &self.components
+    }
+
+    pub fn subgroup_arities(&self) -> &[usize] {
+        &self.subgroup_arities
     }
 }
 
 #[derive(Default)]
 pub struct GroupLayoutBuilder {
-    components: Vec<TypeId>,
+    components: Vec<LayoutComponent>,
     subgroup_arities: Vec<usize>,
 }
 
 impl GroupLayoutBuilder {
-    pub fn add(&mut self, subgroup_layout: SubgroupLayout) {
+    pub fn add(&mut self, mut subgroup_layout: SubgroupLayout) {
         assert!(
             subgroup_layout.components.len() > self.components.len(),
             "Child subgroup must contain more types than the parent subgroup",
         );
 
         let mut overlapped_count = 0_usize;
-        let mut new_components = Vec::<TypeId>::new();
+        let mut new_components = Vec::<LayoutComponent>::new();
 
-        for &component in subgroup_layout.components.iter() {
+        for component in subgroup_layout.components.drain(..) {
             if self.components.contains(&component) {
                 overlapped_count += 1;
             } else {
@@ -89,7 +91,7 @@ impl GroupLayoutBuilder {
             "Child subgroup must contain all types from the parent subgroup",
         );
 
-        for &component in &new_components {
+        for component in new_components.drain(..) {
             self.components.push(component);
         }
 
@@ -104,7 +106,7 @@ impl GroupLayoutBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Default)]
 pub struct WorldLayout {
     group_layouts: Box<[GroupLayout]>,
 }
@@ -114,8 +116,8 @@ impl WorldLayout {
         Default::default()
     }
 
-    pub fn into_group_layouts(self) -> Box<[GroupLayout]> {
-        self.group_layouts
+    pub fn group_layouts(&self) -> &[GroupLayout] {
+        &self.group_layouts
     }
 }
 
