@@ -1,20 +1,47 @@
-use crate::storage::{
-    ComponentFlags, Entity, IndexEntity, SparseArray, SparseSet, COMPONENT_FLAG_NONE,
-};
+use crate::storage::{ComponentFlags, Entity, IndexEntity, SparseArray, SparseSet};
 use std::any::Any;
-use std::{mem, ptr, slice};
+use std::{mem, ptr};
 
 pub trait AbstractSparseSet
 where
     Self: 'static,
 {
-    fn clear_flags(&mut self);
+    fn maintain(&mut self);
 
     fn as_any(&self) -> &dyn Any;
 
     fn as_mut_any(&mut self) -> &mut dyn Any;
 
+    fn as_abstract_view(&self) -> AbstractSparseSetView;
+
     fn as_abstract_view_mut(&mut self) -> AbstractSparseSetViewMut;
+}
+
+#[derive(Copy, Clone)]
+pub struct AbstractSparseSetView<'a> {
+    sparse: &'a SparseArray,
+    dense: &'a [Entity],
+    _flags: *const ComponentFlags,
+}
+
+impl<'a> AbstractSparseSetView<'a> {
+    pub(crate) fn new<T>(set: &'a SparseSet<T>) -> Self {
+        let (sparse, dense, _, flags) = set.split();
+
+        Self {
+            sparse,
+            dense,
+            _flags: flags.as_ptr(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.dense.len()
+    }
+
+    pub fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
+        self.sparse.get(entity)
+    }
 }
 
 pub struct AbstractSparseSetViewMut<'a> {
@@ -26,7 +53,7 @@ pub struct AbstractSparseSetViewMut<'a> {
 }
 
 impl<'a> AbstractSparseSetViewMut<'a> {
-    pub fn new<T>(set: &'a mut SparseSet<T>) -> Self {
+    pub(crate) fn new<T>(set: &'a mut SparseSet<T>) -> Self {
         let (sparse, dense, data, flags) = unsafe { set.split_raw() };
 
         Self {
@@ -36,11 +63,6 @@ impl<'a> AbstractSparseSetViewMut<'a> {
             component_size: mem::size_of::<T>(),
             flags: flags.as_mut_ptr(),
         }
-    }
-
-    pub fn clear_flags(&mut self) {
-        let flags = unsafe { slice::from_raw_parts_mut(self.flags, self.len()) };
-        flags.iter_mut().for_each(|f| *f = COMPONENT_FLAG_NONE);
     }
 
     pub fn len(&self) -> usize {

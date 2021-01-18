@@ -5,6 +5,8 @@ use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};
 
+use super::AbstractSparseSetView;
+
 pub const COMPONENT_FLAG_NONE: ComponentFlags = 0;
 pub const COMPONENT_FLAG_CHANGED: ComponentFlags = 1;
 pub const COMPONENT_FLAG_ADDED: ComponentFlags = 1 << 1;
@@ -211,7 +213,7 @@ impl<T> AbstractSparseSet for SparseSet<T>
 where
     T: 'static,
 {
-    fn clear_flags(&mut self) {
+    fn maintain(&mut self) {
         self.flags.iter_mut().for_each(|f| *f = 0);
     }
 
@@ -221,6 +223,10 @@ where
 
     fn as_mut_any(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn as_abstract_view(&self) -> AbstractSparseSetView {
+        AbstractSparseSetView::new(self)
     }
 
     fn as_abstract_view_mut(&mut self) -> AbstractSparseSetViewMut {

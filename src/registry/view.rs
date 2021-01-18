@@ -147,9 +147,9 @@ impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T> {
 
 unsafe impl<'a: 'b, 'b, T> UnfilteredIterableView<'b> for &'b mut CompMut<'a, T> {}
 
-pub struct SparseSetMut<'a, T>(pub(crate) AtomicRefMut<'a, SparseSet<T>>);
+pub(crate) struct BorrowSparseSetMut<'a, T>(pub(crate) AtomicRefMut<'a, SparseSet<T>>);
 
-impl<'a, T> BorrowWorld<'a> for SparseSetMut<'a, T>
+impl<'a, T> BorrowWorld<'a> for BorrowSparseSetMut<'a, T>
 where
     T: Component,
 {

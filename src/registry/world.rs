@@ -1,8 +1,8 @@
 use crate::group::WorldLayout;
-use crate::registry::{
-    BorrowWorld, Comp, CompMut, Component, ComponentSet, Components, GroupedComponents,
+use crate::registry::{Comp, CompMut, Component, ComponentSet, Components, GroupedComponents};
+use crate::storage::{
+    AbstractSparseSetView, AbstractSparseSetViewMut, Entity, EntityStorage, SparseSet,
 };
-use crate::storage::{AbstractSparseSetViewMut, Entity, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::collections::HashSet;
@@ -46,7 +46,8 @@ impl World {
     }
 
     pub fn maintain(&mut self) {
-        todo!()
+        self.components.maintain();
+        self.grouped_components.maintain();
     }
 
     pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
@@ -83,218 +84,211 @@ impl World {
         &self.entities
     }
 
-    // pub fn create<'a, C>(&'a mut self, components: C) -> Entity
-    // where
-    //     C: ComponentSet<'a>,
-    // {
-    //     let entity = self.entities.create();
-    //     self.insert(entity, components);
-    //     entity
-    // }
+    pub fn create<C>(&mut self, components: C) -> Entity
+    where
+        C: ComponentSet,
+    {
+        let entity = self.entities.create();
+        self.insert(entity, components);
+        entity
+    }
 
-    // pub fn insert<'a, C>(&'a mut self, entity: Entity, components: C)
-    // where
-    //     C: ComponentSet<'a>,
-    // {
-    //     {
-    //         let mut target = <C::Target as BorrowWorld>::borrow_world(self);
-    //         C::insert(&mut target, entity, components);
-    //     }
+    pub fn insert<C>(&mut self, entity: Entity, components: C)
+    where
+        C: ComponentSet,
+    {
+        unsafe {
+            C::insert_raw(self, entity, components);
+        }
 
-    //     let group_indexes = C::components()
-    //         .as_ref()
-    //         .iter()
-    //         .flat_map(|&c| self.groups.get_subgroup_index(c))
-    //         .map(|c| c.group_index())
-    //         .collect::<HashSet<_>>();
+        let group_indexes = unsafe { C::components() }
+            .as_ref()
+            .iter()
+            .flat_map(|&c| self.grouped_components.group_index_for(c))
+            .collect::<HashSet<_>>();
 
-    //     let mut storages = Vec::<AbstractSparseSetViewMut>::new();
+        for &i in group_indexes.iter() {
+            let (mut sparse_sets, mut subgroups) = unsafe {
+                self.grouped_components
+                    .get_component_group_split_view_mut_unchecked(i)
+            };
 
-    //     for group in group_indexes
-    //         .iter()
-    //         .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
-    //     {
-    //         storages.extend(group.components().iter().map(|&c| unsafe {
-    //             self.components
-    //                 .get_abstract_mut_unchecked(c)
-    //                 .unwrap()
-    //                 .as_abstract_view_mut()
-    //         }));
+            let mut previous_arity = 0_usize;
 
-    //         let mut previous_arity = 0_usize;
+            for (arity, len) in unsafe { subgroups.iter_split_subgroups_mut(..) } {
+                let status = group_insert_status(
+                    sparse_sets.iter_abstract_sparse_set_views(previous_arity..arity),
+                    *len,
+                    entity,
+                );
 
-    //         for (arity, len) in group.iter_subgroup_data_mut(..) {
-    //             let status = group_insert_status(&storages[previous_arity..arity], *len, entity);
+                match status {
+                    InsertGroupStatus::NeedsGrouping => unsafe {
+                        group_components(
+                            sparse_sets.iter_abstract_sparse_set_views_mut(..arity),
+                            len,
+                            entity,
+                        );
+                    },
+                    InsertGroupStatus::MissingComponents => break,
+                    InsertGroupStatus::Grouped => (),
+                }
 
-    //             match status {
-    //                 InsertGroupStatus::NeedsGrouping => unsafe {
-    //                     group_components(&mut storages[..arity], len, entity);
-    //                 },
-    //                 InsertGroupStatus::MissingComponents => break,
-    //                 InsertGroupStatus::Grouped => (),
-    //             }
+                previous_arity = arity;
+            }
+        }
+    }
 
-    //             previous_arity = arity;
-    //         }
+    pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
+    where
+        C: ComponentSet,
+    {
+        let group_indexes = unsafe { C::components() }
+            .as_ref()
+            .iter()
+            .flat_map(|&c| self.grouped_components.group_index_for(c))
+            .collect::<HashSet<_>>();
 
-    //         storages.clear()
-    //     }
-    // }
+        for &i in group_indexes.iter() {
+            let (mut sparse_sets, mut subgroups) = unsafe {
+                self.grouped_components
+                    .get_component_group_split_view_mut_unchecked(i)
+            };
 
-    // pub fn remove<'a, C>(&'a mut self, entity: Entity) -> Option<C>
-    // where
-    //     C: ComponentSet<'a>,
-    // {
-    //     let group_indexes = C::components()
-    //         .as_ref()
-    //         .iter()
-    //         .flat_map(|&c| self.groups.get_subgroup_index(c))
-    //         .map(|c| c.group_index())
-    //         .collect::<HashSet<_>>();
+            let mut previous_arity = 0_usize;
+            let mut ungroup_start = Option::<usize>::None;
+            let mut ungroup_len = 0;
 
-    //     let mut storages = Vec::<AbstractSparseSetViewMut>::new();
+            for (i, (arity, len)) in unsafe { subgroups.iter_split_subgroups_mut(..).enumerate() } {
+                let status = group_remove_status(
+                    sparse_sets.iter_abstract_sparse_set_views(previous_arity..arity),
+                    *len,
+                    entity,
+                );
 
-    //     for group in group_indexes
-    //         .iter()
-    //         .map(|&i| unsafe { self.groups.get_mut_unchecked(i) })
-    //     {
-    //         storages.extend(group.components().iter().map(|&c| unsafe {
-    //             self.components
-    //                 .get_abstract_mut_unchecked(c)
-    //                 .unwrap()
-    //                 .as_abstract_view_mut()
-    //         }));
+                match status {
+                    RemoveGroupStatus::NeedsUngrouping => {
+                        if ungroup_start.is_none() {
+                            ungroup_start = Some(i);
+                        }
+                        ungroup_len += 1;
+                    }
+                    RemoveGroupStatus::Ungrouped => break,
+                    RemoveGroupStatus::MissingComponents => break,
+                }
 
-    //         let mut previous_arity = 0_usize;
-    //         let mut ungroup_start = Option::<usize>::None;
-    //         let mut ungroup_len = 0;
+                previous_arity = arity;
+            }
 
-    //         for (i, (arity, len)) in group.iter_subgroup_data_mut(..).enumerate() {
-    //             let status = group_remove_status(&storages[previous_arity..arity], *len, entity);
+            if let Some(ungroup_start) = ungroup_start {
+                let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
-    //             match status {
-    //                 RemoveGroupStatus::NeedsUngrouping => {
-    //                     if ungroup_start.is_none() {
-    //                         ungroup_start = Some(i);
-    //                     }
+                unsafe {
+                    for (arity, len) in subgroups.iter_split_subgroups_mut(ungroup_range).rev() {
+                        ungroup_components(
+                            sparse_sets.iter_abstract_sparse_set_views_mut(..arity),
+                            len,
+                            entity,
+                        );
+                    }
+                }
+            }
+        }
 
-    //                     ungroup_len += 1;
-    //                 }
-    //                 RemoveGroupStatus::Ungrouped => break,
-    //                 RemoveGroupStatus::MissingComponents => break,
-    //             }
-
-    //             previous_arity = arity;
-    //         }
-
-    //         if let Some(ungroup_start) = ungroup_start {
-    //             let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
-
-    //             for (arity, len) in group.iter_subgroup_data_mut(ungroup_range).rev() {
-    //                 unsafe {
-    //                     ungroup_components(&mut storages[..arity], len, entity);
-    //                 }
-    //             }
-    //         }
-
-    //         storages.clear();
-    //     }
-
-    //     let mut target = <C::Target as BorrowWorld>::borrow_world(self);
-    //     C::remove(&mut target, entity)
-    // }
+        unsafe { C::remove_raw(self, entity) }
+    }
 }
 
-// #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-// enum InsertGroupStatus {
-//     Grouped,
-//     NeedsGrouping,
-//     MissingComponents,
-// }
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+enum InsertGroupStatus {
+    Grouped,
+    NeedsGrouping,
+    MissingComponents,
+}
 
-// #[derive(Copy, Clone, Eq, PartialEq)]
-// enum RemoveGroupStatus {
-//     Ungrouped,
-//     NeedsUngrouping,
-//     MissingComponents,
-// }
+#[derive(Copy, Clone, Eq, PartialEq)]
+enum RemoveGroupStatus {
+    Ungrouped,
+    NeedsUngrouping,
+    MissingComponents,
+}
 
-// fn group_insert_status(
-//     storages: &[AbstractSparseSetViewMut],
-//     group_len: usize,
-//     entity: Entity,
-// ) -> InsertGroupStatus {
-//     let mut status = InsertGroupStatus::Grouped;
+fn group_insert_status<'a>(
+    sparse_set_iter: impl Iterator<Item = AbstractSparseSetView<'a>>,
+    group_len: usize,
+    entity: Entity,
+) -> InsertGroupStatus {
+    let mut status = InsertGroupStatus::Grouped;
 
-//     for storage in storages.iter() {
-//         match storage.get_index_entity(entity) {
-//             Some(index_entity) => {
-//                 if index_entity.index() >= group_len {
-//                     status = InsertGroupStatus::NeedsGrouping;
-//                 }
-//             }
-//             None => return InsertGroupStatus::MissingComponents,
-//         }
-//     }
+    for sparse_set in sparse_set_iter {
+        match sparse_set.get_index_entity(entity) {
+            Some(index_entity) => {
+                if index_entity.index() >= group_len {
+                    status = InsertGroupStatus::NeedsGrouping;
+                }
+            }
+            None => return InsertGroupStatus::MissingComponents,
+        }
+    }
 
-//     status
-// }
+    status
+}
 
-// fn group_remove_status(
-//     storages: &[AbstractSparseSetViewMut],
-//     group_len: usize,
-//     entity: Entity,
-// ) -> RemoveGroupStatus {
-//     let mut status = RemoveGroupStatus::Ungrouped;
+fn group_remove_status<'a>(
+    sparse_set_iter: impl Iterator<Item = AbstractSparseSetView<'a>>,
+    group_len: usize,
+    entity: Entity,
+) -> RemoveGroupStatus {
+    let mut status = RemoveGroupStatus::Ungrouped;
 
-//     for storage in storages.iter() {
-//         match storage.get_index_entity(entity) {
-//             Some(index_entity) => {
-//                 if index_entity.index() < group_len {
-//                     status = RemoveGroupStatus::NeedsUngrouping;
-//                 }
-//             }
-//             None => return RemoveGroupStatus::MissingComponents,
-//         }
-//     }
+    for sparse_set in sparse_set_iter {
+        match sparse_set.get_index_entity(entity) {
+            Some(index_entity) => {
+                if index_entity.index() < group_len {
+                    status = RemoveGroupStatus::NeedsUngrouping;
+                }
+            }
+            None => return RemoveGroupStatus::MissingComponents,
+        }
+    }
 
-//     status
-// }
+    status
+}
 
-// unsafe fn group_components(
-//     storages: &mut [AbstractSparseSetViewMut],
-//     group_len: &mut usize,
-//     entity: Entity,
-// ) {
-//     for storage in storages.iter_mut() {
-//         let index = match storage.get_index_entity(entity) {
-//             Some(index_entity) => index_entity.index(),
-//             None => unreachable_unchecked(),
-//         };
+unsafe fn group_components<'a>(
+    sparse_set_iter: impl Iterator<Item = AbstractSparseSetViewMut<'a>>,
+    group_len: &mut usize,
+    entity: Entity,
+) {
+    for mut sparse_set in sparse_set_iter {
+        let index = match sparse_set.get_index_entity(entity) {
+            Some(index_entity) => index_entity.index(),
+            None => unreachable_unchecked(),
+        };
 
-//         storage.swap(index, *group_len);
-//     }
+        sparse_set.swap(index, *group_len);
+    }
 
-//     *group_len += 1;
-// }
+    *group_len += 1;
+}
 
-// unsafe fn ungroup_components(
-//     storages: &mut [AbstractSparseSetViewMut],
-//     group_len: &mut usize,
-//     entity: Entity,
-// ) {
-//     if *group_len > 0 {
-//         let last_index = *group_len - 1;
+unsafe fn ungroup_components<'a>(
+    sparse_set_iter: impl Iterator<Item = AbstractSparseSetViewMut<'a>>,
+    group_len: &mut usize,
+    entity: Entity,
+) {
+    if *group_len > 0 {
+        let last_index = *group_len - 1;
 
-//         for storage in storages.iter_mut() {
-//             let index = match storage.get_index_entity(entity) {
-//                 Some(index_entity) => index_entity.index(),
-//                 None => unreachable_unchecked(),
-//             };
+        for mut sparse_set in sparse_set_iter {
+            let index = match sparse_set.get_index_entity(entity) {
+                Some(index_entity) => index_entity.index(),
+                None => unreachable_unchecked(),
+            };
 
-//             storage.swap(index, last_index);
-//         }
+            sparse_set.swap(index, last_index);
+        }
 
-//         *group_len -= 1;
-//     }
-// }
+        *group_len -= 1;
+    }
+}

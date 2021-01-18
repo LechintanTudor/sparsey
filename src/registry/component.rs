@@ -1,6 +1,6 @@
 pub use self::impls::*;
 
-use crate::registry::{BorrowWorld, SparseSetMut};
+use crate::registry::{BorrowSparseSetMut, BorrowWorld, World};
 use crate::storage::Entity;
 use std::any::TypeId;
 
@@ -12,42 +12,48 @@ where
 
 impl<T> Component for T where T: Send + Sync + 'static {}
 
-pub trait ComponentSet<'a>
+pub trait ComponentSet
 where
     Self: Sized,
 {
-    type Target: BorrowWorld<'a>;
     type Components: AsRef<[TypeId]>;
 
-    fn components() -> Self::Components;
+    unsafe fn components() -> Self::Components;
 
-    fn insert(target: &mut Self::Target, entity: Entity, components: Self);
+    unsafe fn insert_raw(world: &World, entity: Entity, components: Self);
 
-    fn remove(target: &mut Self::Target, entity: Entity) -> Option<Self>;
+    unsafe fn remove_raw(world: &World, entity: Entity) -> Option<Self>;
 
-    fn delete(target: &mut Self::Target, entity: Entity);
+    unsafe fn delete_raw(world: &World, entity: Entity);
 }
 
 macro_rules! impl_component_set {
     ($len:tt, $(($ty:ident, $idx:tt)),+) => {
-        impl<'a, $($ty,)+> ComponentSet<'a> for ($($ty,)+)
+        impl<$($ty,)+> ComponentSet for ($($ty,)+)
         where
             $($ty: Component,)+
         {
-            type Target = ($(SparseSetMut<'a, $ty>,)+);
             type Components = [TypeId; $len];
 
-            fn components() -> Self::Components {
+            unsafe fn components() -> Self::Components {
                 [$(TypeId::of::<$ty>(),)+]
             }
 
-            fn insert(target: &mut Self::Target, entity: Entity, components: Self) {
-                $(target.$idx.0.insert(entity, components.$idx);)+
+            unsafe fn insert_raw(world: &World, entity: Entity, components: Self) {
+                let mut sparse_sets = <(
+                    $(BorrowSparseSetMut<$ty>,)+
+                )>::borrow_world(world);
+
+                $(sparse_sets.$idx.0.insert(entity, components.$idx);)+
             }
 
-            fn remove(target: &mut Self::Target, entity: Entity) -> Option<Self> {
+            unsafe fn remove_raw(world: &World, entity: Entity) -> Option<Self> {
+                let mut sparse_sets = <(
+                    $(BorrowSparseSetMut<$ty>,)+
+                )>::borrow_world(world);
+
                 let components = (
-                    $(target.$idx.0.remove(entity),)+
+                    $(sparse_sets.$idx.0.remove(entity),)+
                 );
 
                 Some((
@@ -55,8 +61,12 @@ macro_rules! impl_component_set {
                 ))
             }
 
-            fn delete(target: &mut Self::Target, entity: Entity) {
-                $(target.$idx.0.remove(entity);)+
+            unsafe fn delete_raw(world: &World, entity: Entity) {
+                let mut sparse_sets = <(
+                    $(BorrowSparseSetMut<$ty>,)+
+                )>::borrow_world(world);
+
+                $(sparse_sets.$idx.0.remove(entity);)+
             }
         }
     };

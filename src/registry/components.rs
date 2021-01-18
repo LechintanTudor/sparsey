@@ -11,10 +11,8 @@ pub struct Components {
 }
 
 impl Components {
-    pub fn clear_flags(&mut self) {
-        self.sets
-            .values_mut()
-            .for_each(|s| s.get_mut().clear_flags());
+    pub fn maintain(&mut self) {
+        self.sets.values_mut().for_each(|s| s.get_mut().maintain());
     }
 
     pub fn register<T>(&mut self)

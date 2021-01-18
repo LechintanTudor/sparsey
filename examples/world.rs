@@ -2,6 +2,7 @@
 
 use ecstasy::data::filter::*;
 use ecstasy::prelude::*;
+use ecstasy::group::WorldLayoutDescriptor as _;
 
 #[derive(Debug)]
 struct A;
@@ -30,36 +31,37 @@ type WorldLayout = (
 );
 
 fn main() {
-    // let mut world = World::new::<WorldLayout>();
-    // world.register::<A>();
-    // world.register::<B>();
-    // world.register::<C>();
-    // world.register::<D>();
-    // world.register::<E>();
+    // let mut world = World::new(WorldLayout::world_layout());
+    let mut world = World::new(<()>::world_layout());
+    world.register::<A>();
+    world.register::<B>();
+    world.register::<C>();
+    world.register::<D>();
+    world.register::<E>();
 
-    // let e0 = world.create((A, B));
-    // let e1 = world.create((A, B, C));
-    // let e2 = world.create((A, B, C, D, E));
+    let e0 = world.create((A, B));
+    let e1 = world.create((A, B, C));
+    let e2 = world.create((A, B, C, D, E));
 
-    // {
-    //     println!("Before maintain:");
+    {
+        println!("Before maintain:");
 
-    //     let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
+        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
 
-    //     for (a, b) in (added(&mut a), &mut b).join() {
-    //         println!("{:?}, {:?}", *a, *b);
-    //     }
-    // }
+        for (a, b) in (added(&mut a), &mut b).join() {
+            println!("{:?}, {:?}", *a, *b);
+        }
+    }
 
-    // world.maintain();
+    world.maintain();
 
-    // {
-    //     println!("\nAfter maintain:");
+    {
+        println!("\nAfter maintain:");
 
-    //     let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
+        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
 
-    //     for (a, b) in (added(&mut a), &mut b).join() {
-    //         println!("{:?}, {:?}", *a, *b);
-    //     }
-    // }
+        for (a, b) in (added(&mut a), &mut b).join() {
+            println!("{:?}, {:?}", *a, *b);
+        }
+    }
 }

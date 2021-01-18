@@ -1,11 +1,13 @@
 use crate::group::WorldLayout;
-use crate::storage::{AbstractSparseSet, SparseSet};
+use crate::registry::Component;
+use crate::storage::{
+    AbstractSparseSet, AbstractSparseSetView, AbstractSparseSetViewMut, SparseSet,
+};
 use atomic_refcell::*;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
-
-use super::Component;
+use std::slice::SliceIndex;
 
 #[derive(Default)]
 pub struct Subgroup {
@@ -27,9 +29,85 @@ struct ComponentInfo {
 }
 
 #[derive(Default)]
-struct ComponentGroup {
+pub struct ComponentGroup {
     components: Vec<AtomicRefCell<Box<dyn AbstractSparseSet>>>,
     subgroups: Vec<Subgroup>,
+}
+
+impl ComponentGroup {
+    pub unsafe fn split(
+        &mut self,
+    ) -> (
+        ComponentGroupSparseSetsViewMut,
+        ComponentGroupSubgroupsViewMut,
+    ) {
+        (
+            ComponentGroupSparseSetsViewMut::new(&mut self.components),
+            ComponentGroupSubgroupsViewMut::new(&mut self.subgroups),
+        )
+    }
+}
+
+pub struct ComponentGroupSparseSetsViewMut<'a> {
+    components: &'a mut [AtomicRefCell<Box<dyn AbstractSparseSet>>],
+}
+
+impl<'a> ComponentGroupSparseSetsViewMut<'a> {
+    fn new(components: &'a mut [AtomicRefCell<Box<dyn AbstractSparseSet>>]) -> Self {
+        Self { components }
+    }
+
+    pub fn iter_abstract_sparse_set_views<I>(
+        &mut self,
+        range: I,
+    ) -> impl DoubleEndedIterator<Item = AbstractSparseSetView>
+    where
+        I: SliceIndex<
+            [AtomicRefCell<Box<dyn AbstractSparseSet>>],
+            Output = [AtomicRefCell<Box<dyn AbstractSparseSet>>],
+        >,
+    {
+        (&mut self.components[range])
+            .iter_mut()
+            .map(|s| s.get_mut().as_abstract_view())
+    }
+
+    pub unsafe fn iter_abstract_sparse_set_views_mut<I>(
+        &mut self,
+        range: I,
+    ) -> impl DoubleEndedIterator<Item = AbstractSparseSetViewMut>
+    where
+        I: SliceIndex<
+            [AtomicRefCell<Box<dyn AbstractSparseSet>>],
+            Output = [AtomicRefCell<Box<dyn AbstractSparseSet>>],
+        >,
+    {
+        (&mut self.components[range])
+            .iter_mut()
+            .map(|s| s.get_mut().as_abstract_view_mut())
+    }
+}
+
+pub struct ComponentGroupSubgroupsViewMut<'a> {
+    subgroups: &'a mut [Subgroup],
+}
+
+impl<'a> ComponentGroupSubgroupsViewMut<'a> {
+    fn new(subgroups: &'a mut [Subgroup]) -> Self {
+        Self { subgroups }
+    }
+
+    pub unsafe fn iter_split_subgroups_mut<I>(
+        &mut self,
+        range: I,
+    ) -> impl DoubleEndedIterator<Item = (usize, &mut usize)>
+    where
+        I: SliceIndex<[Subgroup], Output = [Subgroup]>,
+    {
+        (&mut self.subgroups[range])
+            .iter_mut()
+            .map(|s| (s.arity, &mut s.length))
+    }
 }
 
 #[derive(Default)]
@@ -74,8 +152,30 @@ impl GroupedComponents {
         }
     }
 
+    pub fn maintain(&mut self) {
+        for group in self.component_groups.iter_mut() {
+            for sparse_set in group.components.iter_mut() {
+                sparse_set.get_mut().maintain();
+            }
+        }
+    }
+
     pub fn contains(&self, component: TypeId) -> bool {
         self.component_info.contains_key(&component)
+    }
+
+    pub fn group_index_for(&self, component: TypeId) -> Option<usize> {
+        self.component_info.get(&component).map(|c| c.group_index)
+    }
+
+    pub unsafe fn get_component_group_split_view_mut_unchecked(
+        &mut self,
+        index: usize,
+    ) -> (
+        ComponentGroupSparseSetsViewMut,
+        ComponentGroupSubgroupsViewMut,
+    ) {
+        self.component_groups.get_unchecked_mut(index).split()
     }
 
     pub fn borrow<T>(&self) -> Option<AtomicRef<SparseSet<T>>>
