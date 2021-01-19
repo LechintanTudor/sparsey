@@ -6,6 +6,8 @@ pub trait AbstractSparseSet
 where
     Self: 'static,
 {
+    fn delete(&mut self, entity: Entity);
+
     fn maintain(&mut self);
 
     fn as_any(&self) -> &dyn Any;
@@ -37,6 +39,10 @@ impl<'a> AbstractSparseSetView<'a> {
 
     pub fn len(&self) -> usize {
         self.dense.len()
+    }
+
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains(entity)
     }
 
     pub fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {

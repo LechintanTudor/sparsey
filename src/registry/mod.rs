@@ -9,6 +9,7 @@ pub use self::world::*;
 mod borrow;
 mod component;
 mod components;
+mod group;
 mod grouped_components;
 mod resources;
 mod view;

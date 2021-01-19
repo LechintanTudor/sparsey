@@ -1,7 +1,7 @@
 use crate::group::WorldLayout;
 use crate::registry::Component;
 use crate::storage::{
-    AbstractSparseSet, AbstractSparseSetView, AbstractSparseSetViewMut, SparseSet,
+    AbstractSparseSet, AbstractSparseSetView, AbstractSparseSetViewMut, Entity, SparseSet,
 };
 use atomic_refcell::*;
 use std::any::TypeId;
@@ -154,6 +154,12 @@ impl GroupedComponents {
             component_groups,
             component_info,
         }
+    }
+
+    pub fn destroy(&mut self, _entity: Entity) {
+        // for group in self.component_groups.iter_mut() {
+        //     let (sets, subgroups) = unsafe { group.split() };
+        // }
     }
 
     pub fn maintain(&mut self) {

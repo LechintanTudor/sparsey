@@ -1,12 +1,11 @@
 use crate::group::WorldLayoutDescriptor;
+use crate::registry::group;
+use crate::registry::group::GroupStatus;
 use crate::registry::{Comp, CompMut, Component, ComponentSet, Components, GroupedComponents};
-use crate::storage::{
-    AbstractSparseSetView, AbstractSparseSetViewMut, Entity, EntityStorage, SparseSet,
-};
+use crate::storage::{Entity, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::collections::HashSet;
-use std::hint::unreachable_unchecked;
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -96,6 +95,10 @@ impl World {
         entity
     }
 
+    pub fn destroy(&mut self, _entity: Entity) -> bool {
+        todo!()
+    }
+
     pub fn insert<C>(&mut self, entity: Entity, components: C)
     where
         C: ComponentSet,
@@ -119,22 +122,22 @@ impl World {
             let mut previous_arity = 0_usize;
 
             for (arity, len) in unsafe { subgroups.iter_split_subgroups_mut(..) } {
-                let status = group_insert_status(
+                let status = group::get_group_status(
                     sparse_sets.iter_abstract_sparse_set_views(previous_arity..arity),
                     *len,
                     entity,
                 );
 
                 match status {
-                    InsertGroupStatus::NeedsGrouping => unsafe {
-                        group_components(
+                    GroupStatus::Grouped => (),
+                    GroupStatus::Ungrouped => unsafe {
+                        group::group_components(
                             sparse_sets.iter_abstract_sparse_set_views_mut(..arity),
                             len,
                             entity,
                         );
                     },
-                    InsertGroupStatus::MissingComponents => break,
-                    InsertGroupStatus::Grouped => (),
+                    GroupStatus::MissingComponents => break,
                 }
 
                 previous_arity = arity;
@@ -163,21 +166,21 @@ impl World {
             let mut ungroup_len = 0;
 
             for (i, (arity, len)) in unsafe { subgroups.iter_split_subgroups_mut(..).enumerate() } {
-                let status = group_remove_status(
+                let status = group::get_group_status(
                     sparse_sets.iter_abstract_sparse_set_views(previous_arity..arity),
                     *len,
                     entity,
                 );
 
                 match status {
-                    RemoveGroupStatus::NeedsUngrouping => {
+                    GroupStatus::Grouped => {
                         if ungroup_start.is_none() {
                             ungroup_start = Some(i);
                         }
                         ungroup_len += 1;
                     }
-                    RemoveGroupStatus::Ungrouped => break,
-                    RemoveGroupStatus::MissingComponents => break,
+                    GroupStatus::Ungrouped => break,
+                    GroupStatus::MissingComponents => break,
                 }
 
                 previous_arity = arity;
@@ -188,7 +191,7 @@ impl World {
 
                 unsafe {
                     for (arity, len) in subgroups.iter_split_subgroups_mut(ungroup_range).rev() {
-                        ungroup_components(
+                        group::ungroup_components(
                             sparse_sets.iter_abstract_sparse_set_views_mut(..arity),
                             len,
                             entity,
@@ -199,99 +202,5 @@ impl World {
         }
 
         unsafe { C::remove_raw(self, entity) }
-    }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-enum InsertGroupStatus {
-    Grouped,
-    NeedsGrouping,
-    MissingComponents,
-}
-
-#[derive(Copy, Clone, Eq, PartialEq)]
-enum RemoveGroupStatus {
-    Ungrouped,
-    NeedsUngrouping,
-    MissingComponents,
-}
-
-fn group_insert_status<'a>(
-    sparse_set_iter: impl Iterator<Item = AbstractSparseSetView<'a>>,
-    group_len: usize,
-    entity: Entity,
-) -> InsertGroupStatus {
-    let mut status = InsertGroupStatus::Grouped;
-
-    for sparse_set in sparse_set_iter {
-        match sparse_set.get_index_entity(entity) {
-            Some(index_entity) => {
-                if index_entity.index() >= group_len {
-                    status = InsertGroupStatus::NeedsGrouping;
-                }
-            }
-            None => return InsertGroupStatus::MissingComponents,
-        }
-    }
-
-    status
-}
-
-fn group_remove_status<'a>(
-    sparse_set_iter: impl Iterator<Item = AbstractSparseSetView<'a>>,
-    group_len: usize,
-    entity: Entity,
-) -> RemoveGroupStatus {
-    let mut status = RemoveGroupStatus::Ungrouped;
-
-    for sparse_set in sparse_set_iter {
-        match sparse_set.get_index_entity(entity) {
-            Some(index_entity) => {
-                if index_entity.index() < group_len {
-                    status = RemoveGroupStatus::NeedsUngrouping;
-                }
-            }
-            None => return RemoveGroupStatus::MissingComponents,
-        }
-    }
-
-    status
-}
-
-unsafe fn group_components<'a>(
-    sparse_set_iter: impl Iterator<Item = AbstractSparseSetViewMut<'a>>,
-    group_len: &mut usize,
-    entity: Entity,
-) {
-    for mut sparse_set in sparse_set_iter {
-        let index = match sparse_set.get_index_entity(entity) {
-            Some(index_entity) => index_entity.index(),
-            None => unreachable_unchecked(),
-        };
-
-        sparse_set.swap(index, *group_len);
-    }
-
-    *group_len += 1;
-}
-
-unsafe fn ungroup_components<'a>(
-    sparse_set_iter: impl Iterator<Item = AbstractSparseSetViewMut<'a>>,
-    group_len: &mut usize,
-    entity: Entity,
-) {
-    if *group_len > 0 {
-        let last_index = *group_len - 1;
-
-        for mut sparse_set in sparse_set_iter {
-            let index = match sparse_set.get_index_entity(entity) {
-                Some(index_entity) => index_entity.index(),
-                None => unreachable_unchecked(),
-            };
-
-            sparse_set.swap(index, last_index);
-        }
-
-        *group_len -= 1;
     }
 }

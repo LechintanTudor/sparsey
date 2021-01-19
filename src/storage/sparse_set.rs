@@ -1,11 +1,10 @@
 use crate::storage::{
-    AbstractSparseSet, AbstractSparseSetViewMut, Entity, IndexEntity, SparseArray,
+    AbstractSparseSet, AbstractSparseSetView, AbstractSparseSetViewMut, Entity, IndexEntity,
+    SparseArray,
 };
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};
-
-use super::AbstractSparseSetView;
 
 pub const COMPONENT_FLAG_NONE: ComponentFlags = 0;
 pub const COMPONENT_FLAG_CHANGED: ComponentFlags = 1;
@@ -122,10 +121,6 @@ impl<T> SparseSet<T> {
         Some(self.data.swap_remove(sparse_entity.index()))
     }
 
-    pub fn clear_flags(&mut self) {
-        self.flags.iter_mut().for_each(|f| *f = COMPONENT_FLAG_NONE);
-    }
-
     pub fn len(&self) -> usize {
         self.data.len()
     }
@@ -213,8 +208,12 @@ impl<T> AbstractSparseSet for SparseSet<T>
 where
     T: 'static,
 {
+    fn delete(&mut self, entity: Entity) {
+        self.remove(entity);
+    }
+
     fn maintain(&mut self) {
-        self.flags.iter_mut().for_each(|f| *f = 0);
+        self.flags.iter_mut().for_each(|f| *f = COMPONENT_FLAG_NONE);
     }
 
     fn as_any(&self) -> &dyn Any {

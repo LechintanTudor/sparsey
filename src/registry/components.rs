@@ -1,5 +1,5 @@
 use crate::registry::Component;
-use crate::storage::{AbstractSparseSet, SparseSet};
+use crate::storage::{AbstractSparseSet, Entity, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -11,6 +11,12 @@ pub struct Components {
 }
 
 impl Components {
+    pub fn destroy(&mut self, entity: Entity) {
+        for set in self.sets.values_mut() {
+            set.get_mut().delete(entity);
+        }
+    }
+
     pub fn maintain(&mut self) {
         self.sets.values_mut().for_each(|s| s.get_mut().maintain());
     }
