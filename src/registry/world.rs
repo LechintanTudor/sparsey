@@ -1,4 +1,4 @@
-use crate::group::WorldLayout;
+use crate::group::WorldLayoutDescriptor;
 use crate::registry::{Comp, CompMut, Component, ComponentSet, Components, GroupedComponents};
 use crate::storage::{
     AbstractSparseSetView, AbstractSparseSetViewMut, Entity, EntityStorage, SparseSet,
@@ -23,11 +23,14 @@ pub struct World {
 }
 
 impl World {
-    pub fn new(world_layout: WorldLayout) -> Self {
+    pub fn new<L>() -> Self
+    where
+        L: WorldLayoutDescriptor,
+    {
         Self {
             entities: Default::default(),
             components: Default::default(),
-            grouped_components: GroupedComponents::new(world_layout),
+            grouped_components: GroupedComponents::new(L::world_layout()),
             id: WorldId(NonZeroU64::new(CURRENT_WORLD_ID.fetch_add(1, Ordering::Relaxed)).unwrap()),
         }
     }

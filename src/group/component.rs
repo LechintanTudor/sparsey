@@ -22,6 +22,10 @@ impl LayoutComponent {
         self.component.component_type_id()
     }
 
+    pub fn component_type_name(&self) -> &'static str {
+        self.component.component_type_name()
+    }
+
     pub fn create_sparse_set(&self) -> Box<dyn AbstractSparseSet> {
         self.component.create_sparse_set()
     }

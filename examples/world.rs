@@ -2,7 +2,6 @@
 
 use ecstasy::data::filter::*;
 use ecstasy::prelude::*;
-use ecstasy::group::WorldLayoutDescriptor as _;
 
 #[derive(Debug)]
 struct A;
@@ -27,19 +26,18 @@ type WorldLayout = (
     ),
     (
         (D, E),
-    )
+    ),
 );
 
 fn main() {
-    // let mut world = World::new(WorldLayout::world_layout());
-    let mut world = World::new(<()>::world_layout());
+    let mut world = World::new::<WorldLayout>();
     world.register::<A>();
     world.register::<B>();
     world.register::<C>();
     world.register::<D>();
     world.register::<E>();
 
-    let e0 = world.create((A, B));
+    let e0 = world.create((A,));
     let e1 = world.create((A, B, C));
     let e2 = world.create((A, B, C, D, E));
 

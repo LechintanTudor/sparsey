@@ -25,7 +25,7 @@ impl Subgroup {
 struct ComponentInfo {
     group_index: usize,
     local_index: usize,
-    subgroup_index: usize,
+    _subgroup_index: usize,
 }
 
 #[derive(Default)]
@@ -134,9 +134,13 @@ impl GroupedComponents {
                         ComponentInfo {
                             group_index: component_groups.len(),
                             local_index: component_group.components.len(),
-                            subgroup_index,
+                            _subgroup_index: subgroup_index,
                         },
                     );
+
+                    component_group
+                        .components
+                        .push(AtomicRefCell::new(component.create_sparse_set()));
                 }
 
                 component_group.subgroups.push(Subgroup::from_arity(arity));
