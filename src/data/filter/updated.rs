@@ -1,4 +1,5 @@
-use crate::data::{IterableView, ParentGroup, UnfilteredIterableView};
+use crate::data::{IterableView, UnfilteredIterableView};
+use crate::group::Group;
 use crate::storage::{
     ComponentFlags, Entity, SparseArray, COMPONENT_FLAG_ADDED, COMPONENT_FLAG_CHANGED,
 };
@@ -30,8 +31,8 @@ where
     type Flags = V::Flags;
     type Output = V::Output;
 
-    fn parent_group(&self) -> Option<ParentGroup> {
-        V::parent_group(&self.view)
+    unsafe fn group(&self) -> Option<Group> {
+        V::group(&self.view)
     }
 
     unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags) {
@@ -82,8 +83,8 @@ where
     type Flags = V::Flags;
     type Output = V::Output;
 
-    fn parent_group(&self) -> Option<ParentGroup> {
-        V::parent_group(&self.view)
+    unsafe fn group(&self) -> Option<Group> {
+        V::group(&self.view)
     }
 
     unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags) {

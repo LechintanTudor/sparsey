@@ -2,22 +2,12 @@ pub use self::impls::*;
 
 use crate::data::dense_iter::*;
 use crate::data::sparse_iter::*;
-use crate::data::{IterableView, ParentGroup};
+use crate::data::IterableView;
+use crate::group::Group;
 use paste::paste;
 
-fn is_grouped(groups: &[ParentGroup]) -> bool {
-    let (first, other) = match groups.split_first() {
-        Some(result) => result,
-        None => return false,
-    };
-
-    for group in other.iter() {
-        if group != first {
-            return false;
-        }
-    }
-
-    true
+fn is_grouped(groups: &[Group]) -> bool {
+    groups.windows(2).all(|w| w[0] == w[1])
 }
 
 macro_rules! impl_iter {
@@ -42,7 +32,7 @@ macro_rules! impl_iter {
             {
                 pub fn new($([<view_ $view:lower>]: $view,)+) -> Self {
                     let groups = (|| -> Option<_> {
-                        Some([$([<view_ $view:lower>].parent_group()?,)+])
+                        unsafe { Some([$([<view_ $view:lower>].group()?,)+]) }
                     })();
 
                     let is_grouped = match groups {

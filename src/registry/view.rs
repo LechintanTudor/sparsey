@@ -1,4 +1,5 @@
-use crate::data::{IterableView, ParentGroup, UnfilteredIterableView};
+use crate::data::{IterableView, UnfilteredIterableView};
+use crate::group::Group;
 use crate::registry::{BorrowWorld, Component, World};
 use crate::storage::{ComponentFlags, ComponentRefMut, Entity, SparseArray, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
@@ -8,7 +9,7 @@ where
     T: 'static,
 {
     set: AtomicRef<'a, SparseSet<T>>,
-    group: Option<ParentGroup>,
+    group: Option<Group>,
 }
 
 impl<'a, T> Comp<'a, T> {
@@ -16,11 +17,11 @@ impl<'a, T> Comp<'a, T> {
         Self { set, group: None }
     }
 
-    pub(crate) unsafe fn grouped(
-        set: AtomicRef<'a, SparseSet<T>>,
-        group: Option<ParentGroup>,
-    ) -> Self {
-        Self { set, group }
+    pub(crate) unsafe fn grouped(set: AtomicRef<'a, SparseSet<T>>, group: Group) -> Self {
+        Self {
+            set,
+            group: Some(group),
+        }
     }
 }
 
@@ -38,7 +39,7 @@ impl<'a, T> IterableView<'a> for &'a Comp<'a, T> {
     type Flags = *const ComponentFlags;
     type Output = &'a T;
 
-    fn parent_group(&self) -> Option<ParentGroup> {
+    unsafe fn group(&self) -> Option<Group> {
         self.group
     }
 
@@ -67,7 +68,7 @@ where
     T: 'static,
 {
     set: AtomicRefMut<'a, SparseSet<T>>,
-    group: Option<ParentGroup>,
+    group: Option<Group>,
 }
 
 impl<'a, T> CompMut<'a, T> {
@@ -75,8 +76,11 @@ impl<'a, T> CompMut<'a, T> {
         Self { set, group: None }
     }
 
-    pub unsafe fn grouped(set: AtomicRefMut<'a, SparseSet<T>>, group: Option<ParentGroup>) -> Self {
-        Self { set, group }
+    pub unsafe fn grouped(set: AtomicRefMut<'a, SparseSet<T>>, group: Group) -> Self {
+        Self {
+            set,
+            group: Some(group),
+        }
     }
 }
 
@@ -94,7 +98,7 @@ impl<'a, T> IterableView<'a> for &'a CompMut<'a, T> {
     type Flags = *const ComponentFlags;
     type Output = &'a T;
 
-    fn parent_group(&self) -> Option<ParentGroup> {
+    unsafe fn group(&self) -> Option<Group> {
         self.group
     }
 
@@ -123,7 +127,7 @@ impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T> {
     type Flags = *mut ComponentFlags;
     type Output = ComponentRefMut<'b, T>;
 
-    fn parent_group(&self) -> Option<ParentGroup> {
+    unsafe fn group(&self) -> Option<Group> {
         self.group
     }
 

@@ -32,8 +32,9 @@ macro_rules! impl_dense_iter {
                 #[allow(unused_variables)]
                 pub unsafe fn new_unchecked($([<view_ $comp:lower>]: $comp),+) -> Self {
                     let subgroup_len = first_of!($([<view_ $comp:lower>]),+)
-                        .parent_group()
+                        .group()
                         .unwrap()
+                        .info()
                         .subgroup_len();
 
                     $(

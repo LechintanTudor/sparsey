@@ -1,4 +1,4 @@
-use crate::group::WorldLayoutDescriptor;
+use crate::group::{Group, WorldLayoutDescriptor};
 use crate::registry::group;
 use crate::registry::group::GroupStatus;
 use crate::registry::{Comp, CompMut, Component, ComponentSet, Components, GroupedComponents};
@@ -57,7 +57,17 @@ impl World {
         T: Component,
     {
         match self.grouped_components.borrow::<T>() {
-            Some(set) => Some(Comp::ungrouped(set)),
+            Some(set) => unsafe {
+                Some(Comp::grouped(
+                    set,
+                    Group::new(
+                        self.id,
+                        self.grouped_components
+                            .get_group_info(TypeId::of::<T>())
+                            .unwrap(),
+                    ),
+                ))
+            },
             None => Some(Comp::ungrouped(self.components.borrow::<T>()?)),
         }
     }
@@ -67,7 +77,17 @@ impl World {
         T: Component,
     {
         match self.grouped_components.borrow_mut::<T>() {
-            Some(set) => Some(CompMut::ungrouped(set)),
+            Some(set) => unsafe {
+                Some(CompMut::grouped(
+                    set,
+                    Group::new(
+                        self.id,
+                        self.grouped_components
+                            .get_group_info(TypeId::of::<T>())
+                            .unwrap(),
+                    ),
+                ))
+            },
             None => Some(CompMut::ungrouped(self.components.borrow_mut::<T>()?)),
         }
     }
@@ -116,7 +136,7 @@ impl World {
         let group_indexes = unsafe { C::components() }
             .as_ref()
             .iter()
-            .flat_map(|&c| self.grouped_components.group_index_for(c))
+            .flat_map(|&c| self.grouped_components.get_group_index(c))
             .collect::<HashSet<_>>();
 
         for &i in group_indexes.iter() {
@@ -158,7 +178,7 @@ impl World {
         let group_indexes = unsafe { C::components() }
             .as_ref()
             .iter()
-            .flat_map(|&c| self.grouped_components.group_index_for(c))
+            .flat_map(|&c| self.grouped_components.get_group_index(c))
             .collect::<HashSet<_>>();
 
         for &i in group_indexes.iter() {

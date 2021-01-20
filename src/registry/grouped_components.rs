@@ -1,4 +1,4 @@
-use crate::group::WorldLayout;
+use crate::group::{GroupInfo, WorldLayout};
 use crate::registry::group;
 use crate::registry::group::GroupStatus;
 use crate::registry::Component;
@@ -27,7 +27,7 @@ impl Subgroup {
 struct ComponentInfo {
     group_index: usize,
     local_index: usize,
-    _subgroup_index: usize,
+    subgroup_index: usize,
 }
 
 #[derive(Default)]
@@ -136,7 +136,7 @@ impl GroupedComponents {
                         ComponentInfo {
                             group_index: component_groups.len(),
                             local_index: component_group.components.len(),
-                            _subgroup_index: subgroup_index,
+                            subgroup_index,
                         },
                     );
 
@@ -224,8 +224,18 @@ impl GroupedComponents {
         self.component_info.contains_key(&component)
     }
 
-    pub fn group_index_for(&self, component: TypeId) -> Option<usize> {
+    pub fn get_group_index(&self, component: TypeId) -> Option<usize> {
         self.component_info.get(&component).map(|c| c.group_index)
+    }
+
+    pub fn get_group_info(&self, component: TypeId) -> Option<GroupInfo> {
+        self.component_info.get(&component).map(|c| {
+            GroupInfo::new(
+                c.group_index,
+                c.subgroup_index,
+                self.component_groups[c.group_index].subgroups[c.subgroup_index].length,
+            )
+        })
     }
 
     pub unsafe fn get_component_group_split_view_mut_unchecked(
