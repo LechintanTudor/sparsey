@@ -95,8 +95,14 @@ impl World {
         entity
     }
 
-    pub fn destroy(&mut self, _entity: Entity) -> bool {
-        todo!()
+    pub fn destroy(&mut self, entity: Entity) -> bool {
+        if self.entities.destroy(entity) {
+            self.components.remove(entity);
+            self.grouped_components.remove(entity);
+            true
+        } else {
+            false
+        }
     }
 
     pub fn insert<C>(&mut self, entity: Entity, components: C)

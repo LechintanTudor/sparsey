@@ -1,4 +1,6 @@
 use crate::group::WorldLayout;
+use crate::registry::group;
+use crate::registry::group::GroupStatus;
 use crate::registry::Component;
 use crate::storage::{
     AbstractSparseSet, AbstractSparseSetView, AbstractSparseSetViewMut, Entity, SparseSet,
@@ -156,10 +158,58 @@ impl GroupedComponents {
         }
     }
 
-    pub fn destroy(&mut self, _entity: Entity) {
-        // for group in self.component_groups.iter_mut() {
-        //     let (sets, subgroups) = unsafe { group.split() };
-        // }
+    pub fn remove(&mut self, entity: Entity) {
+        for group in self.component_groups.iter_mut() {
+            {
+                let (mut sets, mut subgroups) = unsafe { group.split() };
+
+                let mut previous_arity = 0_usize;
+                let mut ungroup_start = Option::<usize>::None;
+                let mut ungroup_len = 0;
+
+                for (i, (arity, len)) in
+                    unsafe { subgroups.iter_split_subgroups_mut(..).enumerate() }
+                {
+                    let status = group::get_group_status(
+                        sets.iter_abstract_sparse_set_views(previous_arity..arity),
+                        *len,
+                        entity,
+                    );
+
+                    match status {
+                        GroupStatus::Grouped => {
+                            if ungroup_start.is_none() {
+                                ungroup_start = Some(i);
+                            }
+                            ungroup_len += 1;
+                        }
+                        GroupStatus::Ungrouped => break,
+                        GroupStatus::MissingComponents => break,
+                    }
+
+                    previous_arity = arity;
+                }
+
+                if let Some(ungroup_start) = ungroup_start {
+                    let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
+
+                    unsafe {
+                        for (arity, len) in subgroups.iter_split_subgroups_mut(ungroup_range).rev()
+                        {
+                            group::ungroup_components(
+                                sets.iter_abstract_sparse_set_views_mut(..arity),
+                                len,
+                                entity,
+                            );
+                        }
+                    }
+                }
+            }
+
+            for set in group.components.iter_mut() {
+                set.get_mut().delete(entity);
+            }
+        }
     }
 
     pub fn maintain(&mut self) {

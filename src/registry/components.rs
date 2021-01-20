@@ -11,7 +11,7 @@ pub struct Components {
 }
 
 impl Components {
-    pub fn destroy(&mut self, entity: Entity) {
+    pub fn remove(&mut self, entity: Entity) {
         for set in self.sets.values_mut() {
             set.get_mut().delete(entity);
         }

@@ -38,9 +38,12 @@ impl EntityStorage {
         entity
     }
 
-    pub fn remove(&mut self, entity: Entity) {
+    pub fn destroy(&mut self, entity: Entity) -> bool {
         if self.entities.remove(entity).is_some() {
-            self.allocator.remove(entity)
+            self.allocator.remove(entity);
+            true
+        } else {
+            false
         }
     }
 }
