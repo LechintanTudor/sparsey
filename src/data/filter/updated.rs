@@ -1,8 +1,6 @@
 use crate::data::{IterableView, UnfilteredIterableView};
 use crate::group::Group;
-use crate::storage::{
-    ComponentFlags, Entity, SparseArray, COMPONENT_FLAG_ADDED, COMPONENT_FLAG_CHANGED,
-};
+use crate::storage::{ComponentFlags, Entity, SparseArray};
 use std::marker::PhantomData;
 use std::ops::Not;
 
@@ -40,8 +38,7 @@ where
     }
 
     unsafe fn matches_flags(flags: Self::Flags, index: usize) -> bool {
-        let component_flags = V::get_flags(flags, index);
-        ((component_flags & COMPONENT_FLAG_ADDED) | (component_flags & COMPONENT_FLAG_CHANGED)) != 0
+        V::get_flags(flags, index).intersects(ComponentFlags::ADDED | ComponentFlags::CHANGED)
     }
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
@@ -92,7 +89,7 @@ where
     }
 
     unsafe fn matches_flags(flags: Self::Flags, index: usize) -> bool {
-        (V::get_flags(flags, index) & (COMPONENT_FLAG_ADDED | COMPONENT_FLAG_CHANGED)) == 0
+        !V::get_flags(flags, index).intersects(ComponentFlags::ADDED | ComponentFlags::CHANGED)
     }
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {

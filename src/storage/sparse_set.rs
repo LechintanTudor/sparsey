@@ -2,15 +2,17 @@ use crate::storage::{
     AbstractSparseSet, AbstractSparseSetView, AbstractSparseSetViewMut, Entity, IndexEntity,
     SparseArray,
 };
+use bitflags::bitflags;
 use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};
 
-pub const COMPONENT_FLAG_NONE: ComponentFlags = 0;
-pub const COMPONENT_FLAG_CHANGED: ComponentFlags = 1;
-pub const COMPONENT_FLAG_ADDED: ComponentFlags = 1 << 1;
-
-pub type ComponentFlags = u8;
+bitflags! {
+    pub struct ComponentFlags: u8 {
+        const ADDED   = 0b00000001;
+        const CHANGED = 0b00000010;
+    }
+}
 
 pub struct ComponentRefMut<'a, T>
 where
@@ -26,14 +28,6 @@ where
 {
     pub fn new(data: &'a mut T, flags: &'a mut ComponentFlags) -> Self {
         Self { data, flags }
-    }
-
-    pub fn flags(component_ref: &ComponentRefMut<'a, T>) -> ComponentFlags {
-        *component_ref.flags
-    }
-
-    pub fn into_component(component_ref: ComponentRefMut<'a, T>) -> &'a mut T {
-        component_ref.data
     }
 }
 
@@ -53,7 +47,7 @@ where
     T: 'static,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        *self.flags |= COMPONENT_FLAG_CHANGED;
+        self.flags.insert(ComponentFlags::CHANGED);
         self.data
     }
 }
@@ -86,9 +80,9 @@ impl<T> SparseSet<T> {
 
         if sparse_entity.is_valid() {
             if sparse_entity.id() == entity.id() {
-                self.flags[sparse_entity.index()] |= COMPONENT_FLAG_CHANGED;
+                self.flags[sparse_entity.index()].insert(ComponentFlags::CHANGED);
             } else {
-                self.flags[sparse_entity.index()] = COMPONENT_FLAG_ADDED;
+                self.flags[sparse_entity.index()].insert(ComponentFlags::ADDED);
             }
 
             *sparse_entity = IndexEntity::new(sparse_entity.id(), entity.gen());
@@ -97,7 +91,7 @@ impl<T> SparseSet<T> {
             *sparse_entity = IndexEntity::new(self.dense.len() as u32, entity.gen());
             self.dense.push(entity);
             self.data.push(value);
-            self.flags.push(COMPONENT_FLAG_ADDED);
+            self.flags.push(ComponentFlags::ADDED);
             None
         }
     }
@@ -213,7 +207,9 @@ where
     }
 
     fn maintain(&mut self) {
-        self.flags.iter_mut().for_each(|f| *f = COMPONENT_FLAG_NONE);
+        self.flags
+            .iter_mut()
+            .for_each(|f| *f = ComponentFlags::empty());
     }
 
     fn as_any(&self) -> &dyn Any {
