@@ -41,6 +41,8 @@ fn main() {
     let e1 = world.create((A, B, C));
     let e2 = world.create((A, B, C, D, E));
 
+    println!("{:?}, {:?}, {:?}", e0, e1, e2);
+
     {
         println!("Before maintain:");
 

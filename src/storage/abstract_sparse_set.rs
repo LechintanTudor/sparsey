@@ -45,8 +45,8 @@ impl<'a> AbstractSparseSetView<'a> {
         self.sparse.contains(entity)
     }
 
-    pub fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.sparse.get(entity)
+    pub fn get_index_entity(&self, entity: Entity) -> Option<IndexEntity> {
+        self.sparse.get_index_entity(entity)
     }
 }
 
@@ -75,8 +75,8 @@ impl<'a> AbstractSparseSetViewMut<'a> {
         self.dense.len()
     }
 
-    pub fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.sparse.get(entity)
+    pub fn get_index_entity(&self, entity: Entity) -> Option<IndexEntity> {
+        self.sparse.get_index_entity(entity)
     }
 
     pub fn swap(&mut self, a: usize, b: usize) {

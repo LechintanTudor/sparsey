@@ -1,69 +1,109 @@
-const INVALID_ID: u32 = u32::MAX;
+use std::num::NonZeroU32;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Entity {
     id: u32,
-    gen: u32,
+    gen: Generation,
 }
 
 impl Entity {
-    pub const INVALID: Self = Self::with_id(INVALID_ID);
-
-    pub const fn new(id: u32, gen: u32) -> Self {
+    pub const fn new(id: u32, gen: Generation) -> Self {
         Self { id, gen }
     }
 
     pub const fn with_id(id: u32) -> Self {
-        Self { id, gen: 0 }
+        Self {
+            id,
+            gen: Generation::FIRST,
+        }
     }
 
-    pub fn id(&self) -> u32 {
+    pub const fn id(&self) -> u32 {
         self.id
     }
 
-    pub fn gen(&self) -> u32 {
+    pub const fn gen(&self) -> Generation {
         self.gen
     }
 
-    pub fn index(&self) -> usize {
+    pub const fn index(&self) -> usize {
         self.id as _
     }
+}
 
-    pub fn is_valid(&self) -> bool {
-        self.id != INVALID_ID
+impl From<IndexEntity> for Entity {
+    fn from(index_entity: IndexEntity) -> Self {
+        Self {
+            id: index_entity.id,
+            gen: index_entity.gen,
+        }
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct IndexEntity {
     id: u32,
-    gen: u32,
+    gen: Generation,
 }
 
 impl IndexEntity {
-    pub const INVALID: Self = Self::with_id(INVALID_ID);
-
-    pub const fn new(id: u32, gen: u32) -> Self {
+    pub const fn new(id: u32, gen: Generation) -> Self {
         Self { id, gen }
     }
 
     pub const fn with_id(id: u32) -> Self {
-        Self { id, gen: 0 }
+        Self {
+            id,
+            gen: Generation::FIRST,
+        }
     }
 
-    pub fn id(&self) -> u32 {
+    pub const fn id(&self) -> u32 {
         self.id
     }
 
-    pub fn gen(&self) -> u32 {
+    pub const fn gen(&self) -> Generation {
         self.gen
     }
 
-    pub fn index(&self) -> usize {
+    pub const fn index(&self) -> usize {
         self.id as _
     }
+}
 
-    pub fn is_valid(&self) -> bool {
-        self.id != INVALID_ID
+impl From<Entity> for IndexEntity {
+    fn from(entity: Entity) -> Self {
+        Self {
+            id: entity.id,
+            gen: entity.gen,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub struct Generation(NonZeroU32);
+
+impl Generation {
+    pub const FIRST: Self = unsafe { Self::new_unchecked(1) };
+    pub const LAST: Self = unsafe { Self::new_unchecked(u32::MAX) };
+
+    pub fn new(id: u32) -> Self {
+        Self(NonZeroU32::new(id).unwrap())
+    }
+
+    pub const unsafe fn new_unchecked(id: u32) -> Self {
+        Self(NonZeroU32::new_unchecked(id))
+    }
+
+    pub const fn id(&self) -> u32 {
+        self.0.get()
+    }
+
+    pub const fn next(&self) -> Option<Self> {
+        if self.id() != u32::MAX {
+            Some(Self(unsafe { NonZeroU32::new_unchecked(self.id() + 1) }))
+        } else {
+            None
+        }
     }
 }

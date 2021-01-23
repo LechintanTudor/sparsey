@@ -1,69 +1,132 @@
-use crate::registry::{BorrowWorld, World};
-use crate::storage::{Entity, SparseSet};
-use std::ops::Deref;
-
-#[derive(Default, Debug)]
-struct EntityAllocator {
-    index: usize,
-    removed: Vec<Entity>,
-}
-
-impl EntityAllocator {
-    fn allocate(&mut self) -> Entity {
-        match self.removed.pop() {
-            Some(entity) => Entity::new(entity.id(), entity.gen() + 1),
-            None => {
-                let index = self.index;
-                self.index += 1;
-                Entity::with_id(index as u32)
-            }
-        }
-    }
-
-    fn remove(&mut self, entity: Entity) {
-        self.removed.push(entity)
-    }
-}
+use crate::storage::{Entity, IndexEntity, SparseArray};
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
 pub struct EntityStorage {
     allocator: EntityAllocator,
-    entities: SparseSet<()>,
+    entities: EntitySparseSet,
 }
 
 impl EntityStorage {
     pub fn create(&mut self) -> Entity {
-        let entity = self.allocator.allocate();
-        self.entities.insert(entity, ());
+        let entity = self
+            .allocator
+            .allocate()
+            .expect("No entities left to be created");
+
+        self.entities.insert(entity);
         entity
     }
 
+    pub fn create_atomic(&self) -> Entity {
+        self.allocator
+            .allocate_atomic()
+            .expect("No entities left to be created")
+    }
+
     pub fn destroy(&mut self, entity: Entity) -> bool {
-        if self.entities.remove(entity).is_some() {
+        if self.entities.remove(entity) {
             self.allocator.remove(entity);
             true
         } else {
             false
         }
     }
+
+    pub fn maintain(&mut self) {}
 }
 
-pub struct Entities<'a> {
-    storage: &'a EntityStorage,
+#[derive(Clone, Default, Debug)]
+struct EntitySparseSet {
+    sparse: SparseArray,
+    dense: Vec<Entity>,
 }
 
-impl Deref for Entities<'_> {
-    type Target = EntityStorage;
+impl EntitySparseSet {
+    fn insert(&mut self, entity: Entity) {
+        let index_entity = self.sparse.get_mut_or_allocate(entity.index());
 
-    fn deref(&self) -> &Self::Target {
-        &self.storage
-    }
-}
+        match index_entity {
+            Some(e) => {
+                *e = IndexEntity::new(e.id(), entity.gen());
 
-impl<'a> BorrowWorld<'a> for Entities<'a> {
-    fn borrow_world(world: &'a World) -> Self {
-        Self {
-            storage: world.entities(),
+                unsafe {
+                    *self.dense.get_unchecked_mut(e.index()) = entity;
+                }
+            }
+            None => {
+                *index_entity = Some(IndexEntity::new(self.dense.len() as u32, entity.gen()));
+                self.dense.push(entity);
+            }
         }
     }
+
+    fn remove(&mut self, entity: Entity) -> bool {
+        (|| -> Option<()> {
+            let index_entity = self.sparse.get_index_entity(entity)?;
+
+            let last_index = self.dense.last()?.index();
+            self.dense.swap_remove(index_entity.index());
+
+            unsafe {
+                *self.sparse.get_unchecked_mut(last_index) = Some(index_entity);
+                *self.sparse.get_unchecked_mut(entity.index()) = None;
+            }
+
+            Some(())
+        })()
+        .is_some()
+    }
+}
+
+#[derive(Default, Debug)]
+struct EntityAllocator {
+    current_entity_id: AtomicU32,
+    removed_entities: Vec<Entity>,
+    removed_index: AtomicUsize,
+}
+
+impl EntityAllocator {
+    fn allocate(&mut self) -> Option<Entity> {
+        self.maintain();
+
+        match self.removed_entities.pop() {
+            Some(entity) => Some(Entity::new(entity.id(), entity.gen().next()?)),
+            None => {
+                let entity = Entity::with_id(*self.current_entity_id.get_mut());
+                *self.current_entity_id.get_mut() += 1;
+                Some(entity)
+            }
+        }
+    }
+
+    fn allocate_atomic(&self) -> Option<Entity> {
+        atomic_decrement_usize(&self.removed_index)
+            .map(|i| unsafe { *self.removed_entities.get_unchecked(i) })
+    }
+
+    fn remove(&mut self, entity: Entity) {
+        self.maintain();
+        self.removed_entities.push(entity)
+    }
+
+    fn maintain(&mut self) {
+        self.removed_entities
+            .truncate(self.removed_entities.len() - *self.removed_index.get_mut());
+
+        *self.removed_index.get_mut() = self.removed_entities.len();
+    }
+}
+
+fn atomic_decrement_usize(value: &AtomicUsize) -> Option<usize> {
+    let mut prev = value.load(Ordering::Relaxed);
+
+    while prev != 0 {
+        match value.compare_exchange_weak(prev, prev - 1, Ordering::Relaxed, Ordering::Relaxed) {
+            Ok(value) => return Some(value),
+            Err(value) => prev = value,
+        }
+    }
+
+    None
 }

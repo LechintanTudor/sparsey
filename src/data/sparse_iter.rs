@@ -87,7 +87,7 @@ macro_rules! impl_sparse_iter {
                                     data::get_output::<$comp>(
                                         self.[<set_ $comp:lower>].1,
                                         self.[<set_ $comp:lower>].2,
-                                        self.[<set_ $comp:lower>].0.get(entity)?.index(),
+                                        self.[<set_ $comp:lower>].0.get_index_entity(entity)?.index(),
                                     )?,
                                 )+
                             ))

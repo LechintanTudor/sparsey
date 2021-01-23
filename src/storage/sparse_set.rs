@@ -72,47 +72,42 @@ impl<T> Default for SparseSet<T> {
 
 impl<T> SparseSet<T> {
     pub fn insert(&mut self, entity: Entity, value: T) -> Option<T> {
-        if !entity.is_valid() {
-            return None;
-        }
+        let index_entity = self.sparse.get_mut_or_allocate(entity.index());
 
-        let sparse_entity = self.sparse.get_mut_or_allocate(entity.index());
+        match index_entity {
+            Some(e) => {
+                if e.id() == entity.id() {
+                    self.flags[e.index()].insert(ComponentFlags::CHANGED);
+                } else {
+                    self.flags[e.index()].insert(ComponentFlags::ADDED);
+                }
 
-        if sparse_entity.is_valid() {
-            if sparse_entity.id() == entity.id() {
-                self.flags[sparse_entity.index()].insert(ComponentFlags::CHANGED);
-            } else {
-                self.flags[sparse_entity.index()].insert(ComponentFlags::ADDED);
+                *e = IndexEntity::new(e.id(), entity.gen());
+                Some(mem::replace(&mut self.data[e.index()], value))
             }
-
-            *sparse_entity = IndexEntity::new(sparse_entity.id(), entity.gen());
-            Some(mem::replace(&mut self.data[sparse_entity.index()], value))
-        } else {
-            *sparse_entity = IndexEntity::new(self.dense.len() as u32, entity.gen());
-            self.dense.push(entity);
-            self.data.push(value);
-            self.flags.push(ComponentFlags::ADDED);
-            None
+            None => {
+                *index_entity = Some(IndexEntity::new(self.dense.len() as u32, entity.gen()));
+                self.dense.push(entity);
+                self.data.push(value);
+                self.flags.push(ComponentFlags::ADDED);
+                None
+            }
         }
     }
 
     pub fn remove(&mut self, entity: Entity) -> Option<T> {
-        let sparse_entity = *self.sparse.get(entity)?;
-
-        if !sparse_entity.is_valid() {
-            return None;
-        }
+        let index_entity = self.sparse.get_index_entity(entity)?;
 
         let last_index = self.dense.last()?.index();
-        self.dense.swap_remove(sparse_entity.index());
-        self.flags.swap_remove(sparse_entity.index());
+        self.dense.swap_remove(index_entity.index());
+        self.flags.swap_remove(index_entity.index());
 
         unsafe {
-            *self.sparse.get_unchecked_mut(last_index) = sparse_entity;
-            *self.sparse.get_unchecked_mut(entity.index()) = IndexEntity::INVALID;
+            *self.sparse.get_unchecked_mut(last_index) = Some(index_entity);
+            *self.sparse.get_unchecked_mut(entity.index()) = None;
         }
 
-        Some(self.data.swap_remove(sparse_entity.index()))
+        Some(self.data.swap_remove(index_entity.index()))
     }
 
     pub fn len(&self) -> usize {
@@ -124,12 +119,12 @@ impl<T> SparseSet<T> {
     }
 
     pub fn get(&self, entity: Entity) -> Option<&T> {
-        let index = self.sparse.get(entity)?.index();
+        let index = self.sparse.get_index_entity(entity)?.index();
         unsafe { Some(self.data.get_unchecked(index)) }
     }
 
     pub fn get_mut(&mut self, entity: Entity) -> Option<ComponentRefMut<T>> {
-        let index = self.sparse.get(entity)?.index();
+        let index = self.sparse.get_index_entity(entity)?.index();
         unsafe {
             Some(ComponentRefMut::new(
                 self.data.get_unchecked_mut(index),
