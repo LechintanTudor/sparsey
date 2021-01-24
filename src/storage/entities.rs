@@ -33,7 +33,13 @@ impl EntityStorage {
         }
     }
 
-    pub fn maintain(&mut self) {}
+    pub fn maintain(&mut self) {
+        self.allocator.maintain();
+    }
+
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.entities.contains(entity)
+    }
 }
 
 #[derive(Clone, Default, Debug)]
@@ -76,6 +82,10 @@ impl EntitySparseSet {
             Some(())
         })()
         .is_some()
+    }
+
+    fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains(entity)
     }
 }
 

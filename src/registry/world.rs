@@ -48,6 +48,7 @@ impl World {
     }
 
     pub fn maintain(&mut self) {
+        self.entities.maintain();
         self.components.maintain();
         self.grouped_components.maintain();
     }
@@ -102,10 +103,6 @@ impl World {
         }
     }
 
-    pub(crate) fn entities(&self) -> &EntityStorage {
-        &self.entities
-    }
-
     pub fn create<C>(&mut self, components: C) -> Entity
     where
         C: ComponentSet,
@@ -125,10 +122,14 @@ impl World {
         }
     }
 
-    pub fn insert<C>(&mut self, entity: Entity, components: C)
+    pub fn insert<C>(&mut self, entity: Entity, components: C) -> bool
     where
         C: ComponentSet,
     {
+        if !self.entities.contains(entity) {
+            return false;
+        }
+
         unsafe {
             C::insert_raw(self, entity, components);
         }
@@ -169,12 +170,18 @@ impl World {
                 previous_arity = arity;
             }
         }
+
+        true
     }
 
     pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
     where
         C: ComponentSet,
     {
+        if !self.entities.contains(entity) {
+            return None;
+        }
+
         let group_indexes = unsafe { C::components() }
             .as_ref()
             .iter()
