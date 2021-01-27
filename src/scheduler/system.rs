@@ -1,4 +1,4 @@
-use crate::registry::{World, Resources};
+use crate::registry::{Resources, World};
 use std::any::TypeId;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -9,8 +9,8 @@ pub enum RegistryAccess {
     ResMut(TypeId),
 }
 
-pub trait ThreadLocalSystem 
-where 
+pub trait ThreadLocalSystem
+where
     Self: Send + 'static,
 {
     unsafe fn registry_accesses(&self, accesses: &mut Vec<RegistryAccess>);
@@ -19,7 +19,7 @@ where
 }
 
 pub trait System
-where 
+where
     Self: Sync + ThreadLocalSystem,
 {
     fn run(&mut self, world: &World, resources: &Resources);
