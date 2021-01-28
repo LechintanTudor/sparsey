@@ -3,7 +3,6 @@ use crate::storage::{
     SparseArray,
 };
 use bitflags::bitflags;
-use std::any::Any;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr};
 
@@ -205,14 +204,6 @@ where
         self.flags
             .iter_mut()
             .for_each(|f| *f = ComponentFlags::empty());
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_mut_any(&mut self) -> &mut dyn Any {
-        self
     }
 
     fn as_abstract_view(&self) -> AbstractSparseSetView {

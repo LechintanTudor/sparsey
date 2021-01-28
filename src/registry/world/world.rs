@@ -1,7 +1,9 @@
 use crate::group::{Group, WorldLayoutDescriptor};
-use crate::registry::group;
-use crate::registry::group::GroupStatus;
-use crate::registry::{Comp, CompMut, Component, ComponentSet, Components, GroupedComponents};
+use crate::registry::world::group;
+use crate::registry::world::group::GroupStatus;
+use crate::registry::{
+    Comp, CompMut, Component, ComponentSet, GroupedComponents, UngroupedComponents,
+};
 use crate::storage::{Entity, EntityStorage, SparseSet};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
@@ -16,7 +18,7 @@ pub struct WorldId(NonZeroU64);
 
 pub struct World {
     entities: EntityStorage,
-    components: Components,
+    components: UngroupedComponents,
     grouped_components: GroupedComponents,
     id: WorldId,
 }

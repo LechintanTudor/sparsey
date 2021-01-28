@@ -1,23 +1,21 @@
 use crate::storage::{ComponentFlags, Entity, IndexEntity, SparseArray, SparseSet};
-use std::any::Any;
+use downcast_rs::{impl_downcast, Downcast};
 use std::{mem, ptr};
 
 pub trait AbstractSparseSet
 where
-    Self: 'static,
+    Self: Downcast + 'static,
 {
     fn delete(&mut self, entity: Entity);
 
     fn maintain(&mut self);
 
-    fn as_any(&self) -> &dyn Any;
-
-    fn as_mut_any(&mut self) -> &mut dyn Any;
-
     fn as_abstract_view(&self) -> AbstractSparseSetView;
 
     fn as_abstract_view_mut(&mut self) -> AbstractSparseSetViewMut;
 }
+
+impl_downcast!(AbstractSparseSet);
 
 #[derive(Copy, Clone)]
 pub struct AbstractSparseSetView<'a> {

@@ -6,11 +6,11 @@ use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
 
 #[derive(Default)]
-pub struct Components {
+pub struct UngroupedComponents {
     sets: HashMap<TypeId, AtomicRefCell<Box<dyn AbstractSparseSet>>>,
 }
 
-impl Components {
+impl UngroupedComponents {
     pub fn remove(&mut self, entity: Entity) {
         for set in self.sets.values_mut() {
             set.get_mut().delete(entity);
@@ -35,7 +35,7 @@ impl Components {
         T: Component,
     {
         self.borrow_abstract(TypeId::of::<T>()).map(|s| {
-            AtomicRef::map(s, |s| match s.as_any().downcast_ref::<SparseSet<T>>() {
+            AtomicRef::map(s, |s| match s.downcast_ref::<SparseSet<T>>() {
                 Some(s) => s,
                 None => unsafe { unreachable_unchecked() },
             })
@@ -47,7 +47,7 @@ impl Components {
         T: Component,
     {
         self.borrow_abstract_mut(TypeId::of::<T>()).map(|s| {
-            AtomicRefMut::map(s, |s| match s.as_mut_any().downcast_mut::<SparseSet<T>>() {
+            AtomicRefMut::map(s, |s| match s.downcast_mut::<SparseSet<T>>() {
                 Some(s) => s,
                 None => unsafe { unreachable_unchecked() },
             })

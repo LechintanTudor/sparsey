@@ -1,6 +1,6 @@
 use crate::group::{GroupInfo, WorldLayout};
-use crate::registry::group;
-use crate::registry::group::GroupStatus;
+use crate::registry::world::group;
+use crate::registry::world::group::GroupStatus;
 use crate::registry::Component;
 use crate::storage::{
     AbstractSparseSet, AbstractSparseSetView, AbstractSparseSetViewMut, Entity, SparseSet,
@@ -253,7 +253,7 @@ impl GroupedComponents {
         T: Component,
     {
         self.borrow_abstract(TypeId::of::<T>()).map(|s| {
-            AtomicRef::map(s, |s| match s.as_any().downcast_ref::<SparseSet<T>>() {
+            AtomicRef::map(s, |s| match s.downcast_ref::<SparseSet<T>>() {
                 Some(s) => s,
                 None => unsafe { unreachable_unchecked() },
             })
@@ -265,7 +265,7 @@ impl GroupedComponents {
         T: Component,
     {
         self.borrow_abstract_mut(TypeId::of::<T>()).map(|s| {
-            AtomicRefMut::map(s, |s| match s.as_mut_any().downcast_mut::<SparseSet<T>>() {
+            AtomicRefMut::map(s, |s| match s.downcast_mut::<SparseSet<T>>() {
                 Some(s) => s,
                 None => unsafe { unreachable_unchecked() },
             })

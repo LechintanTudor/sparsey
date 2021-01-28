@@ -43,12 +43,6 @@ fn main() {
 
     println!("{:?}, {:?}, {:?}", e0, e1, e2);
 
-    /*
-    let (mut a, mut b) = world.borrow::<(CompMut<A>, CompMut<B>)>();
-    let (mut c, mut d) = resources.borrow::<(ResMut<C>, ResMut<D>)>();
-    let (e, f, g, h) = registry.borrow::<(Comp<E>, Comp<F>, Res<G>, Res<H>)>();
-    */
-
     {
         println!("Before maintain:");
 
