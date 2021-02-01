@@ -1,6 +1,6 @@
-use crate::group::WorldLayoutDescriptor;
 use crate::registry::{
-    Comp, CompMut, Component, ComponentSet, ComponentTypeId, GroupedComponents, UngroupedComponents,
+    Comp, CompMut, Component, ComponentSet, ComponentTypeId, GroupedComponents,
+    UngroupedComponents, WorldLayoutDescriptor,
 };
 use crate::storage::{AbstractSparseSet, Entity, EntityStorage, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefMut};

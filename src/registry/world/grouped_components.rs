@@ -1,6 +1,6 @@
-use crate::registry::{ComponentTypeId, Group, WorldId};
+use crate::registry::{ComponentTypeId, Group, WorldId, WorldLayout};
+use crate::storage::AbstractSparseSetViewMut;
 use crate::storage::{AbstractSparseSet, Entity};
-use crate::{group::WorldLayout, storage::AbstractSparseSetViewMut};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::borrow::Borrow;
 use std::collections::HashMap;
