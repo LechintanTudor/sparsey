@@ -1,8 +1,8 @@
 use crate::data::{IterableView, UnfilteredIterableView};
-use crate::group::Group;
-use crate::registry::{BorrowWorld, Component, World};
+use crate::registry::{BorrowWorld, BorrowWorldUnsafe, Component, Group, World};
 use crate::storage::{ComponentFlags, ComponentRefMut, Entity, SparseArray, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
+use std::ops::{Deref, DerefMut};
 
 pub struct Comp<'a, T>
 where
@@ -13,15 +13,8 @@ where
 }
 
 impl<'a, T> Comp<'a, T> {
-    pub(crate) fn ungrouped(set: AtomicRef<'a, SparseSet<T>>) -> Self {
-        Self { set, group: None }
-    }
-
-    pub(crate) unsafe fn grouped(set: AtomicRef<'a, SparseSet<T>>, group: Group) -> Self {
-        Self {
-            set,
-            group: Some(group),
-        }
+    pub(crate) unsafe fn new(set: AtomicRef<'a, SparseSet<T>>, group: Option<Group>) -> Self {
+        Self { set, group }
     }
 }
 
@@ -72,15 +65,8 @@ where
 }
 
 impl<'a, T> CompMut<'a, T> {
-    pub(crate) fn ungrouped(set: AtomicRefMut<'a, SparseSet<T>>) -> Self {
-        Self { set, group: None }
-    }
-
-    pub unsafe fn grouped(set: AtomicRefMut<'a, SparseSet<T>>, group: Group) -> Self {
-        Self {
-            set,
-            group: Some(group),
-        }
+    pub(crate) unsafe fn new(set: AtomicRefMut<'a, SparseSet<T>>, group: Option<Group>) -> Self {
+        Self { set, group }
     }
 }
 
@@ -151,13 +137,27 @@ impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T> {
 
 unsafe impl<'a: 'b, 'b, T> UnfilteredIterableView<'b> for &'b mut CompMut<'a, T> {}
 
-pub(crate) struct BorrowSparseSetMut<'a, T>(pub(crate) AtomicRefMut<'a, SparseSet<T>>);
+pub(crate) struct SparseSetRefMut<'a, T>(AtomicRefMut<'a, SparseSet<T>>);
 
-impl<'a, T> BorrowWorld<'a> for BorrowSparseSetMut<'a, T>
+impl<'a, T> BorrowWorldUnsafe<'a> for SparseSetRefMut<'a, T>
 where
     T: Component,
 {
-    fn borrow_world(world: &'a World) -> Self {
-        unsafe { Self(world.borrow_sparse_set_mut().unwrap()) }
+    unsafe fn borrow_world_unsafe(world: &'a World) -> Self {
+        SparseSetRefMut(world.borrow_sparse_set_mut::<T>().unwrap())
+    }
+}
+
+impl<T> Deref for SparseSetRefMut<'_, T> {
+    type Target = SparseSet<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for SparseSetRefMut<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }

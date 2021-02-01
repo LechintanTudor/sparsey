@@ -1,8 +1,10 @@
 pub use self::impls::*;
 
-use crate::registry::{BorrowSparseSetMut, BorrowWorld, World};
+use crate::registry::{BorrowWorldUnsafe, SparseSetRefMut, World};
 use crate::storage::Entity;
 use std::any::TypeId;
+
+pub type ComponentTypeId = TypeId;
 
 pub trait Component
 where
@@ -41,19 +43,19 @@ macro_rules! impl_component_set {
 
             unsafe fn insert_raw(world: &World, entity: Entity, components: Self) {
                 let mut sparse_sets = <(
-                    $(BorrowSparseSetMut<$ty>,)+
-                )>::borrow_world(world);
+                    $(SparseSetRefMut<$ty>,)+
+                )>::borrow_world_unsafe(world);
 
-                $(sparse_sets.$idx.0.insert(entity, components.$idx);)+
+                $(sparse_sets.$idx.insert(entity, components.$idx);)+
             }
 
             unsafe fn remove_raw(world: &World, entity: Entity) -> Option<Self> {
                 let mut sparse_sets = <(
-                    $(BorrowSparseSetMut<$ty>,)+
-                )>::borrow_world(world);
+                    $(SparseSetRefMut<$ty>,)+
+                )>::borrow_world_unsafe(world);
 
                 let components = (
-                    $(sparse_sets.$idx.0.remove(entity),)+
+                    $(sparse_sets.$idx.remove(entity),)+
                 );
 
                 Some((
@@ -63,10 +65,10 @@ macro_rules! impl_component_set {
 
             unsafe fn delete_raw(world: &World, entity: Entity) {
                 let mut sparse_sets = <(
-                    $(BorrowSparseSetMut<$ty>,)+
-                )>::borrow_world(world);
+                    $(SparseSetRefMut<$ty>,)+
+                )>::borrow_world_unsafe(world);
 
-                $(sparse_sets.$idx.0.remove(entity);)+
+                $(sparse_sets.$idx.remove(entity);)+
             }
         }
     };

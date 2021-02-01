@@ -1,5 +1,5 @@
 use crate::data::{IterableView, UnfilteredIterableView};
-use crate::group::Group;
+use crate::registry::Group;
 use crate::storage::{ComponentFlags, Entity, SparseArray};
 use std::marker::PhantomData;
 use std::ops::Not;

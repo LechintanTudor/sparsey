@@ -1,9 +1,11 @@
 pub use self::borrow::*;
 pub use self::component::*;
-pub use self::grouped_components::*;
-pub use self::ungrouped_components::*;
+pub use self::group::*;
 pub use self::view::*;
 pub use self::world::*;
+
+pub(crate) use self::grouped_components::*;
+pub(crate) use self::ungrouped_components::*;
 
 mod borrow;
 mod component;

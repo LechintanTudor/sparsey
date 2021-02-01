@@ -1,26 +1,16 @@
-use crate::group::{Group, WorldLayoutDescriptor};
-use crate::registry::world::group;
-use crate::registry::world::group::GroupStatus;
+use crate::group::WorldLayoutDescriptor;
 use crate::registry::{
-    Comp, CompMut, Component, ComponentSet, GroupedComponents, UngroupedComponents,
+    Comp, CompMut, Component, ComponentSet, ComponentTypeId, GroupedComponents, UngroupedComponents,
 };
-use crate::storage::{Entity, EntityStorage, SparseSet};
-use atomic_refcell::AtomicRefMut;
-use std::any::TypeId;
+use crate::storage::{AbstractSparseSet, Entity, EntityStorage, SparseSet};
+use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::collections::HashSet;
-use std::num::NonZeroU64;
-use std::sync::atomic::{AtomicU64, Ordering};
-
-static CURRENT_WORLD_ID: AtomicU64 = AtomicU64::new(1);
-
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub struct WorldId(NonZeroU64);
+use std::hint::unreachable_unchecked;
 
 pub struct World {
     entities: EntityStorage,
-    components: UngroupedComponents,
     grouped_components: GroupedComponents,
-    id: WorldId,
+    ungrouped_components: UngroupedComponents,
 }
 
 impl World {
@@ -30,78 +20,34 @@ impl World {
     {
         Self {
             entities: Default::default(),
-            components: Default::default(),
-            grouped_components: GroupedComponents::new(L::world_layout()),
-            id: WorldId(NonZeroU64::new(CURRENT_WORLD_ID.fetch_add(1, Ordering::Relaxed)).unwrap()),
+            grouped_components: GroupedComponents::new(&L::world_layout()),
+            ungrouped_components: Default::default(),
         }
-    }
-
-    pub fn id(&self) -> WorldId {
-        self.id
     }
 
     pub fn register<C>(&mut self)
     where
         C: Component,
     {
-        if !self.grouped_components.contains(TypeId::of::<C>()) {
-            self.components.register::<C>();
+        if !self
+            .grouped_components
+            .contains(&ComponentTypeId::of::<C>())
+        {
+            self.ungrouped_components.register::<C>();
         }
     }
 
     pub fn maintain(&mut self) {
         self.entities.maintain();
-        self.components.maintain();
-        self.grouped_components.maintain();
-    }
 
-    pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
-    where
-        T: Component,
-    {
-        match self.grouped_components.borrow::<T>() {
-            Some(set) => unsafe {
-                Some(Comp::grouped(
-                    set,
-                    Group::new(
-                        self.id,
-                        self.grouped_components
-                            .get_group_info(TypeId::of::<T>())
-                            .unwrap(),
-                    ),
-                ))
-            },
-            None => Some(Comp::ungrouped(self.components.borrow::<T>()?)),
-        }
-    }
+        unsafe {
+            for sparse_set in self.grouped_components.iter_sparse_sets_mut() {
+                sparse_set.maintain();
+            }
 
-    pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
-    where
-        T: Component,
-    {
-        match self.grouped_components.borrow_mut::<T>() {
-            Some(set) => unsafe {
-                Some(CompMut::grouped(
-                    set,
-                    Group::new(
-                        self.id,
-                        self.grouped_components
-                            .get_group_info(TypeId::of::<T>())
-                            .unwrap(),
-                    ),
-                ))
-            },
-            None => Some(CompMut::ungrouped(self.components.borrow_mut::<T>()?)),
-        }
-    }
-
-    pub(crate) unsafe fn borrow_sparse_set_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
-    where
-        T: Component,
-    {
-        match self.grouped_components.borrow_mut::<T>() {
-            Some(set) => Some(set),
-            None => Some(self.components.borrow_mut::<T>()?),
+            for sparse_set in self.ungrouped_components.iter_sparse_sets_mut() {
+                sparse_set.maintain();
+            }
         }
     }
 
@@ -115,13 +61,29 @@ impl World {
     }
 
     pub fn destroy(&mut self, entity: Entity) -> bool {
-        if self.entities.destroy(entity) {
-            self.components.remove(entity);
-            self.grouped_components.remove(entity);
-            true
-        } else {
-            false
+        if !self.entities.contains(entity) {
+            return false;
         }
+
+        for group_index in 0..self.grouped_components.group_count() {
+            unsafe {
+                self.grouped_components
+                    .ungroup_components(group_index, Some(entity));
+            }
+        }
+
+        unsafe {
+            for sparse_set in self.grouped_components.iter_sparse_sets_mut() {
+                sparse_set.delete(entity);
+            }
+
+            for sparse_set in self.ungrouped_components.iter_sparse_sets_mut() {
+                sparse_set.delete(entity);
+            }
+        }
+
+        self.entities.destroy(entity);
+        true
     }
 
     pub fn insert<C>(&mut self, entity: Entity, components: C) -> bool
@@ -134,42 +96,16 @@ impl World {
 
         unsafe {
             C::insert_raw(self, entity, components);
-        }
 
-        let group_indexes = unsafe { C::components() }
-            .as_ref()
-            .iter()
-            .flat_map(|&c| self.grouped_components.get_group_index(c))
-            .collect::<HashSet<_>>();
+            let group_indexes = C::components()
+                .as_ref()
+                .iter()
+                .flat_map(|type_id| self.grouped_components.get_group_index(type_id))
+                .collect::<HashSet<_>>();
 
-        for &i in group_indexes.iter() {
-            let (mut sparse_sets, mut subgroups) = unsafe {
+            for &group_index in group_indexes.iter() {
                 self.grouped_components
-                    .get_component_group_split_view_mut_unchecked(i)
-            };
-
-            let mut previous_arity = 0_usize;
-
-            for (arity, len) in unsafe { subgroups.iter_split_subgroups_mut(..) } {
-                let status = group::get_group_status(
-                    sparse_sets.iter_abstract_sparse_set_views(previous_arity..arity),
-                    *len,
-                    entity,
-                );
-
-                match status {
-                    GroupStatus::Grouped => (),
-                    GroupStatus::Ungrouped => unsafe {
-                        group::group_components(
-                            sparse_sets.iter_abstract_sparse_set_views_mut(..arity),
-                            len,
-                            entity,
-                        );
-                    },
-                    GroupStatus::MissingComponents => break,
-                }
-
-                previous_arity = arity;
+                    .group_components(group_index, Some(entity));
             }
         }
 
@@ -184,58 +120,102 @@ impl World {
             return None;
         }
 
-        let group_indexes = unsafe { C::components() }
-            .as_ref()
-            .iter()
-            .flat_map(|&c| self.grouped_components.get_group_index(c))
-            .collect::<HashSet<_>>();
+        unsafe {
+            let group_indexes = C::components()
+                .as_ref()
+                .iter()
+                .flat_map(|type_id| self.grouped_components.get_group_index(type_id))
+                .collect::<HashSet<_>>();
 
-        for &i in group_indexes.iter() {
-            let (mut sparse_sets, mut subgroups) = unsafe {
+            for &group_index in group_indexes.iter() {
                 self.grouped_components
-                    .get_component_group_split_view_mut_unchecked(i)
-            };
-
-            let mut previous_arity = 0_usize;
-            let mut ungroup_start = Option::<usize>::None;
-            let mut ungroup_len = 0;
-
-            for (i, (arity, len)) in unsafe { subgroups.iter_split_subgroups_mut(..).enumerate() } {
-                let status = group::get_group_status(
-                    sparse_sets.iter_abstract_sparse_set_views(previous_arity..arity),
-                    *len,
-                    entity,
-                );
-
-                match status {
-                    GroupStatus::Grouped => {
-                        if ungroup_start.is_none() {
-                            ungroup_start = Some(i);
-                        }
-                        ungroup_len += 1;
-                    }
-                    GroupStatus::Ungrouped => break,
-                    GroupStatus::MissingComponents => break,
-                }
-
-                previous_arity = arity;
+                    .ungroup_components(group_index, Some(entity));
             }
 
-            if let Some(ungroup_start) = ungroup_start {
-                let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
+            C::remove_raw(self, entity)
+        }
+    }
 
-                unsafe {
-                    for (arity, len) in subgroups.iter_split_subgroups_mut(ungroup_range).rev() {
-                        group::ungroup_components(
-                            sparse_sets.iter_abstract_sparse_set_views_mut(..arity),
-                            len,
-                            entity,
-                        );
-                    }
-                }
+    pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
+    where
+        T: Component,
+    {
+        let type_id = ComponentTypeId::of::<T>();
+
+        match self.grouped_components.borrow_abstract(&type_id) {
+            Some(sparse_set) => unsafe {
+                Some(Comp::new(
+                    downcast_sparse_set::<T>(sparse_set),
+                    self.grouped_components.get_group(&type_id),
+                ))
+            },
+            None => {
+                let sparse_set = self.ungrouped_components.borrow_abstract(&type_id)?;
+
+                unsafe { Some(Comp::new(downcast_sparse_set::<T>(sparse_set), None)) }
             }
         }
-
-        unsafe { C::remove_raw(self, entity) }
     }
+
+    pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
+    where
+        T: Component,
+    {
+        let type_id = ComponentTypeId::of::<T>();
+
+        match unsafe { self.grouped_components.borrow_abstract_mut(&type_id) } {
+            Some(sparse_set) => unsafe {
+                Some(CompMut::new(
+                    downcast_sparse_set_mut::<T>(sparse_set),
+                    self.grouped_components.get_group(&type_id),
+                ))
+            },
+            None => {
+                let sparse_set = self.ungrouped_components.borrow_abstract_mut(&type_id)?;
+
+                unsafe { Some(CompMut::new(downcast_sparse_set_mut::<T>(sparse_set), None)) }
+            }
+        }
+    }
+
+    pub(crate) unsafe fn borrow_sparse_set_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
+    where
+        T: Component,
+    {
+        let type_id = ComponentTypeId::of::<T>();
+        let sparse_set = self
+            .grouped_components
+            .borrow_abstract_mut(&type_id)
+            .or_else(|| self.ungrouped_components.borrow_abstract_mut(&type_id))?;
+
+        Some(downcast_sparse_set_mut::<T>(sparse_set))
+    }
+}
+
+unsafe fn downcast_sparse_set<T>(
+    sparse_set: AtomicRef<dyn AbstractSparseSet>,
+) -> AtomicRef<SparseSet<T>>
+where
+    T: Component,
+{
+    AtomicRef::map(sparse_set, |sparse_set| {
+        match sparse_set.downcast_ref::<SparseSet<T>>() {
+            Some(sparse_set) => sparse_set,
+            None => unreachable_unchecked(),
+        }
+    })
+}
+
+unsafe fn downcast_sparse_set_mut<T>(
+    sparse_set: AtomicRefMut<dyn AbstractSparseSet>,
+) -> AtomicRefMut<SparseSet<T>>
+where
+    T: Component,
+{
+    AtomicRefMut::map(sparse_set, |sparse_set| {
+        match sparse_set.downcast_mut::<SparseSet<T>>() {
+            Some(sparse_set) => sparse_set,
+            None => unreachable_unchecked(),
+        }
+    })
 }

@@ -1,4 +1,4 @@
-use crate::group::Group;
+use crate::registry::Group;
 use crate::storage::*;
 
 pub trait IterableView<'a> {

@@ -73,6 +73,10 @@ impl<'a> AbstractSparseSetViewMut<'a> {
         self.dense.len()
     }
 
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains(entity)
+    }
+
     pub fn get_index_entity(&self, entity: Entity) -> Option<IndexEntity> {
         self.sparse.get_index_entity(entity)
     }

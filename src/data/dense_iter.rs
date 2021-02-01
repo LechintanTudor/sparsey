@@ -34,7 +34,6 @@ macro_rules! impl_dense_iter {
                     let subgroup_len = first_of!($([<view_ $comp:lower>]),+)
                         .group()
                         .unwrap()
-                        .info()
                         .subgroup_len();
 
                     $(
