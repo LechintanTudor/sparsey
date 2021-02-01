@@ -1,6 +1,6 @@
 pub use self::impls::*;
 
-use crate::data::{self, IterableView};
+use crate::data::IterableView;
 use crate::storage::Entity;
 use paste::paste;
 
@@ -76,7 +76,7 @@ macro_rules! impl_dense_iter {
                     unsafe {
                         Some((
                             $(
-                                data::get_output::<$comp>(
+                                <$comp>::get(
                                     self.[<set_ $comp:lower>].0,
                                     self.[<set_ $comp:lower>].1,
                                     index,

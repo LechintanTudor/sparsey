@@ -60,7 +60,7 @@ fn main() {
 
         let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
 
-        for (a, b) in (added(&mut a), &mut b).join() {
+        for (a, b) in (changed(&mut a), &mut b).join() {
             println!("{:?}, {:?}", *a, *b);
         }
     }

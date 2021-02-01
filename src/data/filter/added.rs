@@ -1,4 +1,4 @@
-use crate::data::{IterableView, UnfilteredIterableView};
+use crate::data::IterableView;
 use crate::registry::Group;
 use crate::storage::{ComponentFlags, Entity, SparseArray};
 use std::marker::PhantomData;
@@ -6,7 +6,7 @@ use std::ops::Not;
 
 pub struct Added<'a, V>
 where
-    V: UnfilteredIterableView<'a>,
+    V: IterableView<'a>,
 {
     view: V,
     phantom: PhantomData<&'a ()>,
@@ -14,7 +14,7 @@ where
 
 pub fn added<'a, V>(view: V) -> Added<'a, V>
 where
-    V: UnfilteredIterableView<'a>,
+    V: IterableView<'a>,
 {
     Added {
         view,
@@ -24,7 +24,7 @@ where
 
 impl<'a, V> IterableView<'a> for Added<'a, V>
 where
-    V: UnfilteredIterableView<'a>,
+    V: IterableView<'a>,
 {
     type Data = V::Data;
     type Flags = V::Flags;
@@ -38,22 +38,22 @@ where
         V::split(self.view)
     }
 
-    unsafe fn matches_flags(flags: Self::Flags, index: usize) -> bool {
-        V::get_flags(flags, index).contains(ComponentFlags::ADDED)
-    }
-
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
         V::get_flags(flags, index)
     }
 
-    unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Self::Output {
-        V::get(data, flags, index)
+    unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
+        if Self::get_flags(flags, index).contains(ComponentFlags::ADDED) {
+            V::get(data, flags, index)
+        } else {
+            None
+        }
     }
 }
 
 impl<'a, V> Not for Added<'a, V>
 where
-    V: UnfilteredIterableView<'a>,
+    V: IterableView<'a>,
 {
     type Output = NotAdded<'a, V>;
 
@@ -67,7 +67,7 @@ where
 
 pub struct NotAdded<'a, V>
 where
-    V: UnfilteredIterableView<'a>,
+    V: IterableView<'a>,
 {
     view: V,
     phantom: PhantomData<&'a ()>,
@@ -75,7 +75,7 @@ where
 
 impl<'a, V> IterableView<'a> for NotAdded<'a, V>
 where
-    V: UnfilteredIterableView<'a>,
+    V: IterableView<'a>,
 {
     type Data = V::Data;
     type Flags = V::Flags;
@@ -89,15 +89,15 @@ where
         V::split(self.view)
     }
 
-    unsafe fn matches_flags(flags: Self::Flags, index: usize) -> bool {
-        !V::get_flags(flags, index).contains(ComponentFlags::ADDED)
-    }
-
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
         V::get_flags(flags, index)
     }
 
-    unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Self::Output {
-        V::get(data, flags, index)
+    unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
+        if !Self::get_flags(flags, index).contains(ComponentFlags::ADDED) {
+            V::get(data, flags, index)
+        } else {
+            None
+        }
     }
 }
