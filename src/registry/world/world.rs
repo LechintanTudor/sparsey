@@ -2,13 +2,13 @@ use crate::registry::{
     Comp, CompMut, Component, ComponentSet, ComponentTypeId, GroupedComponents,
     UngroupedComponents, WorldLayoutDescriptor,
 };
-use crate::storage::{AbstractSparseSet, Entity, EntityStorage, SparseSet};
+use crate::storage::{AbstractSparseSet, Entities, Entity, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::collections::HashSet;
 use std::hint::unreachable_unchecked;
 
 pub struct World {
-    entities: EntityStorage,
+    entities: Entities,
     grouped_components: GroupedComponents,
     ungrouped_components: UngroupedComponents,
 }

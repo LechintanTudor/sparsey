@@ -2,12 +2,12 @@ use crate::storage::{Entity, IndexEntity, SparseArray};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
-pub struct EntityStorage {
+pub struct Entities {
     allocator: EntityAllocator,
     entities: EntitySparseSet,
 }
 
-impl EntityStorage {
+impl Entities {
     pub fn create(&mut self) -> Entity {
         let entity = self
             .allocator
