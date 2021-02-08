@@ -1,4 +1,4 @@
-use crate::registry::{Res, ResMut, Resource, UnsafeResources};
+use crate::resources::{Res, ResMut, Resource, UnsafeResources};
 
 #[derive(Copy, Clone)]
 pub struct SyncResources<'a> {

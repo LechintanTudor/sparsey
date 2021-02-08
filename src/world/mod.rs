@@ -1,4 +1,3 @@
-pub use self::borrow::*;
 pub use self::component::*;
 pub use self::group::*;
 pub use self::layout::*;
@@ -8,7 +7,6 @@ pub use self::world::*;
 pub(crate) use self::grouped_components::*;
 pub(crate) use self::ungrouped_components::*;
 
-mod borrow;
 mod component;
 mod group;
 mod grouped_components;

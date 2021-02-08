@@ -1,7 +1,7 @@
 pub use self::impls::*;
 
-use crate::registry::{BorrowWorldUnsafe, SparseSetRefMut, World};
 use crate::storage::Entity;
+use crate::world::World;
 use std::any::TypeId;
 
 pub type ComponentTypeId = TypeId;
@@ -42,17 +42,17 @@ macro_rules! impl_component_set {
             }
 
             unsafe fn insert_raw(world: &World, entity: Entity, components: Self) {
-                let mut sparse_sets = <(
-                    $(SparseSetRefMut<$ty>,)+
-                )>::borrow_world_unsafe(world);
+                let mut sparse_sets = (
+                    $(world.borrow_sparse_set_mut::<$ty>().unwrap(),)+
+                );
 
                 $(sparse_sets.$idx.insert(entity, components.$idx);)+
             }
 
             unsafe fn remove_raw(world: &World, entity: Entity) -> Option<Self> {
-                let mut sparse_sets = <(
-                    $(SparseSetRefMut<$ty>,)+
-                )>::borrow_world_unsafe(world);
+                let mut sparse_sets = (
+                    $(world.borrow_sparse_set_mut::<$ty>().unwrap(),)+
+                );
 
                 let components = (
                     $(sparse_sets.$idx.remove(entity),)+
@@ -64,9 +64,9 @@ macro_rules! impl_component_set {
             }
 
             unsafe fn delete_raw(world: &World, entity: Entity) {
-                let mut sparse_sets = <(
-                    $(SparseSetRefMut<$ty>,)+
-                )>::borrow_world_unsafe(world);
+                let mut sparse_sets = (
+                    $(world.borrow_sparse_set_mut::<$ty>().unwrap(),)+
+                );
 
                 $(sparse_sets.$idx.remove(entity);)+
             }

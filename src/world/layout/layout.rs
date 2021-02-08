@@ -1,4 +1,4 @@
-use crate::registry::LayoutComponent;
+use crate::world::LayoutComponent;
 
 pub struct SubgroupLayout {
     components: Vec<LayoutComponent>,

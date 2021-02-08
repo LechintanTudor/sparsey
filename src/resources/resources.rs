@@ -1,4 +1,4 @@
-use crate::registry::{Res, ResMut, Resource, ResourceTypeId, SyncResources, UnsafeResources};
+use crate::resources::{Res, ResMut, Resource, ResourceTypeId, SyncResources, UnsafeResources};
 use std::marker::PhantomData;
 
 pub struct Resources {
@@ -9,6 +9,10 @@ pub struct Resources {
 impl Resources {
     pub fn sync<'a>(&'a self) -> SyncResources<'a> {
         SyncResources::new(&self.internal)
+    }
+
+    pub unsafe fn internal(&self) -> &UnsafeResources {
+        &self.internal
     }
 
     pub fn clear(&mut self) {

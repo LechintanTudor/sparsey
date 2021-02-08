@@ -1,5 +1,5 @@
-use crate::registry::Group;
 use crate::storage::*;
+use crate::world::Group;
 
 pub trait IterableView<'a> {
     type Data: 'a + Copy;

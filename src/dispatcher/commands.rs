@@ -1,36 +1,85 @@
-use crate::registry::{Resources, World};
+use crate::resources::Resources;
 use crate::storage::Entities;
+use crate::world::World;
+use std::cell::UnsafeCell;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+pub struct Command(Box<dyn FnOnce(&mut World, &mut Resources) + Send + 'static>);
+
+impl Command {
+    pub fn run(self, world: &mut World, resources: &mut Resources) {
+        self.0(world, resources)
+    }
+}
+
+impl<F> From<F> for Command
+where
+    F: FnOnce(&mut World, &mut Resources) + Send + 'static,
+{
+    fn from(function: F) -> Self {
+        Self(Box::new(function))
+    }
+}
+
+pub struct CommandBuffers {
+    buffers: Vec<UnsafeCell<Vec<Command>>>,
+    index: AtomicUsize,
+}
+
+impl CommandBuffers {
+    pub fn new(buffer_count: usize) -> Self {
+        let mut buffers = Vec::new();
+        buffers.resize_with(buffer_count, || UnsafeCell::new(Vec::new()));
+
+        Self {
+            buffers,
+            index: AtomicUsize::new(0),
+        }
+    }
+
+    pub fn next(&self) -> Option<&mut Vec<Command>> {
+        let mut prev = self.index.load(Ordering::Relaxed);
+
+        while prev < self.buffers.len() {
+            match self.index.compare_exchange_weak(
+                prev,
+                prev + 1,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(result) => unsafe { return Some(&mut *self.buffers[result - 1].get()) },
+                Err(next_prev) => prev = next_prev,
+            }
+        }
+
+        None
+    }
+
+    pub fn drain(&mut self) -> impl Iterator<Item = Command> + '_ {
+        let used_buffers = *self.index.get_mut();
+        *self.index.get_mut() = 0;
+
+        self.buffers
+            .iter_mut()
+            .take(used_buffers)
+            .flat_map(|buffer| unsafe { (&mut *buffer.get()).drain(..) })
+    }
+}
 
 pub struct Commands<'a> {
-    buffer: &'a mut Vec<Box<dyn Command>>,
+    buffer: &'a mut Vec<Command>,
     entities: &'a Entities,
 }
 
 impl<'a> Commands<'a> {
-    pub(crate) fn new(buffer: &'a mut Vec<Box<dyn Command>>, entities: &'a Entities) -> Self {
+    pub(crate) fn new(buffer: &'a mut Vec<Command>, entities: &'a Entities) -> Self {
         Self { buffer, entities }
     }
 
     pub fn queue<C>(&mut self, command: C)
     where
-        C: Command,
+        C: Into<Command>,
     {
-        self.buffer.push(Box::new(command));
-    }
-}
-
-pub trait Command
-where
-    Self: Send + 'static,
-{
-    fn run(self, world: &mut World, resources: &mut Resources);
-}
-
-impl<F> Command for F
-where
-    F: FnOnce(&mut World, &mut Resources) + Send + 'static,
-{
-    fn run(self, world: &mut World, resources: &mut Resources) {
-        self(world, resources)
+        self.buffer.push(command.into());
     }
 }

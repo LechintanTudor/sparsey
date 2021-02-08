@@ -1,4 +1,4 @@
-use crate::registry::{Res, ResMut, Resource, ResourceTypeId};
+use crate::resources::{Res, ResMut, Resource, ResourceTypeId};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::collections::HashMap;
 use std::hint::unreachable_unchecked;

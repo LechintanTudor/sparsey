@@ -1,5 +1,5 @@
 pub mod data;
 pub mod dispatcher;
-pub mod prelude;
-pub mod registry;
+pub mod resources;
 pub mod storage;
+pub mod world;

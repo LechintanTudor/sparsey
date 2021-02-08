@@ -1,6 +1,6 @@
 use crate::data::IterableView;
-use crate::registry::Group;
 use crate::storage::{ComponentFlags, Entity, SparseArray};
+use crate::world::Group;
 use std::marker::PhantomData;
 use std::ops::Not;
 

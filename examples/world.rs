@@ -1,67 +1,47 @@
-#![allow(unused_variables)]
+use ecstasy::data::*;
+use ecstasy::dispatcher::*;
+use ecstasy::resources::*;
+use ecstasy::storage::*;
+use ecstasy::world::*;
 
-use ecstasy::data::filter::*;
-use ecstasy::prelude::*;
+struct Immobile;
 
-#[derive(Debug)]
-struct A;
+struct Position(f32, f32);
 
-#[derive(Debug)]
-struct B;
+struct Velocity(f32, f32);
 
-#[derive(Debug)]
-struct C;
+struct Acceleration(f32, f32);
 
-#[derive(Debug)]
-struct D;
+fn immobile(
+    immobiles: Comp<Immobile>,
+    // mut velocities: CompMut<Velocity>,
+    // mut accelerations: CompMut<Acceleration>,
+) {
+    // for (mut velocity, mut acceleration, _) in
+    //     (&mut velocities, &mut accelerations, &immobiles).join()
+    // {
+    //     *velocity = Velocity(0.0, 0.0);
+    //     *acceleration = Acceleration(0.0, 0.0);
+    // }
+}
 
-#[derive(Debug)]
-struct E;
+fn movement(
+    mut positions: CompMut<Position>,
+    mut velocities: CompMut<Velocity>,
+    accelerations: Comp<Acceleration>,
+) {
+    for (mut position, mut velocity, acceleration) in
+        (&mut positions, &mut velocities, &accelerations).join()
+    {
+        velocity.0 += acceleration.0;
+        velocity.1 += acceleration.1;
 
-#[rustfmt::skip]
-type WorldLayout = (
-    (
-        (A, B), 
-        (A, B, C), 
-    ),
-    (
-        (D, E),
-    ),
-);
+        position.0 += velocity.0;
+        position.1 += velocity.1;
+    }
+}
 
 fn main() {
-    let mut world = World::new::<WorldLayout>();
-    world.register::<A>();
-    world.register::<B>();
-    world.register::<C>();
-    world.register::<D>();
-    world.register::<E>();
-
-    let e0 = world.create((A,));
-    let e1 = world.create((A, B, C));
-    let e2 = world.create((A, B, C, D, E));
-
-    println!("{:?}, {:?}, {:?}", e0, e1, e2);
-
-    {
-        println!("Before maintain:");
-
-        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
-
-        for (a, b) in (added(&mut a), &mut b).join() {
-            println!("{:?}, {:?}", *a, *b);
-        }
-    }
-
-    world.maintain();
-
-    {
-        println!("\nAfter maintain:");
-
-        let (mut a, mut b) = <(CompMut<A>, CompMut<B>)>::borrow_world(&world);
-
-        for (a, b) in (changed(&mut a), &mut b).join() {
-            println!("{:?}, {:?}", *a, *b);
-        }
-    }
+    let system = immobile.thread_local_system();
+    // let dispatcher = Dispatcher::builder().with_thread_local_system(immobile.thread_local_system());
 }

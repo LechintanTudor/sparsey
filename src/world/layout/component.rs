@@ -1,5 +1,5 @@
-use crate::registry::Component;
 use crate::storage::{AbstractSparseSet, SparseSet};
+use crate::world::Component;
 use std::any::{self, TypeId};
 use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::marker::PhantomData;
@@ -52,7 +52,10 @@ impl Ord for LayoutComponent {
     }
 }
 
-trait AbstractLayoutComponent {
+trait AbstractLayoutComponent
+where
+    Self: Send + Sync + 'static,
+{
     fn component_type_id(&self) -> TypeId;
 
     fn component_type_name(&self) -> &'static str;
@@ -61,12 +64,12 @@ trait AbstractLayoutComponent {
 }
 
 #[derive(Copy, Clone)]
-struct GenericLayoutComponent<C>
-where
-    C: Component,
-{
+struct GenericLayoutComponent<C> {
     _phantom: PhantomData<*const C>,
 }
+
+unsafe impl<C> Send for GenericLayoutComponent<C> {}
+unsafe impl<C> Sync for GenericLayoutComponent<C> {}
 
 impl<C> Default for GenericLayoutComponent<C>
 where

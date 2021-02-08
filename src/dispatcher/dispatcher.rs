@@ -1,6 +1,6 @@
-use crate::dispatcher::{Command, Commands, System, ThreadLocalSystem};
-use crate::registry::{Resources, World};
-use std::cell::UnsafeCell;
+use crate::dispatcher::{CommandBuffers, Registry, System, ThreadLocalSystem};
+use crate::resources::Resources;
+use crate::world::World;
 
 enum SimpleStep {
     RunSystem(Box<dyn System>),
@@ -16,48 +16,82 @@ enum Step {
 
 #[derive(Default)]
 pub struct DispatcherBuilder {
-    raw_steps: Vec<SimpleStep>,
+    simple_steps: Vec<SimpleStep>,
 }
 
 impl DispatcherBuilder {
     pub fn with_system(mut self, system: Box<dyn System>) -> Self {
-        self.raw_steps.push(SimpleStep::RunSystem(system));
+        self.simple_steps.push(SimpleStep::RunSystem(system));
         self
     }
 
     pub fn with_thread_local_system(mut self, system: Box<dyn ThreadLocalSystem>) -> Self {
-        self.raw_steps
+        self.simple_steps
             .push(SimpleStep::RunThreadLocalSystem(system));
         self
     }
 
-    pub fn flush_command_buffers(mut self) -> Self {
-        if !matches!(self.raw_steps.last(), Some(SimpleStep::FlushCommands)) {
-            self.raw_steps.push(SimpleStep::FlushCommands);
-        }
-
+    pub fn with_barrier(mut self) -> Self {
+        self.simple_steps.push(SimpleStep::FlushCommands);
         self
     }
 
     pub fn merge(mut self, mut other: DispatcherBuilder) -> Self {
-        for raw_command in other.raw_steps.drain(..) {
-            if matches!(raw_command, SimpleStep::FlushCommands) {
-                self = self.flush_command_buffers();
-            } else {
-                self.raw_steps.push(raw_command);
-            }
-        }
-
+        self.simple_steps.extend(other.simple_steps.drain(..));
         self
     }
 
-    pub fn build(self) -> Dispatcher {
-        todo!()
+    pub fn build(mut self) -> Dispatcher {
+        let mut steps = Vec::<Step>::new();
+        let mut command_buffer_count = 100;
+
+        for simple_step in self.simple_steps.drain(..) {
+            match simple_step {
+                SimpleStep::RunSystem(system) => match steps.last_mut() {
+                    Some(Step::RunSystems(systems)) => {
+                        let systems_conflict = systems
+                            .iter()
+                            .flat_map(|system| unsafe { system.registry_access() })
+                            .any(|access1| unsafe {
+                                system
+                                    .registry_access()
+                                    .iter()
+                                    .any(|access2| access1.conflicts(access2))
+                            });
+
+                        if systems_conflict {
+                            steps.push(Step::RunSystems(vec![system]));
+                        } else {
+                            systems.push(system);
+                        }
+                    }
+                    _ => {
+                        steps.push(Step::RunSystems(vec![system]));
+                    }
+                },
+                SimpleStep::RunThreadLocalSystem(system) => match steps.last_mut() {
+                    Some(Step::RunThreadLocalSystems(thread_local_systems)) => {
+                        thread_local_systems.push(system);
+                    }
+                    _ => steps.push(Step::RunThreadLocalSystems(vec![system])),
+                },
+                SimpleStep::FlushCommands => match steps.last() {
+                    Some(Step::FlushCommands) | None => (),
+                    _ => steps.push(Step::FlushCommands),
+                },
+            }
+        }
+
+        Dispatcher {
+            steps,
+            command_buffers: CommandBuffers::new(command_buffer_count),
+        }
     }
 }
 
 pub struct Dispatcher {
-    step: Vec<Step>,
+    steps: Vec<Step>,
+    command_buffers: CommandBuffers,
 }
 
 impl Dispatcher {
@@ -65,5 +99,37 @@ impl Dispatcher {
         DispatcherBuilder::default()
     }
 
-    pub fn run(&mut self, world: &mut World, resources: &mut Resources) {}
+    pub fn run(&mut self, world: &mut World, resources: &mut Resources) {
+        for step in self.steps.iter_mut() {
+            match step {
+                Step::RunSystems(systems) => {
+                    for system in systems {
+                        unsafe {
+                            system.run_unsafe(Registry::new(
+                                world,
+                                resources.internal(),
+                                &self.command_buffers,
+                            ));
+                        }
+                    }
+                }
+                Step::RunThreadLocalSystems(systems) => {
+                    for system in systems {
+                        unsafe {
+                            system.run_unsafe(Registry::new(
+                                world,
+                                resources.internal(),
+                                &self.command_buffers,
+                            ));
+                        }
+                    }
+                }
+                Step::FlushCommands => {
+                    for command in self.command_buffers.drain() {
+                        command.run(world, resources);
+                    }
+                }
+            }
+        }
+    }
 }

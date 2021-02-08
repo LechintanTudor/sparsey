@@ -1,8 +1,8 @@
-use crate::registry::{
+use crate::storage::{AbstractSparseSet, Entities, Entity, SparseSet};
+use crate::world::{
     Comp, CompMut, Component, ComponentSet, ComponentTypeId, GroupedComponents,
     UngroupedComponents, WorldLayoutDescriptor,
 };
-use crate::storage::{AbstractSparseSet, Entities, Entity, SparseSet};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::collections::HashSet;
 use std::hint::unreachable_unchecked;
@@ -136,7 +136,7 @@ impl World {
         }
     }
 
-    pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
+    pub fn borrow_comp<T>(&self) -> Option<Comp<T>>
     where
         T: Component,
     {
@@ -157,7 +157,7 @@ impl World {
         }
     }
 
-    pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
+    pub fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
     where
         T: Component,
     {
@@ -189,6 +189,10 @@ impl World {
             .or_else(|| self.ungrouped_components.borrow_abstract_mut(&type_id))?;
 
         Some(downcast_sparse_set_mut::<T>(sparse_set))
+    }
+
+    pub(crate) fn entities(&self) -> &Entities {
+        &self.entities
     }
 }
 

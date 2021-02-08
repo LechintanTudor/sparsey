@@ -1,4 +1,4 @@
-use crate::registry::{Component, GroupLayout, LayoutComponent, SubgroupLayout, WorldLayout};
+use crate::world::{Component, GroupLayout, LayoutComponent, SubgroupLayout, WorldLayout};
 
 pub trait SubgroupLayoutDescriptor {
     fn subgroup_layout() -> SubgroupLayout;
