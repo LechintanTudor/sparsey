@@ -4,7 +4,7 @@ use std::{mem, ptr};
 
 pub trait AbstractSparseSet
 where
-    Self: Downcast + 'static,
+    Self: Downcast + Send + Sync + 'static,
 {
     fn delete(&mut self, entity: Entity);
 

@@ -194,7 +194,7 @@ impl<T> SparseSet<T> {
 
 impl<T> AbstractSparseSet for SparseSet<T>
 where
-    T: 'static,
+    T: Send + Sync + 'static,
 {
     fn delete(&mut self, entity: Entity) {
         self.remove(entity);

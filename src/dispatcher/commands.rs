@@ -26,6 +26,8 @@ pub struct CommandBuffers {
     index: AtomicUsize,
 }
 
+unsafe impl Sync for CommandBuffers {}
+
 impl CommandBuffers {
     pub fn new(buffer_count: usize) -> Self {
         let mut buffers = Vec::new();
@@ -47,7 +49,7 @@ impl CommandBuffers {
                 Ordering::Relaxed,
                 Ordering::Relaxed,
             ) {
-                Ok(result) => unsafe { return Some(&mut *self.buffers[result - 1].get()) },
+                Ok(result) => unsafe { return Some(&mut *self.buffers[result].get()) },
                 Err(next_prev) => prev = next_prev,
             }
         }
@@ -76,9 +78,9 @@ impl<'a> Commands<'a> {
         Self { buffer, entities }
     }
 
-    pub fn queue<C>(&mut self, command: C)
+    pub fn queue<F>(&mut self, command: F)
     where
-        C: Into<Command>,
+        F: FnOnce(&mut World, &mut Resources) + Send + 'static,
     {
         self.buffer.push(command.into());
     }

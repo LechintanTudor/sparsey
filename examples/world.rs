@@ -44,6 +44,18 @@ fn movement(
 
         println!("{:?}, {:?}, {:?}", *position, *velocity, *acceleration);
     }
+
+    println!();
+}
+
+fn spawn(mut commands: Commands) {
+    commands.queue(|world, _| {
+        world.create((
+            Position(0.0, 0.0),
+            Velocity(0.0, 0.0),
+            Acceleration(-1.0, 1.0),
+        ));
+    });
 }
 
 fn main() {
@@ -52,13 +64,6 @@ fn main() {
     world.register::<Velocity>();
     world.register::<Acceleration>();
     world.register::<Immobile>();
-
-    let mut resources = Resources::default();
-
-    let mut dispatcher = Dispatcher::builder()
-        .with_system(immobile.system())
-        .with_system(movement.system())
-        .build();
 
     world.create((
         Position(0.0, 0.0),
@@ -72,5 +77,22 @@ fn main() {
         Immobile,
     ));
 
-    dispatcher.run(&mut world, &mut resources);
+    let mut resources = Resources::default();
+
+    let mut dispatcher = Dispatcher::builder()
+        .with_system(immobile.system())
+        .with_system(movement.system())
+        .with_system(spawn.system())
+        .build();
+
+    let thread_pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(dispatcher.max_parallel_systems())
+        .build()
+        .unwrap();
+
+    println!("Maximum parallelism: {}", dispatcher.max_parallel_systems());
+
+    for _ in 0..3 {
+        dispatcher.run(&mut world, &mut resources, &thread_pool);
+    }
 }
