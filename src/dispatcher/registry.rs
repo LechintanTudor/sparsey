@@ -49,7 +49,7 @@ impl<'a> Registry<'a> {
 pub trait BorrowRegistry<'a> {
     type Item;
 
-    unsafe fn registry_access() -> RegistryAccess;
+    fn registry_access() -> RegistryAccess;
 
     unsafe fn borrow_registry(registry: &'a Registry) -> Self::Item;
 }
@@ -62,7 +62,7 @@ where
 {
     type Item = Comp<'a, T>;
 
-    unsafe fn registry_access() -> RegistryAccess {
+    fn registry_access() -> RegistryAccess {
         RegistryAccess::Comp(LayoutComponent::new::<T>())
     }
 
@@ -79,7 +79,7 @@ where
 {
     type Item = CompMut<'a, T>;
 
-    unsafe fn registry_access() -> RegistryAccess {
+    fn registry_access() -> RegistryAccess {
         RegistryAccess::CompMut(LayoutComponent::new::<T>())
     }
 
@@ -96,7 +96,7 @@ where
 {
     type Item = Res<'a, T>;
 
-    unsafe fn registry_access() -> RegistryAccess {
+    fn registry_access() -> RegistryAccess {
         RegistryAccess::Res(TypeId::of::<T>())
     }
 
@@ -113,7 +113,7 @@ where
 {
     type Item = ResMut<'a, T>;
 
-    unsafe fn registry_access() -> RegistryAccess {
+    fn registry_access() -> RegistryAccess {
         RegistryAccess::ResMut(TypeId::of::<T>())
     }
 
@@ -127,7 +127,7 @@ pub struct BorrowCommands(PhantomData<*const ()>);
 impl<'a> BorrowRegistry<'a> for BorrowCommands {
     type Item = Commands<'a>;
 
-    unsafe fn registry_access() -> RegistryAccess {
+    fn registry_access() -> RegistryAccess {
         RegistryAccess::Commands
     }
 

@@ -1,6 +1,7 @@
 use crate::resources::{Res, ResMut, Resource, ResourceTypeId, SyncResources, UnsafeResources};
 use std::marker::PhantomData;
 
+#[derive(Default)]
 pub struct Resources {
     internal: UnsafeResources,
     _non_send_sync: PhantomData<*const ()>,
@@ -42,8 +43,8 @@ impl Resources {
         unsafe { self.internal.remove::<T>() }
     }
 
-    pub fn remove_by_type_id(&mut self, type_id: &ResourceTypeId) -> Option<Box<dyn Resource>> {
-        unsafe { self.internal.remove_by_type_id(type_id) }
+    pub fn remove_abstract(&mut self, type_id: &ResourceTypeId) -> Option<Box<dyn Resource>> {
+        unsafe { self.internal.remove_abstract(type_id) }
     }
 
     pub fn contains<T>(&self) -> bool
@@ -71,11 +72,11 @@ impl Resources {
         unsafe { self.internal.borrow_mut() }
     }
 
-    pub fn borrow_by_type_id(&self, type_id: &ResourceTypeId) -> Option<Res<dyn Resource>> {
-        unsafe { self.internal.borrow_by_type_id(type_id) }
+    pub fn borrow_abstract(&self, type_id: &ResourceTypeId) -> Option<Res<dyn Resource>> {
+        unsafe { self.internal.borrow_abstract(type_id) }
     }
 
-    pub fn borrow_by_type_id_mut(&self, type_id: &ResourceTypeId) -> Option<ResMut<dyn Resource>> {
-        unsafe { self.internal.borrow_by_type_id_mut(type_id) }
+    pub fn borrow_abstract_mut(&self, type_id: &ResourceTypeId) -> Option<ResMut<dyn Resource>> {
+        unsafe { self.internal.borrow_abstract_mut(type_id) }
     }
 }

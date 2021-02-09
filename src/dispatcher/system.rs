@@ -2,102 +2,120 @@ use crate::dispatcher::{
     BorrowRegistry, Registry, RegistryAccess, SystemParameter, ThreadLocalSystemParameter,
 };
 
-pub trait ThreadLocalSystem
+pub trait ThreadLocalRunnable
 where
     Self: 'static,
 {
-    unsafe fn registry_access(&self) -> &[RegistryAccess];
+    fn registry_access(&self) -> &[RegistryAccess];
 
-    unsafe fn run_unsafe(&mut self, registry: Registry);
+    fn run_thread_local(&mut self, registry: Registry);
 }
 
-pub trait IntoThreadLocalSystem<Parameters> {
-    fn thread_local_system(self) -> Box<dyn ThreadLocalSystem>;
-}
-
-pub unsafe trait System
+pub trait Runnable
 where
-    Self: Send + ThreadLocalSystem,
+    Self: ThreadLocalRunnable + Send,
 {
+    unsafe fn run(&mut self, registry: Registry);
 }
 
-pub trait IntoSystem<Parameters>
-where
-    Self: IntoThreadLocalSystem<Parameters>,
-{
-    fn system(self) -> Box<dyn System>;
-}
-
-struct SystemWrapper<F> {
-    function: F,
+pub struct ThreadLocalSystem {
+    runnable: Box<dyn FnMut(Registry) + 'static>,
     accesses: Vec<RegistryAccess>,
 }
 
-impl<F> SystemWrapper<F> {
-    fn new(function: F, accesses: Vec<RegistryAccess>) -> Self {
-        Self { function, accesses }
-    }
-}
-
-impl<F> ThreadLocalSystem for SystemWrapper<F>
-where
-    F: FnMut(Registry) + 'static,
-{
-    unsafe fn registry_access(&self) -> &[RegistryAccess] {
+impl ThreadLocalRunnable for ThreadLocalSystem {
+    fn registry_access(&self) -> &[RegistryAccess] {
         &self.accesses
     }
 
-    unsafe fn run_unsafe(&mut self, registry: Registry) {
-        (self.function)(registry);
+    fn run_thread_local(&mut self, registry: Registry) {
+        (self.runnable)(registry);
     }
 }
 
-unsafe impl<F> System for SystemWrapper<F> where F: FnMut(Registry) + Send + 'static {}
+pub trait IntoThreadLocalSystem<Params> {
+    fn thread_local_system(self) -> ThreadLocalSystem;
+}
+
+pub struct System {
+    runnable: Box<dyn FnMut(Registry) + Send + 'static>,
+    accesses: Vec<RegistryAccess>,
+}
+
+impl ThreadLocalRunnable for System {
+    fn registry_access(&self) -> &[RegistryAccess] {
+        &self.accesses
+    }
+
+    fn run_thread_local(&mut self, registry: Registry) {
+        (self.runnable)(registry);
+    }
+}
+
+impl Runnable for System {
+    unsafe fn run(&mut self, registry: Registry) {
+        (self.runnable)(registry);
+    }
+}
+
+impl IntoThreadLocalSystem<()> for System {
+    fn thread_local_system(self) -> ThreadLocalSystem {
+        ThreadLocalSystem {
+            runnable: self.runnable,
+            accesses: self.accesses,
+        }
+    }
+}
+
+pub trait IntoSystem<Params>
+where
+    Self: IntoThreadLocalSystem<Params>,
+{
+    fn system(self) -> System;
+}
 
 macro_rules! impl_into_system {
     ($($param:ident),*) => {
-        impl<Function, $($param),*> IntoThreadLocalSystem<($($param,)*)> for Function
+        impl<Func, $($param),*> IntoThreadLocalSystem<($($param,)*)> for Func
         where
-            Function: FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) + 'static,
-            $($param: ThreadLocalSystemParameter),*
+            Func:
+                FnMut($($param),*) +
+                FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) +
+                'static,
+            $($param: ThreadLocalSystemParameter,)*
         {
-            fn thread_local_system(mut self) -> Box<dyn ThreadLocalSystem> {
-                #[allow(unused_unsafe)]
-                unsafe {
-                    Box::new(SystemWrapper::new(
-                        #[allow(unused_variables)]
-                        move |registry: Registry| {
-                            self(
-                                $(<$param::Borrow as BorrowRegistry>::borrow_registry(&registry)),*
-                            );
-                        },
-                        vec![
-                            $(<$param::Borrow as BorrowRegistry>::registry_access()),*
-                        ]
-                    ))
+            #[allow(unused_unsafe)]
+            #[allow(unused_variables)]
+            fn thread_local_system(mut self) -> ThreadLocalSystem {
+                ThreadLocalSystem {
+                    runnable: Box::new(move |registry| unsafe {
+                        self($(<$param::Borrow as BorrowRegistry>::borrow_registry(&registry)),*)
+                    }),
+                    accesses: vec![
+                        $(<$param::Borrow as BorrowRegistry>::registry_access()),*
+                    ],
                 }
             }
         }
 
-        impl<Function, $($param),*> IntoSystem<($($param,)*)> for Function
+        impl<Func, $($param),*> IntoSystem<($($param,)*)> for Func
         where
-            Function: FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) + Send + 'static,
-            $($param: SystemParameter),*
+            Func:
+                FnMut($($param),*) +
+                FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) +
+                Send + 'static,
+            $($param: SystemParameter,)*
         {
-            fn system(mut self) -> Box<dyn System> {
-                #[allow(unused_unsafe)]
-                unsafe {
-                    Box::new(SystemWrapper::new(
-                        #[allow(unused_variables)]
-                        move |registry: Registry| {
-                            self(
-                                $(<$param::Borrow as BorrowRegistry>::borrow_registry(&registry)),*
-                            );
-                        },
-                        vec![
-                            $(<$param::Borrow as BorrowRegistry>::registry_access()),*
-                        ]
-                    ))
+            #[allow(unused_unsafe)]
+            #[allow(unused_variables)]
+            fn system(mut self) -> System {
+                System {
+                    runnable: Box::new(move |registry| unsafe {
+                        self($(<$param::Borrow as BorrowRegistry>::borrow_registry(&registry)),*)
+                    }),
+                    accesses: vec![
+                        $(<$param::Borrow as BorrowRegistry>::registry_access()),*
+                    ],
                 }
             }
         }
@@ -113,3 +131,7 @@ impl_into_system!(A, B, C, D, E);
 impl_into_system!(A, B, C, D, E, F);
 impl_into_system!(A, B, C, D, E, F, G);
 impl_into_system!(A, B, C, D, E, F, G, H);
+impl_into_system!(A, B, C, D, E, F, G, H, I);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L);

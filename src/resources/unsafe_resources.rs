@@ -39,14 +39,14 @@ impl UnsafeResources {
     where
         T: Resource,
     {
-        self.remove_by_type_id(&ResourceTypeId::of::<T>())
+        self.remove_abstract(&ResourceTypeId::of::<T>())
             .map(|res| match res.downcast::<T>() {
                 Ok(res) => res,
                 Err(_) => unreachable_unchecked(),
             })
     }
 
-    pub unsafe fn remove_by_type_id(
+    pub unsafe fn remove_abstract(
         &mut self,
         type_id: &ResourceTypeId,
     ) -> Option<Box<dyn Resource>> {
@@ -92,13 +92,13 @@ impl UnsafeResources {
         })
     }
 
-    pub unsafe fn borrow_by_type_id(&self, type_id: &ResourceTypeId) -> Option<Res<dyn Resource>> {
+    pub unsafe fn borrow_abstract(&self, type_id: &ResourceTypeId) -> Option<Res<dyn Resource>> {
         self.values
             .get(type_id)
             .map(|res| Res::new(AtomicRef::map(res.borrow(), |res| res.as_ref())))
     }
 
-    pub unsafe fn borrow_by_type_id_mut(
+    pub unsafe fn borrow_abstract_mut(
         &self,
         type_id: &ResourceTypeId,
     ) -> Option<ResMut<dyn Resource>> {
