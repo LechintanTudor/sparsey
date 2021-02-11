@@ -1,8 +1,7 @@
-pub use self::impls::*;
-
 use crate::storage::Entity;
-use crate::world::World;
+use crate::world::{SparseSetRefMut, World};
 use std::any::TypeId;
+use std::marker::PhantomData;
 
 pub type ComponentTypeId = TypeId;
 
@@ -19,83 +18,98 @@ where
     Self: Sized,
 {
     type Components: AsRef<[TypeId]>;
+    type Borrow: for<'a> BorrowSparseSetSet<'a>;
 
     unsafe fn components() -> Self::Components;
 
-    unsafe fn insert_raw(world: &World, entity: Entity, components: Self);
+    unsafe fn append(
+        sparse_sets: &mut <Self::Borrow as BorrowSparseSetSet>::SparseSetSet,
+        entity: Entity,
+        components: Self,
+    );
 
-    unsafe fn remove_raw(world: &World, entity: Entity) -> Option<Self>;
+    unsafe fn remove(
+        sparse_sets: &mut <Self::Borrow as BorrowSparseSetSet>::SparseSetSet,
+        entity: Entity,
+    ) -> Option<Self>;
 
-    unsafe fn delete_raw(world: &World, entity: Entity);
+    unsafe fn delete(
+        sparse_sets: &mut <Self::Borrow as BorrowSparseSetSet>::SparseSetSet,
+        entity: Entity,
+    );
 }
 
+pub trait BorrowSparseSetSet<'a> {
+    type SparseSetSet: 'a;
+
+    unsafe fn borrow(world: &'a World) -> Self::SparseSetSet;
+}
+
+pub struct SparseSetSetBorrower<S> {
+    _phantom: PhantomData<S>,
+}
+
+#[allow(unused_macros)]
 macro_rules! impl_component_set {
-    ($len:tt, $(($ty:ident, $idx:tt)),+) => {
-        impl<$($ty,)+> ComponentSet for ($($ty,)+)
+    ($len:tt, $(($comp:ident, $idx:tt)),+) => {
+        impl<$($comp),+> ComponentSet for ($($comp,)+)
         where
-            $($ty: Component,)+
+            $($comp: Component,)+
         {
             type Components = [TypeId; $len];
+            type Borrow = SparseSetSetBorrower<Self>;
 
             unsafe fn components() -> Self::Components {
-                [$(TypeId::of::<$ty>(),)+]
+                [
+                    $(TypeId::of::<$comp>()),+
+                ]
             }
 
-            unsafe fn insert_raw(world: &World, entity: Entity, components: Self) {
-                let mut sparse_sets = (
-                    $(world.borrow_sparse_set_mut::<$ty>().unwrap(),)+
-                );
-
-                $(sparse_sets.$idx.insert(entity, components.$idx);)+
+            unsafe fn append(
+                sparse_sets: &mut <Self::Borrow as BorrowSparseSetSet>::SparseSetSet,
+                entity: Entity,
+                components: Self,
+            ) {
+                $(
+                    sparse_sets.$idx.insert(entity, components.$idx);
+                )+
             }
 
-            unsafe fn remove_raw(world: &World, entity: Entity) -> Option<Self> {
-                let mut sparse_sets = (
-                    $(world.borrow_sparse_set_mut::<$ty>().unwrap(),)+
-                );
-
-                let components = (
+            unsafe fn remove(
+                sparse_sets: &mut <Self::Borrow as BorrowSparseSetSet>::SparseSetSet,
+                entity: Entity,
+            ) -> Option<Self> {
+                let removed_components = (
                     $(sparse_sets.$idx.remove(entity),)+
                 );
 
                 Some((
-                    $(components.$idx?,)+
+                    $(removed_components.$idx?,)+
                 ))
             }
 
-            unsafe fn delete_raw(world: &World, entity: Entity) {
-                let mut sparse_sets = (
-                    $(world.borrow_sparse_set_mut::<$ty>().unwrap(),)+
-                );
-
+            unsafe fn delete(
+                sparse_sets: &mut <Self::Borrow as BorrowSparseSetSet>::SparseSetSet,
+                entity: Entity,
+            ) {
                 $(sparse_sets.$idx.remove(entity);)+
+            }
+        }
+
+        impl<'a, $($comp),+> BorrowSparseSetSet<'a> for SparseSetSetBorrower<($($comp,)+)>
+        where
+            $($comp: Component,)+
+        {
+            type SparseSetSet = ($(SparseSetRefMut<'a, $comp>,)+);
+
+            unsafe fn borrow(world: &'a World) -> Self::SparseSetSet {
+                ($(world.borrow_sparse_set_mut::<$comp>().unwrap(),)+)
             }
         }
     };
 }
 
-#[rustfmt::skip]
-mod impls {
-    use super::*;
-
-    impl_component_set!(1, (A, 0));
-    impl_component_set!(2, (A, 0), (B, 1));
-    impl_component_set!(3, (A, 0), (B, 1), (C, 2));
-    impl_component_set!(4, (A, 0), (B, 1), (C, 2), (D, 3));
-    impl_component_set!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_component_set!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_component_set!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_component_set!(8, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
-
-    impl_component_set!(9, (A, 0), (B, 1), (C, 2), (D, 3), 
-        (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
-
-    impl_component_set!(10, (A, 0), (B, 1), (C, 2), (D, 3), 
-        (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
-
-    impl_component_set!(11, (A, 0), (B, 1), (C, 2), (D, 3), 
-        (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
-
-    impl_component_set!(12, (A, 0), (B, 1), (C, 2), (D, 3), 
-        (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));  
-}
+impl_component_set!(1, (A, 0));
+impl_component_set!(2, (A, 0), (B, 1));
+impl_component_set!(3, (A, 0), (B, 1), (C, 2));
+impl_component_set!(4, (A, 0), (B, 1), (C, 2), (D, 3));

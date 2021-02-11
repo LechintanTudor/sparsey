@@ -2,8 +2,8 @@ use crate::storage::AbstractSparseSetViewMut;
 use crate::storage::{AbstractSparseSet, Entity};
 use crate::world::{ComponentTypeId, Group, WorldId, WorldLayout};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
-use std::borrow::Borrow;
-use std::collections::HashMap;
+use std::cell::UnsafeCell;
+use std::collections::{HashMap, HashSet};
 use std::hint::unreachable_unchecked;
 
 pub(crate) struct GroupedComponents {
@@ -44,7 +44,7 @@ impl GroupedComponents {
 
             groups.push(ComponentGroup {
                 sparse_sets,
-                subgroups,
+                subgroups: UnsafeCell::new(subgroups),
             });
         }
 
@@ -55,12 +55,20 @@ impl GroupedComponents {
         }
     }
 
-    pub fn contains(&self, type_id: &ComponentTypeId) -> bool {
-        self.info.contains_key(type_id)
+    pub fn clear(&mut self) {
+        for group in self.groups.iter_mut() {
+            for sparse_set in group.sparse_sets.iter_mut() {
+                sparse_set.get_mut().clear();
+            }
+
+            for subgroup in group.subgroups.get_mut().iter_mut() {
+                subgroup.len = 0;
+            }
+        }
     }
 
-    pub fn group_count(&self) -> usize {
-        self.groups.len()
+    pub fn contains(&self, type_id: &ComponentTypeId) -> bool {
+        self.info.contains_key(type_id)
     }
 
     pub fn get_group(&self, type_id: &ComponentTypeId) -> Option<Group> {
@@ -72,6 +80,9 @@ impl GroupedComponents {
                 self.groups
                     .get_unchecked(info.group_index)
                     .subgroups
+                    .get()
+                    .as_ref()
+                    .unwrap()
                     .get_unchecked(info.subgroup_index)
                     .len,
             )
@@ -114,104 +125,24 @@ impl GroupedComponents {
         })
     }
 
-    pub unsafe fn group_components<E, I>(&mut self, group_index: usize, entities: I)
-    where
-        E: Borrow<Entity>,
-        I: IntoIterator<Item = E>,
-    {
-        let (mut sparse_sets, subgroups) = {
-            let group = self.groups.get_unchecked_mut(group_index);
-
-            let sparse_sets = group
-                .sparse_sets
-                .iter_mut()
-                .map(|sparse_set| sparse_set.get_mut().as_abstract_view_mut())
-                .collect::<Vec<_>>();
-
-            (sparse_sets, group.subgroups.as_mut_slice())
-        };
-
-        for entity in entities.into_iter().map(|entity| *entity.borrow()) {
-            let mut previous_arity = 0_usize;
-
-            for subgroup in subgroups.iter_mut() {
-                let status = get_group_status(
-                    &sparse_sets[previous_arity..subgroup.arity],
-                    subgroup.len,
-                    entity,
-                );
-
-                match status {
-                    GroupStatus::Grouped => (),
-                    GroupStatus::Ungrouped => {
-                        group_components(
-                            &mut sparse_sets[..subgroup.arity],
-                            &mut subgroup.len,
-                            entity,
-                        );
-                    }
-                    GroupStatus::MissingComponents => break,
-                }
-
-                previous_arity = subgroup.arity;
-            }
+    pub unsafe fn get_full_group_set(&mut self) -> ComponentGroupSet {
+        ComponentGroupSet {
+            groups: self
+                .groups
+                .iter()
+                .map(|group| group.to_view_mut())
+                .collect(),
         }
     }
 
-    pub unsafe fn ungroup_components<E, I>(&mut self, group_index: usize, entities: I)
-    where
-        E: Borrow<Entity>,
-        I: IntoIterator<Item = E>,
-    {
-        let (mut sparse_sets, subgroups) = {
-            let group = self.groups.get_unchecked_mut(group_index);
+    pub unsafe fn get_group_set(&mut self, group_indexes: &HashSet<usize>) -> ComponentGroupSet {
+        let mut groups = Vec::<ComponentGroupViewMut>::with_capacity(group_indexes.len());
 
-            let sparse_sets = group
-                .sparse_sets
-                .iter_mut()
-                .map(|sparse_set| sparse_set.get_mut().as_abstract_view_mut())
-                .collect::<Vec<_>>();
-
-            (sparse_sets, group.subgroups.as_mut_slice())
-        };
-
-        for entity in entities.into_iter().map(|entity| *entity.borrow()) {
-            let mut previous_arity = 0_usize;
-            let mut ungroup_start = 0_usize;
-            let mut ungroup_len = 0_usize;
-
-            for (i, subgroup) in subgroups.iter_mut().enumerate() {
-                let status = get_group_status(
-                    &sparse_sets[previous_arity..subgroup.arity],
-                    subgroup.len,
-                    entity,
-                );
-
-                match status {
-                    GroupStatus::Grouped => {
-                        if ungroup_len == 0 {
-                            ungroup_start = i;
-                        }
-
-                        ungroup_len += 1;
-                    }
-                    GroupStatus::Ungrouped => break,
-                    GroupStatus::MissingComponents => break,
-                }
-
-                previous_arity = subgroup.arity;
-            }
-
-            let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
-
-            for subgroup in (&mut subgroups[ungroup_range]).iter_mut().rev() {
-                ungroup_components(
-                    &mut sparse_sets[..subgroup.arity],
-                    &mut subgroup.len,
-                    entity,
-                );
-            }
+        for &i in group_indexes.iter() {
+            groups.push(self.groups[i].to_view_mut());
         }
+
+        ComponentGroupSet { groups }
     }
 
     pub unsafe fn iter_sparse_sets_mut(
@@ -226,11 +157,35 @@ impl GroupedComponents {
     }
 }
 
-#[derive(Default)]
 struct ComponentGroup {
     sparse_sets: Vec<AtomicRefCell<Box<dyn AbstractSparseSet>>>,
-    subgroups: Vec<SubgroupInfo>,
+    subgroups: UnsafeCell<Vec<SubgroupInfo>>,
 }
+
+impl ComponentGroup {
+    unsafe fn to_view_mut(&self) -> ComponentGroupViewMut {
+        let sparse_sets = self
+            .sparse_sets
+            .iter()
+            .map(|sparse_set| sparse_set.as_ptr().as_mut().unwrap().as_abstract_view_mut())
+            .collect::<Vec<_>>();
+
+        let subgroups = self.subgroups.get().as_mut().unwrap();
+
+        ComponentGroupViewMut {
+            sparse_sets,
+            subgroups,
+        }
+    }
+}
+
+struct ComponentGroupViewMut<'a> {
+    sparse_sets: Vec<AbstractSparseSetViewMut<'a>>,
+    subgroups: &'a mut [SubgroupInfo],
+}
+
+unsafe impl Send for ComponentGroup {}
+unsafe impl Sync for ComponentGroup {}
 
 #[derive(Copy, Clone)]
 struct ComponentInfo {
@@ -315,5 +270,81 @@ unsafe fn ungroup_components<'a>(
         }
 
         *group_len -= 1;
+    }
+}
+
+pub struct ComponentGroupSet<'a> {
+    groups: Vec<ComponentGroupViewMut<'a>>,
+}
+
+impl<'a> ComponentGroupSet<'a> {
+    pub fn group_components(&mut self, entity: Entity) {
+        for group in self.groups.iter_mut() {
+            let mut previous_arity = 0_usize;
+
+            for subgroup in group.subgroups.iter_mut() {
+                let status = get_group_status(
+                    &group.sparse_sets[previous_arity..subgroup.arity],
+                    subgroup.len,
+                    entity,
+                );
+
+                match status {
+                    GroupStatus::Grouped => (),
+                    GroupStatus::Ungrouped => unsafe {
+                        group_components(
+                            &mut group.sparse_sets[..subgroup.arity],
+                            &mut subgroup.len,
+                            entity,
+                        );
+                    },
+                    GroupStatus::MissingComponents => break,
+                }
+
+                previous_arity = subgroup.arity;
+            }
+        }
+    }
+
+    pub fn ungroup_components(&mut self, entity: Entity) {
+        for group in self.groups.iter_mut() {
+            let mut previous_arity = 0_usize;
+            let mut ungroup_start = 0_usize;
+            let mut ungroup_len = 0_usize;
+
+            for (i, subgroup) in group.subgroups.iter_mut().enumerate() {
+                let status = get_group_status(
+                    &group.sparse_sets[previous_arity..subgroup.arity],
+                    subgroup.len,
+                    entity,
+                );
+
+                match status {
+                    GroupStatus::Grouped => {
+                        if ungroup_len == 0 {
+                            ungroup_start = i;
+                        }
+
+                        ungroup_len += 1;
+                    }
+                    GroupStatus::Ungrouped => break,
+                    GroupStatus::MissingComponents => break,
+                }
+
+                previous_arity = subgroup.arity;
+            }
+
+            let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
+
+            for subgroup in (&mut group.subgroups[ungroup_range]).iter_mut().rev() {
+                unsafe {
+                    ungroup_components(
+                        &mut group.sparse_sets[..subgroup.arity],
+                        &mut subgroup.len,
+                        entity,
+                    );
+                }
+            }
+        }
     }
 }

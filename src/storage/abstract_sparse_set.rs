@@ -6,13 +6,19 @@ pub trait AbstractSparseSet
 where
     Self: Downcast + Send + Sync + 'static,
 {
-    fn delete(&mut self, entity: Entity);
-
-    fn maintain(&mut self);
-
     fn as_abstract_view(&self) -> AbstractSparseSetView;
 
     fn as_abstract_view_mut(&mut self) -> AbstractSparseSetViewMut;
+
+    fn maintain(&mut self);
+
+    fn clear(&mut self);
+
+    fn delete(&mut self, entity: Entity);
+
+    fn contains(&self, entity: Entity) -> bool;
+
+    fn len(&self) -> usize;
 }
 
 impl_downcast!(AbstractSparseSet);
@@ -25,7 +31,10 @@ pub struct AbstractSparseSetView<'a> {
 }
 
 impl<'a> AbstractSparseSetView<'a> {
-    pub(crate) fn new<T>(set: &'a SparseSet<T>) -> Self {
+    pub(crate) fn new<T>(set: &'a SparseSet<T>) -> Self
+    where
+        T: Send + Sync + 'static,
+    {
         let (sparse, dense, _, flags) = set.split();
 
         Self {
@@ -57,7 +66,10 @@ pub struct AbstractSparseSetViewMut<'a> {
 }
 
 impl<'a> AbstractSparseSetViewMut<'a> {
-    pub(crate) fn new<T>(set: &'a mut SparseSet<T>) -> Self {
+    pub(crate) fn new<T>(set: &'a mut SparseSet<T>) -> Self
+    where
+        T: Send + Sync + 'static,
+    {
         let (sparse, dense, data, flags) = unsafe { set.split_raw() };
 
         Self {

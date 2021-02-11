@@ -33,6 +33,10 @@ impl Entities {
         }
     }
 
+    pub fn clear(&mut self) {
+        todo!()
+    }
+
     pub fn maintain(&mut self) {
         self.allocator.maintain();
     }
@@ -121,8 +125,8 @@ impl EntityAllocator {
     }
 
     fn maintain(&mut self) {
-        self.removed_entities
-            .truncate(self.removed_entities.len() - *self.removed_index.get_mut());
+        // self.removed_entities
+        //     .truncate(self.removed_entities.len() - *self.removed_index.get_mut());
 
         *self.removed_index.get_mut() = self.removed_entities.len();
     }

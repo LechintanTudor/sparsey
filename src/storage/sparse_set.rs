@@ -4,7 +4,7 @@ use crate::storage::{
 };
 use bitflags::bitflags;
 use std::ops::{Deref, DerefMut};
-use std::{mem, ptr};
+use std::ptr;
 
 bitflags! {
     pub struct ComponentFlags: u8 {
@@ -69,8 +69,11 @@ impl<T> Default for SparseSet<T> {
     }
 }
 
-impl<T> SparseSet<T> {
-    pub fn insert(&mut self, entity: Entity, value: T) -> Option<T> {
+impl<T> SparseSet<T>
+where
+    T: Send + Sync + 'static,
+{
+    pub fn insert(&mut self, entity: Entity, value: T) {
         let index_entity = self.sparse.get_mut_or_allocate(entity.index());
 
         match index_entity {
@@ -82,14 +85,13 @@ impl<T> SparseSet<T> {
                 }
 
                 *e = IndexEntity::new(e.id(), entity.gen());
-                Some(mem::replace(&mut self.data[e.index()], value))
+                self.data[e.index()] = value;
             }
             None => {
                 *index_entity = Some(IndexEntity::new(self.dense.len() as u32, entity.gen()));
                 self.dense.push(entity);
                 self.data.push(value);
                 self.flags.push(ComponentFlags::ADDED);
-                None
             }
         }
     }
@@ -107,14 +109,6 @@ impl<T> SparseSet<T> {
         }
 
         Some(self.data.swap_remove(index_entity.index()))
-    }
-
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    pub fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains(entity)
     }
 
     pub fn get(&self, entity: Entity) -> Option<&T> {
@@ -196,8 +190,12 @@ impl<T> AbstractSparseSet for SparseSet<T>
 where
     T: Send + Sync + 'static,
 {
-    fn delete(&mut self, entity: Entity) {
-        self.remove(entity);
+    fn as_abstract_view(&self) -> AbstractSparseSetView {
+        AbstractSparseSetView::new(self)
+    }
+
+    fn as_abstract_view_mut(&mut self) -> AbstractSparseSetViewMut {
+        AbstractSparseSetViewMut::new(self)
     }
 
     fn maintain(&mut self) {
@@ -206,12 +204,23 @@ where
             .for_each(|f| *f = ComponentFlags::empty());
     }
 
-    fn as_abstract_view(&self) -> AbstractSparseSetView {
-        AbstractSparseSetView::new(self)
+    fn clear(&mut self) {
+        self.sparse.clear();
+        self.dense.clear();
+        self.data.clear();
+        self.flags.clear();
     }
 
-    fn as_abstract_view_mut(&mut self) -> AbstractSparseSetViewMut {
-        AbstractSparseSetViewMut::new(self)
+    fn delete(&mut self, entity: Entity) {
+        self.remove(entity);
+    }
+
+    fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains(entity)
+    }
+
+    fn len(&self) -> usize {
+        self.data.len()
     }
 }
 
@@ -225,10 +234,6 @@ mod tests {
         set.insert(Entity::with_id(1), 10);
         set.insert(Entity::with_id(2), 20);
         set.insert(Entity::with_id(3), 30);
-
-        assert_eq!(set.insert(Entity::with_id(1), 11), Some(10));
-        assert_eq!(set.insert(Entity::with_id(2), 21), Some(20));
-        assert_eq!(set.insert(Entity::with_id(3), 31), Some(30));
 
         assert_eq!(set.get(Entity::with_id(1)), Some(&11));
         assert_eq!(set.get(Entity::with_id(2)), Some(&21));

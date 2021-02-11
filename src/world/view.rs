@@ -18,7 +18,10 @@ impl<'a, T> Comp<'a, T> {
     }
 }
 
-impl<'a, T> IterableView<'a> for &'a Comp<'a, T> {
+impl<'a, T> IterableView<'a> for &'a Comp<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     type Data = *const T;
     type Flags = *const ComponentFlags;
     type Output = &'a T;
@@ -55,7 +58,10 @@ impl<'a, T> CompMut<'a, T> {
     }
 }
 
-impl<'a, T> IterableView<'a> for &'a CompMut<'a, T> {
+impl<'a, T> IterableView<'a> for &'a CompMut<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     type Data = *const T;
     type Flags = *const ComponentFlags;
     type Output = &'a T;
@@ -78,7 +84,10 @@ impl<'a, T> IterableView<'a> for &'a CompMut<'a, T> {
     }
 }
 
-impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T> {
+impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     type Data = *mut T;
     type Flags = *mut ComponentFlags;
     type Output = ComponentRefMut<'b, T>;
@@ -104,7 +113,13 @@ impl<'a: 'b, 'b, T> IterableView<'b> for &'b mut CompMut<'a, T> {
     }
 }
 
-pub(crate) struct SparseSetRefMut<'a, T>(pub(crate) AtomicRefMut<'a, SparseSet<T>>);
+pub struct SparseSetRefMut<'a, T>(AtomicRefMut<'a, SparseSet<T>>);
+
+impl<'a, T> SparseSetRefMut<'a, T> {
+    pub(crate) fn new(sparse_set: AtomicRefMut<'a, SparseSet<T>>) -> Self {
+        Self(sparse_set)
+    }
+}
 
 impl<T> Deref for SparseSetRefMut<'_, T> {
     type Target = SparseSet<T>;

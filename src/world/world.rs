@@ -1,9 +1,10 @@
 use crate::storage::{AbstractSparseSet, Entities, Entity, SparseSet};
 use crate::world::{
-    Comp, CompMut, Component, ComponentSet, ComponentTypeId, GroupedComponents,
-    UngroupedComponents, WorldLayoutDescriptor,
+    BorrowSparseSetSet, Comp, CompMut, Component, ComponentSet, ComponentTypeId, GroupedComponents,
+    SparseSetRefMut, UngroupedComponents, WorldLayoutDescriptor,
 };
 use atomic_refcell::{AtomicRef, AtomicRefMut};
+use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::hint::unreachable_unchecked;
 
@@ -21,7 +22,7 @@ impl World {
         Self {
             entities: Default::default(),
             grouped_components: GroupedComponents::new(&L::world_layout()),
-            ungrouped_components: Default::default(),
+            ungrouped_components: UngroupedComponents::default(),
         }
     }
 
@@ -51,32 +52,34 @@ impl World {
         }
     }
 
-    pub fn create<C>(&mut self, components: C) -> Entity
+    pub fn create_entity<C>(&mut self, components: C) -> Entity
     where
         C: ComponentSet,
     {
         let entity = self.entities.create();
-        self.insert(entity, components);
+        self.append_components(entity, components).unwrap();
         entity
     }
 
-    pub fn destroy(&mut self, entity: Entity) -> bool {
+    pub fn extend<C, I>(&mut self, component_iter: I) -> ()
+    where
+        C: ComponentSet,
+        I: Iterator<Item = C>,
+    {
+    }
+
+    pub fn destroy_entity(&mut self, entity: Entity) -> bool {
         if !self.entities.contains(entity) {
             return false;
         }
 
-        for group_index in 0..self.grouped_components.group_count() {
-            unsafe {
-                self.grouped_components
-                    .ungroup_components(group_index, Some(entity));
-            }
-        }
-
         unsafe {
+            let mut group_set = self.grouped_components.get_full_group_set();
+            group_set.ungroup_components(entity);
+
             for sparse_set in self.grouped_components.iter_sparse_sets_mut() {
                 sparse_set.delete(entity);
             }
-
             for sparse_set in self.ungrouped_components.iter_sparse_sets_mut() {
                 sparse_set.delete(entity);
             }
@@ -86,16 +89,19 @@ impl World {
         true
     }
 
-    pub fn insert<C>(&mut self, entity: Entity, components: C) -> bool
+    pub fn append_components<C>(&mut self, entity: Entity, components: C) -> Result<(), ()>
     where
         C: ComponentSet,
     {
         if !self.entities.contains(entity) {
-            return false;
+            return Err(());
         }
 
         unsafe {
-            C::insert_raw(self, entity, components);
+            {
+                let mut sparse_set_set = <C::Borrow as BorrowSparseSetSet>::borrow(self);
+                C::append(&mut sparse_set_set, entity, components);
+            }
 
             let group_indexes = C::components()
                 .as_ref()
@@ -103,16 +109,16 @@ impl World {
                 .flat_map(|type_id| self.grouped_components.get_group_index(type_id))
                 .collect::<HashSet<_>>();
 
-            for &group_index in group_indexes.iter() {
-                self.grouped_components
-                    .group_components(group_index, Some(entity));
+            if !group_indexes.is_empty() {
+                let mut group_set = self.grouped_components.get_group_set(&group_indexes);
+                group_set.group_components(entity);
             }
         }
 
-        true
+        Ok(())
     }
 
-    pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
+    pub fn remove_components<C>(&mut self, entity: Entity) -> Option<C>
     where
         C: ComponentSet,
     {
@@ -127,13 +133,58 @@ impl World {
                 .flat_map(|type_id| self.grouped_components.get_group_index(type_id))
                 .collect::<HashSet<_>>();
 
-            for &group_index in group_indexes.iter() {
-                self.grouped_components
-                    .ungroup_components(group_index, Some(entity));
+            if !group_indexes.is_empty() {
+                let mut group_set = self.grouped_components.get_group_set(&group_indexes);
+                group_set.ungroup_components(entity);
             }
 
-            C::remove_raw(self, entity)
+            {
+                let mut sparse_set_set = <C::Borrow as BorrowSparseSetSet>::borrow(self);
+                C::remove(&mut sparse_set_set, entity)
+            }
         }
+    }
+
+    pub fn delete_components<C>(&mut self, entity: Entity)
+    where
+        C: ComponentSet,
+    {
+        if !self.entities.contains(entity) {
+            return;
+        }
+
+        unsafe {
+            let group_indexes = C::components()
+                .as_ref()
+                .iter()
+                .flat_map(|type_id| self.grouped_components.get_group_index(type_id))
+                .collect::<HashSet<_>>();
+
+            if !group_indexes.is_empty() {
+                let mut group_set = self.grouped_components.get_group_set(&group_indexes);
+                group_set.ungroup_components(entity);
+            }
+
+            {
+                let mut sparse_set_set = <C::Borrow as BorrowSparseSetSet>::borrow(self);
+                C::delete(&mut sparse_set_set, entity)
+            }
+        }
+    }
+
+    pub fn drain<C, E, I>(&mut self, _entities: I) -> ()
+    where
+        C: ComponentSet,
+        E: Borrow<Entity>,
+        I: Iterator<Item = E>,
+    {
+        todo!()
+    }
+
+    pub fn clear(&mut self) {
+        self.entities.clear();
+        self.grouped_components.clear();
+        self.ungrouped_components.clear();
     }
 
     pub fn borrow_comp<T>(&self) -> Option<Comp<T>>
@@ -177,8 +228,7 @@ impl World {
             }
         }
     }
-
-    pub(crate) unsafe fn borrow_sparse_set_mut<T>(&self) -> Option<AtomicRefMut<SparseSet<T>>>
+    pub(crate) unsafe fn borrow_sparse_set_mut<T>(&self) -> Option<SparseSetRefMut<T>>
     where
         T: Component,
     {
@@ -188,7 +238,9 @@ impl World {
             .borrow_abstract_mut(&type_id)
             .or_else(|| self.ungrouped_components.borrow_abstract_mut(&type_id))?;
 
-        Some(downcast_sparse_set_mut::<T>(sparse_set))
+        Some(SparseSetRefMut::new(downcast_sparse_set_mut::<T>(
+            sparse_set,
+        )))
     }
 
     pub(crate) fn entities(&self) -> &Entities {

@@ -12,7 +12,9 @@ pub struct SparseArray {
 
 impl SparseArray {
     pub fn clear(&mut self) {
-        self.pages.clear()
+        for page in self.pages.iter_mut() {
+            *page = uninit_page();
+        }
     }
 
     pub fn insert(&mut self, entity: Entity) -> Option<IndexEntity> {

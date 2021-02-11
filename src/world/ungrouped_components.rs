@@ -19,6 +19,12 @@ impl UngroupedComponents {
             .or_insert_with(|| AtomicRefCell::new(Box::new(SparseSet::<T>::default())));
     }
 
+    pub fn clear(&mut self) {
+        for sparse_set in self.sparse_sets.values_mut() {
+            sparse_set.get_mut().clear();
+        }
+    }
+
     pub fn borrow_abstract(&self, component: &TypeId) -> Option<AtomicRef<dyn AbstractSparseSet>> {
         self.sparse_sets
             .get(component)

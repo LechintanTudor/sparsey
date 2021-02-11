@@ -31,15 +31,6 @@ impl Entity {
     }
 }
 
-impl From<IndexEntity> for Entity {
-    fn from(index_entity: IndexEntity) -> Self {
-        Self {
-            id: index_entity.id,
-            gen: index_entity.gen,
-        }
-    }
-}
-
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct IndexEntity {
     id: u32,
@@ -68,15 +59,6 @@ impl IndexEntity {
 
     pub const fn index(&self) -> usize {
         self.id as _
-    }
-}
-
-impl From<Entity> for IndexEntity {
-    fn from(entity: Entity) -> Self {
-        Self {
-            id: entity.id,
-            gen: entity.gen,
-        }
     }
 }
 
