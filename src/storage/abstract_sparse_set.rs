@@ -30,6 +30,10 @@ pub struct AbstractSparseSetView<'a> {
     _flags: *const ComponentFlags,
 }
 
+// Safe because new only works for thread-safe types
+unsafe impl Send for AbstractSparseSetView<'_> {}
+unsafe impl Sync for AbstractSparseSetView<'_> {}
+
 impl<'a> AbstractSparseSetView<'a> {
     pub(crate) fn new<T>(set: &'a SparseSet<T>) -> Self
     where
@@ -64,6 +68,10 @@ pub struct AbstractSparseSetViewMut<'a> {
     flags: *mut ComponentFlags,
     component_size: usize,
 }
+
+// Safe because new only works for thread-safe types
+unsafe impl Send for AbstractSparseSetViewMut<'_> {}
+unsafe impl Sync for AbstractSparseSetViewMut<'_> {}
 
 impl<'a> AbstractSparseSetViewMut<'a> {
     pub(crate) fn new<T>(set: &'a mut SparseSet<T>) -> Self

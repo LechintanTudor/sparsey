@@ -1,6 +1,6 @@
 use crate::data::IterableView;
 use crate::storage::{ComponentFlags, ComponentRefMut, Entity, SparseArray, SparseSet};
-use crate::world::Group;
+use crate::world::GroupInfo;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::ops::{Deref, DerefMut};
 
@@ -9,11 +9,11 @@ where
     T: 'static,
 {
     set: AtomicRef<'a, SparseSet<T>>,
-    group: Option<Group>,
+    group: Option<GroupInfo>,
 }
 
 impl<'a, T> Comp<'a, T> {
-    pub(crate) unsafe fn new(set: AtomicRef<'a, SparseSet<T>>, group: Option<Group>) -> Self {
+    pub(crate) unsafe fn new(set: AtomicRef<'a, SparseSet<T>>, group: Option<GroupInfo>) -> Self {
         Self { set, group }
     }
 }
@@ -26,7 +26,7 @@ where
     type Flags = *const ComponentFlags;
     type Output = &'a T;
 
-    unsafe fn group(&self) -> Option<Group> {
+    unsafe fn group(&self) -> Option<GroupInfo> {
         self.group
     }
 
@@ -49,11 +49,14 @@ where
     T: 'static,
 {
     set: AtomicRefMut<'a, SparseSet<T>>,
-    group: Option<Group>,
+    group: Option<GroupInfo>,
 }
 
 impl<'a, T> CompMut<'a, T> {
-    pub(crate) unsafe fn new(set: AtomicRefMut<'a, SparseSet<T>>, group: Option<Group>) -> Self {
+    pub(crate) unsafe fn new(
+        set: AtomicRefMut<'a, SparseSet<T>>,
+        group: Option<GroupInfo>,
+    ) -> Self {
         Self { set, group }
     }
 }
@@ -66,7 +69,7 @@ where
     type Flags = *const ComponentFlags;
     type Output = &'a T;
 
-    unsafe fn group(&self) -> Option<Group> {
+    unsafe fn group(&self) -> Option<GroupInfo> {
         self.group
     }
 
@@ -92,7 +95,7 @@ where
     type Flags = *mut ComponentFlags;
     type Output = ComponentRefMut<'b, T>;
 
-    unsafe fn group(&self) -> Option<Group> {
+    unsafe fn group(&self) -> Option<GroupInfo> {
         self.group
     }
 

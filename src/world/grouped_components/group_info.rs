@@ -12,14 +12,14 @@ impl WorldId {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub struct Group {
+pub struct GroupInfo {
     world_id: WorldId,
     group_index: usize,
     subgroup_index: usize,
     subgroup_len: usize,
 }
 
-impl Group {
+impl GroupInfo {
     pub fn new(
         world_id: WorldId,
         group_index: usize,

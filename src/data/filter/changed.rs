@@ -1,6 +1,6 @@
 use crate::data::IterableView;
 use crate::storage::{ComponentFlags, Entity, SparseArray};
-use crate::world::Group;
+use crate::world::GroupInfo;
 use std::marker::PhantomData;
 use std::ops::Not;
 
@@ -30,7 +30,7 @@ where
     type Flags = V::Flags;
     type Output = V::Output;
 
-    unsafe fn group(&self) -> Option<Group> {
+    unsafe fn group(&self) -> Option<GroupInfo> {
         V::group(&self.view)
     }
 
@@ -81,7 +81,7 @@ where
     type Flags = V::Flags;
     type Output = V::Output;
 
-    unsafe fn group(&self) -> Option<Group> {
+    unsafe fn group(&self) -> Option<GroupInfo> {
         V::group(&self.view)
     }
 

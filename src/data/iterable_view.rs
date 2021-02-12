@@ -1,12 +1,12 @@
 use crate::storage::*;
-use crate::world::Group;
+use crate::world::GroupInfo;
 
 pub trait IterableView<'a> {
     type Data: 'a + Copy;
     type Flags: 'a + Copy;
     type Output: 'a;
 
-    unsafe fn group(&self) -> Option<Group>;
+    unsafe fn group(&self) -> Option<GroupInfo>;
 
     unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags);
 

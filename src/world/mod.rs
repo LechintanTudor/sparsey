@@ -1,5 +1,4 @@
 pub use self::component::*;
-pub use self::group::*;
 pub use self::iter::*;
 pub use self::layout::*;
 pub use self::view::*;
@@ -9,7 +8,6 @@ pub(crate) use self::grouped_components::*;
 pub(crate) use self::ungrouped_components::*;
 
 mod component;
-mod group;
 mod grouped_components;
 mod iter;
 mod layout;

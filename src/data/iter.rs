@@ -3,10 +3,10 @@ pub use self::impls::*;
 use crate::data::dense_iter::*;
 use crate::data::sparse_iter::*;
 use crate::data::IterableView;
-use crate::world::Group;
+use crate::world::GroupInfo;
 use paste::paste;
 
-fn is_grouped(groups: &[Group]) -> bool {
+fn is_grouped(groups: &[GroupInfo]) -> bool {
     groups.windows(2).all(|w| w[0] == w[1])
 }
 
