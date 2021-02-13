@@ -56,7 +56,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        let entity = self.entities.create();
+        let entity = self.entities.create_atomic();
         self.append_components(entity, components).unwrap();
         entity
     }
@@ -69,7 +69,7 @@ impl World {
     }
 
     pub fn destroy_entity(&mut self, entity: Entity) -> bool {
-        if !self.entities.contains(entity) {
+        if !self.entities.destroy(entity) {
             return false;
         }
 
@@ -85,7 +85,6 @@ impl World {
             }
         }
 
-        self.entities.destroy(entity);
         true
     }
 
@@ -93,7 +92,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        if !self.entities.contains(entity) {
+        if !self.entities.contains(entity) && false {
             return Err(());
         }
 

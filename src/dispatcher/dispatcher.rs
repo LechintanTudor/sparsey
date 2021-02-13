@@ -160,7 +160,6 @@ fn count_command_buffers(steps: &[Step]) -> usize {
 
 fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
     let mut steps = Vec::<Step>::new();
-    println!("{}", simple_steps.len());
 
     for simple_step in simple_steps
         .drain(..)

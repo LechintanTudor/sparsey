@@ -84,11 +84,11 @@ where
                     self.flags[e.index()].insert(ComponentFlags::ADDED);
                 }
 
-                *e = IndexEntity::new(e.id(), entity.gen());
+                *e = IndexEntity::new(e.id(), entity.ver());
                 self.data[e.index()] = value;
             }
             None => {
-                *index_entity = Some(IndexEntity::new(self.dense.len() as u32, entity.gen()));
+                *index_entity = Some(IndexEntity::new(self.dense.len() as u32, entity.ver()));
                 self.dense.push(entity);
                 self.data.push(value);
                 self.flags.push(ComponentFlags::ADDED);

@@ -20,7 +20,7 @@ impl SparseArray {
     pub fn insert(&mut self, entity: Entity) -> Option<IndexEntity> {
         let dest = self.get_mut_or_allocate(entity.index());
         let prev = *dest;
-        *dest = Some(IndexEntity::new(entity.id(), entity.gen()));
+        *dest = Some(IndexEntity::new(entity.id(), entity.ver()));
         prev
     }
 
@@ -41,7 +41,7 @@ impl SparseArray {
             .get(page_index(entity))
             .and_then(|p| p.as_ref())
             .and_then(|p| p[local_index(entity)])
-            .filter(|e| e.gen() == entity.gen())
+            .filter(|e| e.ver() == entity.ver())
     }
 
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut Option<IndexEntity>> {
@@ -51,7 +51,7 @@ impl SparseArray {
             .and_then(|p| p.as_mut())
             .map(|p| &mut p[local_index(entity)])?;
 
-        if (*index_entity)?.gen() == entity.gen() {
+        if (*index_entity)?.ver() == entity.ver() {
             Some(index_entity)
         } else {
             None

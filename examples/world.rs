@@ -70,7 +70,7 @@ fn main() {
         Velocity(1.0, 1.0),
         Acceleration(1.0, 1.0),
     ));
-    world.create_entity((
+    let e1 = world.create_entity((
         Position(0.0, 0.0),
         Velocity(1.0, 1.0),
         Acceleration(1.0, 1.0),
@@ -78,6 +78,7 @@ fn main() {
     ));
 
     world.destroy_entity(e0);
+    world.destroy_entity(e1);
 
     let mut resources = Resources::default();
 

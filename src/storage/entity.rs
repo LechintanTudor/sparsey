@@ -3,18 +3,18 @@ use std::num::NonZeroU32;
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Entity {
     id: u32,
-    gen: Generation,
+    ver: Version,
 }
 
 impl Entity {
-    pub const fn new(id: u32, gen: Generation) -> Self {
-        Self { id, gen }
+    pub const fn new(id: u32, ver: Version) -> Self {
+        Self { id, ver }
     }
 
     pub const fn with_id(id: u32) -> Self {
         Self {
             id,
-            gen: Generation::FIRST,
+            ver: Version::FIRST,
         }
     }
 
@@ -22,8 +22,8 @@ impl Entity {
         self.id
     }
 
-    pub const fn gen(&self) -> Generation {
-        self.gen
+    pub const fn ver(&self) -> Version {
+        self.ver
     }
 
     pub const fn index(&self) -> usize {
@@ -34,18 +34,18 @@ impl Entity {
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct IndexEntity {
     id: u32,
-    gen: Generation,
+    ver: Version,
 }
 
 impl IndexEntity {
-    pub const fn new(id: u32, gen: Generation) -> Self {
-        Self { id, gen }
+    pub const fn new(id: u32, ver: Version) -> Self {
+        Self { id, ver }
     }
 
     pub const fn with_id(id: u32) -> Self {
         Self {
             id,
-            gen: Generation::FIRST,
+            ver: Version::FIRST,
         }
     }
 
@@ -53,8 +53,8 @@ impl IndexEntity {
         self.id
     }
 
-    pub const fn gen(&self) -> Generation {
-        self.gen
+    pub const fn ver(&self) -> Version {
+        self.ver
     }
 
     pub const fn index(&self) -> usize {
@@ -63,9 +63,9 @@ impl IndexEntity {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub struct Generation(NonZeroU32);
+pub struct Version(NonZeroU32);
 
-impl Generation {
+impl Version {
     pub const FIRST: Self = unsafe { Self::new_unchecked(1) };
     pub const LAST: Self = unsafe { Self::new_unchecked(u32::MAX) };
 
