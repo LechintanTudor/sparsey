@@ -2,8 +2,7 @@ pub use self::impls::*;
 
 use crate::data::dense_iter::*;
 use crate::data::sparse_iter::*;
-use crate::data::IterableView;
-use crate::world::GroupInfo;
+use crate::data::{GroupInfo, IterableView};
 use paste::paste;
 
 fn is_grouped(groups: &[GroupInfo]) -> bool {

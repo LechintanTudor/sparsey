@@ -116,7 +116,10 @@ struct EntityAllocator {
 impl EntityAllocator {
     fn allocate(&mut self) -> Option<Entity> {
         match self.recycled.pop() {
-            Some(entity) => Some(entity),
+            Some(entity) => {
+                *self.recycled_len.get_mut() -= 1;
+                Some(entity)
+            }
             None => {
                 let current_id = *self.current_id.get_mut();
                 *self.current_id.get_mut() = self.current_id.get_mut().checked_add(1)?;
