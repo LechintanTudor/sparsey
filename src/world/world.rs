@@ -78,7 +78,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        if !self.entities.contains(entity) && false {
+        if !self.entities.contains(entity) {
             return Err(());
         }
 
