@@ -3,12 +3,15 @@ use crate::world::{
     BorrowSparseSetSet, Comp, CompMut, Component, ComponentSet, Components, SparseSetRefMut,
     WorldLayoutDescriptor,
 };
+use std::any::TypeId;
 use std::borrow::Borrow;
 use std::collections::HashSet;
+use std::iter;
 
 pub struct World {
     entities: Entities,
     components: Components,
+    group_indexes: HashSet<usize>,
 }
 
 impl World {
@@ -19,6 +22,7 @@ impl World {
         Self {
             entities: Entities::default(),
             components: Components::new(&L::world_layout()),
+            group_indexes: HashSet::default(),
         }
     }
 
@@ -61,9 +65,8 @@ impl World {
         }
 
         unsafe {
-            {
-                let mut group_set = self.components.get_full_group_set();
-                group_set.ungroup_components(entity);
+            for i in 0..self.components.group_count() {
+                self.components.ungroup_components(i, iter::once(entity));
             }
 
             for sparse_set in self.components.iter_sparse_sets_mut() {
@@ -88,15 +91,10 @@ impl World {
                 C::append(&mut sparse_set_set, entity, components);
             }
 
-            let group_indexes = C::components()
-                .as_ref()
-                .iter()
-                .flat_map(|type_id| self.components.get_group_index(type_id))
-                .collect::<HashSet<_>>();
+            self.update_group_indexes(C::components());
 
-            if !group_indexes.is_empty() {
-                let mut group_set = self.components.get_group_set(&group_indexes);
-                group_set.group_components(entity);
+            for &i in self.group_indexes.iter() {
+                self.components.group_components(i, iter::once(entity));
             }
         }
 
@@ -112,21 +110,14 @@ impl World {
         }
 
         unsafe {
-            let group_indexes = C::components()
-                .as_ref()
-                .iter()
-                .flat_map(|type_id| self.components.get_group_index(type_id))
-                .collect::<HashSet<_>>();
+            self.update_group_indexes(C::components());
 
-            if !group_indexes.is_empty() {
-                let mut group_set = self.components.get_group_set(&group_indexes);
-                group_set.ungroup_components(entity);
+            for &i in self.group_indexes.iter() {
+                self.components.ungroup_components(i, iter::once(entity));
             }
 
-            {
-                let mut sparse_set_set = <C::Borrow as BorrowSparseSetSet>::borrow(self);
-                C::remove(&mut sparse_set_set, entity)
-            }
+            let mut sparse_set_set = <C::Borrow as BorrowSparseSetSet>::borrow(self);
+            C::remove(&mut sparse_set_set, entity)
         }
     }
 
@@ -139,21 +130,14 @@ impl World {
         }
 
         unsafe {
-            let group_indexes = C::components()
-                .as_ref()
-                .iter()
-                .flat_map(|type_id| self.components.get_group_index(type_id))
-                .collect::<HashSet<_>>();
+            self.update_group_indexes(C::components());
 
-            if !group_indexes.is_empty() {
-                let mut group_set = self.components.get_group_set(&group_indexes);
-                group_set.ungroup_components(entity);
+            for &i in self.group_indexes.iter() {
+                self.components.ungroup_components(i, iter::once(entity));
             }
 
-            {
-                let mut sparse_set_set = <C::Borrow as BorrowSparseSetSet>::borrow(self);
-                C::delete(&mut sparse_set_set, entity)
-            }
+            let mut sparse_set_set = <C::Borrow as BorrowSparseSetSet>::borrow(self);
+            C::delete(&mut sparse_set_set, entity)
         }
     }
 
@@ -194,5 +178,20 @@ impl World {
 
     pub(crate) fn entities(&self) -> &Entities {
         &self.entities
+    }
+
+    fn update_group_indexes<T>(&mut self, type_ids: T)
+    where
+        T: AsRef<[TypeId]>,
+    {
+        let components = &self.components;
+
+        self.group_indexes.clear();
+        self.group_indexes.extend(
+            type_ids
+                .as_ref()
+                .iter()
+                .flat_map(|type_id| components.get_group_index(type_id)),
+        );
     }
 }

@@ -1,11 +1,9 @@
-use crate::storage::{AbstractSparseSet, SparseSet};
+use crate::storage::{AbstractSparseSet, Entity, SparseSet};
 use crate::world::{
-    Comp, CompMut, Component, GroupSetViewMut, GroupedComponents, SparseSetRefMut,
-    UngroupedComponents, WorldLayout,
+    Comp, CompMut, Component, GroupedComponents, SparseSetRefMut, UngroupedComponents, WorldLayout,
 };
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
-use std::collections::HashSet;
 use std::hint::unreachable_unchecked;
 
 pub(crate) struct Components {
@@ -47,12 +45,22 @@ impl Components {
         self.grouped.get_group_index(type_id)
     }
 
-    pub unsafe fn get_group_set(&mut self, group_indexes: &HashSet<usize>) -> GroupSetViewMut {
-        self.grouped.get_group_set(group_indexes)
+    pub fn group_count(&self) -> usize {
+        self.grouped.group_count()
     }
 
-    pub unsafe fn get_full_group_set(&mut self) -> GroupSetViewMut {
-        self.grouped.get_full_group_set()
+    pub fn group_components<E>(&mut self, group_index: usize, entities: E)
+    where
+        E: Iterator<Item = Entity>,
+    {
+        self.grouped.group_components(group_index, entities);
+    }
+
+    pub fn ungroup_components<E>(&mut self, group_index: usize, entities: E)
+    where
+        E: Iterator<Item = Entity>,
+    {
+        self.grouped.ungroup_components(group_index, entities);
     }
 
     pub fn borrow_comp<T>(&self) -> Option<Comp<T>>
