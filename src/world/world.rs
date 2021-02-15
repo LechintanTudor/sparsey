@@ -4,7 +4,6 @@ use crate::world::{
     WorldLayoutDescriptor,
 };
 use std::any::TypeId;
-use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::iter;
 
@@ -43,23 +42,16 @@ impl World {
         }
     }
 
-    pub fn create_entity<C>(&mut self, components: C) -> Entity
+    pub fn create<C>(&mut self, components: C) -> Entity
     where
         C: ComponentSet,
     {
         let entity = self.entities.create();
-        self.append_components(entity, components).unwrap();
+        self.append(entity, components).unwrap();
         entity
     }
 
-    pub fn extend<C, I>(&mut self, _component_iter: I) -> ()
-    where
-        C: ComponentSet,
-        I: Iterator<Item = C>,
-    {
-    }
-
-    pub fn destroy_entity(&mut self, entity: Entity) -> bool {
+    pub fn destroy(&mut self, entity: Entity) -> bool {
         if !self.entities.destroy(entity) {
             return false;
         }
@@ -77,7 +69,7 @@ impl World {
         true
     }
 
-    pub fn append_components<C>(&mut self, entity: Entity, components: C) -> Result<(), ()>
+    pub fn append<C>(&mut self, entity: Entity, components: C) -> Result<(), ()>
     where
         C: ComponentSet,
     {
@@ -101,7 +93,7 @@ impl World {
         Ok(())
     }
 
-    pub fn remove_components<C>(&mut self, entity: Entity) -> Option<C>
+    pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
     where
         C: ComponentSet,
     {
@@ -121,7 +113,7 @@ impl World {
         }
     }
 
-    pub fn delete_components<C>(&mut self, entity: Entity)
+    pub fn delete<C>(&mut self, entity: Entity)
     where
         C: ComponentSet,
     {
@@ -139,15 +131,6 @@ impl World {
             let mut sparse_set_set = <C::Borrow as BorrowSparseSetSet>::borrow(self);
             C::delete(&mut sparse_set_set, entity)
         }
-    }
-
-    pub fn drain<C, E, I>(&mut self, _entities: I) -> ()
-    where
-        C: ComponentSet,
-        E: Borrow<Entity>,
-        I: Iterator<Item = E>,
-    {
-        todo!()
     }
 
     pub fn clear(&mut self) {

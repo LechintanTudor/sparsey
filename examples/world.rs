@@ -50,7 +50,7 @@ fn movement(
 
 fn spawn(mut commands: Commands) {
     commands.queue(|world, _| {
-        world.create_entity((
+        world.create((
             Position(0.0, 0.0),
             Velocity(0.0, 0.0),
             Acceleration(-1.0, 1.0),
@@ -65,20 +65,20 @@ fn main() {
     world.register::<Acceleration>();
     world.register::<Immobile>();
 
-    let e0 = world.create_entity((
+    let e0 = world.create((
         Position(0.0, 0.0),
         Velocity(1.0, 1.0),
         Acceleration(1.0, 1.0),
     ));
-    let e1 = world.create_entity((
+    let e1 = world.create((
         Position(0.0, 0.0),
         Velocity(1.0, 1.0),
         Acceleration(1.0, 1.0),
         Immobile,
     ));
 
-    world.destroy_entity(e0);
-    world.destroy_entity(e1);
+    world.destroy(e0);
+    world.destroy(e1);
 
     let mut resources = Resources::default();
 

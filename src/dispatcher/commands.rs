@@ -70,12 +70,15 @@ impl CommandBuffers {
 
 pub struct Commands<'a> {
     buffer: &'a mut Vec<Command>,
-    entities: &'a Entities,
+    _entities: &'a Entities,
 }
 
 impl<'a> Commands<'a> {
     pub(crate) fn new(buffer: &'a mut Vec<Command>, entities: &'a Entities) -> Self {
-        Self { buffer, entities }
+        Self {
+            buffer,
+            _entities: entities,
+        }
     }
 
     pub fn queue<F>(&mut self, command: F)
