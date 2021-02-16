@@ -1,4 +1,6 @@
-use crate::data::{Component, ComponentFlags, Entity, SparseArray, SparseSetRefMut, TypeErasedVec};
+use crate::data::{
+    Component, ComponentFlags, Entity, SparseArray, SparseSetMutPtr, SparseSetRefMut, TypeErasedVec,
+};
 
 pub struct TypeErasedSparseSet {
     sparse: SparseArray,
@@ -56,17 +58,31 @@ impl TypeErasedSparseSet {
         self.sparse.contains(entity)
     }
 
-    pub fn to_ref_mut<T>(&mut self) -> Option<SparseSetRefMut<T>>
+    pub fn to_ref_mut<T>(&mut self) -> SparseSetRefMut<T>
     where
         T: Component,
     {
         unsafe {
-            Some(SparseSetRefMut::new(
+            SparseSetRefMut::new(
                 &mut self.sparse,
                 &mut self.dense,
                 &mut self.flags,
-                Box::as_mut(&mut self.data).downcast_mut()?,
-            ))
+                Box::as_mut(&mut self.data).downcast_mut().unwrap(),
+            )
+        }
+    }
+
+    pub fn to_mut_ptr<T>(&mut self) -> SparseSetMutPtr<T>
+    where
+        T: Component,
+    {
+        unsafe {
+            SparseSetMutPtr::new(
+                &mut self.sparse,
+                &mut self.dense,
+                &mut self.flags,
+                Box::as_mut(&mut self.data).downcast_mut().unwrap(),
+            )
         }
     }
 }
