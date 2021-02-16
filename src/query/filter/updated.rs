@@ -1,9 +1,9 @@
-use crate::data::{GroupInfo, IterableView};
+use crate::query::{GroupInfo, IterableView};
 use crate::storage::{ComponentFlags, Entity, SparseArray};
 use std::marker::PhantomData;
 use std::ops::Not;
 
-pub struct Changed<'a, V>
+pub struct Updated<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -11,17 +11,16 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
-pub fn changed<'a, V>(view: V) -> Changed<'a, V>
+pub fn updated<'a, V>(view: V) -> Updated<'a, V>
 where
     V: IterableView<'a>,
 {
-    Changed {
+    Updated {
         view,
         phantom: PhantomData,
     }
 }
-
-impl<'a, V> IterableView<'a> for Changed<'a, V>
+impl<'a, V> IterableView<'a> for Updated<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -42,7 +41,8 @@ where
     }
 
     unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
-        if Self::get_flags(flags, index).contains(ComponentFlags::CHANGED) {
+        if Self::get_flags(flags, index).intersects(ComponentFlags::ADDED | ComponentFlags::CHANGED)
+        {
             V::get(data, flags, index)
         } else {
             None
@@ -50,21 +50,21 @@ where
     }
 }
 
-impl<'a, V> Not for Changed<'a, V>
+impl<'a, V> Not for Updated<'a, V>
 where
     V: IterableView<'a>,
 {
-    type Output = NotChanged<'a, V>;
+    type Output = NotUpdated<'a, V>;
 
     fn not(self) -> Self::Output {
-        NotChanged {
+        NotUpdated {
             view: self.view,
             phantom: self.phantom,
         }
     }
 }
 
-pub struct NotChanged<'a, V>
+pub struct NotUpdated<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -72,7 +72,7 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
-impl<'a, V> IterableView<'a> for NotChanged<'a, V>
+impl<'a, V> IterableView<'a> for NotUpdated<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -93,7 +93,9 @@ where
     }
 
     unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
-        if !Self::get_flags(flags, index).contains(ComponentFlags::ADDED) {
+        if !Self::get_flags(flags, index)
+            .intersects(ComponentFlags::ADDED | ComponentFlags::CHANGED)
+        {
             V::get(data, flags, index)
         } else {
             None

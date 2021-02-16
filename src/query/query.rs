@@ -1,7 +1,7 @@
 pub use self::impls::*;
 
-use crate::data::iter::*;
-use crate::data::IterableView;
+use crate::query::iter::*;
+use crate::query::IterableView;
 use paste::paste;
 
 pub trait Query<'a> {

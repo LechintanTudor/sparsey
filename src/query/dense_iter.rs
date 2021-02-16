@@ -1,6 +1,6 @@
 pub use self::impls::*;
 
-use crate::data::IterableView;
+use crate::query::IterableView;
 use crate::storage::Entity;
 use paste::paste;
 

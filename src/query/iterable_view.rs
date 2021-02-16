@@ -1,4 +1,4 @@
-use crate::data::GroupInfo;
+use crate::query::GroupInfo;
 use crate::storage::*;
 
 pub trait IterableView<'a> {

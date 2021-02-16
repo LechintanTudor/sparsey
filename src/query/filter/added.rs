@@ -1,9 +1,9 @@
-use crate::data::{GroupInfo, IterableView};
+use crate::query::{GroupInfo, IterableView};
 use crate::storage::{ComponentFlags, Entity, SparseArray};
 use std::marker::PhantomData;
 use std::ops::Not;
 
-pub struct Updated<'a, V>
+pub struct Added<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -11,16 +11,17 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
-pub fn updated<'a, V>(view: V) -> Updated<'a, V>
+pub fn added<'a, V>(view: V) -> Added<'a, V>
 where
     V: IterableView<'a>,
 {
-    Updated {
+    Added {
         view,
         phantom: PhantomData,
     }
 }
-impl<'a, V> IterableView<'a> for Updated<'a, V>
+
+impl<'a, V> IterableView<'a> for Added<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -41,8 +42,7 @@ where
     }
 
     unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
-        if Self::get_flags(flags, index).intersects(ComponentFlags::ADDED | ComponentFlags::CHANGED)
-        {
+        if Self::get_flags(flags, index).contains(ComponentFlags::ADDED) {
             V::get(data, flags, index)
         } else {
             None
@@ -50,21 +50,21 @@ where
     }
 }
 
-impl<'a, V> Not for Updated<'a, V>
+impl<'a, V> Not for Added<'a, V>
 where
     V: IterableView<'a>,
 {
-    type Output = NotUpdated<'a, V>;
+    type Output = NotAdded<'a, V>;
 
     fn not(self) -> Self::Output {
-        NotUpdated {
+        NotAdded {
             view: self.view,
             phantom: self.phantom,
         }
     }
 }
 
-pub struct NotUpdated<'a, V>
+pub struct NotAdded<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -72,7 +72,7 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
-impl<'a, V> IterableView<'a> for NotUpdated<'a, V>
+impl<'a, V> IterableView<'a> for NotAdded<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -93,9 +93,7 @@ where
     }
 
     unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
-        if !Self::get_flags(flags, index)
-            .intersects(ComponentFlags::ADDED | ComponentFlags::CHANGED)
-        {
+        if !Self::get_flags(flags, index).contains(ComponentFlags::ADDED) {
             V::get(data, flags, index)
         } else {
             None

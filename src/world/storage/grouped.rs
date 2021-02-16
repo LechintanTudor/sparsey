@@ -1,4 +1,4 @@
-use crate::data::{GroupInfo, WorldId};
+use crate::query::{GroupInfo, WorldId};
 use crate::storage::{AbstractSparseSet, AbstractSparseSetViewMut, Entity};
 use crate::world::WorldLayout;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};

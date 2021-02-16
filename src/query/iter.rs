@@ -1,8 +1,8 @@
 pub use self::impls::*;
 
-use crate::data::dense_iter::*;
-use crate::data::sparse_iter::*;
-use crate::data::{GroupInfo, IterableView};
+use crate::query::dense_iter::*;
+use crate::query::sparse_iter::*;
+use crate::query::{GroupInfo, IterableView};
 use paste::paste;
 
 fn is_grouped(groups: &[GroupInfo]) -> bool {
