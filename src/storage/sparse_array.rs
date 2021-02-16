@@ -45,17 +45,11 @@ impl SparseArray {
     }
 
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut Option<IndexEntity>> {
-        let index_entity = self
-            .pages
+        self.pages
             .get_mut(page_index(entity))
-            .and_then(|p| p.as_mut())
-            .map(|p| &mut p[local_index(entity)])?;
-
-        if (*index_entity)?.ver() == entity.ver() {
-            Some(index_entity)
-        } else {
-            None
-        }
+            .and_then(|page| page.as_mut())
+            .map(|page| &mut page[local_index(entity)])
+            .filter(|e| e.map(|e| e.ver()) == Some(entity.ver()))
     }
 
     pub fn get_mut_or_allocate(&mut self, index: usize) -> &mut Option<IndexEntity> {

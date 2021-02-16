@@ -1,4 +1,4 @@
-use crate::data::{Component, ComponentFlags, Entity, SparseArray, TypeErasedVec};
+use crate::data::{Component, ComponentFlags, Entity, SparseArray, SparseSetRefMut, TypeErasedVec};
 
 pub struct TypeErasedSparseSet {
     sparse: SparseArray,
@@ -24,10 +24,12 @@ impl TypeErasedSparseSet {
         self.sparse.clear();
         self.dense.clear();
         self.flags.clear();
-        self.data.clear();
+        self.data.clear_components();
     }
 
     pub fn swap(&mut self, a: usize, b: usize) {
+        assert!(a != b);
+
         let sparse_index_a = self.dense[a].index();
         let sparse_index_b = self.dense[b].index();
 
@@ -37,7 +39,13 @@ impl TypeErasedSparseSet {
 
         self.dense.swap(a, b);
         self.flags.swap(a, b);
-        self.data.swap(a, b);
+        self.data.swap_components(a, b);
+    }
+
+    pub fn maintain(&mut self) {
+        self.flags
+            .iter_mut()
+            .for_each(|flags| *flags = ComponentFlags::empty());
     }
 
     pub fn len(&self) -> usize {
@@ -46,5 +54,19 @@ impl TypeErasedSparseSet {
 
     pub fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
+    }
+
+    pub fn to_ref_mut<T>(&mut self) -> Option<SparseSetRefMut<T>>
+    where
+        T: Component,
+    {
+        unsafe {
+            Some(SparseSetRefMut::new(
+                &mut self.sparse,
+                &mut self.dense,
+                &mut self.flags,
+                Box::as_mut(&mut self.data).downcast_mut()?,
+            ))
+        }
     }
 }
