@@ -1,8 +1,8 @@
+use crate::data::{AtomicRef, AtomicRefMut};
 use crate::storage::{AbstractSparseSet, Entity, SparseSet};
 use crate::world::{
     Comp, CompMut, Component, GroupedComponents, SparseSetRefMut, UngroupedComponents, WorldLayout,
 };
-use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
 use std::hint::unreachable_unchecked;
 

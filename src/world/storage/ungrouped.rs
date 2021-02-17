@@ -1,6 +1,6 @@
+use crate::data::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use crate::storage::{AbstractSparseSet, SparseSet};
 use crate::world::Component;
-use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
 

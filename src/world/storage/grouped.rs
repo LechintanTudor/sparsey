@@ -1,7 +1,7 @@
+use crate::data::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use crate::query::{GroupInfo, WorldId};
 use crate::storage::{AbstractSparseSet, AbstractSparseSetViewMut, Entity};
 use crate::world::WorldLayout;
-use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hint::unreachable_unchecked;

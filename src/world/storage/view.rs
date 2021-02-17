@@ -1,8 +1,8 @@
+use crate::data::{AtomicRef, AtomicRefMut};
 use crate::query::{GroupInfo, IterableView};
 use crate::storage::Entity;
 use crate::storage::{ComponentFlags, ComponentRefMut, SparseArray, SparseSet};
 use crate::world::World;
-use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
