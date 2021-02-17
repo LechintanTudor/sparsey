@@ -1,7 +1,7 @@
 pub use self::impls::*;
 
+use crate::data::{Entity, SparseArray};
 use crate::query::IterableView;
-use crate::storage::{Entity, SparseArray};
 use paste::paste;
 
 unsafe fn split<'a, V>(view: V) -> (&'a SparseArray, &'a [Entity], V::Data, V::Flags)

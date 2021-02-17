@@ -1,5 +1,5 @@
-use crate::query::{GroupInfo, IterableView};
-use crate::storage::{ComponentFlags, Entity, SparseArray};
+use crate::data::{ComponentFlags, Entity, SparseArray};
+use crate::query::IterableView;
 use std::marker::PhantomData;
 use std::ops::Not;
 
@@ -21,7 +21,7 @@ where
     }
 }
 
-impl<'a, V> IterableView<'a> for Changed<'a, V>
+unsafe impl<'a, V> IterableView<'a> for Changed<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -29,11 +29,11 @@ where
     type Flags = V::Flags;
     type Output = V::Output;
 
-    unsafe fn group(&self) -> Option<GroupInfo> {
-        V::group(&self.view)
+    fn group_len(&self) -> Option<&usize> {
+        V::group_len(&self.view)
     }
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags) {
+    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags) {
         V::split(self.view)
     }
 
@@ -72,7 +72,7 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
-impl<'a, V> IterableView<'a> for NotChanged<'a, V>
+unsafe impl<'a, V> IterableView<'a> for NotChanged<'a, V>
 where
     V: IterableView<'a>,
 {
@@ -80,11 +80,11 @@ where
     type Flags = V::Flags;
     type Output = V::Output;
 
-    unsafe fn group(&self) -> Option<GroupInfo> {
-        V::group(&self.view)
+    fn group_len(&self) -> Option<&usize> {
+        V::group_len(&self.view)
     }
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags) {
+    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags) {
         V::split(self.view)
     }
 

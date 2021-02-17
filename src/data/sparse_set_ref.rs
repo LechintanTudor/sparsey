@@ -1,5 +1,38 @@
 use crate::data::{Component, ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseArray};
 
+pub struct SparseSetRef<'a, T>
+where
+    T: Component,
+{
+    sparse: &'a SparseArray,
+    dense: &'a [Entity],
+    flags: &'a [ComponentFlags],
+    data: &'a [T],
+}
+
+impl<'a, T> SparseSetRef<'a, T>
+where
+    T: Component,
+{
+    pub unsafe fn new(
+        sparse: &'a SparseArray,
+        dense: &'a [Entity],
+        flags: &'a [ComponentFlags],
+        data: &'a [T],
+    ) -> Self {
+        Self {
+            sparse,
+            dense,
+            data,
+            flags,
+        }
+    }
+
+    pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
+        (self.sparse, self.dense, self.flags, self.data)
+    }
+}
+
 pub struct SparseSetRefMut<'a, T>
 where
     T: Component,
@@ -79,5 +112,23 @@ where
                 self.flags.get_unchecked_mut(index),
             ))
         }
+    }
+
+    pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
+        (
+            self.sparse,
+            self.dense.as_slice(),
+            self.flags.as_slice(),
+            self.data.as_slice(),
+        )
+    }
+
+    pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [ComponentFlags], &mut [T]) {
+        (
+            self.sparse,
+            self.dense.as_slice(),
+            self.flags.as_mut_slice(),
+            self.data.as_mut_slice(),
+        )
     }
 }

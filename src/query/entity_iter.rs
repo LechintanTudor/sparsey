@@ -1,4 +1,4 @@
-use crate::storage::Entity;
+use crate::data::Entity;
 
 pub trait EntityIterator
 where

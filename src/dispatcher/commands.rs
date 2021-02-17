@@ -1,6 +1,5 @@
 use crate::resources::Resources;
-use crate::storage::Entities;
-use crate::world::World;
+use crate::world::{Entities, World};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

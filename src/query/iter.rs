@@ -2,11 +2,13 @@ pub use self::impls::*;
 
 use crate::query::dense_iter::*;
 use crate::query::sparse_iter::*;
-use crate::query::{GroupInfo, IterableView};
+use crate::query::IterableView;
 use paste::paste;
 
-fn is_grouped(groups: &[GroupInfo]) -> bool {
-    groups.windows(2).all(|w| w[0] == w[1])
+fn is_grouped(groups: &[&usize]) -> bool {
+    groups
+        .windows(2)
+        .all(|w| (w[0] as *const _) == (w[1] as *const _))
 }
 
 macro_rules! impl_iter {
@@ -31,7 +33,7 @@ macro_rules! impl_iter {
             {
                 pub fn new($([<view_ $view:lower>]: $view,)+) -> Self {
                     let groups = (|| -> Option<_> {
-                        unsafe { Some([$([<view_ $view:lower>].group()?,)+]) }
+                        unsafe { Some([$([<view_ $view:lower>].group_len()?,)+]) }
                     })();
 
                     let is_grouped = match groups {

@@ -1,6 +1,6 @@
-use crate::storage::{AbstractSparseSet, SparseSet};
-use crate::world::Component;
-use std::any::{self, TypeId};
+use crate::data::{Component, TypeErasedSparseSet};
+use std::any;
+use std::any::TypeId;
 use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::marker::PhantomData;
 
@@ -26,7 +26,7 @@ impl LayoutComponent {
         self.component.component_type_name()
     }
 
-    pub fn create_sparse_set(&self) -> Box<dyn AbstractSparseSet> {
+    pub fn create_sparse_set(&self) -> TypeErasedSparseSet {
         self.component.create_sparse_set()
     }
 }
@@ -52,7 +52,7 @@ impl Ord for LayoutComponent {
     }
 }
 
-trait AbstractLayoutComponent
+unsafe trait AbstractLayoutComponent
 where
     Self: Send + Sync + 'static,
 {
@@ -60,7 +60,7 @@ where
 
     fn component_type_name(&self) -> &'static str;
 
-    fn create_sparse_set(&self) -> Box<dyn AbstractSparseSet>;
+    fn create_sparse_set(&self) -> TypeErasedSparseSet;
 }
 
 #[derive(Copy, Clone)]
@@ -82,7 +82,7 @@ where
     }
 }
 
-impl<C> AbstractLayoutComponent for GenericLayoutComponent<C>
+unsafe impl<C> AbstractLayoutComponent for GenericLayoutComponent<C>
 where
     C: Component,
 {
@@ -94,7 +94,7 @@ where
         any::type_name::<C>()
     }
 
-    fn create_sparse_set(&self) -> Box<dyn AbstractSparseSet> {
-        Box::new(SparseSet::<C>::default())
+    fn create_sparse_set(&self) -> TypeErasedSparseSet {
+        TypeErasedSparseSet::new::<C>()
     }
 }

@@ -4,7 +4,7 @@ use std::ops::DerefMut;
 
 pub unsafe trait TypeErasedVec
 where
-    Self: Downcast,
+    Self: Send + Sync + Downcast + 'static,
 {
     fn component_count(&self) -> usize;
 

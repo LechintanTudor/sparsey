@@ -1,5 +1,6 @@
 use crate::data::{
-    Component, ComponentFlags, Entity, SparseArray, SparseSetMutPtr, SparseSetRefMut, TypeErasedVec,
+    Component, ComponentFlags, Entity, IndexEntity, SparseArray, SparseSetMutPtr, SparseSetRef,
+    SparseSetRefMut, TypeErasedVec,
 };
 
 pub struct TypeErasedSparseSet {
@@ -58,6 +59,24 @@ impl TypeErasedSparseSet {
         self.sparse.contains(entity)
     }
 
+    pub fn get_index_entity(&self, entity: Entity) -> Option<IndexEntity> {
+        self.sparse.get_index_entity(entity)
+    }
+
+    pub fn to_ref<T>(&self) -> SparseSetRef<T>
+    where
+        T: Component,
+    {
+        unsafe {
+            SparseSetRef::new(
+                &self.sparse,
+                &self.dense,
+                &self.flags,
+                Box::as_ref(&self.data).downcast_ref::<Vec<T>>().unwrap(),
+            )
+        }
+    }
+
     pub fn to_ref_mut<T>(&mut self) -> SparseSetRefMut<T>
     where
         T: Component,
@@ -67,7 +86,9 @@ impl TypeErasedSparseSet {
                 &mut self.sparse,
                 &mut self.dense,
                 &mut self.flags,
-                Box::as_mut(&mut self.data).downcast_mut().unwrap(),
+                Box::as_mut(&mut self.data)
+                    .downcast_mut::<Vec<T>>()
+                    .unwrap(),
             )
         }
     }

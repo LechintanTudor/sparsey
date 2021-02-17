@@ -1,7 +1,7 @@
 pub use self::impls::*;
 
+use crate::data::Entity;
 use crate::query::IterableView;
-use crate::storage::Entity;
 use paste::paste;
 
 macro_rules! first_of {
@@ -31,10 +31,9 @@ macro_rules! impl_dense_iter {
             {
                 #[allow(unused_variables)]
                 pub unsafe fn new_unchecked($([<view_ $comp:lower>]: $comp),+) -> Self {
-                    let subgroup_len = first_of!($([<view_ $comp:lower>]),+)
-                        .group()
-                        .unwrap()
-                        .subgroup_len();
+                    let subgroup_len = *first_of!($([<view_ $comp:lower>]),+)
+                        .group_len()
+                        .unwrap();
 
                     $(
                         let (

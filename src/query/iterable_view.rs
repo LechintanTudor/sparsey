@@ -1,14 +1,13 @@
-use crate::query::GroupInfo;
-use crate::storage::*;
+use crate::data::{ComponentFlags, Entity, SparseArray};
 
-pub trait IterableView<'a> {
+pub unsafe trait IterableView<'a> {
     type Data: 'a + Copy;
     type Flags: 'a + Copy;
     type Output: 'a;
 
-    unsafe fn group(&self) -> Option<GroupInfo>;
+    fn group_len(&self) -> Option<&usize>;
 
-    unsafe fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags);
+    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags);
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags;
 
