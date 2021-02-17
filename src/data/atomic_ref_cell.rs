@@ -362,7 +362,7 @@ where
 {
     /// Copies an `AtomicRef`.
     #[inline]
-    pub fn clone(orig: &AtomicRef<'a, T>) -> AtomicRef<'a, T> {
+    pub fn clone(orig: &Self) -> AtomicRef<'a, T> {
         AtomicRef {
             value: orig.value,
             borrow: orig.borrow.clone(),
@@ -371,7 +371,7 @@ where
 
     /// Make a new `AtomicRef` for a component of the borrowed data.
     #[inline]
-    pub fn map<U, F>(orig: AtomicRef<'a, T>, f: F) -> AtomicRef<'a, U>
+    pub fn map<U, F>(orig: Self, f: F) -> AtomicRef<'a, U>
     where
         U: ?Sized,
         F: FnOnce(&T) -> &U,
@@ -382,9 +382,23 @@ where
         }
     }
 
+    // Make a `MappedAtomicRef` using the borrowed data.
+    #[inline]
+    pub fn map_into<'b, U, F>(orig: Self, f: F) -> MappedAtomicRef<'a, U>
+    where
+        'a: 'b,
+        U: 'a,
+        F: FnOnce(&'b T) -> U,
+    {
+        MappedAtomicRef {
+            value: f(orig.value),
+            borrow: orig.borrow,
+        }
+    }
+
     /// Make a new `AtomicRef` for an optional component of the borrowed data.
     #[inline]
-    pub fn filter_map<U, F>(orig: AtomicRef<'a, T>, f: F) -> Option<AtomicRef<'a, U>>
+    pub fn filter_map<U, F>(orig: Self, f: F) -> Option<AtomicRef<'a, U>>
     where
         U: ?Sized,
         F: FnOnce(&T) -> Option<&U>,
@@ -443,7 +457,7 @@ where
     /// Make a new `AtomicRefMut` for a component of the borrowed data, e.g. an enum
     /// variant.
     #[inline]
-    pub fn map<U, F>(orig: AtomicRefMut<'a, T>, f: F) -> AtomicRefMut<'a, U>
+    pub fn map<U, F>(orig: Self, f: F) -> AtomicRefMut<'a, U>
     where
         U: ?Sized,
         F: FnOnce(&mut T) -> &mut U,
@@ -454,9 +468,23 @@ where
         }
     }
 
+    /// Make a `MappedAtomicRefMut` using the borrowed data.
+    #[inline]
+    pub fn map_into<'b, U, F>(orig: Self, f: F) -> MappedAtomicRefMut<'a, U>
+    where
+        'a: 'b,
+        U: 'a,
+        F: FnOnce(&'b mut T) -> U,
+    {
+        MappedAtomicRefMut {
+            value: f(orig.value),
+            borrow: orig.borrow,
+        }
+    }
+
     /// Make a new `AtomicRefMut` for an optional component of the borrowed data.
     #[inline]
-    pub fn filter_map<U, F>(orig: AtomicRefMut<'a, T>, f: F) -> Option<AtomicRefMut<'a, U>>
+    pub fn filter_map<U, F>(orig: Self, f: F) -> Option<AtomicRefMut<'a, U>>
     where
         U: ?Sized,
         F: FnOnce(&mut T) -> Option<&mut U>,
@@ -471,6 +499,96 @@ where
 impl<'a, T> Debug for AtomicRefMut<'a, T>
 where
     T: ?Sized + Debug + 'a,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.value.fmt(f)
+    }
+}
+
+/// A wrapper type for a value created from an `AtomicRef<T>`.
+pub struct MappedAtomicRef<'a, T> {
+    value: T,
+    borrow: AtomicBorrowRef<'a>,
+}
+
+impl<'a, T> Deref for MappedAtomicRef<'a, T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl<'a, T> DerefMut for MappedAtomicRef<'a, T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.value
+    }
+}
+
+impl<'a, T> MappedAtomicRef<'a, T> {
+    /// Make a new `MappedAtomicRef` using the borrowed data.
+    #[inline]
+    pub fn map_into<U, F>(orig: Self, f: F) -> MappedAtomicRef<'a, U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        MappedAtomicRef {
+            value: f(orig.value),
+            borrow: orig.borrow,
+        }
+    }
+}
+
+impl<'a, T> Debug for MappedAtomicRef<'a, T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.value.fmt(f)
+    }
+}
+
+/// A wrapper type for a value created from an `AtomicRefMut<T>`.
+pub struct MappedAtomicRefMut<'a, T> {
+    value: T,
+    borrow: AtomicBorrowRefMut<'a>,
+}
+
+impl<'a, T> Deref for MappedAtomicRefMut<'a, T> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl<'a, T> DerefMut for MappedAtomicRefMut<'a, T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.value
+    }
+}
+
+impl<'a, T> MappedAtomicRefMut<'a, T> {
+    /// Make a new `MappedAtomicRefMut` using the borrowed data.
+    #[inline]
+    pub fn map_into<U, F>(orig: Self, f: F) -> MappedAtomicRefMut<'a, U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        MappedAtomicRefMut {
+            value: f(orig.value),
+            borrow: orig.borrow,
+        }
+    }
+}
+
+impl<'a, T> Debug for MappedAtomicRefMut<'a, T>
+where
+    T: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.value.fmt(f)
