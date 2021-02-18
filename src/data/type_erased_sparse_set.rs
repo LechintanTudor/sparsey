@@ -30,6 +30,12 @@ impl TypeErasedSparseSet {
         self.data.clear_components();
     }
 
+    pub fn maintain(&mut self) {
+        self.flags
+            .iter_mut()
+            .for_each(|flags| *flags = ComponentFlags::empty());
+    }
+
     pub fn swap(&mut self, a: usize, b: usize) {
         assert!(a != b);
 
@@ -45,10 +51,26 @@ impl TypeErasedSparseSet {
         self.data.swap_components(a, b);
     }
 
-    pub fn maintain(&mut self) {
-        self.flags
-            .iter_mut()
-            .for_each(|flags| *flags = ComponentFlags::empty());
+    pub fn delete(&mut self, entity: Entity) {
+        let index_entity = match self.sparse.get_index_entity(entity) {
+            Some(index_entity) => index_entity,
+            None => return,
+        };
+
+        let last_index = match self.dense.last() {
+            Some(entity) => entity.index(),
+            None => return,
+        };
+
+        self.dense.swap_remove(index_entity.index());
+        self.flags.swap_remove(index_entity.index());
+
+        unsafe {
+            *self.sparse.get_unchecked_mut(last_index) = Some(index_entity);
+            *self.sparse.get_unchecked_mut(entity.index()) = None;
+        }
+
+        self.data.swap_delete_component(index_entity.index());
     }
 
     pub fn len(&self) -> usize {

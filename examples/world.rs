@@ -20,12 +20,12 @@ fn immobile(
     mut velocities: CompMut<Velocity>,
     mut accelerations: CompMut<Acceleration>,
 ) {
-    for (mut velocity, mut acceleration, _) in
-        (&mut velocities, &mut accelerations, &immobiles).join()
-    {
-        *velocity = Velocity(0.0, 0.0);
-        *acceleration = Acceleration(0.0, 0.0);
-    }
+    // for (mut velocity, mut acceleration, _) in
+    //     (&mut velocities, &mut accelerations, &immobiles).join()
+    // {
+    //     *velocity = Velocity(0.0, 0.0);
+    //     *acceleration = Acceleration(0.0, 0.0);
+    // }
 }
 
 fn movement(
@@ -33,17 +33,17 @@ fn movement(
     mut velocities: CompMut<Velocity>,
     accelerations: Comp<Acceleration>,
 ) {
-    for (mut position, mut velocity, acceleration) in
-        (&mut positions, &mut velocities, &accelerations).join()
-    {
-        velocity.0 += acceleration.0;
-        velocity.1 += acceleration.1;
+    // for (mut position, mut velocity, acceleration) in
+    //     (&mut positions, &mut velocities, &accelerations).join()
+    // {
+    //     velocity.0 += acceleration.0;
+    //     velocity.1 += acceleration.1;
 
-        position.0 += velocity.0;
-        position.1 += velocity.1;
+    //     position.0 += velocity.0;
+    //     position.1 += velocity.1;
 
-        println!("{:?}, {:?}, {:?}", *position, *velocity, *acceleration);
-    }
+    //     println!("{:?}, {:?}, {:?}", *position, *velocity, *acceleration);
+    // }
 
     println!();
 }

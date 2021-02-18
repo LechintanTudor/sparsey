@@ -64,7 +64,7 @@ impl GroupedComponents {
         self.info.contains_key(type_id)
     }
 
-    pub fn group_components(&mut self, group_index: usize, entity: Entity) {
+    pub unsafe fn group_components(&mut self, group_index: usize, entity: Entity) {
         let (sparse_sets, subgroups) = {
             let group = &mut self.groups[group_index];
             (
@@ -84,13 +84,13 @@ impl GroupedComponents {
 
             match status {
                 GroupStatus::Grouped => (),
-                GroupStatus::Ungrouped => unsafe {
+                GroupStatus::Ungrouped => {
                     group_components(
                         &mut sparse_sets[..subgroup.arity],
                         &mut subgroup.len,
                         entity,
                     );
-                },
+                }
                 GroupStatus::MissingComponents => break,
             }
 
@@ -98,7 +98,7 @@ impl GroupedComponents {
         }
     }
 
-    pub fn ungroup_components(&mut self, group_index: usize, entity: Entity) {
+    pub unsafe fn ungroup_components(&mut self, group_index: usize, entity: Entity) {
         let (sparse_sets, subgroups) = {
             let group = &mut self.groups[group_index];
             (
@@ -136,13 +136,11 @@ impl GroupedComponents {
         let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
         for subgroup in (&mut subgroups[ungroup_range]).iter_mut().rev() {
-            unsafe {
-                ungroup_components(
-                    &mut sparse_sets[..subgroup.arity],
-                    &mut subgroup.len,
-                    entity,
-                );
-            }
+            ungroup_components(
+                &mut sparse_sets[..subgroup.arity],
+                &mut subgroup.len,
+                entity,
+            );
         }
     }
 
