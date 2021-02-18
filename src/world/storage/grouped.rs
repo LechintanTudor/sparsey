@@ -152,7 +152,7 @@ impl GroupedComponents {
         self.info.get(type_id).map(|info| info.group_index)
     }
 
-    pub fn get_group_len(&self, type_id: &TypeId) -> Option<&usize> {
+    pub fn get_group_len_ref(&self, type_id: &TypeId) -> Option<&usize> {
         self.info.get(type_id).map(|info| unsafe {
             &self
                 .groups

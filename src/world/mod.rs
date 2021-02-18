@@ -1,11 +1,9 @@
-pub use self::component_set::*;
-pub use self::entities::*;
 pub use self::layout::*;
+pub use self::query::*;
 pub use self::storage::*;
 pub use self::world::*;
 
-mod component_set;
-mod entities;
 mod layout;
+mod query;
 mod storage;
 mod world;

@@ -168,7 +168,8 @@ impl World {
             Some(sparse_set) => unsafe {
                 Some(Comp::new(
                     AtomicRef::map_into(sparse_set, |sparse_set| sparse_set.to_ref()),
-                    self.grouped_components.get_group_len(&TypeId::of::<T>()),
+                    self.grouped_components
+                        .get_group_len_ref(&TypeId::of::<T>()),
                 ))
             },
             None => match self.ungrouped_components.borrow(&TypeId::of::<T>()) {
@@ -191,7 +192,8 @@ impl World {
             Some(sparse_set) => unsafe {
                 Some(CompMut::new(
                     AtomicRefMut::map_into(sparse_set, |sparse_set| sparse_set.to_ref_mut()),
-                    self.grouped_components.get_group_len(&TypeId::of::<T>()),
+                    self.grouped_components
+                        .get_group_len_ref(&TypeId::of::<T>()),
                 ))
             },
             None => match self.ungrouped_components.borrow_mut(&TypeId::of::<T>()) {

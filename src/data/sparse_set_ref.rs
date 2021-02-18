@@ -31,6 +31,11 @@ where
     pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
         (self.sparse, self.dense, self.flags, self.data)
     }
+
+    pub fn get(&self, entity: Entity) -> Option<&T> {
+        let index = self.sparse.get_index_entity(entity)?.index();
+        unsafe { Some(self.data.get_unchecked(index)) }
+    }
 }
 
 pub struct SparseSetRefMut<'a, T>
