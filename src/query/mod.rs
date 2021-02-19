@@ -1,3 +1,4 @@
+pub use self::query::*;
 pub use self::view::*;
 
 pub mod filter;

@@ -3,7 +3,10 @@ use crate::data::{
     SparseArray, SparseSetRef, SparseSetRefMut,
 };
 
-pub unsafe trait ComponentView<'a> {
+pub unsafe trait ComponentView<'a>
+where
+    Self: Sized,
+{
     type Flags: 'a + Copy;
     type Data: 'a + Copy;
     type Item: 'a;
@@ -11,6 +14,13 @@ pub unsafe trait ComponentView<'a> {
     fn group_len_ref(&self) -> Option<&usize>;
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data);
+
+    fn get(self, entity: Entity) -> Option<Self::Item> {
+        let (sparse, _, flags, data) = self.split();
+        let index = sparse.get_index_entity(entity)?.index();
+
+        unsafe { Self::get_item(flags, data, index) }
+    }
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags;
 

@@ -1,3 +1,4 @@
+use ecstasy::data::*;
 use ecstasy::dispatcher::*;
 use ecstasy::query::*;
 use ecstasy::resources::*;
@@ -20,12 +21,11 @@ fn immobile(
     mut velocities: CompMut<Velocity>,
     mut accelerations: CompMut<Acceleration>,
 ) {
-    // for (mut velocity, mut acceleration, _) in
-    //     (&mut velocities, &mut accelerations, &immobiles).join()
-    // {
-    //     *velocity = Velocity(0.0, 0.0);
-    //     *acceleration = Acceleration(0.0, 0.0);
-    // }
+    let entity = Entity::new(0, Version::new(1));
+
+    if let Some(data) = (&mut velocities, &mut accelerations, &immobiles).get(entity) {
+        println!("{:?}, {:?}, {:?}", *data.0, *data.1, *data.2);
+    }
 }
 
 fn movement(
@@ -33,17 +33,19 @@ fn movement(
     mut velocities: CompMut<Velocity>,
     accelerations: Comp<Acceleration>,
 ) {
-    // for (mut position, mut velocity, acceleration) in
-    //     (&mut positions, &mut velocities, &accelerations).join()
-    // {
-    //     velocity.0 += acceleration.0;
-    //     velocity.1 += acceleration.1;
+    let entity = Entity::new(0, Version::new(1));
 
-    //     position.0 += velocity.0;
-    //     position.1 += velocity.1;
+    if let Some(data) = (&mut positions, &mut velocities, &accelerations).get(entity) {
+        let (mut position, mut velocity, acceleration) = data;
 
-    //     println!("{:?}, {:?}, {:?}", *position, *velocity, *acceleration);
-    // }
+        velocity.0 += acceleration.0;
+        velocity.1 += acceleration.1;
+
+        position.0 += velocity.0;
+        position.1 += velocity.1;
+
+        println!("{:?}, {:?}, {:?}", *position, *velocity, *acceleration);
+    }
 
     println!();
 }
@@ -65,20 +67,20 @@ fn main() {
     world.register::<Acceleration>();
     world.register::<Immobile>();
 
-    let e0 = world.create((
+    let _ = world.create((
         Position(0.0, 0.0),
         Velocity(1.0, 1.0),
         Acceleration(1.0, 1.0),
     ));
-    let e1 = world.create((
+    let _ = world.create((
         Position(0.0, 0.0),
         Velocity(1.0, 1.0),
         Acceleration(1.0, 1.0),
         Immobile,
     ));
 
-    world.destroy(e0);
-    world.destroy(e1);
+    //world.destroy(e0);
+    //world.destroy(e1);
 
     let mut resources = Resources::default();
 
