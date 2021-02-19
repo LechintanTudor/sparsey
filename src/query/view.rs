@@ -8,11 +8,9 @@ pub unsafe trait ComponentView<'a> {
     type Data: 'a + Copy;
     type Item: 'a;
 
-    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data);
-
     fn group_len_ref(&self) -> Option<&usize>;
 
-    fn get(self, entity: Entity) -> Option<Self::Item>;
+    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data);
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags;
 
@@ -57,10 +55,6 @@ where
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
         let (sparse, dense, flags, data) = self.sparse_set.split();
         (sparse, dense, flags.as_ptr(), data.as_ptr())
-    }
-
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        self.sparse_set.get(entity)
     }
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
@@ -112,10 +106,6 @@ where
         (sparse, dense, flags.as_ptr(), data.as_ptr())
     }
 
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        self.sparse_set.get(entity)
-    }
-
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
         *flags.add(index)
     }
@@ -140,10 +130,6 @@ where
     fn split(self) -> (&'b SparseArray, &'b [Entity], Self::Flags, Self::Data) {
         let (sparse, dense, flags, data) = self.sparse_set.split_mut();
         (sparse, dense, flags.as_mut_ptr(), data.as_mut_ptr())
-    }
-
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        self.sparse_set.get_mut(entity)
     }
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {

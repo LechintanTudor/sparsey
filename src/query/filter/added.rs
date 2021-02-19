@@ -37,10 +37,6 @@ where
         V::split(self.view)
     }
 
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        V::get(self.view, entity)
-    }
-
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
         V::get_flags(flags, index)
     }
@@ -90,10 +86,6 @@ where
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
         V::split(self.view)
-    }
-
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        V::get(self.view, entity)
     }
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
