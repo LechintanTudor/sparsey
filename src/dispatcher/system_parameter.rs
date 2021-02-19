@@ -2,8 +2,8 @@ use crate::data::Component;
 use crate::dispatcher::{
     BorrowCommands, BorrowComp, BorrowCompMut, BorrowRegistry, BorrowRes, BorrowResMut, Commands,
 };
+use crate::query::{Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource};
-use crate::world::{Comp, CompMut};
 
 pub trait ThreadLocalSystemParameter {
     type Borrow: for<'a> BorrowRegistry<'a>;

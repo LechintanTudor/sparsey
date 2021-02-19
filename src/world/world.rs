@@ -1,7 +1,7 @@
 use crate::data::{AtomicRef, AtomicRefMut, Component, Entity, SparseSetMutPtr};
+use crate::query::{Comp, CompMut};
 use crate::world::{
-    Comp, CompMut, ComponentSet, Entities, GroupedComponents, UngroupedComponents,
-    WorldLayoutDescriptor,
+    ComponentSet, Entities, GroupedComponents, UngroupedComponents, WorldLayoutDescriptor,
 };
 use std::any::TypeId;
 use std::collections::HashSet;

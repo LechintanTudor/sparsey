@@ -1,11 +1,11 @@
 use crate::data::{ComponentFlags, Entity, SparseArray};
-use crate::query::IterableView;
+use crate::query::ComponentView;
 use std::marker::PhantomData;
 use std::ops::Not;
 
 pub struct Updated<'a, V>
 where
-    V: IterableView<'a>,
+    V: ComponentView<'a>,
 {
     view: V,
     phantom: PhantomData<&'a ()>,
@@ -13,37 +13,41 @@ where
 
 pub fn updated<'a, V>(view: V) -> Updated<'a, V>
 where
-    V: IterableView<'a>,
+    V: ComponentView<'a>,
 {
     Updated {
         view,
         phantom: PhantomData,
     }
 }
-unsafe impl<'a, V> IterableView<'a> for Updated<'a, V>
+unsafe impl<'a, V> ComponentView<'a> for Updated<'a, V>
 where
-    V: IterableView<'a>,
+    V: ComponentView<'a>,
 {
-    type Data = V::Data;
     type Flags = V::Flags;
-    type Output = V::Output;
+    type Data = V::Data;
+    type Item = V::Item;
 
-    fn group_len(&self) -> Option<&usize> {
-        V::group_len(&self.view)
+    fn group_len_ref(&self) -> Option<&usize> {
+        V::group_len_ref(&self.view)
     }
 
-    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags) {
+    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
         V::split(self.view)
+    }
+
+    fn get(self, entity: Entity) -> Option<Self::Item> {
+        V::get(self.view, entity)
     }
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
         V::get_flags(flags, index)
     }
 
-    unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
+    unsafe fn get_item(flags: Self::Flags, data: Self::Data, index: usize) -> Option<Self::Item> {
         if Self::get_flags(flags, index).intersects(ComponentFlags::ADDED | ComponentFlags::CHANGED)
         {
-            V::get(data, flags, index)
+            V::get_item(flags, data, index)
         } else {
             None
         }
@@ -52,7 +56,7 @@ where
 
 impl<'a, V> Not for Updated<'a, V>
 where
-    V: IterableView<'a>,
+    V: ComponentView<'a>,
 {
     type Output = NotUpdated<'a, V>;
 
@@ -66,37 +70,41 @@ where
 
 pub struct NotUpdated<'a, V>
 where
-    V: IterableView<'a>,
+    V: ComponentView<'a>,
 {
     view: V,
     phantom: PhantomData<&'a ()>,
 }
 
-unsafe impl<'a, V> IterableView<'a> for NotUpdated<'a, V>
+unsafe impl<'a, V> ComponentView<'a> for NotUpdated<'a, V>
 where
-    V: IterableView<'a>,
+    V: ComponentView<'a>,
 {
-    type Data = V::Data;
     type Flags = V::Flags;
-    type Output = V::Output;
+    type Data = V::Data;
+    type Item = V::Item;
 
-    fn group_len(&self) -> Option<&usize> {
-        V::group_len(&self.view)
+    fn group_len_ref(&self) -> Option<&usize> {
+        V::group_len_ref(&self.view)
     }
 
-    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Data, Self::Flags) {
+    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
         V::split(self.view)
+    }
+
+    fn get(self, entity: Entity) -> Option<Self::Item> {
+        V::get(self.view, entity)
     }
 
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags {
         V::get_flags(flags, index)
     }
 
-    unsafe fn get(data: Self::Data, flags: Self::Flags, index: usize) -> Option<Self::Output> {
+    unsafe fn get_item(flags: Self::Flags, data: Self::Data, index: usize) -> Option<Self::Item> {
         if !Self::get_flags(flags, index)
             .intersects(ComponentFlags::ADDED | ComponentFlags::CHANGED)
         {
-            V::get(data, flags, index)
+            V::get_item(flags, data, index)
         } else {
             None
         }
