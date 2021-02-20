@@ -33,11 +33,9 @@ fn movement(
     mut velocities: CompMut<Velocity>,
     accelerations: Comp<Acceleration>,
 ) {
-    let entity = Entity::new(0, Version::new(1));
-
-    if let Some(data) = (&mut positions, &mut velocities, &accelerations).get(entity) {
-        let (mut position, mut velocity, acceleration) = data;
-
+    for (mut position, mut velocity, acceleration) in
+        SparseIter3::new(&mut positions, &mut velocities, &accelerations)
+    {
         velocity.0 += acceleration.0;
         velocity.1 += acceleration.1;
 
