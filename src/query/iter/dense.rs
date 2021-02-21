@@ -40,10 +40,10 @@ macro_rules! impl_dense_iter {
                         if self.index >= self.dense.len() {
                             return None;
                         }
-    
+
                         let index = self.index;
                         self.index += 1;
-    
+
                         let item = (|| unsafe {
                             Some((
                                 $(

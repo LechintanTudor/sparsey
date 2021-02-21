@@ -1,4 +1,3 @@
-use ecstasy::data::*;
 use ecstasy::dispatcher::*;
 use ecstasy::query::*;
 use ecstasy::resources::*;
@@ -21,10 +20,14 @@ fn immobile(
     mut velocities: CompMut<Velocity>,
     mut accelerations: CompMut<Acceleration>,
 ) {
-    let entity = Entity::new(0, Version::new(1));
+    for (mut velocity, mut acceleration, _) in
+        (&mut velocities, &mut accelerations, &immobiles).iter()
+    {
+        velocity.0 = 0.0;
+        velocity.1 = 0.0;
 
-    if let Some(data) = (&mut velocities, &mut accelerations, &immobiles).get(entity) {
-        println!("{:?}, {:?}, {:?}", *data.0, *data.1, *data.2);
+        acceleration.0 = 0.0;
+        acceleration.1 = 0.0;
     }
 }
 
@@ -34,7 +37,7 @@ fn movement(
     accelerations: Comp<Acceleration>,
 ) {
     for (mut position, mut velocity, acceleration) in
-        SparseIter3::new(&mut positions, &mut velocities, &accelerations)
+        (&mut positions, &mut velocities, &accelerations).iter()
     {
         velocity.0 += acceleration.0;
         velocity.1 += acceleration.1;
