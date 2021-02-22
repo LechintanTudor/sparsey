@@ -86,9 +86,9 @@ fn main() {
     let mut resources = Resources::default();
 
     let mut dispatcher = Dispatcher::builder()
-        .with_system(immobile.system())
-        .with_system(movement.system())
-        .with_system(spawn.system())
+        .add_system(immobile.system())
+        .add_system(movement.system())
+        .add_system(spawn.system())
         .build();
 
     let thread_pool = rayon::ThreadPoolBuilder::new()
