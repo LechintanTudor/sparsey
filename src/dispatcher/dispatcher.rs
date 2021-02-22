@@ -6,6 +6,7 @@ use crate::resources::Resources;
 use crate::world::World;
 use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use rayon::ThreadPool;
+use std::mem;
 
 enum SimpleStep {
     RunSystem(System),
@@ -25,30 +26,30 @@ pub struct DispatcherBuilder {
 }
 
 impl DispatcherBuilder {
-    pub fn with_system(mut self, system: System) -> Self {
+    pub fn add_system(&mut self, system: System) -> &mut Self {
         self.simple_steps.push(SimpleStep::RunSystem(system));
         self
     }
 
-    pub fn with_thread_local_system(mut self, system: ThreadLocalSystem) -> Self {
+    pub fn add_thread_local_system(&mut self, system: ThreadLocalSystem) -> &mut Self {
         self.simple_steps
             .push(SimpleStep::RunThreadLocalSystem(system));
         self
     }
 
-    pub fn with_barrier(mut self) -> Self {
+    pub fn add_flush_barrier(&mut self) -> &mut Self {
         self.simple_steps.push(SimpleStep::FlushCommands);
         self
     }
 
-    pub fn merge(mut self, mut other: DispatcherBuilder) -> Self {
+    pub fn merge(&mut self, mut other: DispatcherBuilder) -> &mut Self {
         self.simple_steps.extend(other.simple_steps.drain(..));
         self
     }
 
-    pub fn build(self) -> Dispatcher {
-        let steps = merge_and_optimize_steps(self.simple_steps);
-        let command_buffers = CommandBuffers::new(count_command_buffers(&steps));
+    pub fn build(&mut self) -> Dispatcher {
+        let steps = merge_and_optimize_steps(mem::take(&mut self.simple_steps));
+        let command_buffers = CommandBuffers::new(required_command_buffers(&steps));
 
         Dispatcher {
             command_buffers,
@@ -128,34 +129,37 @@ impl Dispatcher {
     }
 }
 
-fn count_command_buffers(steps: &[Step]) -> usize {
-    let mut command_buffer_count = 0;
+fn required_command_buffers(steps: &[Step]) -> usize {
+    let mut max_buffer_count = 0;
+    let mut buffer_count = 0;
 
     for step in steps {
         match step {
             Step::RunSystems(systems) => {
-                let step_command_buffer_count: usize = systems
+                let step_buffer_count: usize = systems
                     .iter()
                     .flat_map(|system| system.registry_access())
                     .map(|access| matches!(access, RegistryAccess::Commands) as usize)
                     .sum();
 
-                command_buffer_count += step_command_buffer_count;
+                buffer_count += step_buffer_count;
             }
             Step::RunThreadLocalSystems(systems) => {
-                let step_command_buffer_count: usize = systems
+                let step_buffer_count: usize = systems
                     .iter()
                     .flat_map(|system| system.registry_access())
                     .map(|access| matches!(access, RegistryAccess::Commands) as usize)
                     .sum();
 
-                command_buffer_count += step_command_buffer_count;
+                buffer_count += step_buffer_count;
             }
-            _ => (),
+            Step::FlushCommands => {
+                max_buffer_count = max_buffer_count.max(buffer_count);
+            }
         }
     }
 
-    command_buffer_count
+    max_buffer_count
 }
 
 fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
