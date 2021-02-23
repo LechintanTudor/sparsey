@@ -51,6 +51,10 @@ impl Entities {
     pub fn contains(&self, entity: Entity) -> bool {
         self.entities.contains(entity)
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.entities.dense.iter().copied()
+    }
 }
 
 #[derive(Clone, Default, Debug)]

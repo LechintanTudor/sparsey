@@ -2,6 +2,7 @@ use crate::data::{
     Component, ComponentFlags, Entity, IndexEntity, SparseArray, SparseSetMutPtr, SparseSetRef,
     SparseSetRefMut, TypeErasedVec,
 };
+use std::any::TypeId;
 
 pub struct TypeErasedSparseSet {
     sparse: SparseArray,
@@ -23,6 +24,10 @@ impl TypeErasedSparseSet {
         }
     }
 
+    pub fn component_type_id(&self) -> TypeId {
+        self.data.component_type_id()
+    }
+
     pub fn clear(&mut self) {
         self.sparse.clear();
         self.dense.clear();
@@ -37,7 +42,9 @@ impl TypeErasedSparseSet {
     }
 
     pub fn swap(&mut self, a: usize, b: usize) {
-        assert!(a != b);
+        if a == b {
+            return;
+        }
 
         let sparse_index_a = self.dense[a].index();
         let sparse_index_b = self.dense[b].index();

@@ -3,14 +3,19 @@ use crate::world::WorldLayout;
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
+use std::ptr;
 
+#[derive(Default)]
 pub(crate) struct GroupedComponents {
     groups: Vec<Group>,
     info: HashMap<TypeId, ComponentInfo>,
 }
 
 impl GroupedComponents {
-    pub fn new(world_layout: &WorldLayout) -> Self {
+    pub fn with_layout(
+        world_layout: &WorldLayout,
+        sparse_set_map: &mut HashMap<TypeId, TypeErasedSparseSet>,
+    ) -> Self {
         let mut groups = Vec::<Group>::new();
         let mut info = HashMap::<TypeId, ComponentInfo>::new();
 
@@ -23,8 +28,10 @@ impl GroupedComponents {
 
             for (subgroup_index, &arity) in group_layout.subgroup_arities().iter().enumerate() {
                 for component in &components[previous_arity..arity] {
+                    let type_id = component.component_type_id();
+
                     info.insert(
-                        component.component_type_id(),
+                        type_id,
                         ComponentInfo {
                             group_index: groups.len(),
                             sparse_set_index: sparse_sets.len(),
@@ -32,7 +39,12 @@ impl GroupedComponents {
                         },
                     );
 
-                    sparse_sets.push(AtomicRefCell::new(component.create_sparse_set()));
+                    let sparse_set = match sparse_set_map.remove(&type_id) {
+                        Some(sparse_set) => sparse_set,
+                        None => component.create_sparse_set(),
+                    };
+
+                    sparse_sets.push(AtomicRefCell::new(sparse_set));
                 }
 
                 subgroups.push(Subgroup::with_arity(arity));
@@ -60,11 +72,20 @@ impl GroupedComponents {
         }
     }
 
+    pub fn drain(&mut self) -> impl Iterator<Item = TypeErasedSparseSet> + '_ {
+        self.info.clear();
+
+        self.groups
+            .iter_mut()
+            .flat_map(|group| group.sparse_sets.drain(..))
+            .map(|sparse_set| sparse_set.into_inner())
+    }
+
     pub fn contains(&self, type_id: &TypeId) -> bool {
         self.info.contains_key(type_id)
     }
 
-    pub unsafe fn group_components(&mut self, group_index: usize, entity: Entity) {
+    pub fn group_components(&mut self, group_index: usize, entity: Entity) {
         let (sparse_sets, subgroups) = {
             let group = &mut self.groups[group_index];
             (
@@ -84,13 +105,13 @@ impl GroupedComponents {
 
             match status {
                 GroupStatus::Grouped => (),
-                GroupStatus::Ungrouped => {
+                GroupStatus::Ungrouped => unsafe {
                     group_components(
                         &mut sparse_sets[..subgroup.arity],
                         &mut subgroup.len,
                         entity,
                     );
-                }
+                },
                 GroupStatus::MissingComponents => break,
             }
 
@@ -152,14 +173,13 @@ impl GroupedComponents {
         self.info.get(type_id).map(|info| info.group_index)
     }
 
-    pub fn get_group_len_ref(&self, type_id: &TypeId) -> Option<&usize> {
+    pub fn get_subgroup_info(&self, type_id: &TypeId) -> Option<SubgroupInfo> {
         self.info.get(type_id).map(|info| unsafe {
-            &self
-                .groups
-                .get_unchecked(info.group_index)
-                .subgroups
-                .get_unchecked(info.subgroup_index)
-                .len
+            let subgroups = &self.groups.get_unchecked(info.group_index).subgroups;
+
+            let index = info.subgroup_index;
+
+            SubgroupInfo { subgroups, index }
         })
     }
 
@@ -195,6 +215,23 @@ impl GroupedComponents {
     }
 }
 
+#[derive(Copy, Clone)]
+pub struct SubgroupInfo<'a> {
+    subgroups: &'a [Subgroup],
+    index: usize,
+}
+
+impl<'a> SubgroupInfo<'a> {
+    pub fn has_same_group(&self, other: &SubgroupInfo) -> bool {
+        ptr::eq(self.subgroups, other.subgroups)
+    }
+
+    pub fn subgroup_len(&self) -> usize {
+        unsafe { self.subgroups.get_unchecked(self.index).len }
+    }
+}
+
+#[derive(Default)]
 struct Group {
     sparse_sets: Vec<AtomicRefCell<TypeErasedSparseSet>>,
     subgroups: Vec<Subgroup>,

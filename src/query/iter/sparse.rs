@@ -89,7 +89,6 @@ where
     (view.0, view.2, view.3)
 }
 
-impl_sparse_iter!(SparseIter1, A);
 impl_sparse_iter!(SparseIter2, A, B);
 impl_sparse_iter!(SparseIter3, A, B, C);
 impl_sparse_iter!(SparseIter4, A, B, C, D);

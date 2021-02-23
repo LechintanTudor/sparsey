@@ -18,11 +18,11 @@ macro_rules! impl_dense_iter {
             where
                 $($comp: ComponentView<'a>,)+
             {
-                pub unsafe fn new_unchecked($([<comp_ $comp:lower>]: $comp,)+) -> Self {
+                pub unsafe fn new_unchecked(subgroup_len: usize, $([<comp_ $comp:lower>]: $comp,)+) -> Self {
                     $(let [<comp_ $comp:lower>] = [<comp_ $comp:lower>].split();)+
 
                     Self {
-                        dense: first_of!($([<comp_ $comp:lower>].1),+),
+                        dense: &first_of!($([<comp_ $comp:lower>].1),+)[..subgroup_len],
                         index: 0,
                         $([<comp_ $comp:lower>]: ([<comp_ $comp:lower>].2, [<comp_ $comp:lower>].3),)+
                     }
@@ -75,7 +75,6 @@ macro_rules! first_of {
     };
 }
 
-impl_dense_iter!(DenseIter1, A);
 impl_dense_iter!(DenseIter2, A, B);
 impl_dense_iter!(DenseIter3, A, B, C);
 impl_dense_iter!(DenseIter4, A, B, C, D);

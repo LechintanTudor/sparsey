@@ -2,6 +2,7 @@ use crate::data::{
     Component, ComponentFlags, ComponentRefMut, Entity, MappedAtomicRef, MappedAtomicRefMut,
     SparseArray, SparseSetRef, SparseSetRefMut,
 };
+use crate::world::SubgroupInfo;
 
 pub unsafe trait ComponentView<'a>
 where
@@ -11,7 +12,7 @@ where
     type Data: 'a + Copy;
     type Item: 'a;
 
-    fn group_len_ref(&self) -> Option<&usize>;
+    fn subgroup_info(&self) -> Option<SubgroupInfo>;
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data);
 
@@ -32,7 +33,7 @@ where
     T: Component,
 {
     sparse_set: MappedAtomicRef<'a, SparseSetRef<'a, T>>,
-    group_len_ref: Option<&'a usize>,
+    subgroup_info: Option<SubgroupInfo<'a>>,
 }
 
 impl<'a, T> Comp<'a, T>
@@ -41,11 +42,11 @@ where
 {
     pub(crate) unsafe fn new(
         sparse_set: MappedAtomicRef<'a, SparseSetRef<'a, T>>,
-        group_len_ref: Option<&'a usize>,
+        subgroup_info: Option<SubgroupInfo<'a>>,
     ) -> Self {
         Self {
             sparse_set,
-            group_len_ref,
+            subgroup_info,
         }
     }
 }
@@ -58,8 +59,8 @@ where
     type Data = *const T;
     type Item = &'a T;
 
-    fn group_len_ref(&self) -> Option<&usize> {
-        self.group_len_ref
+    fn subgroup_info(&self) -> Option<SubgroupInfo> {
+        self.subgroup_info
     }
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
@@ -81,7 +82,7 @@ where
     T: Component,
 {
     sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>,
-    group_len_ref: Option<&'a usize>,
+    subgroup_info: Option<SubgroupInfo<'a>>,
 }
 
 impl<'a, T> CompMut<'a, T>
@@ -90,11 +91,11 @@ where
 {
     pub(crate) unsafe fn new(
         sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>,
-        group_len_ref: Option<&'a usize>,
+        subgroup_info: Option<SubgroupInfo<'a>>,
     ) -> Self {
         Self {
             sparse_set,
-            group_len_ref,
+            subgroup_info,
         }
     }
 }
@@ -107,8 +108,8 @@ where
     type Data = *const T;
     type Item = &'a T;
 
-    fn group_len_ref(&self) -> Option<&usize> {
-        self.group_len_ref
+    fn subgroup_info(&self) -> Option<SubgroupInfo> {
+        self.subgroup_info
     }
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
@@ -133,8 +134,8 @@ where
     type Data = *mut T;
     type Item = ComponentRefMut<'b, T>;
 
-    fn group_len_ref(&self) -> Option<&usize> {
-        self.group_len_ref
+    fn subgroup_info(&self) -> Option<SubgroupInfo> {
+        self.subgroup_info
     }
 
     fn split(self) -> (&'b SparseArray, &'b [Entity], Self::Flags, Self::Data) {

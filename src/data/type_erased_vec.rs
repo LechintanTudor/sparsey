@@ -1,11 +1,14 @@
 use crate::data::Component;
 use downcast_rs::{impl_downcast, Downcast};
+use std::any::TypeId;
 use std::ops::DerefMut;
 
 pub unsafe trait TypeErasedVec
 where
     Self: Send + Sync + Downcast + 'static,
 {
+    fn component_type_id(&self) -> TypeId;
+
     fn component_count(&self) -> usize;
 
     fn swap_delete_component(&mut self, index: usize);
@@ -21,6 +24,10 @@ unsafe impl<T> TypeErasedVec for Vec<T>
 where
     T: Component,
 {
+    fn component_type_id(&self) -> TypeId {
+        TypeId::of::<T>()
+    }
+
     fn component_count(&self) -> usize {
         Vec::len(self)
     }

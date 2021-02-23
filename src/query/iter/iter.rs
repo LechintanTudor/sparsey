@@ -1,8 +1,8 @@
 use crate::query::iter::dense::*;
 use crate::query::iter::sparse::*;
 use crate::query::ComponentView;
+use crate::world::SubgroupInfo;
 use paste::paste;
-use std::ptr;
 
 macro_rules! impl_iter {
     ($len:tt, $($comp:ident),+) => {
@@ -20,17 +20,24 @@ macro_rules! impl_iter {
                 $($comp: ComponentView<'a>,)+
             {
                 pub fn new($([<comp_ $comp:lower>]: $comp),+) -> Self {
-                    let is_grouped = is_grouped(&[
-                        $([<comp_ $comp:lower>].group_len_ref()),+
+                    let subgroup_len = subgroup_len(&[
+                        $([<comp_ $comp:lower>].subgroup_info()),+
                     ]);
 
-                    if is_grouped {
+                    if let Some(subgroup_len) = subgroup_len {
                         unsafe {
-                            Self::Dense([<DenseIter $len>]::new_unchecked($([<comp_ $comp:lower>]),+))
+                            Self::Dense([<DenseIter $len>]::new_unchecked(
+                                subgroup_len,
+                                $([<comp_ $comp:lower>]),+
+                            ))
                         }
                     } else {
                         Self::Sparse([<SparseIter $len>]::new($([<comp_ $comp:lower>]),+))
                     }
+                }
+
+                pub fn is_grouped(&self) -> bool {
+                    matches!(self, Self::Dense(_))
                 }
             }
 
@@ -51,29 +58,25 @@ macro_rules! impl_iter {
     }
 }
 
-fn is_grouped(group_len_refs: &[Option<&usize>]) -> bool {
-    (|| -> Option<()> {
-        match group_len_refs.split_first() {
-            Some((&first, others)) => {
-                let first = first?;
+fn subgroup_len(subgroup_infos: &[Option<SubgroupInfo>]) -> Option<usize> {
+    let (&first, others) = subgroup_infos.split_first()?;
+    let first = first?;
 
-                for &other in others {
-                    let other = other?;
+    let mut subgroup_len = first.subgroup_len();
 
-                    if !ptr::eq(first, other) {
-                        return None;
-                    }
-                }
+    for &other in others {
+        let other = other?;
 
-                Some(())
-            }
-            None => Some(()),
+        if !first.has_same_group(&other) {
+            return None;
         }
-    })()
-    .is_some()
+
+        subgroup_len = subgroup_len.min(other.subgroup_len());
+    }
+
+    Some(subgroup_len)
 }
 
-impl_iter!(1, A);
 impl_iter!(2, A, B);
 impl_iter!(3, A, B, C);
 impl_iter!(4, A, B, C, D);

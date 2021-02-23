@@ -68,6 +68,40 @@ impl Dispatcher {
         DispatcherBuilder::default()
     }
 
+    pub fn run_thread_local(&mut self, world: &mut World, resources: &mut Resources) {
+        for step in self.steps.iter_mut() {
+            match step {
+                Step::RunSystems(systems) => {
+                    for system in systems {
+                        unsafe {
+                            system.run_thread_local(Registry::new(
+                                world,
+                                resources.internal(),
+                                &self.command_buffers,
+                            ));
+                        }
+                    }
+                }
+                Step::RunThreadLocalSystems(systems) => {
+                    for system in systems {
+                        unsafe {
+                            system.run_thread_local(Registry::new(
+                                world,
+                                resources.internal(),
+                                &self.command_buffers,
+                            ));
+                        }
+                    }
+                }
+                Step::FlushCommands => {
+                    for command in self.command_buffers.drain() {
+                        command.run(world, resources);
+                    }
+                }
+            }
+        }
+    }
+
     pub fn run(&mut self, world: &mut World, resources: &mut Resources, thread_pool: &ThreadPool) {
         for step in self.steps.iter_mut() {
             match step {

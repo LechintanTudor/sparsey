@@ -3,102 +3,50 @@ use ecstasy::query::*;
 use ecstasy::resources::*;
 use ecstasy::world::*;
 
-#[derive(Debug)]
-struct Immobile;
+#[rustfmt::skip]
+pub type Layout = (
+    (
+        (u16, u32),
+        (u16, u32, u64),
+    ),
+);
 
-#[derive(Debug)]
-struct Position(f32, f32);
+fn check(a: Comp<u16>, b: Comp<u32>, c: Comp<u64>) {
+    println!("AB: {}", (&a, &b).is_grouped());
 
-#[derive(Debug)]
-struct Velocity(f32, f32);
-
-#[derive(Debug)]
-struct Acceleration(f32, f32);
-
-fn immobile(
-    immobiles: Comp<Immobile>,
-    mut velocities: CompMut<Velocity>,
-    mut accelerations: CompMut<Acceleration>,
-) {
-    for (mut velocity, mut acceleration, _) in
-        (&mut velocities, &mut accelerations, &immobiles).iter()
-    {
-        velocity.0 = 0.0;
-        velocity.1 = 0.0;
-
-        acceleration.0 = 0.0;
-        acceleration.1 = 0.0;
-    }
-}
-
-fn movement(
-    mut positions: CompMut<Position>,
-    mut velocities: CompMut<Velocity>,
-    accelerations: Comp<Acceleration>,
-) {
-    for (mut position, mut velocity, acceleration) in
-        (&mut positions, &mut velocities, &accelerations).iter()
-    {
-        velocity.0 += acceleration.0;
-        velocity.1 += acceleration.1;
-
-        position.0 += velocity.0;
-        position.1 += velocity.1;
-
-        println!("{:?}, {:?}, {:?}", *position, *velocity, *acceleration);
+    for (a, b) in (&a, &b).iter() {
+        println!("{}, {}", a, b);
     }
 
     println!();
-}
 
-fn spawn(mut commands: Commands) {
-    commands.queue(|world, _| {
-        world.create((
-            Position(0.0, 0.0),
-            Velocity(0.0, 0.0),
-            Acceleration(-1.0, 1.0),
-        ));
-    });
+    println!("ABC: {}", (&a, &b, &c).is_grouped());
+
+    for (a, b, c) in (&a, &b, &c).iter() {
+        println!("{}, {}, {}", a, b, c);
+    }
+
+    println!("\n");
 }
 
 fn main() {
-    let mut world = World::new::<()>();
-    world.register::<Position>();
-    world.register::<Velocity>();
-    world.register::<Acceleration>();
-    world.register::<Immobile>();
-
-    let _ = world.create((
-        Position(0.0, 0.0),
-        Velocity(1.0, 1.0),
-        Acceleration(1.0, 1.0),
-    ));
-    let _ = world.create((
-        Position(0.0, 0.0),
-        Velocity(1.0, 1.0),
-        Acceleration(1.0, 1.0),
-        Immobile,
-    ));
-
-    //world.destroy(e0);
-    //world.destroy(e1);
-
+    let mut world = World::default();
     let mut resources = Resources::default();
 
-    let mut dispatcher = Dispatcher::builder()
-        .add_system(immobile.system())
-        .add_system(movement.system())
-        .add_system(spawn.system())
-        .build();
+    world.register::<u16>();
+    world.register::<u32>();
+    world.register::<u64>();
 
-    let thread_pool = rayon::ThreadPoolBuilder::new()
-        .num_threads(dispatcher.max_parallel_systems())
-        .build()
-        .unwrap();
+    world.create((1_u16, 2_u32, 3_u64));
+    world.create((2_u32, 3_u64));
+    world.create((1_u16, 3_u64));
+    world.create((1_u16, 2_u32, 3_u64));
 
-    println!("Maximum parallelism: {}", dispatcher.max_parallel_systems());
+    let mut dispatcher = Dispatcher::builder().add_system(check.system()).build();
 
-    for _ in 0..3 {
-        dispatcher.run(&mut world, &mut resources, &thread_pool);
-    }
+    dispatcher.run_thread_local(&mut world, &mut resources);
+
+    world.set_layout(&Layout::world_layout());
+
+    dispatcher.run_thread_local(&mut world, &mut resources);
 }

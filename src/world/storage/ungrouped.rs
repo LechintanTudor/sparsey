@@ -8,6 +8,16 @@ pub(crate) struct UngroupedComponents {
 }
 
 impl UngroupedComponents {
+    pub fn from_sparse_sets(sparse_set_map: &mut HashMap<TypeId, TypeErasedSparseSet>) -> Self {
+        let mut sparse_sets = HashMap::<TypeId, AtomicRefCell<TypeErasedSparseSet>>::new();
+
+        for (type_id, sparse_set) in sparse_set_map.drain() {
+            sparse_sets.insert(type_id, AtomicRefCell::new(sparse_set));
+        }
+
+        Self { sparse_sets }
+    }
+
     pub fn register<T>(&mut self)
     where
         T: Component,
@@ -21,6 +31,12 @@ impl UngroupedComponents {
         for sparse_set in self.sparse_sets.values_mut() {
             sparse_set.get_mut().clear();
         }
+    }
+
+    pub fn drain(&mut self) -> impl Iterator<Item = TypeErasedSparseSet> + '_ {
+        self.sparse_sets
+            .drain()
+            .map(|(_, sparse_set)| sparse_set.into_inner())
     }
 
     pub fn borrow(&self, component: &TypeId) -> Option<AtomicRef<TypeErasedSparseSet>> {

@@ -1,11 +1,12 @@
-use crate::data::{AtomicRef, AtomicRefMut, Component, Entity, SparseSetMutPtr};
-use crate::query::{Comp, CompMut};
-use crate::world::{
-    ComponentSet, Entities, GroupedComponents, UngroupedComponents, WorldLayoutDescriptor,
+use crate::data::{
+    AtomicRef, AtomicRefMut, Component, Entity, SparseSetMutPtr, TypeErasedSparseSet,
 };
+use crate::query::{Comp, CompMut};
+use crate::world::{ComponentSet, Entities, GroupedComponents, UngroupedComponents, WorldLayout};
 use std::any::TypeId;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
+#[derive(Default)]
 pub struct World {
     entities: Entities,
     grouped_components: GroupedComponents,
@@ -14,15 +15,26 @@ pub struct World {
 }
 
 impl World {
-    pub fn new<L>() -> Self
-    where
-        L: WorldLayoutDescriptor,
-    {
-        Self {
-            entities: Entities::default(),
-            grouped_components: GroupedComponents::new(&L::world_layout()),
-            ungrouped_components: UngroupedComponents::default(),
-            group_indexes: HashSet::default(),
+    pub fn set_layout(&mut self, layout: &WorldLayout) {
+        let mut sparse_sets = HashMap::<TypeId, TypeErasedSparseSet>::new();
+
+        for sparse_set in self.grouped_components.drain() {
+            sparse_sets.insert(sparse_set.component_type_id(), sparse_set);
+        }
+
+        for sparse_set in self.ungrouped_components.drain() {
+            sparse_sets.insert(sparse_set.component_type_id(), sparse_set);
+        }
+
+        self.grouped_components = GroupedComponents::with_layout(&layout, &mut sparse_sets);
+        self.ungrouped_components = UngroupedComponents::from_sparse_sets(&mut sparse_sets);
+
+        self.entities.maintain();
+
+        for entity in self.entities.iter() {
+            for i in 0..self.grouped_components.group_count() {
+                self.grouped_components.group_components(i, entity);
+            }
         }
     }
 
@@ -98,9 +110,7 @@ impl World {
         self.update_group_indexes(C::components().as_ref());
 
         for &i in self.group_indexes.iter() {
-            unsafe {
-                self.grouped_components.group_components(i, entity);
-            }
+            self.grouped_components.group_components(i, entity);
         }
 
         Ok(())
@@ -169,7 +179,7 @@ impl World {
                 Some(Comp::new(
                     AtomicRef::map_into(sparse_set, |sparse_set| sparse_set.to_ref()),
                     self.grouped_components
-                        .get_group_len_ref(&TypeId::of::<T>()),
+                        .get_subgroup_info(&TypeId::of::<T>()),
                 ))
             },
             None => match self.ungrouped_components.borrow(&TypeId::of::<T>()) {
@@ -193,7 +203,7 @@ impl World {
                 Some(CompMut::new(
                     AtomicRefMut::map_into(sparse_set, |sparse_set| sparse_set.to_ref_mut()),
                     self.grouped_components
-                        .get_group_len_ref(&TypeId::of::<T>()),
+                        .get_subgroup_info(&TypeId::of::<T>()),
                 ))
             },
             None => match self.ungrouped_components.borrow_mut(&TypeId::of::<T>()) {
