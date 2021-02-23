@@ -1,7 +1,7 @@
 use crate::data::Entity;
 use crate::query::iter::*;
 use crate::query::ComponentView;
-use crate::world::SubgroupInfo;
+use crate::world::get_subgroup_len;
 
 pub unsafe trait Query<'a> {
     type Item: 'a;
@@ -34,34 +34,15 @@ macro_rules! impl_query {
             }
 
             fn is_grouped(&self) -> bool {
-                is_grouped(&[
-                    $(self.$idx.subgroup_info()),+
-                ])
+                (|| -> Option<_> {
+                    get_subgroup_len(&[
+                        $(self.$idx.subgroup_info()?),+
+                    ])
+                })()
+                .is_some()
             }
         }
     };
-}
-
-fn is_grouped(group_len_refs: &[Option<SubgroupInfo>]) -> bool {
-    (|| -> Option<()> {
-        match group_len_refs.split_first() {
-            Some((&first, others)) => {
-                let first = first?;
-
-                for &other in others {
-                    let other = other?;
-
-                    if !first.has_same_group(&other) {
-                        return None;
-                    }
-                }
-
-                Some(())
-            }
-            None => Some(()),
-        }
-    })()
-    .is_some()
 }
 
 impl_query!(Iter2, (A, 0), (B, 1));

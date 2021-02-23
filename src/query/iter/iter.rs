@@ -1,7 +1,7 @@
 use crate::query::iter::dense::*;
 use crate::query::iter::sparse::*;
 use crate::query::ComponentView;
-use crate::world::SubgroupInfo;
+use crate::world::get_subgroup_len;
 use paste::paste;
 
 macro_rules! impl_iter {
@@ -20,9 +20,11 @@ macro_rules! impl_iter {
                 $($comp: ComponentView<'a>,)+
             {
                 pub fn new($([<comp_ $comp:lower>]: $comp),+) -> Self {
-                    let subgroup_len = subgroup_len(&[
-                        $([<comp_ $comp:lower>].subgroup_info()),+
-                    ]);
+                    let subgroup_len = (|| -> Option<usize> {
+                        get_subgroup_len(&[
+                            $([<comp_ $comp:lower>].subgroup_info()?),+
+                        ])
+                    })();
 
                     if let Some(subgroup_len) = subgroup_len {
                         unsafe {
@@ -56,25 +58,6 @@ macro_rules! impl_iter {
             }
         }
     }
-}
-
-fn subgroup_len(subgroup_infos: &[Option<SubgroupInfo>]) -> Option<usize> {
-    let (&first, others) = subgroup_infos.split_first()?;
-    let first = first?;
-
-    let mut subgroup_len = first.subgroup_len();
-
-    for &other in others {
-        let other = other?;
-
-        if !first.has_same_group(&other) {
-            return None;
-        }
-
-        subgroup_len = subgroup_len.min(other.subgroup_len());
-    }
-
-    Some(subgroup_len)
 }
 
 impl_iter!(2, A, B);

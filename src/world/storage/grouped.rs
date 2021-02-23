@@ -1,9 +1,8 @@
 use crate::data::{AtomicRef, AtomicRefCell, AtomicRefMut, Entity, TypeErasedSparseSet};
-use crate::world::WorldLayout;
+use crate::world::{Subgroup, SubgroupInfo, WorldLayout};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
-use std::ptr;
 
 #[derive(Default)]
 pub(crate) struct GroupedComponents {
@@ -98,7 +97,7 @@ impl GroupedComponents {
 
         for subgroup in subgroups.iter_mut() {
             let status = get_group_status(
-                &mut sparse_sets[previous_arity..subgroup.arity],
+                &mut sparse_sets[previous_arity..subgroup.arity()],
                 subgroup.len,
                 entity,
             );
@@ -107,7 +106,7 @@ impl GroupedComponents {
                 GroupStatus::Grouped => (),
                 GroupStatus::Ungrouped => unsafe {
                     group_components(
-                        &mut sparse_sets[..subgroup.arity],
+                        &mut sparse_sets[..subgroup.arity()],
                         &mut subgroup.len,
                         entity,
                     );
@@ -115,7 +114,7 @@ impl GroupedComponents {
                 GroupStatus::MissingComponents => break,
             }
 
-            previous_arity = subgroup.arity;
+            previous_arity = subgroup.arity();
         }
     }
 
@@ -134,7 +133,7 @@ impl GroupedComponents {
 
         for (i, subgroup) in subgroups.iter_mut().enumerate() {
             let status = get_group_status(
-                &mut sparse_sets[previous_arity..subgroup.arity],
+                &mut sparse_sets[previous_arity..subgroup.arity()],
                 subgroup.len,
                 entity,
             );
@@ -151,14 +150,14 @@ impl GroupedComponents {
                 GroupStatus::MissingComponents => break,
             }
 
-            previous_arity = subgroup.arity;
+            previous_arity = subgroup.arity();
         }
 
         let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
         for subgroup in (&mut subgroups[ungroup_range]).iter_mut().rev() {
             ungroup_components(
-                &mut sparse_sets[..subgroup.arity],
+                &mut sparse_sets[..subgroup.arity()],
                 &mut subgroup.len,
                 entity,
             );
@@ -176,10 +175,10 @@ impl GroupedComponents {
     pub fn get_subgroup_info(&self, type_id: &TypeId) -> Option<SubgroupInfo> {
         self.info.get(type_id).map(|info| unsafe {
             let subgroups = &self.groups.get_unchecked(info.group_index).subgroups;
+            let subgroup_index = info.subgroup_index;
+            let sparse_set_index = info.sparse_set_index;
 
-            let index = info.subgroup_index;
-
-            SubgroupInfo { subgroups, index }
+            SubgroupInfo::new(subgroups, subgroup_index, sparse_set_index)
         })
     }
 
@@ -215,38 +214,10 @@ impl GroupedComponents {
     }
 }
 
-#[derive(Copy, Clone)]
-pub struct SubgroupInfo<'a> {
-    subgroups: &'a [Subgroup],
-    index: usize,
-}
-
-impl<'a> SubgroupInfo<'a> {
-    pub fn has_same_group(&self, other: &SubgroupInfo) -> bool {
-        ptr::eq(self.subgroups, other.subgroups)
-    }
-
-    pub fn subgroup_len(&self) -> usize {
-        unsafe { self.subgroups.get_unchecked(self.index).len }
-    }
-}
-
 #[derive(Default)]
 struct Group {
     sparse_sets: Vec<AtomicRefCell<TypeErasedSparseSet>>,
     subgroups: Vec<Subgroup>,
-}
-
-#[derive(Copy, Clone)]
-struct Subgroup {
-    arity: usize,
-    len: usize,
-}
-
-impl Subgroup {
-    fn with_arity(arity: usize) -> Self {
-        Self { arity, len: 0 }
-    }
 }
 
 #[derive(Copy, Clone)]

@@ -26,7 +26,7 @@ fn check(a: Comp<u16>, b: Comp<u32>, c: Comp<u64>) {
         println!("{}, {}, {}", a, b, c);
     }
 
-    println!("\n");
+    println!();
 }
 
 fn main() {
