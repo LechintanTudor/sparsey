@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
 pub struct Entities {
-    entities: EntitySparseSet,
+    storage: EntitySparseSet,
     allocator: EntityAllocator,
 }
 
@@ -16,7 +16,7 @@ impl Entities {
             .allocate()
             .expect("No entities left to allocate");
 
-        self.entities.insert(entity);
+        self.storage.insert(entity);
         entity
     }
 
@@ -29,7 +29,7 @@ impl Entities {
     pub fn destroy(&mut self, entity: Entity) -> bool {
         self.maintain();
 
-        if self.entities.remove(entity) {
+        if self.storage.remove(entity) {
             self.allocator.deallocate(entity);
             true
         } else {
@@ -38,22 +38,28 @@ impl Entities {
     }
 
     pub fn clear(&mut self) {
-        self.entities.clear();
+        self.storage.clear();
         self.allocator.clear();
     }
 
     pub fn maintain(&mut self) {
         for entity in self.allocator.maintain() {
-            self.entities.insert(entity);
+            self.storage.insert(entity);
         }
     }
 
     pub fn contains(&self, entity: Entity) -> bool {
-        self.entities.contains(entity)
+        self.storage.contains(entity)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Entity> + '_ {
-        self.entities.dense.iter().copied()
+        self.storage.dense.iter().copied()
+    }
+}
+
+impl AsRef<[Entity]> for Entities {
+    fn as_ref(&self) -> &[Entity] {
+        &self.storage.dense
     }
 }
 

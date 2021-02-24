@@ -118,7 +118,7 @@ impl GroupedComponents {
         }
     }
 
-    pub unsafe fn ungroup_components(&mut self, group_index: usize, entity: Entity) {
+    pub fn ungroup_components(&mut self, group_index: usize, entity: Entity) {
         let (sparse_sets, subgroups) = {
             let group = &mut self.groups[group_index];
             (
@@ -156,11 +156,13 @@ impl GroupedComponents {
         let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
         for subgroup in (&mut subgroups[ungroup_range]).iter_mut().rev() {
-            ungroup_components(
-                &mut sparse_sets[..subgroup.arity()],
-                &mut subgroup.len,
-                entity,
-            );
+            unsafe {
+                ungroup_components(
+                    &mut sparse_sets[..subgroup.arity()],
+                    &mut subgroup.len,
+                    entity,
+                );
+            }
         }
     }
 
@@ -192,8 +194,8 @@ impl GroupedComponents {
         })
     }
 
-    pub unsafe fn borrow_mut(&self, type_id: &TypeId) -> Option<AtomicRefMut<TypeErasedSparseSet>> {
-        self.info.get(type_id).map(|info| {
+    pub fn borrow_mut(&self, type_id: &TypeId) -> Option<AtomicRefMut<TypeErasedSparseSet>> {
+        self.info.get(type_id).map(|info| unsafe {
             self.groups
                 .get_unchecked(info.group_index)
                 .sparse_sets
@@ -202,9 +204,7 @@ impl GroupedComponents {
         })
     }
 
-    pub unsafe fn iter_sparse_sets_mut(
-        &mut self,
-    ) -> impl Iterator<Item = &mut TypeErasedSparseSet> {
+    pub fn iter_sparse_sets_mut(&mut self) -> impl Iterator<Item = &mut TypeErasedSparseSet> {
         self.groups.iter_mut().flat_map(|group| {
             group
                 .sparse_sets

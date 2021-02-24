@@ -42,6 +42,13 @@ fn main() {
     world.create((1_u16, 3_u64));
     world.create((1_u16, 2_u32, 3_u64));
 
+    world.extend(vec![
+        (1_u16, 2_u32, 3_u64),
+        (1_u16, 2_u32, 3_u64),
+        (1_u16, 2_u32, 3_u64),
+        (1_u16, 2_u32, 3_u64),
+    ]);
+
     let mut dispatcher = Dispatcher::builder().add_system(check.system()).build();
 
     dispatcher.run_thread_local(&mut world, &mut resources);

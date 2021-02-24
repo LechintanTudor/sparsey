@@ -1,6 +1,6 @@
 use crate::data::{
-    Component, ComponentFlags, Entity, IndexEntity, SparseArray, SparseSetMutPtr, SparseSetRef,
-    SparseSetRefMut, TypeErasedVec,
+    Component, ComponentFlags, Entity, IndexEntity, SparseArray, SparseSetRef, SparseSetRefMut,
+    TypeErasedVec,
 };
 use std::any::TypeId;
 
@@ -118,20 +118,6 @@ impl TypeErasedSparseSet {
                 Box::as_mut(&mut self.data)
                     .downcast_mut::<Vec<T>>()
                     .unwrap(),
-            )
-        }
-    }
-
-    pub fn to_mut_ptr<T>(&mut self) -> SparseSetMutPtr<T>
-    where
-        T: Component,
-    {
-        unsafe {
-            SparseSetMutPtr::new(
-                &mut self.sparse,
-                &mut self.dense,
-                &mut self.flags,
-                Box::as_mut(&mut self.data).downcast_mut().unwrap(),
             )
         }
     }

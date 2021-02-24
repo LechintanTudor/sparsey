@@ -3,6 +3,7 @@ use crate::data::{
     SparseArray, SparseSetRef, SparseSetRefMut,
 };
 use crate::world::SubgroupInfo;
+use std::ops::{Deref, DerefMut};
 
 pub unsafe trait ComponentView<'a>
 where
@@ -152,5 +153,38 @@ where
             &mut *data.add(index),
             &mut *flags.add(index),
         ))
+    }
+}
+
+pub struct SparseSetRefMutBorrow<'a, T>(MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>)
+where
+    T: Component;
+
+impl<'a, T> SparseSetRefMutBorrow<'a, T>
+where
+    T: Component,
+{
+    pub(crate) fn new(sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>) -> Self {
+        Self(sparse_set)
+    }
+}
+
+impl<'a, T> Deref for SparseSetRefMutBorrow<'a, T>
+where
+    T: Component,
+{
+    type Target = SparseSetRefMut<'a, T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a, T> DerefMut for SparseSetRefMutBorrow<'a, T>
+where
+    T: Component,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
