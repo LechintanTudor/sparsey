@@ -1,3 +1,5 @@
+pub use self::impls::*;
+
 use crate::data::Entity;
 use crate::query::ComponentView;
 use paste::paste;
@@ -75,6 +77,23 @@ macro_rules! first_of {
     };
 }
 
-impl_dense_iter!(DenseIter2, A, B);
-impl_dense_iter!(DenseIter3, A, B, C);
-impl_dense_iter!(DenseIter4, A, B, C, D);
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_dense_iter!(DenseIter2,  A, B);
+    impl_dense_iter!(DenseIter3,  A, B, C);
+    impl_dense_iter!(DenseIter4,  A, B, C, D);
+    impl_dense_iter!(DenseIter5,  A, B, C, D, E);
+    impl_dense_iter!(DenseIter6,  A, B, C, D, E, F);
+    impl_dense_iter!(DenseIter7,  A, B, C, D, E, F, G);
+    impl_dense_iter!(DenseIter8,  A, B, C, D, E, F, G, H);
+    impl_dense_iter!(DenseIter9,  A, B, C, D, E, F, G, H, I);
+    impl_dense_iter!(DenseIter10, A, B, C, D, E, F, G, H, I, J);
+    impl_dense_iter!(DenseIter11, A, B, C, D, E, F, G, H, I, J, K);
+    impl_dense_iter!(DenseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+    impl_dense_iter!(DenseIter13, A, B, C, D, E, F, G, H, I, J, K, L, M);
+    impl_dense_iter!(DenseIter14, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+    impl_dense_iter!(DenseIter15, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+    impl_dense_iter!(DenseIter16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+}

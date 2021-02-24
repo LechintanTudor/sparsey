@@ -135,3 +135,7 @@ impl_into_system!(A, B, C, D, E, F, G, H, I);
 impl_into_system!(A, B, C, D, E, F, G, H, I, J);
 impl_into_system!(A, B, C, D, E, F, G, H, I, J, K);
 impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);

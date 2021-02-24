@@ -1,3 +1,5 @@
+pub use self::impls::*;
+
 use crate::data::{Component, Entity};
 use crate::query::SparseSetRefMutBorrow;
 use crate::world::Components;
@@ -97,7 +99,24 @@ macro_rules! impl_component_set {
     };
 }
 
-impl_component_set!(1, (A, 0));
-impl_component_set!(2, (A, 0), (B, 1));
-impl_component_set!(3, (A, 0), (B, 1), (C, 2));
-impl_component_set!(4, (A, 0), (B, 1), (C, 2), (D, 3));
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_component_set!(1,  (A, 0));
+    impl_component_set!(2,  (A, 0), (B, 1));
+    impl_component_set!(3,  (A, 0), (B, 1), (C, 2));
+    impl_component_set!(4,  (A, 0), (B, 1), (C, 2), (D, 3));
+    impl_component_set!(5,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_component_set!(6,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_component_set!(7,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_component_set!(8,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_component_set!(9,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_component_set!(10, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+    impl_component_set!(11, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+    impl_component_set!(12, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
+    impl_component_set!(13, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
+    impl_component_set!(14, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
+    impl_component_set!(15, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
+    impl_component_set!(16, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
+}

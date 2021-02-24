@@ -1,3 +1,5 @@
+pub use self::impls::*;
+
 use crate::data::{Entity, SparseArray};
 use crate::query::ComponentView;
 use paste::paste;
@@ -89,6 +91,23 @@ where
     (view.0, view.2, view.3)
 }
 
-impl_sparse_iter!(SparseIter2, A, B);
-impl_sparse_iter!(SparseIter3, A, B, C);
-impl_sparse_iter!(SparseIter4, A, B, C, D);
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_sparse_iter!(SparseIter2,  A, B);
+    impl_sparse_iter!(SparseIter3,  A, B, C);
+    impl_sparse_iter!(SparseIter4,  A, B, C, D);
+    impl_sparse_iter!(SparseIter5,  A, B, C, D, E);
+    impl_sparse_iter!(SparseIter6,  A, B, C, D, E, F);
+    impl_sparse_iter!(SparseIter7,  A, B, C, D, E, F, G);
+    impl_sparse_iter!(SparseIter8,  A, B, C, D, E, F, G, H);
+    impl_sparse_iter!(SparseIter9,  A, B, C, D, E, F, G, H, I);
+    impl_sparse_iter!(SparseIter10, A, B, C, D, E, F, G, H, I, J);
+    impl_sparse_iter!(SparseIter11, A, B, C, D, E, F, G, H, I, J, K);
+    impl_sparse_iter!(SparseIter12, A, B, C, D, E, F, G, H, I, J, K, L);
+    impl_sparse_iter!(SparseIter13, A, B, C, D, E, F, G, H, I, J, K, L, M);
+    impl_sparse_iter!(SparseIter14, A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+    impl_sparse_iter!(SparseIter15, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+    impl_sparse_iter!(SparseIter16, A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+}
