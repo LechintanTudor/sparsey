@@ -1,5 +1,6 @@
+use crate::data::Entity;
 use crate::resources::Resources;
-use crate::world::{Entities, World};
+use crate::world::{ComponentSet, Entities, World};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -69,21 +70,65 @@ impl CommandBuffers {
 
 pub struct Commands<'a> {
     buffer: &'a mut Vec<Command>,
-    _entities: &'a Entities,
+    entities: &'a Entities,
 }
 
 impl<'a> Commands<'a> {
     pub(crate) fn new(buffer: &'a mut Vec<Command>, entities: &'a Entities) -> Self {
-        Self {
-            buffer,
-            _entities: entities,
-        }
+        Self { buffer, entities }
     }
 
-    pub fn queue<F>(&mut self, command: F)
+    pub fn run<F>(&mut self, command: F)
     where
         F: FnOnce(&mut World, &mut Resources) + Send + 'static,
     {
         self.buffer.push(command.into());
+    }
+
+    pub fn create<C>(&mut self, components: C) -> Entity
+    where
+        C: ComponentSet,
+    {
+        let entity = self.entities.create_atomic();
+
+        self.run(move |world, _| {
+            let _ = world.append(entity, components);
+        });
+
+        entity
+    }
+
+    pub fn extend<C, I>(&mut self, components_iter: I)
+    where
+        C: ComponentSet,
+        I: IntoIterator<Item = C> + Send + 'static,
+    {
+        self.run(move |world, _| {
+            world.extend(components_iter);
+        });
+    }
+
+    pub fn destroy(&mut self, entity: Entity) {
+        self.run(move |world, _| {
+            world.destroy(entity);
+        });
+    }
+
+    pub fn append<C>(&mut self, entity: Entity, components: C)
+    where
+        C: ComponentSet,
+    {
+        self.run(move |world, _| {
+            let _ = world.append(entity, components);
+        });
+    }
+
+    pub fn delete<C>(&mut self, entity: Entity)
+    where
+        C: ComponentSet,
+    {
+        self.run(move |world, _| {
+            world.delete::<C>(entity);
+        });
     }
 }

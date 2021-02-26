@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 
 pub unsafe trait ComponentSet
 where
-    Self: Sized,
+    Self: Sized + Send + Sync + 'static,
 {
     type Components: AsRef<[TypeId]>;
     type Storages: for<'a> BorrowStorages<'a>;
