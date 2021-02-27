@@ -1,6 +1,6 @@
 use crate::data::{AtomicRef, AtomicRefMut, Component, Entity, TypeErasedSparseSet};
 use crate::query::{Comp, CompMut, SparseSetRefMutBorrow};
-use crate::world::{GroupedComponents, UngroupedComponents, WorldLayout};
+use crate::world::{GroupedComponents, Layout, UngroupedComponents};
 use std::any::TypeId;
 use std::collections::HashMap;
 
@@ -30,7 +30,7 @@ impl Components {
         }
     }
 
-    pub fn set_layout(&mut self, layout: &WorldLayout, entities: &[Entity]) {
+    pub fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
         let mut sparse_sets = HashMap::<TypeId, TypeErasedSparseSet>::new();
 
         for sparse_set in self.grouped.drain().chain(self.ungrouped.drain()) {

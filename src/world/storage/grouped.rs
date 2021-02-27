@@ -1,5 +1,5 @@
 use crate::data::{AtomicRef, AtomicRefCell, AtomicRefMut, Entity, TypeErasedSparseSet};
-use crate::world::{Subgroup, SubgroupInfo, WorldLayout};
+use crate::world::{Layout, Subgroup, SubgroupInfo};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
@@ -12,22 +12,22 @@ pub(crate) struct GroupedComponents {
 
 impl GroupedComponents {
     pub fn with_layout(
-        world_layout: &WorldLayout,
+        layout: &Layout,
         sparse_set_map: &mut HashMap<TypeId, TypeErasedSparseSet>,
     ) -> Self {
         let mut groups = Vec::<Group>::new();
         let mut info = HashMap::<TypeId, ComponentInfo>::new();
 
-        for group_layout in world_layout.group_layouts() {
+        for group_layout in layout.group_sets() {
             let mut sparse_sets = Vec::<AtomicRefCell<TypeErasedSparseSet>>::new();
             let mut subgroups = Vec::<Subgroup>::new();
 
             let components = group_layout.components();
             let mut previous_arity = 0_usize;
 
-            for (subgroup_index, &arity) in group_layout.subgroup_arities().iter().enumerate() {
+            for (subgroup_index, &arity) in group_layout.arities().iter().enumerate() {
                 for component in &components[previous_arity..arity] {
-                    let type_id = component.component_type_id();
+                    let type_id = component.type_id();
 
                     info.insert(
                         type_id,

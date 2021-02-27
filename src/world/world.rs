@@ -1,6 +1,6 @@
 use crate::data::{Component, Entity};
 use crate::query::{Comp, CompMut};
-use crate::world::{ComponentSet, Components, Entities, WorldLayout};
+use crate::world::{ComponentSet, Components, Entities, Layout};
 use std::any::TypeId;
 use std::collections::HashSet;
 
@@ -12,7 +12,13 @@ pub struct World {
 }
 
 impl World {
-    pub fn set_layout(&mut self, layout: &WorldLayout) {
+    pub fn with_layout(layout: &Layout) -> Self {
+        let mut world = Self::default();
+        world.set_layout(layout);
+        world
+    }
+
+    pub fn set_layout(&mut self, layout: &Layout) {
         self.entities.maintain();
         self.components.set_layout(&layout, self.entities.as_ref());
     }

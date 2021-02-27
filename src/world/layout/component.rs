@@ -2,10 +2,22 @@ use crate::data::{Component, TypeErasedSparseSet};
 use std::any;
 use std::any::TypeId;
 use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
+use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 pub struct LayoutComponent {
-    component: Box<dyn AbstractLayoutComponent>,
+    component: Box<dyn AbstractType>,
+}
+
+unsafe impl Send for LayoutComponent {}
+unsafe impl Sync for LayoutComponent {}
+
+impl Clone for LayoutComponent {
+    fn clone(&self) -> Self {
+        Self {
+            component: self.component.clone(),
+        }
+    }
 }
 
 impl LayoutComponent {
@@ -14,16 +26,16 @@ impl LayoutComponent {
         C: Component,
     {
         Self {
-            component: Box::new(GenericLayoutComponent::<C>::default()),
+            component: Box::new(Type::<C>(PhantomData)),
         }
     }
 
-    pub fn component_type_id(&self) -> TypeId {
-        self.component.component_type_id()
+    pub fn type_id(&self) -> TypeId {
+        self.component.type_id()
     }
 
-    pub fn component_type_name(&self) -> &'static str {
-        self.component.component_type_name()
+    pub fn type_name(&self) -> &'static str {
+        self.component.type_name()
     }
 
     pub fn create_sparse_set(&self) -> TypeErasedSparseSet {
@@ -33,7 +45,7 @@ impl LayoutComponent {
 
 impl PartialEq for LayoutComponent {
     fn eq(&self, other: &Self) -> bool {
-        self.component_type_id().eq(&other.component_type_id())
+        self.type_id().eq(&other.type_id())
     }
 }
 
@@ -41,60 +53,61 @@ impl Eq for LayoutComponent {}
 
 impl PartialOrd for LayoutComponent {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.component_type_id()
-            .partial_cmp(&other.component_type_id())
+        self.type_id().partial_cmp(&other.type_id())
     }
 }
 
 impl Ord for LayoutComponent {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.component_type_id().cmp(&other.component_type_id())
+        self.type_id().cmp(&other.type_id())
     }
 }
 
-unsafe trait AbstractLayoutComponent
-where
-    Self: Send + Sync + 'static,
-{
-    fn component_type_id(&self) -> TypeId;
-
-    fn component_type_name(&self) -> &'static str;
-
-    fn create_sparse_set(&self) -> TypeErasedSparseSet;
+impl Hash for LayoutComponent {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.type_id().hash(state);
+    }
 }
 
 #[derive(Copy, Clone)]
-struct GenericLayoutComponent<C> {
-    _phantom: PhantomData<*const C>,
-}
+struct Type<T>(PhantomData<*const T>);
 
-unsafe impl<C> Send for GenericLayoutComponent<C> {}
-unsafe impl<C> Sync for GenericLayoutComponent<C> {}
-
-impl<C> Default for GenericLayoutComponent<C>
-where
-    C: Component,
-{
+impl<T> Default for Type<T> {
     fn default() -> Self {
-        Self {
-            _phantom: PhantomData,
-        }
+        Self(PhantomData)
     }
 }
 
-unsafe impl<C> AbstractLayoutComponent for GenericLayoutComponent<C>
+unsafe trait AbstractType {
+    fn type_id(&self) -> TypeId;
+
+    fn type_name(&self) -> &'static str;
+
+    fn create_sparse_set(&self) -> TypeErasedSparseSet;
+
+    fn clone(&self) -> Box<dyn AbstractType>;
+}
+
+unsafe impl<T> AbstractType for Type<T>
 where
-    C: Component,
+    T: Component,
 {
-    fn component_type_id(&self) -> TypeId {
-        TypeId::of::<C>()
+    fn type_id(&self) -> TypeId {
+        TypeId::of::<T>()
     }
 
-    fn component_type_name(&self) -> &'static str {
-        any::type_name::<C>()
+    fn type_name(&self) -> &'static str {
+        any::type_name::<T>()
     }
 
     fn create_sparse_set(&self) -> TypeErasedSparseSet {
-        TypeErasedSparseSet::new::<C>()
+        TypeErasedSparseSet::new::<T>()
+    }
+
+    fn clone(&self) -> Box<dyn AbstractType> {
+        Box::new(Type::<T>::default())
     }
 }
