@@ -5,12 +5,12 @@ use ecstasy::world::*;
 use std::iter;
 
 fn check(a: Comp<u16>, b: Comp<u32>, c: Comp<u64>) {
-    for (a, b) in (&a, &b).iter() {
-        println!("{}, {}", a, b);
+    for (e, (a, b)) in (&a, &b).iter().entities() {
+        println!("{:?}, {}, {}", e, a, b);
     }
 
-    for (a, b, c) in (&a, &b, &c).iter() {
-        println!("{}, {}, {}", a, b, c);
+    for (e, (a, b, c)) in (&a, &b, &c).iter().entities() {
+        println!("{:?}, {}, {}, {}", e, a, b, c);
     }
 }
 

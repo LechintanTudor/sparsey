@@ -1,7 +1,7 @@
 pub use self::impls::*;
 
 use crate::data::{Entity, SparseArray};
-use crate::query::ComponentView;
+use crate::query::{ComponentView, EntityIterator};
 use paste::paste;
 
 macro_rules! impl_sparse_iter {
@@ -58,6 +58,15 @@ macro_rules! impl_sparse_iter {
                             return item;
                         }
                     }
+                }
+            }
+
+            impl<'a, $($comp),+> EntityIterator for $ident<'a, $($comp),+>
+            where
+                $($comp: ComponentView<'a>,)+
+            {
+                fn current_entity(&self) -> Option<Entity> {
+                    Some(*self.dense.get(self.index)?)
                 }
             }
         }

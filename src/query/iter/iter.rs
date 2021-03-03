@@ -1,5 +1,6 @@
 pub use self::impls::*;
 
+use crate::data::Entity;
 use crate::query::iter::*;
 use crate::query::ComponentView;
 use crate::world::get_subgroup_len;
@@ -54,6 +55,18 @@ macro_rules! impl_iter {
                     match self {
                         Self::Sparse(iter) => iter.next(),
                         Self::Dense(iter) => iter.next(),
+                    }
+                }
+            }
+
+            impl<'a, $($comp),+> EntityIterator for [<Iter $len>]<'a, $($comp),+>
+            where
+                $($comp: ComponentView<'a>,)+
+            {
+                fn current_entity(&self) -> Option<Entity> {
+                    match self {
+                        Self::Sparse(iter) => iter.current_entity(),
+                        Self::Dense(iter) => iter.current_entity(),
                     }
                 }
             }
