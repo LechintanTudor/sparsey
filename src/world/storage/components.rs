@@ -16,9 +16,9 @@ impl Components {
         self.ungrouped.clear();
     }
 
-    pub fn maintain(&mut self) {
+    pub fn clear_flags(&mut self) {
         self.iter_sparse_sets_mut()
-            .for_each(|sparse_set| sparse_set.maintain())
+            .for_each(|sparse_set| sparse_set.clear_flags())
     }
 
     pub fn register<T>(&mut self)

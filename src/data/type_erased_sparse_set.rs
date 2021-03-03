@@ -35,7 +35,7 @@ impl TypeErasedSparseSet {
         self.data.clear_components();
     }
 
-    pub fn maintain(&mut self) {
+    pub fn clear_flags(&mut self) {
         self.flags
             .iter_mut()
             .for_each(|flags| *flags = ComponentFlags::empty());

@@ -32,7 +32,16 @@ impl World {
 
     pub fn maintain(&mut self) {
         self.entities.maintain();
-        self.components.maintain();
+    }
+
+    pub fn finish_frame(&mut self) {
+        self.entities.maintain();
+        self.components.clear_flags();
+    }
+
+    pub fn clear(&mut self) {
+        self.entities.clear();
+        self.components.clear();
     }
 
     pub fn create<C>(&mut self, components: C) -> Entity
@@ -152,11 +161,6 @@ impl World {
             let mut storages = C::borrow_storages(&self.components);
             C::delete(&mut storages, entity);
         }
-    }
-
-    pub fn clear(&mut self) {
-        self.entities.clear();
-        self.components.clear();
     }
 
     pub fn entities(&self) -> &Entities {

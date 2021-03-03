@@ -92,6 +92,8 @@ impl Dispatcher {
                     }
                 }
                 Step::FlushCommands => {
+                    world.maintain();
+
                     for command in self.command_buffers.drain() {
                         command.run(world, resources);
                     }
