@@ -28,8 +28,8 @@ fn main() {
     world.register::<u32>();
     world.register::<u64>();
 
-    world.extend(iter::repeat((1_u16, 2_u32, 3_u64)).take(1000));
+    world.extend(iter::repeat((1_u16, 2_u32, 3_u64)).take(10));
 
     let mut dispatcher = Dispatcher::builder().add_system(check.system()).build();
-    dispatcher.run_thread_local(&mut world, &mut resources);
+    dispatcher.run_locally(&mut world, &mut resources);
 }

@@ -1,6 +1,5 @@
 use crate::dispatcher::{
-    CommandBuffers, Registry, RegistryAccess, Runnable, System, ThreadLocalRunnable,
-    ThreadLocalSystem,
+    CommandBuffers, Environment, LocalSystem, LocallyRunnable, System, SystemAccess,
 };
 use crate::resources::Resources;
 use crate::world::World;
@@ -10,13 +9,13 @@ use std::mem;
 
 enum SimpleStep {
     RunSystem(System),
-    RunThreadLocalSystem(ThreadLocalSystem),
+    RunLocalSystem(LocalSystem),
     FlushCommands,
 }
 
 enum Step {
     RunSystems(Vec<System>),
-    RunThreadLocalSystems(Vec<ThreadLocalSystem>),
+    RunLocalSystems(Vec<LocalSystem>),
     FlushCommands,
 }
 
@@ -31,13 +30,12 @@ impl DispatcherBuilder {
         self
     }
 
-    pub fn add_thread_local_system(&mut self, system: ThreadLocalSystem) -> &mut Self {
-        self.simple_steps
-            .push(SimpleStep::RunThreadLocalSystem(system));
+    pub fn add_local_system(&mut self, system: LocalSystem) -> &mut Self {
+        self.simple_steps.push(SimpleStep::RunLocalSystem(system));
         self
     }
 
-    pub fn add_flush_barrier(&mut self) -> &mut Self {
+    pub fn add_flush(&mut self) -> &mut Self {
         self.simple_steps.push(SimpleStep::FlushCommands);
         self
     }
@@ -68,13 +66,13 @@ impl Dispatcher {
         DispatcherBuilder::default()
     }
 
-    pub fn run_thread_local(&mut self, world: &mut World, resources: &mut Resources) {
+    pub fn run_locally(&mut self, world: &mut World, resources: &mut Resources) {
         for step in self.steps.iter_mut() {
             match step {
                 Step::RunSystems(systems) => {
                     for system in systems {
                         unsafe {
-                            system.run_thread_local(Registry::new(
+                            system.run(Environment::new(
                                 world,
                                 resources.internal(),
                                 &self.command_buffers,
@@ -82,10 +80,10 @@ impl Dispatcher {
                         }
                     }
                 }
-                Step::RunThreadLocalSystems(systems) => {
+                Step::RunLocalSystems(systems) => {
                     for system in systems {
                         unsafe {
-                            system.run_thread_local(Registry::new(
+                            system.run(Environment::new(
                                 world,
                                 resources.internal(),
                                 &self.command_buffers,
@@ -113,21 +111,21 @@ impl Dispatcher {
                     if systems.len() > 1 {
                         thread_pool.install(|| {
                             systems.par_iter_mut().for_each(|system| unsafe {
-                                system.run(Registry::new(world, resources, command_buffers));
+                                system.run(Environment::new(world, resources, command_buffers));
                             });
                         });
                     } else {
                         if let Some(system) = systems.iter_mut().next() {
                             unsafe {
-                                system.run(Registry::new(world, resources, command_buffers));
+                                system.run(Environment::new(world, resources, command_buffers));
                             }
                         }
                     }
                 }
-                Step::RunThreadLocalSystems(systems) => {
+                Step::RunLocalSystems(systems) => {
                     for system in systems {
                         unsafe {
-                            system.run_thread_local(Registry::new(
+                            system.run(Environment::new(
                                 world,
                                 resources.internal(),
                                 &self.command_buffers,
@@ -152,7 +150,7 @@ impl Dispatcher {
                 Step::RunSystems(systems) => {
                     max_parallel_systems = max_parallel_systems.max(systems.len());
                 }
-                Step::RunThreadLocalSystems(_) => {
+                Step::RunLocalSystems(_) => {
                     max_parallel_systems = max_parallel_systems.max(1);
                 }
                 _ => (),
@@ -172,17 +170,17 @@ fn required_command_buffers(steps: &[Step]) -> usize {
             Step::RunSystems(systems) => {
                 let step_buffer_count: usize = systems
                     .iter()
-                    .flat_map(|system| system.registry_access())
-                    .map(|access| matches!(access, RegistryAccess::Commands) as usize)
+                    .flat_map(|system| system.access())
+                    .map(|access| matches!(access, SystemAccess::Commands) as usize)
                     .sum();
 
                 buffer_count += step_buffer_count;
             }
-            Step::RunThreadLocalSystems(systems) => {
+            Step::RunLocalSystems(systems) => {
                 let step_buffer_count: usize = systems
                     .iter()
-                    .flat_map(|system| system.registry_access())
-                    .map(|access| matches!(access, RegistryAccess::Commands) as usize)
+                    .flat_map(|system| system.access())
+                    .map(|access| matches!(access, SystemAccess::Commands) as usize)
                     .sum();
 
                 buffer_count += step_buffer_count;
@@ -206,15 +204,16 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
         match simple_step {
             SimpleStep::RunSystem(system) => match steps.last_mut() {
                 Some(Step::RunSystems(systems)) => {
-                    let systems_conflict = systems
-                        .iter()
-                        .flat_map(|system| system.registry_access())
-                        .any(|access1| {
-                            system
-                                .registry_access()
-                                .iter()
-                                .any(|access2| access1.conflicts(access2))
-                        });
+                    let systems_conflict =
+                        systems
+                            .iter()
+                            .flat_map(|system| system.access())
+                            .any(|access1| {
+                                system
+                                    .access()
+                                    .iter()
+                                    .any(|access2| access1.conflicts(access2))
+                            });
 
                     if systems_conflict {
                         steps.push(Step::RunSystems(vec![system]));
@@ -226,11 +225,11 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
                     steps.push(Step::RunSystems(vec![system]));
                 }
             },
-            SimpleStep::RunThreadLocalSystem(system) => match steps.last_mut() {
-                Some(Step::RunThreadLocalSystems(thread_local_systems)) => {
+            SimpleStep::RunLocalSystem(system) => match steps.last_mut() {
+                Some(Step::RunLocalSystems(thread_local_systems)) => {
                     thread_local_systems.push(system);
                 }
-                _ => steps.push(Step::RunThreadLocalSystems(vec![system])),
+                _ => steps.push(Step::RunLocalSystems(vec![system])),
             },
             SimpleStep::FlushCommands => match steps.last() {
                 Some(Step::FlushCommands) | None => (),

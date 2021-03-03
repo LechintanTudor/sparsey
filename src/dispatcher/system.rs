@@ -1,66 +1,54 @@
 use crate::dispatcher::{
-    BorrowRegistry, Registry, RegistryAccess, SystemParameter, ThreadLocalSystemParameter,
+    BorrowEnvironment, Environment, LocalSystemParam, SystemAccess, SystemParam,
 };
 
-pub trait ThreadLocalRunnable
-where
-    Self: 'static,
-{
-    fn registry_access(&self) -> &[RegistryAccess];
+pub trait LocallyRunnable {
+    fn access(&self) -> &[SystemAccess];
 
-    fn run_thread_local(&mut self, registry: Registry);
+    unsafe fn run(&mut self, environment: Environment);
 }
 
-pub trait Runnable
-where
-    Self: ThreadLocalRunnable + Send,
-{
-    unsafe fn run(&mut self, registry: Registry);
+pub unsafe trait Runnable {}
+
+pub struct LocalSystem {
+    runnable: Box<dyn FnMut(Environment) + 'static>,
+    accesses: Vec<SystemAccess>,
 }
 
-pub struct ThreadLocalSystem {
-    runnable: Box<dyn FnMut(Registry) + 'static>,
-    accesses: Vec<RegistryAccess>,
-}
-
-impl ThreadLocalRunnable for ThreadLocalSystem {
-    fn registry_access(&self) -> &[RegistryAccess] {
+impl LocallyRunnable for LocalSystem {
+    fn access(&self) -> &[SystemAccess] {
         &self.accesses
     }
 
-    fn run_thread_local(&mut self, registry: Registry) {
-        (self.runnable)(registry);
+    unsafe fn run(&mut self, environment: Environment) {
+        (self.runnable)(environment);
     }
 }
 
-pub trait IntoThreadLocalSystem<Params> {
-    fn thread_local_system(self) -> ThreadLocalSystem;
+pub trait IntoLocalSystem<Params> {
+    fn local_system(self) -> LocalSystem;
 }
 
 pub struct System {
-    runnable: Box<dyn FnMut(Registry) + Send + 'static>,
-    accesses: Vec<RegistryAccess>,
+    runnable: Box<dyn FnMut(Environment) + Send + 'static>,
+    accesses: Vec<SystemAccess>,
 }
 
-impl ThreadLocalRunnable for System {
-    fn registry_access(&self) -> &[RegistryAccess] {
+impl LocallyRunnable for System {
+    fn access(&self) -> &[SystemAccess] {
         &self.accesses
     }
 
-    fn run_thread_local(&mut self, registry: Registry) {
-        (self.runnable)(registry);
+    unsafe fn run(&mut self, environment: Environment) {
+        (self.runnable)(environment);
     }
 }
 
-impl Runnable for System {
-    unsafe fn run(&mut self, registry: Registry) {
-        (self.runnable)(registry);
-    }
-}
+unsafe impl Runnable for System {}
 
-impl IntoThreadLocalSystem<()> for System {
-    fn thread_local_system(self) -> ThreadLocalSystem {
-        ThreadLocalSystem {
+impl IntoLocalSystem<()> for System {
+    fn local_system(self) -> LocalSystem {
+        LocalSystem {
             runnable: self.runnable,
             accesses: self.accesses,
         }
@@ -69,30 +57,30 @@ impl IntoThreadLocalSystem<()> for System {
 
 pub trait IntoSystem<Params>
 where
-    Self: IntoThreadLocalSystem<Params>,
+    Self: IntoLocalSystem<Params>,
 {
     fn system(self) -> System;
 }
 
 macro_rules! impl_into_system {
     ($($param:ident),*) => {
-        impl<Func, $($param),*> IntoThreadLocalSystem<($($param,)*)> for Func
+        impl<Func, $($param),*> IntoLocalSystem<($($param,)*)> for Func
         where
             Func:
                 FnMut($($param),*) +
-                FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) +
+                FnMut($(<$param::Borrow as BorrowEnvironment>::Item),*) +
                 'static,
-            $($param: ThreadLocalSystemParameter,)*
+            $($param: LocalSystemParam,)*
         {
             #[allow(unused_unsafe)]
             #[allow(unused_variables)]
-            fn thread_local_system(mut self) -> ThreadLocalSystem {
-                ThreadLocalSystem {
-                    runnable: Box::new(move |registry| unsafe {
-                        self($(<$param::Borrow as BorrowRegistry>::borrow_registry(&registry)),*)
+            fn local_system(mut self) -> LocalSystem {
+                LocalSystem {
+                    runnable: Box::new(move |environment| unsafe {
+                        self($(<$param::Borrow as BorrowEnvironment>::borrow(&environment)),*)
                     }),
                     accesses: vec![
-                        $(<$param::Borrow as BorrowRegistry>::registry_access()),*
+                        $(<$param::Borrow as BorrowEnvironment>::access()),*
                     ],
                 }
             }
@@ -102,19 +90,19 @@ macro_rules! impl_into_system {
         where
             Func:
                 FnMut($($param),*) +
-                FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) +
+                FnMut($(<$param::Borrow as BorrowEnvironment>::Item),*) +
                 Send + 'static,
-            $($param: SystemParameter,)*
+            $($param: SystemParam,)*
         {
             #[allow(unused_unsafe)]
             #[allow(unused_variables)]
             fn system(mut self) -> System {
                 System {
-                    runnable: Box::new(move |registry| unsafe {
-                        self($(<$param::Borrow as BorrowRegistry>::borrow_registry(&registry)),*)
+                    runnable: Box::new(move |environment| unsafe {
+                        self($(<$param::Borrow as BorrowEnvironment>::borrow(&environment)),*)
                     }),
                     accesses: vec![
-                        $(<$param::Borrow as BorrowRegistry>::registry_access()),*
+                        $(<$param::Borrow as BorrowEnvironment>::access()),*
                     ],
                 }
             }

@@ -1,58 +1,58 @@
 use crate::data::Component;
 use crate::dispatcher::{
-    BorrowCommands, BorrowComp, BorrowCompMut, BorrowRegistry, BorrowRes, BorrowResMut, Commands,
+    BorrowCommands, BorrowComp, BorrowCompMut, BorrowEnvironment, BorrowRes, BorrowResMut, Commands,
 };
 use crate::query::{Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource};
 
-pub trait ThreadLocalSystemParameter {
-    type Borrow: for<'a> BorrowRegistry<'a>;
+pub trait LocalSystemParam {
+    type Borrow: for<'a> BorrowEnvironment<'a>;
 }
 
-pub unsafe trait SystemParameter
+pub unsafe trait SystemParam
 where
-    Self: ThreadLocalSystemParameter,
+    Self: LocalSystemParam,
 {
 }
 
-impl<'a, T> ThreadLocalSystemParameter for Comp<'a, T>
+impl<'a, T> LocalSystemParam for Comp<'a, T>
 where
     T: Component,
 {
     type Borrow = BorrowComp<T>;
 }
 
-unsafe impl<'a, T> SystemParameter for Comp<'a, T> where T: Component {}
+unsafe impl<'a, T> SystemParam for Comp<'a, T> where T: Component {}
 
-impl<'a, T> ThreadLocalSystemParameter for CompMut<'a, T>
+impl<'a, T> LocalSystemParam for CompMut<'a, T>
 where
     T: Component,
 {
     type Borrow = BorrowCompMut<T>;
 }
 
-unsafe impl<'a, T> SystemParameter for CompMut<'a, T> where T: Component {}
+unsafe impl<'a, T> SystemParam for CompMut<'a, T> where T: Component {}
 
-impl<'a, T> ThreadLocalSystemParameter for Res<'a, T>
+impl<'a, T> LocalSystemParam for Res<'a, T>
 where
     T: Resource,
 {
     type Borrow = BorrowRes<T>;
 }
 
-unsafe impl<'a, T> SystemParameter for Res<'a, T> where T: Resource + Sync {}
+unsafe impl<'a, T> SystemParam for Res<'a, T> where T: Resource + Sync {}
 
-impl<'a, T> ThreadLocalSystemParameter for ResMut<'a, T>
+impl<'a, T> LocalSystemParam for ResMut<'a, T>
 where
     T: Resource + Send,
 {
     type Borrow = BorrowResMut<T>;
 }
 
-unsafe impl<'a, T> SystemParameter for ResMut<'a, T> where T: Resource + Send {}
+unsafe impl<'a, T> SystemParam for ResMut<'a, T> where T: Resource + Send {}
 
-impl<'a> ThreadLocalSystemParameter for Commands<'a> {
+impl<'a> LocalSystemParam for Commands<'a> {
     type Borrow = BorrowCommands;
 }
 
-unsafe impl<'a> SystemParameter for Commands<'a> {}
+unsafe impl<'a> SystemParam for Commands<'a> {}

@@ -6,7 +6,7 @@ use crate::world::{LayoutComponent, World};
 use std::any::TypeId;
 use std::marker::PhantomData;
 
-pub enum RegistryAccess {
+pub enum SystemAccess {
     Commands,
     Comp(LayoutComponent),
     CompMut(LayoutComponent),
@@ -14,8 +14,8 @@ pub enum RegistryAccess {
     ResMut(TypeId),
 }
 
-impl RegistryAccess {
-    pub fn conflicts(&self, other: &RegistryAccess) -> bool {
+impl SystemAccess {
+    pub fn conflicts(&self, other: &SystemAccess) -> bool {
         match (self, other) {
             (Self::Comp(comp1), Self::CompMut(comp2)) => comp1 == comp2,
             (Self::CompMut(comp1), Self::Comp(comp2)) => comp1 == comp2,
@@ -28,13 +28,13 @@ impl RegistryAccess {
     }
 }
 
-pub struct Registry<'a> {
+pub struct Environment<'a> {
     world: &'a World,
     resources: &'a UnsafeResources,
     command_buffers: &'a CommandBuffers,
 }
 
-impl<'a> Registry<'a> {
+impl<'a> Environment<'a> {
     pub fn new(
         world: &'a World,
         resources: &'a UnsafeResources,
@@ -48,95 +48,95 @@ impl<'a> Registry<'a> {
     }
 }
 
-pub trait BorrowRegistry<'a> {
+pub unsafe trait BorrowEnvironment<'a> {
     type Item;
 
-    fn registry_access() -> RegistryAccess;
+    fn access() -> SystemAccess;
 
-    unsafe fn borrow_registry(registry: &'a Registry) -> Self::Item;
+    unsafe fn borrow(environment: &'a Environment) -> Self::Item;
 }
 
 pub struct BorrowComp<T>(PhantomData<*const T>);
 
-impl<'a, T> BorrowRegistry<'a> for BorrowComp<T>
+unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowComp<T>
 where
     T: Component,
 {
     type Item = Comp<'a, T>;
 
-    fn registry_access() -> RegistryAccess {
-        RegistryAccess::Comp(LayoutComponent::new::<T>())
+    fn access() -> SystemAccess {
+        SystemAccess::Comp(LayoutComponent::new::<T>())
     }
 
-    unsafe fn borrow_registry(registry: &'a Registry) -> Self::Item {
-        registry.world.borrow_comp::<T>().unwrap()
+    unsafe fn borrow(environment: &'a Environment) -> Self::Item {
+        environment.world.borrow_comp::<T>().unwrap()
     }
 }
 
 pub struct BorrowCompMut<T>(PhantomData<*const T>);
 
-impl<'a, T> BorrowRegistry<'a> for BorrowCompMut<T>
+unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowCompMut<T>
 where
     T: Component,
 {
     type Item = CompMut<'a, T>;
 
-    fn registry_access() -> RegistryAccess {
-        RegistryAccess::CompMut(LayoutComponent::new::<T>())
+    fn access() -> SystemAccess {
+        SystemAccess::CompMut(LayoutComponent::new::<T>())
     }
 
-    unsafe fn borrow_registry(registry: &'a Registry) -> Self::Item {
-        registry.world.borrow_comp_mut::<T>().unwrap()
+    unsafe fn borrow(environment: &'a Environment) -> Self::Item {
+        environment.world.borrow_comp_mut::<T>().unwrap()
     }
 }
 
 pub struct BorrowRes<T>(PhantomData<*const T>);
 
-impl<'a, T> BorrowRegistry<'a> for BorrowRes<T>
+unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowRes<T>
 where
     T: Resource,
 {
     type Item = Res<'a, T>;
 
-    fn registry_access() -> RegistryAccess {
-        RegistryAccess::Res(TypeId::of::<T>())
+    fn access() -> SystemAccess {
+        SystemAccess::Res(TypeId::of::<T>())
     }
 
-    unsafe fn borrow_registry(registry: &'a Registry) -> Self::Item {
-        registry.resources.borrow::<T>().unwrap()
+    unsafe fn borrow(environment: &'a Environment) -> Self::Item {
+        environment.resources.borrow::<T>().unwrap()
     }
 }
 
 pub struct BorrowResMut<T>(PhantomData<*const T>);
 
-impl<'a, T> BorrowRegistry<'a> for BorrowResMut<T>
+unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowResMut<T>
 where
     T: Resource,
 {
     type Item = ResMut<'a, T>;
 
-    fn registry_access() -> RegistryAccess {
-        RegistryAccess::ResMut(TypeId::of::<T>())
+    fn access() -> SystemAccess {
+        SystemAccess::ResMut(TypeId::of::<T>())
     }
 
-    unsafe fn borrow_registry(registry: &'a Registry) -> Self::Item {
-        registry.resources.borrow_mut::<T>().unwrap()
+    unsafe fn borrow(environment: &'a Environment) -> Self::Item {
+        environment.resources.borrow_mut::<T>().unwrap()
     }
 }
 
 pub struct BorrowCommands(PhantomData<*const ()>);
 
-impl<'a> BorrowRegistry<'a> for BorrowCommands {
+unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
     type Item = Commands<'a>;
 
-    fn registry_access() -> RegistryAccess {
-        RegistryAccess::Commands
+    fn access() -> SystemAccess {
+        SystemAccess::Commands
     }
 
-    unsafe fn borrow_registry(registry: &'a Registry) -> Self::Item {
+    unsafe fn borrow(environment: &'a Environment) -> Self::Item {
         Commands::new(
-            registry.command_buffers.next().unwrap(),
-            registry.world.entities(),
+            environment.command_buffers.next().unwrap(),
+            environment.world.entities(),
         )
     }
 }
