@@ -29,18 +29,12 @@ where
     unsafe fn get_item(flags: Self::Flags, data: Self::Data, index: usize) -> Option<Self::Item>;
 }
 
-pub struct Comp<'a, T>
-where
-    T: Component,
-{
+pub struct Comp<'a, T> {
     sparse_set: MappedAtomicRef<'a, SparseSetRef<'a, T>>,
     subgroup_info: Option<SubgroupInfo<'a>>,
 }
 
-impl<'a, T> Comp<'a, T>
-where
-    T: Component,
-{
+impl<'a, T> Comp<'a, T> {
     pub(crate) unsafe fn new(
         sparse_set: MappedAtomicRef<'a, SparseSetRef<'a, T>>,
         subgroup_info: Option<SubgroupInfo<'a>>,
@@ -50,12 +44,27 @@ where
             subgroup_info,
         }
     }
+
+    pub fn entities(&self) -> &[Entity] {
+        self.sparse_set.entities()
+    }
 }
 
-unsafe impl<'a, T> ComponentView<'a> for &'a Comp<'a, T>
-where
-    T: Component,
-{
+impl<T> AsRef<[T]> for Comp<'_, T> {
+    fn as_ref(&self) -> &[T] {
+        self.sparse_set.as_ref()
+    }
+}
+
+impl<T> Deref for Comp<'_, T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.sparse_set.as_ref()
+    }
+}
+
+unsafe impl<'a, T> ComponentView<'a> for &'a Comp<'a, T> {
     type Flags = *const ComponentFlags;
     type Data = *const T;
     type Item = &'a T;
@@ -78,18 +87,12 @@ where
     }
 }
 
-pub struct CompMut<'a, T>
-where
-    T: Component,
-{
+pub struct CompMut<'a, T> {
     sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>,
     subgroup_info: Option<SubgroupInfo<'a>>,
 }
 
-impl<'a, T> CompMut<'a, T>
-where
-    T: Component,
-{
+impl<'a, T> CompMut<'a, T> {
     pub(crate) unsafe fn new(
         sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>,
         subgroup_info: Option<SubgroupInfo<'a>>,
@@ -98,6 +101,36 @@ where
             sparse_set,
             subgroup_info,
         }
+    }
+
+    pub fn entities(&self) -> &[Entity] {
+        self.sparse_set.entities()
+    }
+}
+
+impl<T> AsRef<[T]> for CompMut<'_, T> {
+    fn as_ref(&self) -> &[T] {
+        self.sparse_set.as_ref()
+    }
+}
+
+impl<T> AsMut<[T]> for CompMut<'_, T> {
+    fn as_mut(&mut self) -> &mut [T] {
+        self.sparse_set.as_mut()
+    }
+}
+
+impl<T> Deref for CompMut<'_, T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.sparse_set.as_ref()
+    }
+}
+
+impl<T> DerefMut for CompMut<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.sparse_set.as_mut()
     }
 }
 

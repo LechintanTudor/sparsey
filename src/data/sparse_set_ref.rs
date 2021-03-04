@@ -1,20 +1,15 @@
-use crate::data::{Component, ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseArray};
+use crate::data::{ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseArray};
+use std::ops::{Deref, DerefMut};
 
-pub struct SparseSetRef<'a, T>
-where
-    T: Component,
-{
+pub struct SparseSetRef<'a, T> {
     sparse: &'a SparseArray,
     dense: &'a [Entity],
     flags: &'a [ComponentFlags],
     data: &'a [T],
 }
 
-impl<'a, T> SparseSetRef<'a, T>
-where
-    T: Component,
-{
-    pub unsafe fn new(
+impl<'a, T> SparseSetRef<'a, T> {
+    pub(crate) unsafe fn new(
         sparse: &'a SparseArray,
         dense: &'a [Entity],
         flags: &'a [ComponentFlags],
@@ -28,30 +23,42 @@ where
         }
     }
 
-    pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
-        (self.sparse, self.dense, self.flags, self.data)
-    }
-
     pub fn get(&self, entity: Entity) -> Option<&T> {
         let index = self.sparse.get_index_entity(entity)?.index();
         unsafe { Some(self.data.get_unchecked(index)) }
     }
+
+    pub fn entities(&self) -> &[Entity] {
+        self.dense
+    }
+
+    pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
+        (self.sparse, self.dense, self.flags, self.data)
+    }
 }
 
-pub struct SparseSetRefMut<'a, T>
-where
-    T: Component,
-{
+impl<T> AsRef<[T]> for SparseSetRef<'_, T> {
+    fn as_ref(&self) -> &[T] {
+        self.data
+    }
+}
+
+impl<T> Deref for SparseSetRef<'_, T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.data
+    }
+}
+
+pub struct SparseSetRefMut<'a, T> {
     sparse: &'a mut SparseArray,
     dense: &'a mut Vec<Entity>,
     flags: &'a mut Vec<ComponentFlags>,
     data: &'a mut Vec<T>,
 }
 
-impl<'a, T> SparseSetRefMut<'a, T>
-where
-    T: Component,
-{
+impl<'a, T> SparseSetRefMut<'a, T> {
     pub unsafe fn new(
         sparse: &'a mut SparseArray,
         dense: &'a mut Vec<Entity>,
@@ -119,6 +126,10 @@ where
         }
     }
 
+    pub fn entities(&self) -> &[Entity] {
+        self.dense
+    }
+
     pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
         (
             self.sparse,
@@ -135,5 +146,31 @@ where
             self.flags.as_mut_slice(),
             self.data.as_mut_slice(),
         )
+    }
+}
+
+impl<T> AsRef<[T]> for SparseSetRefMut<'_, T> {
+    fn as_ref(&self) -> &[T] {
+        self.data
+    }
+}
+
+impl<T> AsMut<[T]> for SparseSetRefMut<'_, T> {
+    fn as_mut(&mut self) -> &mut [T] {
+        self.data
+    }
+}
+
+impl<T> Deref for SparseSetRefMut<'_, T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        self.data
+    }
+}
+
+impl<T> DerefMut for SparseSetRefMut<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.data
     }
 }
