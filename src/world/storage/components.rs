@@ -30,6 +30,12 @@ impl Components {
         }
     }
 
+    pub fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
+        if !self.grouped.contains(&sparse_set.component_type_id()) {
+            self.ungrouped.register_storage(sparse_set);
+        }
+    }
+
     pub fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
         let mut sparse_sets = HashMap::<TypeId, TypeErasedSparseSet>::new();
 

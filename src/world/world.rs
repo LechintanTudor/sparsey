@@ -1,4 +1,4 @@
-use crate::data::{Component, Entity};
+use crate::data::{Component, Entity, TypeErasedSparseSet};
 use crate::query::{Comp, CompMut};
 use crate::world::{ComponentSet, Components, Entities, Layout};
 use std::any::TypeId;
@@ -28,6 +28,10 @@ impl World {
         T: Component,
     {
         self.components.register::<T>()
+    }
+
+    pub fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
+        self.components.register_storage(sparse_set);
     }
 
     pub fn maintain(&mut self) {

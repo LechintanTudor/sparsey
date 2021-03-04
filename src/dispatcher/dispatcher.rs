@@ -66,6 +66,40 @@ impl Dispatcher {
         DispatcherBuilder::default()
     }
 
+    pub fn set_up(&self, world: &mut World) {
+        for step in self.steps.iter() {
+            match step {
+                Step::RunSystems(systems) => {
+                    for access in systems.iter().flat_map(|s| s.accesses()) {
+                        match access {
+                            SystemAccess::Comp(comp) => {
+                                world.register_storage(comp.create_sparse_set())
+                            }
+                            SystemAccess::CompMut(comp) => {
+                                world.register_storage(comp.create_sparse_set())
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                Step::RunLocalSystems(systems) => {
+                    for access in systems.iter().flat_map(|s| s.accesses()) {
+                        match access {
+                            SystemAccess::Comp(comp) => {
+                                world.register_storage(comp.create_sparse_set())
+                            }
+                            SystemAccess::CompMut(comp) => {
+                                world.register_storage(comp.create_sparse_set())
+                            }
+                            _ => (),
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+    }
+
     pub fn run_locally(&mut self, world: &mut World, resources: &mut Resources) {
         for step in self.steps.iter_mut() {
             match step {
@@ -172,7 +206,7 @@ fn required_command_buffers(steps: &[Step]) -> usize {
             Step::RunSystems(systems) => {
                 let step_buffer_count: usize = systems
                     .iter()
-                    .flat_map(|system| system.access())
+                    .flat_map(|system| system.accesses())
                     .map(|access| matches!(access, SystemAccess::Commands) as usize)
                     .sum();
 
@@ -181,7 +215,7 @@ fn required_command_buffers(steps: &[Step]) -> usize {
             Step::RunLocalSystems(systems) => {
                 let step_buffer_count: usize = systems
                     .iter()
-                    .flat_map(|system| system.access())
+                    .flat_map(|system| system.accesses())
                     .map(|access| matches!(access, SystemAccess::Commands) as usize)
                     .sum();
 
@@ -209,10 +243,10 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
                     let systems_conflict =
                         systems
                             .iter()
-                            .flat_map(|system| system.access())
+                            .flat_map(|system| system.accesses())
                             .any(|access1| {
                                 system
-                                    .access()
+                                    .accesses()
                                     .iter()
                                     .any(|access2| access1.conflicts(access2))
                             });

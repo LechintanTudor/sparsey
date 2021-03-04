@@ -3,7 +3,7 @@ use crate::dispatcher::{
 };
 
 pub trait LocallyRunnable {
-    fn access(&self) -> &[SystemAccess];
+    fn accesses(&self) -> &[SystemAccess];
 
     unsafe fn run(&mut self, environment: Environment);
 }
@@ -16,7 +16,7 @@ pub struct LocalSystem {
 }
 
 impl LocallyRunnable for LocalSystem {
-    fn access(&self) -> &[SystemAccess] {
+    fn accesses(&self) -> &[SystemAccess] {
         &self.accesses
     }
 
@@ -35,7 +35,7 @@ pub struct System {
 }
 
 impl LocallyRunnable for System {
-    fn access(&self) -> &[SystemAccess] {
+    fn accesses(&self) -> &[SystemAccess] {
         &self.accesses
     }
 
