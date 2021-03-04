@@ -4,15 +4,15 @@ use ecstasy::resources::*;
 use ecstasy::world::*;
 use std::iter;
 
-fn check(a: Comp<u16>, b: Comp<u32>, c: Comp<u64>) {
+fn check(mut a: CompMut<u16>, b: Comp<u32>, c: Comp<u64>) {
     for (e, (a, b)) in (&a, &b).iter().entities() {
         println!("{:?} => {}, {}", e, a, b);
     }
 
     println!();
 
-    for (e, (a,)) in (&a,).iter().entities() {
-        println!("{:?} => {}", e, a);
+    for (e, a) in a.iter_mut().entities() {
+        println!("{:?} => {}", e, *a);
     }
 
     println!();

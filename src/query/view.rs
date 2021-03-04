@@ -2,6 +2,7 @@ use crate::data::{
     Component, ComponentFlags, ComponentRefMut, Entity, MappedAtomicRef, MappedAtomicRefMut,
     SparseArray, SparseSetRef, SparseSetRefMut,
 };
+use crate::query::SimpleIter1;
 use crate::world::SubgroupInfo;
 use std::ops::{Deref, DerefMut};
 
@@ -43,6 +44,13 @@ impl<'a, T> Comp<'a, T> {
             sparse_set,
             subgroup_info,
         }
+    }
+
+    pub fn iter(&'a self) -> SimpleIter1<'a, &'a Self>
+    where
+        T: Component,
+    {
+        SimpleIter1::new(self)
     }
 
     pub fn entities(&self) -> &[Entity] {
@@ -101,6 +109,20 @@ impl<'a, T> CompMut<'a, T> {
             sparse_set,
             subgroup_info,
         }
+    }
+
+    pub fn iter(&'a self) -> SimpleIter1<'a, &'a Self>
+    where
+        T: Component,
+    {
+        SimpleIter1::new(self)
+    }
+
+    pub fn iter_mut(&mut self) -> SimpleIter1<&mut Self>
+    where
+        T: Component,
+    {
+        SimpleIter1::new(self)
     }
 
     pub fn entities(&self) -> &[Entity] {

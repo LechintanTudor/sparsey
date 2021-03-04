@@ -5,7 +5,7 @@ use crate::query::iter::*;
 use crate::query::ComponentView;
 use crate::world::get_subgroup_len;
 
-pub unsafe trait Query<'a> {
+pub trait Query<'a> {
     type Item: 'a;
     type Iterator: Iterator<Item = Self::Item> + 'a;
 
@@ -18,7 +18,7 @@ pub unsafe trait Query<'a> {
 
 macro_rules! impl_query {
     ($iter:ident, $(($comp:ident, $idx:tt)),+) => {
-        unsafe impl<'a, $($comp),+> Query<'a> for ($($comp,)+)
+        impl<'a, $($comp),+> Query<'a> for ($($comp,)+)
         where
             $($comp: ComponentView<'a> + 'a,)+
         {
