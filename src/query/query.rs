@@ -51,6 +51,7 @@ macro_rules! impl_query {
 mod impls {
     use super::*;
 
+    impl_query!(Iter1,  (A, 0));
     impl_query!(Iter2,  (A, 0), (B, 1));
     impl_query!(Iter3,  (A, 0), (B, 1), (C, 2));
     impl_query!(Iter4,  (A, 0), (B, 1), (C, 2), (D, 3));

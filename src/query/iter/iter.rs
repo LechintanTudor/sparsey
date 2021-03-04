@@ -74,6 +74,69 @@ macro_rules! impl_iter {
     }
 }
 
+pub struct Iter1<'a, A>
+where
+    A: ComponentView<'a>,
+{
+    dense: &'a [Entity],
+    index: usize,
+    flags: A::Flags,
+    data: A::Data,
+}
+
+impl<'a, A> Iter1<'a, A>
+where
+    A: ComponentView<'a>,
+{
+    pub fn new(view: A) -> Self {
+        let (_, dense, flags, data) = view.split();
+
+        Self {
+            dense,
+            index: 0,
+            flags,
+            data,
+        }
+    }
+
+    pub fn is_grouped(&self) -> bool {
+        true
+    }
+}
+
+impl<'a, A> Iterator for Iter1<'a, A>
+where
+    A: ComponentView<'a>,
+{
+    type Item = (A::Item,);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.index >= self.dense.len() {
+                return None;
+            }
+
+            let index = self.index;
+            self.index += 1;
+
+            let item = (|| unsafe { Some((A::get_item(self.flags, self.data, index)?,)) })();
+
+            if item.is_some() {
+                return item;
+            }
+        }
+    }
+}
+
+impl<'a, A> EntityIterator for Iter1<'a, A>
+where
+    A: ComponentView<'a>,
+{
+    fn current_entity(&self) -> Option<Entity> {
+        self.dense.get(self.index).copied()
+    }
+}
+
 #[rustfmt::skip]
 mod impls {
     use super::*;
