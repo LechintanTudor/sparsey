@@ -1,6 +1,6 @@
 use crate::data::{ComponentFlags, Entity, SparseArray};
 use crate::query::ComponentView;
-use crate::world::SubgroupInfo;
+use crate::world::GroupInfo;
 use std::marker::PhantomData;
 use std::ops::Not;
 
@@ -30,8 +30,8 @@ where
     type Data = V::Data;
     type Item = V::Item;
 
-    fn subgroup_info(&self) -> Option<SubgroupInfo> {
-        V::subgroup_info(&self.view)
+    fn group_info(&self) -> Option<GroupInfo> {
+        V::group_info(&self.view)
     }
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
@@ -81,8 +81,8 @@ where
     type Data = V::Data;
     type Item = V::Item;
 
-    fn subgroup_info(&self) -> Option<SubgroupInfo> {
-        V::subgroup_info(&self.view)
+    fn group_info(&self) -> Option<GroupInfo> {
+        V::group_info(&self.view)
     }
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {

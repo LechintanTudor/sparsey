@@ -94,7 +94,7 @@ impl World {
             return false;
         }
 
-        for i in 0..self.components.grouped.group_count() {
+        for i in 0..self.components.grouped.group_set_count() {
             self.components.grouped.ungroup_components(i, entity);
         }
 
@@ -192,7 +192,7 @@ impl World {
         self.group_indexes.extend(
             type_ids
                 .iter()
-                .flat_map(|type_id| grouped_components.get_group_index(type_id)),
+                .flat_map(|type_id| grouped_components.get_group_set_index(type_id)),
         );
     }
 }

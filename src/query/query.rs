@@ -3,7 +3,7 @@ pub use self::impls::*;
 use crate::data::Entity;
 use crate::query::iter::*;
 use crate::query::ComponentView;
-use crate::world::get_subgroup_len;
+use crate::world::get_group_len;
 
 pub trait Query<'a> {
     type Item: 'a;
@@ -37,8 +37,8 @@ macro_rules! impl_query {
 
             fn is_grouped(&self) -> bool {
                 (|| -> Option<_> {
-                    get_subgroup_len(&[
-                        $(self.$idx.subgroup_info()?),+
+                    get_group_len(&[
+                        $(self.$idx.group_info()?),+
                     ])
                 })()
                 .is_some()

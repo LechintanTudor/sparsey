@@ -3,7 +3,7 @@ pub use self::impls::*;
 use crate::data::Entity;
 use crate::query::iter::*;
 use crate::query::ComponentView;
-use crate::world::get_subgroup_len;
+use crate::world::get_group_len;
 use paste::paste;
 
 macro_rules! impl_iter {
@@ -22,16 +22,16 @@ macro_rules! impl_iter {
                 $($comp: ComponentView<'a>,)+
             {
                 pub fn new($([<comp_ $comp:lower>]: $comp),+) -> Self {
-                    let subgroup_len = (|| -> Option<usize> {
-                        get_subgroup_len(&[
-                            $([<comp_ $comp:lower>].subgroup_info()?),+
+                    let group_len = (|| -> Option<usize> {
+                        get_group_len(&[
+                            $([<comp_ $comp:lower>].group_info()?),+
                         ])
                     })();
 
-                    if let Some(subgroup_len) = subgroup_len {
+                    if let Some(group_len) = group_len {
                         unsafe {
                             Self::Dense([<DenseIter $len>]::new_unchecked(
-                                subgroup_len,
+                                group_len,
                                 $([<comp_ $comp:lower>]),+
                             ))
                         }
@@ -137,7 +137,7 @@ where
     }
 }
 
-pub struct SimpleIter1<'a, A>
+pub struct IterOne<'a, A>
 where
     A: ComponentView<'a>,
 {
@@ -147,7 +147,7 @@ where
     data: A::Data,
 }
 
-impl<'a, A> SimpleIter1<'a, A>
+impl<'a, A> IterOne<'a, A>
 where
     A: ComponentView<'a>,
 {
@@ -167,7 +167,7 @@ where
     }
 }
 
-impl<'a, A> Iterator for SimpleIter1<'a, A>
+impl<'a, A> Iterator for IterOne<'a, A>
 where
     A: ComponentView<'a>,
 {
@@ -191,7 +191,7 @@ where
     }
 }
 
-impl<'a, A> EntityIterator for SimpleIter1<'a, A>
+impl<'a, A> EntityIterator for IterOne<'a, A>
 where
     A: ComponentView<'a>,
 {

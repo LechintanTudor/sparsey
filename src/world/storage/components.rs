@@ -46,7 +46,7 @@ impl Components {
         self.grouped = GroupedComponents::with_layout(&layout, &mut sparse_sets);
         self.ungrouped = UngroupedComponents::from_sparse_sets(&mut sparse_sets);
 
-        for i in 0..self.grouped.group_count() {
+        for i in 0..self.grouped.group_set_count() {
             for &entity in entities {
                 self.grouped.group_components(i, entity);
             }
@@ -61,7 +61,7 @@ impl Components {
             Some(sparse_set) => unsafe {
                 Some(Comp::new(
                     AtomicRef::map_into(sparse_set, |sparse_set| sparse_set.to_ref()),
-                    self.grouped.get_subgroup_info(&TypeId::of::<T>()),
+                    self.grouped.get_group_info(&TypeId::of::<T>()),
                 ))
             },
             None => match self.ungrouped.borrow(&TypeId::of::<T>()) {
@@ -84,7 +84,7 @@ impl Components {
             Some(sparse_set) => unsafe {
                 Some(CompMut::new(
                     AtomicRefMut::map_into(sparse_set, |sparse_set| sparse_set.to_ref_mut()),
-                    self.grouped.get_subgroup_info(&TypeId::of::<T>()),
+                    self.grouped.get_group_info(&TypeId::of::<T>()),
                 ))
             },
             None => match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {

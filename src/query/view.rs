@@ -2,8 +2,8 @@ use crate::data::{
     Component, ComponentFlags, ComponentRefMut, Entity, MappedAtomicRef, MappedAtomicRefMut,
     SparseArray, SparseSetRef, SparseSetRefMut,
 };
-use crate::query::SimpleIter1;
-use crate::world::SubgroupInfo;
+use crate::query::IterOne;
+use crate::world::GroupInfo;
 use std::ops::{Deref, DerefMut};
 
 pub unsafe trait ComponentView<'a>
@@ -14,7 +14,7 @@ where
     type Data: 'a + Copy;
     type Item: 'a;
 
-    fn subgroup_info(&self) -> Option<SubgroupInfo>;
+    fn group_info(&self) -> Option<GroupInfo>;
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data);
 
@@ -35,7 +35,7 @@ where
     T: Send + Sync + 'static,
 {
     sparse_set: MappedAtomicRef<'a, SparseSetRef<'a, T>>,
-    subgroup_info: Option<SubgroupInfo<'a>>,
+    group_info: Option<GroupInfo<'a>>,
 }
 
 impl<'a, T> Comp<'a, T>
@@ -44,19 +44,19 @@ where
 {
     pub(crate) unsafe fn new(
         sparse_set: MappedAtomicRef<'a, SparseSetRef<'a, T>>,
-        subgroup_info: Option<SubgroupInfo<'a>>,
+        group_info: Option<GroupInfo<'a>>,
     ) -> Self {
         Self {
             sparse_set,
-            subgroup_info,
+            group_info,
         }
     }
 
-    pub fn iter(&'a self) -> SimpleIter1<'a, &'a Self>
+    pub fn iter(&'a self) -> IterOne<'a, &'a Self>
     where
         T: Component,
     {
-        SimpleIter1::new(self)
+        IterOne::new(self)
     }
 
     pub fn entities(&self) -> &[Entity] {
@@ -92,8 +92,8 @@ where
     type Data = *const T;
     type Item = &'a T;
 
-    fn subgroup_info(&self) -> Option<SubgroupInfo> {
-        self.subgroup_info
+    fn group_info(&self) -> Option<GroupInfo> {
+        self.group_info
     }
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
@@ -115,7 +115,7 @@ where
     T: Send + Sync + 'static,
 {
     sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>,
-    subgroup_info: Option<SubgroupInfo<'a>>,
+    group_info: Option<GroupInfo<'a>>,
 }
 
 impl<'a, T> CompMut<'a, T>
@@ -124,26 +124,26 @@ where
 {
     pub(crate) unsafe fn new(
         sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>,
-        subgroup_info: Option<SubgroupInfo<'a>>,
+        group_info: Option<GroupInfo<'a>>,
     ) -> Self {
         Self {
             sparse_set,
-            subgroup_info,
+            group_info,
         }
     }
 
-    pub fn iter(&'a self) -> SimpleIter1<'a, &'a Self>
+    pub fn iter(&'a self) -> IterOne<'a, &'a Self>
     where
         T: Component,
     {
-        SimpleIter1::new(self)
+        IterOne::new(self)
     }
 
-    pub fn iter_mut(&mut self) -> SimpleIter1<&mut Self>
+    pub fn iter_mut(&mut self) -> IterOne<&mut Self>
     where
         T: Component,
     {
-        SimpleIter1::new(self)
+        IterOne::new(self)
     }
 
     pub fn entities(&self) -> &[Entity] {
@@ -200,8 +200,8 @@ where
     type Data = *const T;
     type Item = &'a T;
 
-    fn subgroup_info(&self) -> Option<SubgroupInfo> {
-        self.subgroup_info
+    fn group_info(&self) -> Option<GroupInfo> {
+        self.group_info
     }
 
     fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
@@ -226,8 +226,8 @@ where
     type Data = *mut T;
     type Item = ComponentRefMut<'b, T>;
 
-    fn subgroup_info(&self) -> Option<SubgroupInfo> {
-        self.subgroup_info
+    fn group_info(&self) -> Option<GroupInfo> {
+        self.group_info
     }
 
     fn split(self) -> (&'b SparseArray, &'b [Entity], Self::Flags, Self::Data) {
