@@ -40,6 +40,14 @@ impl TypeInfo {
         self.layout
     }
 
+    pub fn size(&self) -> usize {
+        self.layout.size()
+    }
+
+    pub fn align(&self) -> usize {
+        self.layout.align()
+    }
+
     pub fn needs_drop(&self) -> bool {
         self.needs_drop
     }

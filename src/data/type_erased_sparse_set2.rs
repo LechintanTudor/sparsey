@@ -1,6 +1,6 @@
 use crate::data::{
     Component, ComponentFlags, Entity, IndexEntity, SparseArray, SparseSetRef, SparseSetRefMut,
-    TypeErasedVec,
+    TypeErasedVec2,
 };
 use std::any::TypeId;
 
@@ -8,7 +8,7 @@ pub struct TypeErasedSparseSet {
     sparse: SparseArray,
     dense: Vec<Entity>,
     flags: Vec<ComponentFlags>,
-    data: Box<dyn TypeErasedVec>,
+    data: Box<dyn TypeErasedVec2>,
 }
 
 impl TypeErasedSparseSet {
