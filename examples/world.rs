@@ -1,3 +1,4 @@
+use ecstasy::data::*;
 use ecstasy::dispatcher::*;
 use ecstasy::query::*;
 use ecstasy::resources::*;

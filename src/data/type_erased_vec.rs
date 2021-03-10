@@ -128,7 +128,7 @@ where
     T: Send + Sync + 'static,
 {
     fn as_ref(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.as_ptr() as _, self.vec.len) }
+        unsafe { slice::from_raw_parts(self.as_ptr(), self.vec.len) }
     }
 }
 
@@ -161,7 +161,7 @@ where
         }
 
         unsafe {
-            ptr::write(self.as_ptr() as _, elem);
+            ptr::write(self.as_mut_ptr().add(self.vec.len), elem);
         }
 
         self.vec.len += 1;
@@ -178,11 +178,11 @@ where
     }
 
     pub fn swap_remove(&mut self, index: usize) -> T {
-        let len = self.vec.len;
-        assert!(index < len, "Index out of range");
+        assert!(index < self.vec.len, "Index out of range");
+        self.vec.len -= 1;
 
         unsafe {
-            let last = ptr::read(self.as_ptr().add(len - 1));
+            let last = ptr::read(self.as_ptr().add(self.vec.len));
             let hole = self.as_mut_ptr().add(index);
             ptr::replace(hole, last)
         }
@@ -204,11 +204,7 @@ where
                 let new_cap = self.vec.cap * 2;
                 let new_num_bytes = old_num_bytes * 2;
 
-                let ptr = realloc(
-                    self.vec.ptr.as_ptr() as _,
-                    Layout::new::<T>(),
-                    new_num_bytes,
-                );
+                let ptr = realloc(self.as_mut_ptr() as _, Layout::new::<T>(), new_num_bytes);
                 (new_cap, ptr)
             };
 
@@ -235,7 +231,7 @@ where
     T: Send + Sync + 'static,
 {
     fn as_ref(&self) -> &[T] {
-        unsafe { slice::from_raw_parts(self.as_ptr() as _, self.vec.len) }
+        unsafe { slice::from_raw_parts(self.as_ptr(), self.vec.len) }
     }
 }
 
@@ -244,7 +240,7 @@ where
     T: Send + Sync + 'static,
 {
     fn as_mut(&mut self) -> &mut [T] {
-        unsafe { slice::from_raw_parts_mut(self.as_ptr() as _, self.vec.len) }
+        unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.vec.len) }
     }
 }
 
