@@ -1,6 +1,6 @@
 use crate::data::{
     Component, ComponentFlags, Entity, IndexEntity, SparseArray, SparseSetRef, SparseSetRefMut,
-    TypeErasedVec2,
+    TypeErasedVec,
 };
 use std::any::TypeId;
 
@@ -8,7 +8,7 @@ pub struct TypeErasedSparseSet {
     sparse: SparseArray,
     dense: Vec<Entity>,
     flags: Vec<ComponentFlags>,
-    data: Box<dyn TypeErasedVec2>,
+    data: TypeErasedVec,
 }
 
 impl TypeErasedSparseSet {
@@ -20,19 +20,19 @@ impl TypeErasedSparseSet {
             sparse: Default::default(),
             dense: Default::default(),
             flags: Default::default(),
-            data: Box::new(Vec::<T>::new()),
+            data: TypeErasedVec::new::<T>(),
         }
     }
 
     pub fn component_type_id(&self) -> TypeId {
-        self.data.component_type_id()
+        self.data.type_info().id()
     }
 
     pub fn clear(&mut self) {
         self.sparse.clear();
         self.dense.clear();
         self.flags.clear();
-        self.data.clear_components();
+        self.data.clear();
     }
 
     pub fn clear_flags(&mut self) {
@@ -55,7 +55,7 @@ impl TypeErasedSparseSet {
 
         self.dense.swap(a, b);
         self.flags.swap(a, b);
-        self.data.swap_components(a, b);
+        self.data.swap(a, b);
     }
 
     pub fn delete(&mut self, entity: Entity) {
@@ -77,7 +77,7 @@ impl TypeErasedSparseSet {
             *self.sparse.get_unchecked_mut(entity.index()) = None;
         }
 
-        self.data.swap_delete_component(index_entity.index());
+        self.data.swap_delete(index_entity.index());
     }
 
     pub fn len(&self) -> usize {
@@ -96,14 +96,7 @@ impl TypeErasedSparseSet {
     where
         T: Component,
     {
-        unsafe {
-            SparseSetRef::new(
-                &self.sparse,
-                &self.dense,
-                &self.flags,
-                Box::as_ref(&self.data).downcast_ref::<Vec<T>>().unwrap(),
-            )
-        }
+        unsafe { SparseSetRef::new(&self.sparse, &self.dense, &self.flags, self.data.as_ref()) }
     }
 
     pub fn to_ref_mut<T>(&mut self) -> SparseSetRefMut<T>
@@ -115,9 +108,7 @@ impl TypeErasedSparseSet {
                 &mut self.sparse,
                 &mut self.dense,
                 &mut self.flags,
-                Box::as_mut(&mut self.data)
-                    .downcast_mut::<Vec<T>>()
-                    .unwrap(),
+                self.data.as_mut(),
             )
         }
     }

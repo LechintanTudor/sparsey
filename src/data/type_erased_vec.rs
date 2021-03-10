@@ -15,6 +15,9 @@ pub struct TypeErasedVec {
     len: usize,
 }
 
+unsafe impl Send for TypeErasedVec {}
+unsafe impl Sync for TypeErasedVec {}
+
 impl TypeErasedVec {
     pub fn new<T>() -> Self
     where
@@ -29,6 +32,10 @@ impl TypeErasedVec {
             cap,
             len: 0,
         }
+    }
+
+    pub fn type_info(&self) -> &TypeInfo {
+        &self.type_info
     }
 
     pub fn clear(&mut self) {
@@ -51,6 +58,18 @@ impl TypeErasedVec {
                     self.ptr.as_ptr().add(b * self.type_info.size()),
                     self.type_info.size(),
                 );
+            }
+        }
+    }
+
+    pub fn swap_delete(&mut self, index: usize) {
+        self.swap(index, self.len - 1);
+        self.len -= 1;
+
+        if self.type_info.needs_drop() {
+            unsafe {
+                self.type_info
+                    .drop_one(self.ptr.as_ptr().add(self.len * self.type_info.size()));
             }
         }
     }
@@ -114,6 +133,9 @@ where
     _phantom: PhantomData<T>,
 }
 
+unsafe impl<T> Send for VecRef<'_, T> where T: Send + Sync + 'static {}
+unsafe impl<T> Sync for VecRef<'_, T> where T: Send + Sync + 'static {}
+
 impl<T> VecRef<'_, T>
 where
     T: Send + Sync + 'static,
@@ -150,6 +172,9 @@ where
     vec: &'a mut TypeErasedVec,
     _phantom: PhantomData<T>,
 }
+
+unsafe impl<T> Send for VecRefMut<'_, T> where T: Send + Sync + 'static {}
+unsafe impl<T> Sync for VecRefMut<'_, T> where T: Send + Sync + 'static {}
 
 impl<T> VecRefMut<'_, T>
 where

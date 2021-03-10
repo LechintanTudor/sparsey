@@ -30,12 +30,18 @@ where
     unsafe fn get_item(flags: Self::Flags, data: Self::Data, index: usize) -> Option<Self::Item>;
 }
 
-pub struct Comp<'a, T> {
+pub struct Comp<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     sparse_set: MappedAtomicRef<'a, SparseSetRef<'a, T>>,
     subgroup_info: Option<SubgroupInfo<'a>>,
 }
 
-impl<'a, T> Comp<'a, T> {
+impl<'a, T> Comp<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     pub(crate) unsafe fn new(
         sparse_set: MappedAtomicRef<'a, SparseSetRef<'a, T>>,
         subgroup_info: Option<SubgroupInfo<'a>>,
@@ -58,13 +64,19 @@ impl<'a, T> Comp<'a, T> {
     }
 }
 
-impl<T> AsRef<[T]> for Comp<'_, T> {
+impl<T> AsRef<[T]> for Comp<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     fn as_ref(&self) -> &[T] {
         self.sparse_set.as_ref()
     }
 }
 
-impl<T> Deref for Comp<'_, T> {
+impl<T> Deref for Comp<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
@@ -72,7 +84,10 @@ impl<T> Deref for Comp<'_, T> {
     }
 }
 
-unsafe impl<'a, T> ComponentView<'a> for &'a Comp<'a, T> {
+unsafe impl<'a, T> ComponentView<'a> for &'a Comp<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     type Flags = *const ComponentFlags;
     type Data = *const T;
     type Item = &'a T;
@@ -95,12 +110,18 @@ unsafe impl<'a, T> ComponentView<'a> for &'a Comp<'a, T> {
     }
 }
 
-pub struct CompMut<'a, T> {
+pub struct CompMut<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>,
     subgroup_info: Option<SubgroupInfo<'a>>,
 }
 
-impl<'a, T> CompMut<'a, T> {
+impl<'a, T> CompMut<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     pub(crate) unsafe fn new(
         sparse_set: MappedAtomicRefMut<'a, SparseSetRefMut<'a, T>>,
         subgroup_info: Option<SubgroupInfo<'a>>,
@@ -130,27 +151,42 @@ impl<'a, T> CompMut<'a, T> {
     }
 }
 
-impl<T> AsRef<[T]> for CompMut<'_, T> {
+impl<T> AsRef<[T]> for CompMut<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     fn as_ref(&self) -> &[T] {
         self.sparse_set.as_ref()
     }
 }
 
-impl<T> AsMut<[T]> for CompMut<'_, T> {
+impl<T> AsMut<[T]> for CompMut<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     fn as_mut(&mut self) -> &mut [T] {
         self.sparse_set.as_mut()
     }
 }
 
-impl<T> Deref for CompMut<'_, T> {
+impl<T> Deref for CompMut<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     type Target = [T];
 
-    fn deref(&self) -> &Self::Target {
+    fn deref(&self) -> &Self::Target
+    where
+        T: Send + Sync + 'static,
+    {
         self.sparse_set.as_ref()
     }
 }
 
-impl<T> DerefMut for CompMut<'_, T> {
+impl<T> DerefMut for CompMut<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.sparse_set.as_mut()
     }

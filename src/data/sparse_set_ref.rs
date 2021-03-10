@@ -1,25 +1,33 @@
-use crate::data::{ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseArray};
+use crate::data::{
+    ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseArray, VecRef, VecRefMut,
+};
 use std::ops::{Deref, DerefMut};
 
-pub struct SparseSetRef<'a, T> {
+pub struct SparseSetRef<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     sparse: &'a SparseArray,
     dense: &'a [Entity],
     flags: &'a [ComponentFlags],
-    data: &'a [T],
+    data: VecRef<'a, T>,
 }
 
-impl<'a, T> SparseSetRef<'a, T> {
+impl<'a, T> SparseSetRef<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     pub(crate) unsafe fn new(
         sparse: &'a SparseArray,
         dense: &'a [Entity],
         flags: &'a [ComponentFlags],
-        data: &'a [T],
+        data: VecRef<'a, T>,
     ) -> Self {
         Self {
             sparse,
             dense,
-            data,
             flags,
+            data,
         }
     }
 
@@ -33,37 +41,49 @@ impl<'a, T> SparseSetRef<'a, T> {
     }
 
     pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
-        (self.sparse, self.dense, self.flags, self.data)
+        (self.sparse, self.dense, self.flags, &self.data)
     }
 }
 
-impl<T> AsRef<[T]> for SparseSetRef<'_, T> {
+impl<T> AsRef<[T]> for SparseSetRef<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     fn as_ref(&self) -> &[T] {
-        self.data
+        &self.data
     }
 }
 
-impl<T> Deref for SparseSetRef<'_, T> {
+impl<T> Deref for SparseSetRef<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        self.data
+        &self.data
     }
 }
 
-pub struct SparseSetRefMut<'a, T> {
+pub struct SparseSetRefMut<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     sparse: &'a mut SparseArray,
     dense: &'a mut Vec<Entity>,
     flags: &'a mut Vec<ComponentFlags>,
-    data: &'a mut Vec<T>,
+    data: VecRefMut<'a, T>,
 }
 
-impl<'a, T> SparseSetRefMut<'a, T> {
+impl<'a, T> SparseSetRefMut<'a, T>
+where
+    T: Send + Sync + 'static,
+{
     pub unsafe fn new(
         sparse: &'a mut SparseArray,
         dense: &'a mut Vec<Entity>,
         flags: &'a mut Vec<ComponentFlags>,
-        data: &'a mut Vec<T>,
+        data: VecRefMut<'a, T>,
     ) -> Self {
         Self {
             sparse,
@@ -135,7 +155,7 @@ impl<'a, T> SparseSetRefMut<'a, T> {
             self.sparse,
             self.dense.as_slice(),
             self.flags.as_slice(),
-            self.data.as_slice(),
+            self.data.as_ref(),
         )
     }
 
@@ -144,33 +164,45 @@ impl<'a, T> SparseSetRefMut<'a, T> {
             self.sparse,
             self.dense.as_slice(),
             self.flags.as_mut_slice(),
-            self.data.as_mut_slice(),
+            self.data.as_mut(),
         )
     }
 }
 
-impl<T> AsRef<[T]> for SparseSetRefMut<'_, T> {
+impl<T> AsRef<[T]> for SparseSetRefMut<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     fn as_ref(&self) -> &[T] {
-        self.data
+        self.data.as_ref()
     }
 }
 
-impl<T> AsMut<[T]> for SparseSetRefMut<'_, T> {
+impl<T> AsMut<[T]> for SparseSetRefMut<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     fn as_mut(&mut self) -> &mut [T] {
-        self.data
+        self.data.as_mut()
     }
 }
 
-impl<T> Deref for SparseSetRefMut<'_, T> {
+impl<T> Deref for SparseSetRefMut<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        self.data
+        self.data.as_ref()
     }
 }
 
-impl<T> DerefMut for SparseSetRefMut<'_, T> {
+impl<T> DerefMut for SparseSetRefMut<'_, T>
+where
+    T: Send + Sync + 'static,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.data
+        self.data.as_mut()
     }
 }

@@ -1,11 +1,19 @@
-use ecstasy::data::*;
 use ecstasy::dispatcher::*;
 use ecstasy::query::*;
 use ecstasy::resources::*;
 use ecstasy::world::*;
 use std::iter;
 
-fn check(mut a: CompMut<u16>, b: Comp<u32>, c: Comp<u64>) {
+#[derive(Debug)]
+pub struct Droppable(u32);
+
+impl Drop for Droppable {
+    fn drop(&mut self) {
+        println!("Dropping: {}", self.0);
+    }
+}
+
+fn check(mut a: CompMut<u16>, b: Comp<u32>, c: Comp<u64>, d: Comp<Droppable>) {
     for (e, (a, b)) in (&a, &b).iter().entities() {
         println!("{:?} => {}, {}", e, a, b);
     }
@@ -20,6 +28,12 @@ fn check(mut a: CompMut<u16>, b: Comp<u32>, c: Comp<u64>) {
 
     for (e, (a, b, c)) in (&a, &b, &c).iter().entities() {
         println!("{:?} => {}, {}, {}", e, a, b, c);
+    }
+
+    println!();
+
+    for (e, d) in d.iter().entities() {
+        println!("{:?} => {:?}", e, d);
     }
 
     println!("\n");
@@ -43,6 +57,7 @@ fn main() {
     dispatcher.set_up(&mut world);
 
     world.extend(iter::repeat((1_u16, 2_u32, 3_u64)).take(10));
+    world.extend((1..=5).into_iter().map(|i| (Droppable(i),)));
 
     dispatcher.run_locally(&mut world, &mut resources);
 }
