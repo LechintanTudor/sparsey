@@ -45,11 +45,10 @@
 //! keep the tricky parts small and easy to audit.
 
 use std::cell::UnsafeCell;
-use std::cmp;
-use std::fmt;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{cmp, fmt};
 
 /// A threadsafe analogue to RefCell.
 pub struct AtomicRefCell<T>

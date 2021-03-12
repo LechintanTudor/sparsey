@@ -2,11 +2,9 @@ use crate::data::{Component, TypeInfo};
 use std::alloc::{alloc, dealloc, realloc, Layout};
 use std::any::TypeId;
 use std::marker::PhantomData;
-use std::mem;
 use std::ops::{Deref, DerefMut};
-use std::ptr;
 use std::ptr::NonNull;
-use std::slice;
+use std::{mem, ptr, slice};
 
 pub struct TypeErasedVec {
     type_info: TypeInfo,

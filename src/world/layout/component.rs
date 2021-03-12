@@ -38,8 +38,8 @@ impl LayoutComponent {
         self.component.type_name()
     }
 
-    pub fn create_sparse_set(&self) -> TypeErasedSparseSet {
-        self.component.create_sparse_set()
+    pub fn new_sparse_set(&self) -> TypeErasedSparseSet {
+        self.component.new_sparse_set()
     }
 }
 
@@ -75,6 +75,9 @@ impl Hash for LayoutComponent {
 #[derive(Copy, Clone)]
 struct Type<T>(PhantomData<*const T>);
 
+unsafe impl<T> Send for Type<T> {}
+unsafe impl<T> Sync for Type<T> {}
+
 impl<T> Default for Type<T> {
     fn default() -> Self {
         Self(PhantomData)
@@ -86,7 +89,7 @@ unsafe trait AbstractType {
 
     fn type_name(&self) -> &'static str;
 
-    fn create_sparse_set(&self) -> TypeErasedSparseSet;
+    fn new_sparse_set(&self) -> TypeErasedSparseSet;
 
     fn clone(&self) -> Box<dyn AbstractType>;
 }
@@ -103,7 +106,7 @@ where
         any::type_name::<T>()
     }
 
-    fn create_sparse_set(&self) -> TypeErasedSparseSet {
+    fn new_sparse_set(&self) -> TypeErasedSparseSet {
         TypeErasedSparseSet::new::<T>()
     }
 

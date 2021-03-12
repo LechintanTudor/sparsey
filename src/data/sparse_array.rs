@@ -5,7 +5,7 @@ use std::{iter, ptr};
 const PAGE_SIZE: usize = 32;
 type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SparseArray {
     pages: Vec<EntityPage>,
 }

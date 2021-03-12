@@ -22,12 +22,10 @@ where
         Self(value)
     }
 
-    #[inline]
     pub fn clone(orig: &Self) -> Self {
         Self(AtomicRef::clone(&orig.0))
     }
 
-    #[inline]
     pub fn map<U, F>(orig: Self, f: F) -> Res<'a, U>
     where
         F: FnOnce(&T) -> &U,
@@ -36,7 +34,6 @@ where
         Res(AtomicRef::map(orig.0, f))
     }
 
-    #[inline]
     pub fn filter_map<U, F>(orig: Self, f: F) -> Option<Res<'a, U>>
     where
         F: FnOnce(&T) -> Option<&U>,
@@ -69,7 +66,6 @@ where
         Self(value)
     }
 
-    #[inline]
     pub fn map<U, F>(orig: Self, f: F) -> ResMut<'a, U>
     where
         F: FnOnce(&mut T) -> &mut U,
@@ -78,7 +74,6 @@ where
         ResMut(AtomicRefMut::map(orig.0, f))
     }
 
-    #[inline]
     pub fn filter_map<U, F>(orig: Self, f: F) -> Option<ResMut<'a, U>>
     where
         F: FnOnce(&mut T) -> Option<&mut U>,

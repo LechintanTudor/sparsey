@@ -1,6 +1,6 @@
 use std::num::NonZeroU32;
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Entity {
     id: u32,
     ver: Version,
@@ -31,7 +31,7 @@ impl Entity {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct IndexEntity {
     id: u32,
     ver: Version,
@@ -62,12 +62,11 @@ impl IndexEntity {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Version(NonZeroU32);
 
 impl Version {
     pub const FIRST: Self = unsafe { Self::new_unchecked(1) };
-    pub const LAST: Self = unsafe { Self::new_unchecked(u32::MAX) };
 
     pub fn new(id: u32) -> Self {
         Self(NonZeroU32::new(id).unwrap())
@@ -87,5 +86,11 @@ impl Version {
         } else {
             None
         }
+    }
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Self::FIRST
     }
 }

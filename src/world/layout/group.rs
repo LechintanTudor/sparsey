@@ -14,6 +14,11 @@ impl LayoutGroup {
             "Groups must have at least 2 component types",
         );
 
+        assert!(
+            components.len() <= 16,
+            "Groups must have at most 16 component types",
+        );
+
         Self { components }
     }
 

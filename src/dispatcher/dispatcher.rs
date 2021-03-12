@@ -73,10 +73,10 @@ impl Dispatcher {
                     for access in systems.iter().flat_map(|sys| sys.accesses()) {
                         match access {
                             SystemAccess::Comp(comp) => {
-                                world.register_storage(comp.create_sparse_set())
+                                world.register_storage(comp.new_sparse_set())
                             }
                             SystemAccess::CompMut(comp) => {
-                                world.register_storage(comp.create_sparse_set())
+                                world.register_storage(comp.new_sparse_set())
                             }
                             _ => (),
                         }
@@ -86,10 +86,10 @@ impl Dispatcher {
                     for access in systems.iter().flat_map(|sys| sys.accesses()) {
                         match access {
                             SystemAccess::Comp(comp) => {
-                                world.register_storage(comp.create_sparse_set())
+                                world.register_storage(comp.new_sparse_set())
                             }
                             SystemAccess::CompMut(comp) => {
-                                world.register_storage(comp.create_sparse_set())
+                                world.register_storage(comp.new_sparse_set())
                             }
                             _ => (),
                         }

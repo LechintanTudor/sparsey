@@ -1,8 +1,6 @@
 use std::alloc::Layout;
-use std::any;
 use std::any::TypeId;
-use std::mem;
-use std::ptr;
+use std::{any, mem, ptr};
 
 pub struct TypeInfo {
     id: TypeId,

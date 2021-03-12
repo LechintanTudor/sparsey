@@ -7,9 +7,7 @@ pub struct Layout {
 
 impl Layout {
     pub fn builder() -> LayoutBuilder {
-        LayoutBuilder {
-            group_sets: Default::default(),
-        }
+        LayoutBuilder::default()
     }
 
     pub(crate) fn group_sets(&self) -> &[LayoutGroupSet] {
@@ -17,6 +15,7 @@ impl Layout {
     }
 }
 
+#[derive(Default)]
 pub struct LayoutBuilder {
     group_sets: Vec<Vec<LayoutGroup>>,
 }

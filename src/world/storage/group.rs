@@ -64,7 +64,7 @@ impl<'a> GroupInfo<'a> {
         }
     }
 
-    pub fn has_same_group(&self, other: &GroupInfo) -> bool {
+    pub fn has_same_group_set(&self, other: &GroupInfo) -> bool {
         ptr::eq(self.groups, other.groups)
     }
 
@@ -89,7 +89,7 @@ pub(crate) fn get_group_len(group_infos: &[GroupInfo]) -> Option<usize> {
     let mut group_mask = first.mask();
 
     for other in others {
-        if !first.has_same_group(other) {
+        if !first.has_same_group_set(other) {
             return None;
         }
 

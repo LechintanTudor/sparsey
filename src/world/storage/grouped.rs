@@ -40,7 +40,7 @@ impl GroupedComponents {
 
                     let sparse_set = match sparse_set_map.remove(&type_id) {
                         Some(sparse_set) => sparse_set,
-                        None => component.create_sparse_set(),
+                        None => component.new_sparse_set(),
                     };
 
                     sparse_sets.push(AtomicRefCell::new(sparse_set));
