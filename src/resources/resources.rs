@@ -1,4 +1,5 @@
-use crate::resources::{Res, ResMut, Resource, ResourceTypeId, SyncResources, UnsafeResources};
+use crate::resources::{Res, ResMut, Resource, SyncResources, UnsafeResources};
+use std::any::TypeId;
 use std::marker::PhantomData;
 
 #[derive(Default)]
@@ -36,6 +37,14 @@ impl Resources {
         unsafe { self.internal.insert_boxed(resource) }
     }
 
+    pub unsafe fn insert_dyn(
+        &mut self,
+        type_id: TypeId,
+        resource: Box<dyn Resource>,
+    ) -> Option<Box<dyn Resource>> {
+        self.internal.insert_dyn(type_id, resource)
+    }
+
     pub fn remove<T>(&mut self) -> Option<Box<T>>
     where
         T: Resource,
@@ -43,19 +52,12 @@ impl Resources {
         unsafe { self.internal.remove::<T>() }
     }
 
-    pub fn remove_abstract(&mut self, type_id: &ResourceTypeId) -> Option<Box<dyn Resource>> {
-        unsafe { self.internal.remove_abstract(type_id) }
+    pub fn remove_dyn(&mut self, type_id: &TypeId) -> Option<Box<dyn Resource>> {
+        unsafe { self.internal.remove_dyn(type_id) }
     }
 
-    pub fn contains<T>(&self) -> bool
-    where
-        T: Resource,
-    {
-        self.internal.contains::<T>()
-    }
-
-    pub fn contains_type_id(&self, type_id: &ResourceTypeId) -> bool {
-        self.internal.contains_type_id(type_id)
+    pub fn contains(&self, type_id: &TypeId) -> bool {
+        self.internal.contains(type_id)
     }
 
     pub fn borrow<T>(&self) -> Option<Res<T>>
@@ -72,11 +74,11 @@ impl Resources {
         unsafe { self.internal.borrow_mut() }
     }
 
-    pub fn borrow_abstract(&self, type_id: &ResourceTypeId) -> Option<Res<dyn Resource>> {
-        unsafe { self.internal.borrow_abstract(type_id) }
+    pub fn borrow_dyn(&self, type_id: &TypeId) -> Option<Res<dyn Resource>> {
+        unsafe { self.internal.borrow_dyn(type_id) }
     }
 
-    pub fn borrow_abstract_mut(&self, type_id: &ResourceTypeId) -> Option<ResMut<dyn Resource>> {
-        unsafe { self.internal.borrow_abstract_mut(type_id) }
+    pub fn borrow_dyn_mut(&self, type_id: &TypeId) -> Option<ResMut<dyn Resource>> {
+        unsafe { self.internal.borrow_dyn_mut(type_id) }
     }
 }

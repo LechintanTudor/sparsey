@@ -1,9 +1,6 @@
 use crate::data::{AtomicRef, AtomicRefMut};
 use downcast_rs::{impl_downcast, Downcast};
-use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
-
-pub type ResourceTypeId = TypeId;
 
 pub trait Resource
 where
