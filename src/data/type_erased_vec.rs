@@ -1,4 +1,4 @@
-use crate::data::TypeInfo;
+use crate::data::{Component, TypeInfo};
 use std::alloc::{alloc, dealloc, realloc, Layout};
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -21,7 +21,7 @@ unsafe impl Sync for TypeErasedVec {}
 impl TypeErasedVec {
     pub fn new<T>() -> Self
     where
-        T: Send + Sync + 'static,
+        T: Component,
     {
         let ptr = unsafe { NonNull::new_unchecked(NonNull::<T>::dangling().as_ptr() as _) };
         let cap = if mem::size_of::<T>() == 0 { !0 } else { 0 };
@@ -76,7 +76,7 @@ impl TypeErasedVec {
 
     pub fn as_ref<T>(&self) -> VecRef<T>
     where
-        T: Send + Sync + 'static,
+        T: Component,
     {
         assert!(self.type_info.id() == TypeId::of::<T>());
 
@@ -88,7 +88,7 @@ impl TypeErasedVec {
 
     pub fn as_mut<T>(&mut self) -> VecRefMut<T>
     where
-        T: Send + Sync + 'static,
+        T: Component,
     {
         assert!(self.type_info.id() == TypeId::of::<T>());
 
@@ -127,18 +127,18 @@ impl Drop for TypeErasedVec {
 
 pub struct VecRef<'a, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     vec: &'a TypeErasedVec,
     _phantom: PhantomData<T>,
 }
 
-unsafe impl<T> Send for VecRef<'_, T> where T: Send + Sync + 'static {}
-unsafe impl<T> Sync for VecRef<'_, T> where T: Send + Sync + 'static {}
+unsafe impl<T> Send for VecRef<'_, T> where T: Component {}
+unsafe impl<T> Sync for VecRef<'_, T> where T: Component {}
 
 impl<T> VecRef<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn as_ptr(&self) -> *const T {
         self.vec.ptr.as_ptr() as _
@@ -147,7 +147,7 @@ where
 
 impl<T> AsRef<[T]> for VecRef<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn as_ref(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.as_ptr(), self.vec.len) }
@@ -156,7 +156,7 @@ where
 
 impl<T> Deref for VecRef<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     type Target = [T];
 
@@ -167,18 +167,18 @@ where
 
 pub struct VecRefMut<'a, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     vec: &'a mut TypeErasedVec,
     _phantom: PhantomData<T>,
 }
 
-unsafe impl<T> Send for VecRefMut<'_, T> where T: Send + Sync + 'static {}
-unsafe impl<T> Sync for VecRefMut<'_, T> where T: Send + Sync + 'static {}
+unsafe impl<T> Send for VecRefMut<'_, T> where T: Component {}
+unsafe impl<T> Sync for VecRefMut<'_, T> where T: Component {}
 
 impl<T> VecRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     pub fn push(&mut self, elem: T) {
         if self.vec.len == self.vec.cap {
@@ -253,7 +253,7 @@ where
 
 impl<T> AsRef<[T]> for VecRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn as_ref(&self) -> &[T] {
         unsafe { slice::from_raw_parts(self.as_ptr(), self.vec.len) }
@@ -262,7 +262,7 @@ where
 
 impl<T> AsMut<[T]> for VecRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn as_mut(&mut self) -> &mut [T] {
         unsafe { slice::from_raw_parts_mut(self.as_mut_ptr(), self.vec.len) }
@@ -271,7 +271,7 @@ where
 
 impl<T> Deref for VecRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     type Target = [T];
 
@@ -282,7 +282,7 @@ where
 
 impl<T> DerefMut for VecRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_mut()

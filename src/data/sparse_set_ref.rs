@@ -1,11 +1,11 @@
 use crate::data::{
-    ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseArray, VecRef, VecRefMut,
+    Component, ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseArray, VecRef, VecRefMut,
 };
 use std::ops::{Deref, DerefMut};
 
 pub struct SparseSetRef<'a, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     sparse: &'a SparseArray,
     dense: &'a [Entity],
@@ -15,7 +15,7 @@ where
 
 impl<'a, T> SparseSetRef<'a, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     pub(crate) unsafe fn new(
         sparse: &'a SparseArray,
@@ -47,7 +47,7 @@ where
 
 impl<T> AsRef<[T]> for SparseSetRef<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn as_ref(&self) -> &[T] {
         &self.data
@@ -56,7 +56,7 @@ where
 
 impl<T> Deref for SparseSetRef<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     type Target = [T];
 
@@ -67,7 +67,7 @@ where
 
 pub struct SparseSetRefMut<'a, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     sparse: &'a mut SparseArray,
     dense: &'a mut Vec<Entity>,
@@ -77,7 +77,7 @@ where
 
 impl<'a, T> SparseSetRefMut<'a, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     pub unsafe fn new(
         sparse: &'a mut SparseArray,
@@ -171,7 +171,7 @@ where
 
 impl<T> AsRef<[T]> for SparseSetRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn as_ref(&self) -> &[T] {
         self.data.as_ref()
@@ -180,7 +180,7 @@ where
 
 impl<T> AsMut<[T]> for SparseSetRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn as_mut(&mut self) -> &mut [T] {
         self.data.as_mut()
@@ -189,7 +189,7 @@ where
 
 impl<T> Deref for SparseSetRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     type Target = [T];
 
@@ -200,7 +200,7 @@ where
 
 impl<T> DerefMut for SparseSetRefMut<'_, T>
 where
-    T: Send + Sync + 'static,
+    T: Component,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.data.as_mut()
