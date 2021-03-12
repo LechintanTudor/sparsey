@@ -18,6 +18,10 @@ fn check(mut a: CompMut<u16>, b: Comp<u32>, c: Comp<u64>, d: Comp<Droppable>) {
         println!("Slice length: {}", e.len());
     }
 
+    if let Some(e) = (&a, &b, &c).entities() {
+        println!("Slice length: {}", e.len());
+    }
+
     println!();
 
     for (e, (a, b)) in (&a, &b).iter().entities() {

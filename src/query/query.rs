@@ -22,6 +22,8 @@ where
 {
     type SliceSet: 'a;
 
+    fn entities(self) -> Option<&'a [Entity]>;
+
     fn slice(self) -> Option<Self::SliceSet>;
 
     fn slice_entities(self) -> Option<(&'a [Entity], Self::SliceSet)>;
@@ -62,6 +64,11 @@ macro_rules! impl_query {
         {
             type SliceSet = ($($comp::Slice,)+);
 
+            fn entities(self) -> Option<&'a [Entity]> {
+                let group_len = get_group_len(&[$(self.$idx.group_info()?),+])?;
+                Some(entities!(group_len, $((self.$idx))*))
+            }
+
             fn slice(self) -> Option<Self::SliceSet> {
                 let group_len = get_group_len(&[$(self.$idx.group_info()?),+])?;
 
@@ -79,6 +86,12 @@ macro_rules! impl_query {
                 Some(slice_entities!(group_len, $((self.$idx, $comp))+))
             }
         }
+    };
+}
+
+macro_rules! entities {
+    ($group_len:tt, ($first:expr) $(($other:expr))*) => {
+        &$first.split().1[..$group_len]
     };
 }
 
