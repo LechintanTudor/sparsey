@@ -1,6 +1,6 @@
 pub use self::impls::*;
 
-use crate::data::Entity;
+use crate::data::{Entity, SparseArray};
 use crate::query::{ComponentView, EntityIterator};
 use paste::paste;
 
@@ -20,14 +20,8 @@ macro_rules! impl_dense_iter {
             where
                 $($comp: ComponentView<'a>,)+
             {
-                pub unsafe fn new_unchecked(subgroup_len: usize, $([<comp_ $comp:lower>]: $comp,)+) -> Self {
-                    $(let [<comp_ $comp:lower>] = [<comp_ $comp:lower>].split();)+
-
-                    Self {
-                        dense: &first_of!($([<comp_ $comp:lower>].1),+)[..subgroup_len],
-                        index: 0,
-                        $([<comp_ $comp:lower>]: ([<comp_ $comp:lower>].2, [<comp_ $comp:lower>].3),)+
-                    }
+                pub unsafe fn new_unchecked(group_len: usize, $([<comp_ $comp:lower>]: $comp,)+) -> Self {
+                    new_dense_iter!(group_len, $(([<comp_ $comp:lower>], $comp))+)
                 }
             }
 
@@ -77,13 +71,31 @@ macro_rules! impl_dense_iter {
     };
 }
 
-macro_rules! first_of {
-    ($first:expr) => {
-        $first
+macro_rules! new_dense_iter {
+    ($group_len:tt, ($first:ident, $first_comp:ident) $(($other:ident, $other_comp:ident))*) => {
+        {
+            let (_, dense, flags, data) = $first.split();
+
+            Self {
+                dense: &dense[..$group_len],
+                index: 0,
+                $first: (flags, data),
+                $(
+                    $other: strip_view::<$other_comp>($other.split()),
+                )*
+            }
+        }
     };
-    ($first:expr, $($others:expr),+) => {
-        $first
-    };
+}
+
+#[inline]
+fn strip_view<'a, V>(
+    view: (&'a SparseArray, &'a [Entity], V::Flags, V::Data),
+) -> (V::Flags, V::Data)
+where
+    V: ComponentView<'a>,
+{
+    (view.2, view.3)
 }
 
 #[rustfmt::skip]

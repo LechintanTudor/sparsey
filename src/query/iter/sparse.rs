@@ -21,13 +21,7 @@ macro_rules! impl_sparse_iter {
                 $($comp: ComponentView<'a>,)+
             {
                 pub fn new($([<comp_ $comp:lower>]: $comp),+) -> Self {
-                    $(let [<comp_ $comp:lower>] = [<comp_ $comp:lower>].split();)+
-
-                    Self {
-                        dense: shortest_dense!($([<comp_ $comp:lower>].1),+),
-                        index: 0,
-                        $([<comp_ $comp:lower>]: strip_dense::<$comp>([<comp_ $comp:lower>]),)+
-                    }
+                    new_sparse_iter!($(([<comp_ $comp:lower>], $comp))*)
                 }
             }
 
@@ -73,6 +67,24 @@ macro_rules! impl_sparse_iter {
     };
 }
 
+macro_rules! new_sparse_iter {
+    (($first:ident, $first_comp:ident) $(($other:ident, $other_comp:ident))*) => {
+        {
+            let $first = $first.split();
+            $(let $other = $other.split();)*
+
+            Self {
+                dense: shortest_dense!($first.1, $($other.1),*),
+                index: 0,
+                $first: strip_view::<$first_comp>($first),
+                $(
+                    $other: strip_view::<$other_comp>($other),
+                )*
+            }
+        }
+    };
+}
+
 macro_rules! shortest_dense {
     ($first:expr) => {
         $first
@@ -91,11 +103,11 @@ fn shortest_dense<'a>(a: &'a [Entity], b: &'a [Entity]) -> &'a [Entity] {
 }
 
 #[inline]
-fn strip_dense<'a, C>(
-    view: (&'a SparseArray, &'a [Entity], C::Flags, C::Data),
-) -> (&'a SparseArray, C::Flags, C::Data)
+fn strip_view<'a, V>(
+    view: (&'a SparseArray, &'a [Entity], V::Flags, V::Data),
+) -> (&'a SparseArray, V::Flags, V::Data)
 where
-    C: ComponentView<'a>,
+    V: ComponentView<'a>,
 {
     (view.0, view.2, view.3)
 }

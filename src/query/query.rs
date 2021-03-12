@@ -2,7 +2,7 @@ pub use self::impls::*;
 
 use crate::data::Entity;
 use crate::query::iter::*;
-use crate::query::ComponentView;
+use crate::query::{ComponentView, UnfilteredComponentView};
 use crate::world::get_group_len;
 
 pub trait Query<'a> {
@@ -14,6 +14,17 @@ pub trait Query<'a> {
     fn iter(self) -> Self::Iterator;
 
     fn is_grouped(&self) -> bool;
+}
+
+pub trait UnfilteredQuery<'a>
+where
+    Self: Query<'a>,
+{
+    type SliceSet: 'a;
+
+    fn slice(self) -> Option<Self::SliceSet>;
+
+    fn slice_entities(self) -> Option<(&'a [Entity], Self::SliceSet)>;
 }
 
 macro_rules! impl_query {
@@ -43,6 +54,45 @@ macro_rules! impl_query {
                 })()
                 .is_some()
             }
+        }
+
+        impl<'a, $($comp),+> UnfilteredQuery<'a> for ($($comp,)+)
+        where
+            $($comp: UnfilteredComponentView<'a> + 'a,)+
+        {
+            type SliceSet = ($($comp::Slice,)+);
+
+            fn slice(self) -> Option<Self::SliceSet> {
+                let group_len = get_group_len(&[$(self.$idx.group_info()?),+])?;
+
+                unsafe {
+                    Some((
+                        $(
+                            $comp::get_slice(self.$idx.split().3, group_len),
+                        )+
+                    ))
+                }
+            }
+
+            fn slice_entities(self) -> Option<(&'a [Entity], Self::SliceSet)> {
+                let group_len = get_group_len(&[$(self.$idx.group_info()?),+])?;
+                Some(slice_entities!(group_len, $((self.$idx, $comp))+))
+            }
+        }
+    };
+}
+
+macro_rules! slice_entities {
+    ($group_len:tt, ($first:expr, $first_comp:ident) $(($other:expr, $other_comp:ident))*) => {
+        unsafe {
+            let (_, dense, _, first_data) = $first.split();
+            (
+                &dense[..$group_len],
+                (
+                    $first_comp::get_slice(first_data, $group_len),
+                    $($other_comp::get_slice($other.split().3, $group_len),)*
+                )
+            )
         }
     };
 }

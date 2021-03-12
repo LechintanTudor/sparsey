@@ -14,6 +14,12 @@ impl Drop for Droppable {
 }
 
 fn check(mut a: CompMut<u16>, b: Comp<u32>, c: Comp<u64>, d: Comp<Droppable>) {
+    if let Some((e, (_, _, _))) = (&a, &b, &c).slice_entities() {
+        println!("Slice length: {}", e.len());
+    }
+
+    println!();
+
     for (e, (a, b)) in (&a, &b).iter().entities() {
         println!("{:?} => {}, {}", e, a, b);
     }

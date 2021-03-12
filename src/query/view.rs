@@ -5,6 +5,7 @@ use crate::data::{
 use crate::query::IterOne;
 use crate::world::GroupInfo;
 use std::ops::{Deref, DerefMut};
+use std::slice;
 
 pub unsafe trait ComponentView<'a>
 where
@@ -28,6 +29,15 @@ where
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags;
 
     unsafe fn get_item(flags: Self::Flags, data: Self::Data, index: usize) -> Option<Self::Item>;
+}
+
+pub unsafe trait UnfilteredComponentView<'a>
+where
+    Self: ComponentView<'a> + Sized,
+{
+    type Slice: 'a;
+
+    unsafe fn get_slice(data: Self::Data, len: usize) -> Self::Slice;
 }
 
 pub struct Comp<'a, T>
@@ -107,6 +117,17 @@ where
 
     unsafe fn get_item(_: Self::Flags, data: Self::Data, index: usize) -> Option<Self::Item> {
         Some(&*data.add(index))
+    }
+}
+
+unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a Comp<'a, T>
+where
+    T: Send + Sync + 'static,
+{
+    type Slice = &'a [T];
+
+    unsafe fn get_slice(data: Self::Data, len: usize) -> Self::Slice {
+        slice::from_raw_parts(data, len)
     }
 }
 
@@ -218,6 +239,17 @@ where
     }
 }
 
+unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a CompMut<'a, T>
+where
+    T: Send + Sync + 'static,
+{
+    type Slice = &'a [T];
+
+    unsafe fn get_slice(data: Self::Data, len: usize) -> Self::Slice {
+        slice::from_raw_parts(data, len)
+    }
+}
+
 unsafe impl<'a: 'b, 'b, T> ComponentView<'b> for &'b mut CompMut<'a, T>
 where
     T: Component,
@@ -244,6 +276,17 @@ where
             &mut *data.add(index),
             &mut *flags.add(index),
         ))
+    }
+}
+
+unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a mut CompMut<'a, T>
+where
+    T: Send + Sync + 'static,
+{
+    type Slice = &'a mut [T];
+
+    unsafe fn get_slice(data: Self::Data, len: usize) -> Self::Slice {
+        slice::from_raw_parts_mut(data, len)
     }
 }
 
