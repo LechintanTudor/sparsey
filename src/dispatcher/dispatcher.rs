@@ -40,7 +40,7 @@ impl DispatcherBuilder {
         self
     }
 
-    pub fn merge(&mut self, mut other: DispatcherBuilder) -> &mut Self {
+    pub fn merge(&mut self, other: &mut DispatcherBuilder) -> &mut Self {
         self.simple_steps.extend(other.simple_steps.drain(..));
         self
     }
@@ -70,7 +70,7 @@ impl Dispatcher {
         for step in self.steps.iter() {
             match step {
                 Step::RunSystems(systems) => {
-                    for access in systems.iter().flat_map(|s| s.accesses()) {
+                    for access in systems.iter().flat_map(|sys| sys.accesses()) {
                         match access {
                             SystemAccess::Comp(comp) => {
                                 world.register_storage(comp.create_sparse_set())
@@ -83,7 +83,7 @@ impl Dispatcher {
                     }
                 }
                 Step::RunLocalSystems(systems) => {
-                    for access in systems.iter().flat_map(|s| s.accesses()) {
+                    for access in systems.iter().flat_map(|sys| sys.accesses()) {
                         match access {
                             SystemAccess::Comp(comp) => {
                                 world.register_storage(comp.create_sparse_set())
