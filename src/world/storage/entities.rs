@@ -71,7 +71,7 @@ struct EntitySparseSet {
 
 impl EntitySparseSet {
     fn insert(&mut self, entity: Entity) {
-        let index_entity = self.sparse.get_mut_or_allocate(entity.index());
+        let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
         match index_entity {
             Some(e) => {
@@ -141,10 +141,7 @@ impl EntityAllocator {
     fn allocate_atomic(&self) -> Option<Entity> {
         match atomic_decrement_usize(&self.recycled_len) {
             Some(recycled_len) => Some(self.recycled[recycled_len - 1]),
-            None => {
-                let current_id = atomic_increment_u32(&self.current_id)?;
-                Some(Entity::with_id(current_id))
-            }
+            None => atomic_increment_u32(&self.current_id).map(|id| Entity::with_id(id)),
         }
     }
 

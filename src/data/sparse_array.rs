@@ -1,6 +1,6 @@
 use crate::data::{Entity, IndexEntity};
 use std::hint::unreachable_unchecked;
-use std::{iter, ptr};
+use std::{iter, mem, ptr};
 
 const PAGE_SIZE: usize = 32;
 type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
@@ -17,11 +17,8 @@ impl SparseArray {
         }
     }
 
-    pub fn insert(&mut self, entity: Entity) -> Option<IndexEntity> {
-        let dest = self.get_mut_or_allocate(entity.index());
-        let prev = *dest;
-        *dest = Some(IndexEntity::new(entity.id(), entity.ver()));
-        prev
+    pub fn insert(&mut self, index: usize, entity: IndexEntity) -> Option<IndexEntity> {
+        mem::replace(self.get_mut_or_allocate_at(index), Some(entity))
     }
 
     pub fn remove(&mut self, entity: Entity) -> Option<IndexEntity> {
@@ -52,11 +49,6 @@ impl SparseArray {
             .filter(|e| e.map(|e| e.ver()) == Some(entity.ver()))
     }
 
-    pub fn get_mut_or_allocate(&mut self, index: usize) -> &mut Option<IndexEntity> {
-        self.allocate_at(index);
-        unsafe { self.get_unchecked_mut(index) }
-    }
-
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<IndexEntity> {
         match self.pages.get_unchecked_mut(index / PAGE_SIZE) {
             Some(page) => page.get_unchecked_mut(index % PAGE_SIZE),
@@ -64,7 +56,7 @@ impl SparseArray {
         }
     }
 
-    pub fn allocate_at(&mut self, index: usize) {
+    pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<IndexEntity> {
         let page_index = index / PAGE_SIZE;
 
         if page_index < self.pages.len() {
@@ -79,6 +71,13 @@ impl SparseArray {
             self.pages
                 .extend(iter::repeat(uninit_page()).take(extra_uninit_pages));
             self.pages.push(default_page())
+        }
+
+        unsafe {
+            match self.pages.get_unchecked_mut(page_index) {
+                Some(page) => page.get_unchecked_mut(index % PAGE_SIZE),
+                None => unreachable_unchecked(),
+            }
         }
     }
 

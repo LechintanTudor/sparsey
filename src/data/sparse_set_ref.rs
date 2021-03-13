@@ -94,24 +94,28 @@ where
     }
 
     pub fn insert(&mut self, entity: Entity, value: T) {
-        let index_entity = self.sparse.get_mut_or_allocate(entity.index());
+        let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
         match index_entity {
-            Some(e) => {
+            Some(e) => unsafe {
                 if e.id() == entity.id() {
-                    self.flags[e.index()].insert(ComponentFlags::CHANGED);
+                    self.flags
+                        .get_unchecked_mut(e.index())
+                        .insert(ComponentFlags::CHANGED);
                 } else {
-                    self.flags[e.index()].insert(ComponentFlags::ADDED);
+                    self.flags
+                        .get_unchecked_mut(e.index())
+                        .insert(ComponentFlags::ADDED);
                 }
 
                 *e = IndexEntity::new(e.id(), entity.ver());
-                self.data[e.index()] = value;
-            }
+                *self.data.get_unchecked_mut(e.index()) = value;
+            },
             None => {
                 *index_entity = Some(IndexEntity::new(self.dense.len() as u32, entity.ver()));
                 self.dense.push(entity);
-                self.data.push(value);
                 self.flags.push(ComponentFlags::ADDED);
+                self.data.push(value);
             }
         }
     }
@@ -132,18 +136,18 @@ where
     }
 
     pub fn get(&self, entity: Entity) -> Option<&T> {
-        let index = self.sparse.get_index_entity(entity)?.index();
-        unsafe { Some(self.data.get_unchecked(index)) }
+        self.sparse
+            .get_index_entity(entity)
+            .map(|e| unsafe { self.data.get_unchecked(e.index()) })
     }
 
     pub fn get_mut(&mut self, entity: Entity) -> Option<ComponentRefMut<T>> {
-        let index = self.sparse.get_index_entity(entity)?.index();
-        unsafe {
-            Some(ComponentRefMut::new(
-                self.data.get_unchecked_mut(index),
-                self.flags.get_unchecked_mut(index),
-            ))
-        }
+        self.sparse.get_index_entity(entity).map(move |e| unsafe {
+            ComponentRefMut::new(
+                self.data.get_unchecked_mut(e.index()),
+                self.flags.get_unchecked_mut(e.index()),
+            )
+        })
     }
 
     pub fn entities(&self) -> &[Entity] {
