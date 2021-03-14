@@ -1,13 +1,15 @@
 use crate::data::{
-    Component, ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseArray, VecRef, VecRefMut,
+    Component, ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseVec, VecRef, VecRefMut,
 };
+use std::mem;
 use std::ops::{Deref, DerefMut};
 
+/// Strongly-typed shared reference to a `TypeErasedSparseSet`.
 pub struct SparseSetRef<'a, T>
 where
     T: Component,
 {
-    sparse: &'a SparseArray,
+    sparse: &'a SparseVec,
     dense: &'a [Entity],
     flags: &'a [ComponentFlags],
     data: VecRef<'a, T>,
@@ -18,7 +20,7 @@ where
     T: Component,
 {
     pub(crate) unsafe fn new(
-        sparse: &'a SparseArray,
+        sparse: &'a SparseVec,
         dense: &'a [Entity],
         flags: &'a [ComponentFlags],
         data: VecRef<'a, T>,
@@ -31,16 +33,20 @@ where
         }
     }
 
+    /// Get s shared reference to the component at the given `Entity`.
     pub fn get(&self, entity: Entity) -> Option<&T> {
-        let index = self.sparse.get_index_entity(entity)?.index();
-        unsafe { Some(self.data.get_unchecked(index)) }
+        self.sparse
+            .get_index_entity(entity)
+            .map(|e| unsafe { self.data.get_unchecked(e.index()) })
     }
 
+    /// Get a slice of all entities which hold components in this sparse set.
     pub fn entities(&self) -> &[Entity] {
         self.dense
     }
 
-    pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
+    /// Split the sparse set into its sparse, dense, flags and data arrays.
+    pub fn split(&self) -> (&SparseVec, &[Entity], &[ComponentFlags], &[T]) {
         (self.sparse, self.dense, self.flags, &self.data)
     }
 }
@@ -65,11 +71,13 @@ where
     }
 }
 
+/// Strongly-typed exclusive reference to a `TypeErasedSparseSet`.
+/// Enables adding and removing components.
 pub struct SparseSetRefMut<'a, T>
 where
     T: Component,
 {
-    sparse: &'a mut SparseArray,
+    sparse: &'a mut SparseVec,
     dense: &'a mut Vec<Entity>,
     flags: &'a mut Vec<ComponentFlags>,
     data: VecRefMut<'a, T>,
@@ -79,8 +87,8 @@ impl<'a, T> SparseSetRefMut<'a, T>
 where
     T: Component,
 {
-    pub unsafe fn new(
-        sparse: &'a mut SparseArray,
+    pub(crate) unsafe fn new(
+        sparse: &'a mut SparseVec,
         dense: &'a mut Vec<Entity>,
         flags: &'a mut Vec<ComponentFlags>,
         data: VecRefMut<'a, T>,
@@ -93,7 +101,9 @@ where
         }
     }
 
-    pub fn insert(&mut self, entity: Entity, value: T) {
+    /// Insert a new component at the given `Entity`
+    /// and return the previous component, if any.
+    pub fn insert(&mut self, entity: Entity, value: T) -> Option<T> {
         let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
         match index_entity {
@@ -109,17 +119,19 @@ where
                 }
 
                 *e = IndexEntity::new(e.id(), entity.ver());
-                *self.data.get_unchecked_mut(e.index()) = value;
+                Some(mem::replace(self.data.get_unchecked_mut(e.index()), value))
             },
             None => {
                 *index_entity = Some(IndexEntity::new(self.dense.len() as u32, entity.ver()));
                 self.dense.push(entity);
                 self.flags.push(ComponentFlags::ADDED);
                 self.data.push(value);
+                None
             }
         }
     }
 
+    /// Remove the component at the given `Entity`, if any, and return it.
     pub fn remove(&mut self, entity: Entity) -> Option<T> {
         let index_entity = self.sparse.get_index_entity(entity)?;
 
@@ -135,12 +147,14 @@ where
         Some(self.data.swap_remove(index_entity.index()))
     }
 
+    /// Get a shared reference to the component at the given `Entity`, if any.
     pub fn get(&self, entity: Entity) -> Option<&T> {
         self.sparse
             .get_index_entity(entity)
             .map(|e| unsafe { self.data.get_unchecked(e.index()) })
     }
 
+    /// Get an exclusive reference to the component at the given `Entity`, if any.
     pub fn get_mut(&mut self, entity: Entity) -> Option<ComponentRefMut<T>> {
         self.sparse.get_index_entity(entity).map(move |e| unsafe {
             ComponentRefMut::new(
@@ -150,11 +164,13 @@ where
         })
     }
 
+    /// Get a slice of all entities which hold components in this sparse set.
     pub fn entities(&self) -> &[Entity] {
         self.dense
     }
 
-    pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentFlags], &[T]) {
+    /// Split the sparse set into its sparse, dense, flags and data arrays.
+    pub fn split(&self) -> (&SparseVec, &[Entity], &[ComponentFlags], &[T]) {
         (
             self.sparse,
             self.dense.as_slice(),
@@ -163,7 +179,8 @@ where
         )
     }
 
-    pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [ComponentFlags], &mut [T]) {
+    /// Mutably split the sparse set into its sparse, dense, flags and data arrays.
+    pub fn split_mut(&mut self) -> (&SparseVec, &[Entity], &mut [ComponentFlags], &mut [T]) {
         (
             self.sparse,
             self.dense.as_slice(),

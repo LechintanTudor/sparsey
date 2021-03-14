@@ -29,7 +29,7 @@ impl UngroupedComponents {
 
     pub fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
         self.sparse_sets
-            .entry(sparse_set.component_type_id())
+            .entry(sparse_set.type_info().id())
             .or_insert_with(|| AtomicRefCell::new(sparse_set));
     }
 

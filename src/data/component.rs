@@ -1,3 +1,5 @@
+/// Market trait automatically derived for all types
+/// which can be used as components in the `World`.
 pub trait Component
 where
     Self: Send + Sync + 'static,

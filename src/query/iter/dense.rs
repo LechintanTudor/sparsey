@@ -1,6 +1,6 @@
 pub use self::impls::*;
 
-use crate::data::{Entity, SparseArray};
+use crate::data::{Entity, SparseVec};
 use crate::query::{ComponentView, EntityIterator};
 use paste::paste;
 
@@ -89,9 +89,7 @@ macro_rules! new_dense_iter {
 }
 
 #[inline]
-fn strip_view<'a, V>(
-    view: (&'a SparseArray, &'a [Entity], V::Flags, V::Data),
-) -> (V::Flags, V::Data)
+fn strip_view<'a, V>(view: (&'a SparseVec, &'a [Entity], V::Flags, V::Data)) -> (V::Flags, V::Data)
 where
     V: ComponentView<'a>,
 {

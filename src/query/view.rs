@@ -1,6 +1,6 @@
 use crate::data::{
     Component, ComponentFlags, ComponentRefMut, Entity, MappedAtomicRef, MappedAtomicRefMut,
-    SparseArray, SparseSetRef, SparseSetRefMut,
+    SparseSetRef, SparseSetRefMut, SparseVec,
 };
 use crate::query::IterOne;
 use crate::world::GroupInfo;
@@ -17,7 +17,7 @@ where
 
     fn group_info(&self) -> Option<GroupInfo>;
 
-    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data);
+    fn split(self) -> (&'a SparseVec, &'a [Entity], Self::Flags, Self::Data);
 
     fn get(self, entity: Entity) -> Option<Self::Item> {
         let (sparse, _, flags, data) = self.split();
@@ -106,7 +106,7 @@ where
         self.group_info
     }
 
-    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
+    fn split(self) -> (&'a SparseVec, &'a [Entity], Self::Flags, Self::Data) {
         let (sparse, dense, flags, data) = self.sparse_set.split();
         (sparse, dense, flags.as_ptr(), data.as_ptr())
     }
@@ -225,7 +225,7 @@ where
         self.group_info
     }
 
-    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
+    fn split(self) -> (&'a SparseVec, &'a [Entity], Self::Flags, Self::Data) {
         let (sparse, dense, flags, data) = self.sparse_set.split();
         (sparse, dense, flags.as_ptr(), data.as_ptr())
     }
@@ -262,7 +262,7 @@ where
         self.group_info
     }
 
-    fn split(self) -> (&'b SparseArray, &'b [Entity], Self::Flags, Self::Data) {
+    fn split(self) -> (&'b SparseVec, &'b [Entity], Self::Flags, Self::Data) {
         let (sparse, dense, flags, data) = self.sparse_set.split_mut();
         (sparse, dense, flags.as_mut_ptr(), data.as_mut_ptr())
     }

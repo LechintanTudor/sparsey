@@ -1,4 +1,4 @@
-use crate::data::{ComponentFlags, Entity, SparseArray};
+use crate::data::{ComponentFlags, Entity, SparseVec};
 use crate::query::ComponentView;
 use crate::world::GroupInfo;
 use std::marker::PhantomData;
@@ -33,7 +33,7 @@ where
         V::group_info(&self.view)
     }
 
-    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
+    fn split(self) -> (&'a SparseVec, &'a [Entity], Self::Flags, Self::Data) {
         V::split(self.view)
     }
 
@@ -85,7 +85,7 @@ where
         V::group_info(&self.view)
     }
 
-    fn split(self) -> (&'a SparseArray, &'a [Entity], Self::Flags, Self::Data) {
+    fn split(self) -> (&'a SparseVec, &'a [Entity], Self::Flags, Self::Data) {
         V::split(self.view)
     }
 

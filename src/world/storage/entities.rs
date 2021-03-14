@@ -1,4 +1,4 @@
-use crate::data::{Entity, IndexEntity, SparseArray};
+use crate::data::{Entity, IndexEntity, SparseVec};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
@@ -65,7 +65,7 @@ impl AsRef<[Entity]> for Entities {
 
 #[derive(Clone, Default, Debug)]
 struct EntitySparseSet {
-    sparse: SparseArray,
+    sparse: SparseVec,
     dense: Vec<Entity>,
 }
 

@@ -2,6 +2,9 @@ use std::alloc::Layout;
 use std::any::TypeId;
 use std::{any, mem, ptr};
 
+/// Holds various type information, like the `TypeId`,
+/// the `Layout` and destructor functions for a single
+/// element or a slice of elements of type `T`.
 pub struct TypeInfo {
     id: TypeId,
     name: &'static str,
@@ -12,6 +15,7 @@ pub struct TypeInfo {
 }
 
 impl TypeInfo {
+    /// Create a new `TypeInfo` for type `T`.
     pub fn new<T>() -> Self
     where
         T: 'static,
@@ -26,34 +30,42 @@ impl TypeInfo {
         }
     }
 
+    /// Get the if of the type.
     pub fn id(&self) -> TypeId {
         self.id
     }
 
+    /// Get the name of the type.
     pub fn name(&self) -> &'static str {
         self.name
     }
 
+    /// Get the `Layout` of the type.
     pub fn layout(&self) -> Layout {
         self.layout
     }
 
+    /// Get the size in bytes of the type.
     pub fn size(&self) -> usize {
         self.layout.size()
     }
 
+    /// Get the align in bytes of the type.
     pub fn align(&self) -> usize {
         self.layout.align()
     }
 
+    /// Get whether or not the type has a destructor.
     pub fn needs_drop(&self) -> bool {
         self.needs_drop
     }
 
+    /// Drop the value pointed to by `ptr`.
     pub unsafe fn drop_one(&self, ptr: *mut u8) {
         (self.drop_one_fn)(ptr);
     }
 
+    /// Drop `count` values starting from `ptr`.
     pub unsafe fn drop_slice(&self, ptr: *mut u8, count: usize) {
         (self.drop_slice_fn)(ptr, count);
     }

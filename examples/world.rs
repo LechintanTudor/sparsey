@@ -4,6 +4,8 @@ use ecstasy::resources::*;
 use ecstasy::world::*;
 use std::iter;
 
+// TODO: ORGANIZE MODULES
+
 #[derive(Debug)]
 pub struct Droppable(u32);
 

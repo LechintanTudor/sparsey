@@ -1,6 +1,6 @@
 pub use self::impls::*;
 
-use crate::data::{Entity, SparseArray};
+use crate::data::{Entity, SparseVec};
 use crate::query::{ComponentView, EntityIterator};
 use paste::paste;
 
@@ -13,7 +13,7 @@ macro_rules! impl_sparse_iter {
             {
                 dense: &'a [Entity],
                 index: usize,
-                $([<comp_ $comp:lower>]: (&'a SparseArray, $comp::Flags, $comp::Data),)+
+                $([<comp_ $comp:lower>]: (&'a SparseVec, $comp::Flags, $comp::Data),)+
             }
 
             impl<'a, $($comp),+> $ident<'a, $($comp),+>
@@ -104,8 +104,8 @@ fn shortest_dense<'a>(a: &'a [Entity], b: &'a [Entity]) -> &'a [Entity] {
 
 #[inline]
 fn strip_view<'a, V>(
-    view: (&'a SparseArray, &'a [Entity], V::Flags, V::Data),
-) -> (&'a SparseArray, V::Flags, V::Data)
+    view: (&'a SparseVec, &'a [Entity], V::Flags, V::Data),
+) -> (&'a SparseVec, V::Flags, V::Data)
 where
     V: ComponentView<'a>,
 {

@@ -31,7 +31,7 @@ impl Components {
     }
 
     pub fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
-        if !self.grouped.contains(&sparse_set.component_type_id()) {
+        if !self.grouped.contains(&sparse_set.type_info().id()) {
             self.ungrouped.register_storage(sparse_set);
         }
     }
@@ -40,7 +40,7 @@ impl Components {
         let mut sparse_sets = HashMap::<TypeId, TypeErasedSparseSet>::new();
 
         for sparse_set in self.grouped.drain().chain(self.ungrouped.drain()) {
-            sparse_sets.insert(sparse_set.component_type_id(), sparse_set);
+            sparse_sets.insert(sparse_set.type_info().id(), sparse_set);
         }
 
         self.grouped = GroupedComponents::with_layout(&layout, &mut sparse_sets);

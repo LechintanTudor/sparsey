@@ -6,6 +6,10 @@ use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 use std::{mem, ptr, slice};
 
+/// Vector-like data structure which enables swapping two
+/// components without knowing their type. Elements cannot
+/// be added, removed or retrieved directly, `VecRefMut`
+/// must be used for those operations..
 pub struct TypeErasedVec {
     type_info: TypeInfo,
     ptr: NonNull<u8>,
