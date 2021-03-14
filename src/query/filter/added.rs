@@ -4,6 +4,7 @@ use crate::world::GroupInfo;
 use std::marker::PhantomData;
 use std::ops::Not;
 
+/// `ComponentView` filter which only matches components added this frame.
 pub struct Added<'a, V>
 where
     V: ComponentView<'a>,
@@ -12,6 +13,7 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
+/// Create a `ComponentView` filter which only matches components added this frame.
 pub fn added<'a, V>(view: V) -> Added<'a, V>
 where
     V: ComponentView<'a>,
@@ -65,6 +67,7 @@ where
     }
 }
 
+/// `ComponentView` filter which only matches components that were not added this frame.
 pub struct NotAdded<'a, V>
 where
     V: ComponentView<'a>,

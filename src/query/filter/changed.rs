@@ -4,6 +4,7 @@ use crate::world::GroupInfo;
 use std::marker::PhantomData;
 use std::ops::Not;
 
+/// `ComponentView` filter which only matches components changed this frame.
 pub struct Changed<'a, V>
 where
     V: ComponentView<'a>,
@@ -12,6 +13,7 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
+/// Produce a `ComponentView` filter which only matches components added this frame.
 pub fn changed<'a, V>(view: V) -> Changed<'a, V>
 where
     V: ComponentView<'a>,
@@ -65,6 +67,7 @@ where
     }
 }
 
+/// `ComponentView` filter which only matches components that were not changed this frame.
 pub struct NotChanged<'a, V>
 where
     V: ComponentView<'a>,

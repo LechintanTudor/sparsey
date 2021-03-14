@@ -4,6 +4,8 @@ use crate::world::GroupInfo;
 use std::marker::PhantomData;
 use std::ops::Not;
 
+/// `ComponentView` filter which only matches
+// components updated (added or changed) this frame.
 pub struct Updated<'a, V>
 where
     V: ComponentView<'a>,
@@ -12,6 +14,8 @@ where
     phantom: PhantomData<&'a ()>,
 }
 
+/// Produce a `ComponentView` filter which only matches
+// components updated (added or changed) this frame.
 pub fn updated<'a, V>(view: V) -> Updated<'a, V>
 where
     V: ComponentView<'a>,
@@ -65,6 +69,8 @@ where
     }
 }
 
+/// `ComponentView` filter which only matches components
+// that were not updated (added or changed) this frame.
 pub struct NotUpdated<'a, V>
 where
     V: ComponentView<'a>,

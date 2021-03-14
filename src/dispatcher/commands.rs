@@ -4,8 +4,8 @@ use crate::world::{ComponentSet, Entities, World};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// Command buffer used for queueing commands which require 
-/// exclusive access to `World` and `Resources`. 
+/// Command buffer used for queueing commands which require
+/// exclusive access to `World` and `Resources`.
 pub struct Commands<'a> {
     buffer: &'a mut Vec<Command>,
     entities: &'a Entities,
@@ -39,7 +39,7 @@ impl<'a> Commands<'a> {
         entity
     }
 
-    /// Queue the creation of a set of entities with 
+    /// Queue the creation of a set of entities with
     /// components produced by the given iterator.
     pub fn extend<C, I>(&mut self, components_iter: I)
     where

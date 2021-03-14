@@ -7,6 +7,7 @@ use crate::world::GroupInfo;
 use std::ops::{Deref, DerefMut};
 use std::slice;
 
+/// View over a set of components.
 pub unsafe trait ComponentView<'a>
 where
     Self: Sized,
@@ -15,10 +16,13 @@ where
     type Data: 'a + Copy;
     type Item: 'a;
 
+    /// Get group info for the component set.
     fn group_info(&self) -> Option<GroupInfo>;
 
+    /// Split the view into its sparse, dense, flags and data arrays.
     fn split(self) -> (&'a SparseVec, &'a [Entity], Self::Flags, Self::Data);
 
+    /// Get the item at the given entity, if any.
     fn get(self, entity: Entity) -> Option<Self::Item> {
         let (sparse, _, flags, data) = self.split();
         let index = sparse.get_index_entity(entity)?.index();
@@ -26,17 +30,22 @@ where
         unsafe { Self::get_item(flags, data, index) }
     }
 
+    /// Get the flags at the given index.
     unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags;
 
+    /// Get the item at the given index, if any.
     unsafe fn get_item(flags: Self::Flags, data: Self::Data, index: usize) -> Option<Self::Item>;
 }
 
+/// Unfiltered view over a set of components.
 pub unsafe trait UnfilteredComponentView<'a>
 where
     Self: ComponentView<'a> + Sized,
 {
+    /// Slice of components returned by `get_slice`.
     type Slice: 'a;
 
+    /// Get all components from the view as a slice.
     unsafe fn get_slice(data: Self::Data, len: usize) -> Self::Slice;
 }
 
@@ -48,6 +57,7 @@ where
     group_info: Option<GroupInfo<'a>>,
 }
 
+/// Shared view over a set of components.
 impl<'a, T> Comp<'a, T>
 where
     T: Send + Sync + 'static,
@@ -62,6 +72,7 @@ where
         }
     }
 
+    /// Iterate all components in the set.
     pub fn iter(&'a self) -> IterOne<'a, &'a Self>
     where
         T: Component,
@@ -69,6 +80,7 @@ where
         IterOne::new(self)
     }
 
+    /// Get all entities which have components in the set.
     pub fn entities(&self) -> &[Entity] {
         self.sparse_set.entities()
     }
@@ -131,6 +143,7 @@ where
     }
 }
 
+/// Exclusive view over a set of components.
 pub struct CompMut<'a, T>
 where
     T: Send + Sync + 'static,
@@ -153,6 +166,7 @@ where
         }
     }
 
+    /// Iterate all components in the set.
     pub fn iter(&'a self) -> IterOne<'a, &'a Self>
     where
         T: Component,
@@ -160,6 +174,7 @@ where
         IterOne::new(self)
     }
 
+    /// Mutably iterate all components in the set.
     pub fn iter_mut(&mut self) -> IterOne<&mut Self>
     where
         T: Component,
@@ -167,6 +182,7 @@ where
         IterOne::new(self)
     }
 
+    /// Get all entities which have components in the set.
     pub fn entities(&self) -> &[Entity] {
         self.sparse_set.entities()
     }

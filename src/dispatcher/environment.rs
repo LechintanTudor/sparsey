@@ -10,7 +10,7 @@ use std::marker::PhantomData;
 pub enum SystemAccess {
     /// Get a command buffer for queueing commands.
     Commands,
-    /// Get a shared view over a set of components from the `World`. 
+    /// Get a shared view over a set of components from the `World`.
     Comp(LayoutComponent),
     /// Get an exclusive view over a set of components from the `World`.
     CompMut(LayoutComponent),
@@ -89,7 +89,7 @@ unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
     }
 }
 
-/// Get a shared view over a set of components from the `World`. 
+/// Get a shared view over a set of components from the `World`.
 pub struct BorrowComp<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowComp<T>
@@ -107,7 +107,7 @@ where
     }
 }
 
-/// Get an exclusive view over a set of components from the `World`. 
+/// Get an exclusive view over a set of components from the `World`.
 pub struct BorrowCompMut<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowCompMut<T>
@@ -125,7 +125,7 @@ where
     }
 }
 
-/// Get a shared view over a resource from `Resources`. 
+/// Get a shared view over a resource from `Resources`.
 pub struct BorrowRes<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowRes<T>
