@@ -124,7 +124,7 @@ where
     }
 }
 
-pub struct BorrowCommands(PhantomData<*const ()>);
+pub struct BorrowCommands;
 
 unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
     type Item = Commands<'a>;

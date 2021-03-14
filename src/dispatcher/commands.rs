@@ -4,22 +4,7 @@ use crate::world::{ComponentSet, Entities, World};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-pub struct Command(Box<dyn FnOnce(&mut World, &mut Resources) + Send + 'static>);
-
-impl Command {
-    pub fn run(self, world: &mut World, resources: &mut Resources) {
-        self.0(world, resources)
-    }
-}
-
-impl<F> From<F> for Command
-where
-    F: FnOnce(&mut World, &mut Resources) + Send + 'static,
-{
-    fn from(function: F) -> Self {
-        Self(Box::new(function))
-    }
-}
+pub(crate) type Command = Box<dyn FnOnce(&mut World, &mut Resources) + Send + 'static>;
 
 pub struct CommandBuffers {
     buffers: Vec<UnsafeCell<Vec<Command>>>,
@@ -82,7 +67,7 @@ impl<'a> Commands<'a> {
     where
         F: FnOnce(&mut World, &mut Resources) + Send + 'static,
     {
-        self.buffer.push(command.into());
+        self.buffer.push(Box::new(command));
     }
 
     pub fn create<C>(&mut self, components: C) -> Entity

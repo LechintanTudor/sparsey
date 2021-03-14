@@ -129,7 +129,7 @@ impl Dispatcher {
                     world.maintain();
 
                     for command in self.command_buffers.drain() {
-                        command.run(world, resources);
+                        command(world, resources);
                     }
                 }
             }
@@ -171,7 +171,7 @@ impl Dispatcher {
                 }
                 Step::FlushCommands => {
                     for command in self.command_buffers.drain() {
-                        command.run(world, resources);
+                        command(world, resources);
                     }
                 }
             }
