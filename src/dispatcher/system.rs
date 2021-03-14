@@ -2,20 +2,39 @@ use crate::dispatcher::{
     BorrowEnvironment, Environment, LocalSystemParam, SystemAccess, SystemParam,
 };
 
-pub trait LocallyRunnable {
+/// Trait implemented by systems which can run on the thread
+/// in which they were created.
+pub unsafe trait LocallyRunnable {
+    /// Get a list of all data acessess in the `run` function.
     fn accesses(&self) -> &[SystemAccess];
 
+    /// Run the system in the given `Environment`.
+    /// Always safe to call in the thread in which the system was created.
     unsafe fn run(&mut self, environment: Environment);
 }
 
+/// Marker trait for systems which can be run in threads other than
+/// the one in which they were created.
 pub unsafe trait Runnable {}
 
+/// Encapsulates a locally runnable function. Implements the `LocallyRunnable` trait.
 pub struct LocalSystem {
     runnable: Box<dyn FnMut(Environment) + 'static>,
     accesses: Vec<SystemAccess>,
 }
 
-impl LocallyRunnable for LocalSystem {
+impl LocalSystem {
+    /// Create a `LocalSystem` with the given function.
+    /// Generally used for creating stateful local systems.
+    pub fn new<P, F>(function: F) -> Self
+    where
+        F: IntoLocalSystem<P>,
+    {
+        function.local_system()
+    }
+}
+
+unsafe impl LocallyRunnable for LocalSystem {
     fn accesses(&self) -> &[SystemAccess] {
         &self.accesses
     }
@@ -29,12 +48,24 @@ pub trait IntoLocalSystem<Params> {
     fn local_system(self) -> LocalSystem;
 }
 
+/// Encapsulates a runnable function. Implements the `Runnable` trait.
 pub struct System {
     runnable: Box<dyn FnMut(Environment) + Send + 'static>,
     accesses: Vec<SystemAccess>,
 }
 
-impl LocallyRunnable for System {
+impl System {
+    /// Create a `System` with the given function.
+    /// Generally used for creating stateful systems.
+    pub fn new<P, F>(function: F) -> Self
+    where
+        F: IntoSystem<P>,
+    {
+        function.system()
+    }
+}
+
+unsafe impl LocallyRunnable for System {
     fn accesses(&self) -> &[SystemAccess] {
         &self.accesses
     }

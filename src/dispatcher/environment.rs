@@ -6,15 +6,23 @@ use crate::world::{LayoutComponent, World};
 use std::any::TypeId;
 use std::marker::PhantomData;
 
+/// Represents the type of data which can be accessed by a system.
 pub enum SystemAccess {
+    /// Get a command buffer for queueing commands.
     Commands,
+    /// Get a shared view over a set of components from the `World`. 
     Comp(LayoutComponent),
+    /// Get an exclusive view over a set of components from the `World`.
     CompMut(LayoutComponent),
+    /// Get a shared view over a resource from `Resources`.
     Res(TypeId),
+    /// Get an exclusive view over a resource from `Resources`.
     ResMut(TypeId),
 }
 
 impl SystemAccess {
+    /// Check if two `SystemAccesses` conflict, that is,
+    /// preventing two systems from running in parallel.
     pub fn conflicts(&self, other: &SystemAccess) -> bool {
         match (self, other) {
             (Self::Comp(comp1), Self::CompMut(comp2)) => comp1 == comp2,
@@ -28,6 +36,7 @@ impl SystemAccess {
     }
 }
 
+/// Execution environment for systems.
 pub struct Environment<'a> {
     world: &'a World,
     resources: &'a UnsafeResources,
@@ -35,7 +44,7 @@ pub struct Environment<'a> {
 }
 
 impl<'a> Environment<'a> {
-    pub fn new(
+    pub(crate) fn new(
         world: &'a World,
         resources: &'a UnsafeResources,
         command_buffers: &'a CommandBuffers,
@@ -48,14 +57,39 @@ impl<'a> Environment<'a> {
     }
 }
 
+/// Used by systems to borrow data from `Environments`.
 pub unsafe trait BorrowEnvironment<'a> {
+    /// The data resulting from the borrow.
     type Item;
 
+    /// The type of data acessed.
     fn access() -> SystemAccess;
 
+    /// Borrow the data from the environment.
+    /// Unsafe because it doesn't ensure !Sync or !Send
+    /// resources are borrowed correctly.
     unsafe fn borrow(environment: &'a Environment) -> Self::Item;
 }
 
+/// Get a command buffer for queueing commands.
+pub struct BorrowCommands;
+
+unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
+    type Item = Commands<'a>;
+
+    fn access() -> SystemAccess {
+        SystemAccess::Commands
+    }
+
+    unsafe fn borrow(environment: &'a Environment) -> Self::Item {
+        Commands::new(
+            environment.command_buffers.next().unwrap(),
+            environment.world.entities(),
+        )
+    }
+}
+
+/// Get a shared view over a set of components from the `World`. 
 pub struct BorrowComp<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowComp<T>
@@ -73,6 +107,7 @@ where
     }
 }
 
+/// Get an exclusive view over a set of components from the `World`. 
 pub struct BorrowCompMut<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowCompMut<T>
@@ -90,6 +125,7 @@ where
     }
 }
 
+/// Get a shared view over a resource from `Resources`. 
 pub struct BorrowRes<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowRes<T>
@@ -107,6 +143,7 @@ where
     }
 }
 
+/// Get an exclusive view over a resource from `Resources`.
 pub struct BorrowResMut<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowResMut<T>
@@ -121,22 +158,5 @@ where
 
     unsafe fn borrow(environment: &'a Environment) -> Self::Item {
         environment.resources.borrow_mut::<T>().unwrap()
-    }
-}
-
-pub struct BorrowCommands;
-
-unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
-    type Item = Commands<'a>;
-
-    fn access() -> SystemAccess {
-        SystemAccess::Commands
-    }
-
-    unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-        Commands::new(
-            environment.command_buffers.next().unwrap(),
-            environment.world.entities(),
-        )
     }
 }

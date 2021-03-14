@@ -5,10 +5,13 @@ use crate::dispatcher::{
 use crate::query::{Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource};
 
+/// Trait used for marking system parameters and borrowing data from the `Environment`.
 pub trait LocalSystemParam {
     type Borrow: for<'a> BorrowEnvironment<'a>;
 }
 
+/// Marker trait for parameters of systems which are safe to run
+/// from threads other than the one in which they were created.
 pub unsafe trait SystemParam
 where
     Self: LocalSystemParam,

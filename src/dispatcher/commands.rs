@@ -4,9 +4,84 @@ use crate::world::{ComponentSet, Entities, World};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+/// Command buffer used for queueing commands which require 
+/// exclusive access to `World` and `Resources`. 
+pub struct Commands<'a> {
+    buffer: &'a mut Vec<Command>,
+    entities: &'a Entities,
+}
+
+impl<'a> Commands<'a> {
+    pub(crate) fn new(buffer: &'a mut Vec<Command>, entities: &'a Entities) -> Self {
+        Self { buffer, entities }
+    }
+
+    /// Queue a function to run with exclusive access to the `World` and `Resources`.
+    pub fn run<F>(&mut self, command: F)
+    where
+        F: FnOnce(&mut World, &mut Resources) + Send + 'static,
+    {
+        self.buffer.push(Box::new(command));
+    }
+
+    /// Queue the creation of an entity with given components and
+    /// return the `Entity` to be created.
+    pub fn create<C>(&mut self, components: C) -> Entity
+    where
+        C: ComponentSet,
+    {
+        let entity = self.entities.create_atomic();
+
+        self.run(move |world, _| {
+            let _ = world.append(entity, components);
+        });
+
+        entity
+    }
+
+    /// Queue the creation of a set of entities with 
+    /// components produced by the given iterator.
+    pub fn extend<C, I>(&mut self, components_iter: I)
+    where
+        C: ComponentSet,
+        I: IntoIterator<Item = C> + Send + 'static,
+    {
+        self.run(move |world, _| {
+            world.extend(components_iter);
+        });
+    }
+
+    /// Queue the destruction of the given `Entity`.
+    pub fn destroy(&mut self, entity: Entity) {
+        self.run(move |world, _| {
+            world.destroy(entity);
+        });
+    }
+
+    /// Queue appending a set of components to the given `Entity`.
+    pub fn append<C>(&mut self, entity: Entity, components: C)
+    where
+        C: ComponentSet,
+    {
+        self.run(move |world, _| {
+            let _ = world.append(entity, components);
+        });
+    }
+
+    /// Queue the deletion of a set of components from the given `Entity`.
+    pub fn delete<C>(&mut self, entity: Entity)
+    where
+        C: ComponentSet,
+    {
+        self.run(move |world, _| {
+            world.delete::<C>(entity);
+        });
+    }
+}
+
 pub(crate) type Command = Box<dyn FnOnce(&mut World, &mut Resources) + Send + 'static>;
 
-pub struct CommandBuffers {
+pub(crate) struct CommandBuffers {
     buffers: Vec<UnsafeCell<Vec<Command>>>,
     index: AtomicUsize,
 }
@@ -50,70 +125,5 @@ impl CommandBuffers {
             .iter_mut()
             .take(used_buffers)
             .flat_map(|buffer| unsafe { (&mut *buffer.get()).drain(..) })
-    }
-}
-
-pub struct Commands<'a> {
-    buffer: &'a mut Vec<Command>,
-    entities: &'a Entities,
-}
-
-impl<'a> Commands<'a> {
-    pub(crate) fn new(buffer: &'a mut Vec<Command>, entities: &'a Entities) -> Self {
-        Self { buffer, entities }
-    }
-
-    pub fn run<F>(&mut self, command: F)
-    where
-        F: FnOnce(&mut World, &mut Resources) + Send + 'static,
-    {
-        self.buffer.push(Box::new(command));
-    }
-
-    pub fn create<C>(&mut self, components: C) -> Entity
-    where
-        C: ComponentSet,
-    {
-        let entity = self.entities.create_atomic();
-
-        self.run(move |world, _| {
-            let _ = world.append(entity, components);
-        });
-
-        entity
-    }
-
-    pub fn extend<C, I>(&mut self, components_iter: I)
-    where
-        C: ComponentSet,
-        I: IntoIterator<Item = C> + Send + 'static,
-    {
-        self.run(move |world, _| {
-            world.extend(components_iter);
-        });
-    }
-
-    pub fn destroy(&mut self, entity: Entity) {
-        self.run(move |world, _| {
-            world.destroy(entity);
-        });
-    }
-
-    pub fn append<C>(&mut self, entity: Entity, components: C)
-    where
-        C: ComponentSet,
-    {
-        self.run(move |world, _| {
-            let _ = world.append(entity, components);
-        });
-    }
-
-    pub fn delete<C>(&mut self, entity: Entity)
-    where
-        C: ComponentSet,
-    {
-        self.run(move |world, _| {
-            world.delete::<C>(entity);
-        });
     }
 }

@@ -7,44 +7,39 @@ use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use rayon::ThreadPool;
 use std::mem;
 
-enum SimpleStep {
-    RunSystem(System),
-    RunLocalSystem(LocalSystem),
-    FlushCommands,
-}
-
-enum Step {
-    RunSystems(Vec<System>),
-    RunLocalSystems(Vec<LocalSystem>),
-    FlushCommands,
-}
-
+/// Implements the builder pattern to create a `Dispatcher`.
 #[derive(Default)]
 pub struct DispatcherBuilder {
     simple_steps: Vec<SimpleStep>,
 }
 
 impl DispatcherBuilder {
+    /// Add a system to the `Dispatcher`.
     pub fn add_system(&mut self, system: System) -> &mut Self {
         self.simple_steps.push(SimpleStep::RunSystem(system));
         self
     }
 
+    /// Add a local system to the `Dispatcher` which runs on the current thread.
     pub fn add_local_system(&mut self, system: LocalSystem) -> &mut Self {
         self.simple_steps.push(SimpleStep::RunLocalSystem(system));
         self
     }
 
+    /// Add a flush barrier which runs all the commands which need exclusive access
+    /// to the `World` and `Resources`.
     pub fn add_flush(&mut self) -> &mut Self {
         self.simple_steps.push(SimpleStep::FlushCommands);
         self
     }
 
+    /// Merge two `Dispatchers`. After the call `other` is empty.
     pub fn merge(&mut self, other: &mut DispatcherBuilder) -> &mut Self {
         self.simple_steps.extend(other.simple_steps.drain(..));
         self
     }
 
+    /// Build a `Dispatcher` with the given systems and barriers.
     pub fn build(&mut self) -> Dispatcher {
         let steps = merge_and_optimize_steps(mem::take(&mut self.simple_steps));
         let command_buffers = CommandBuffers::new(required_command_buffers(&steps));
@@ -56,16 +51,21 @@ impl DispatcherBuilder {
     }
 }
 
+/// Used to run systems, potentially in parallel.
 pub struct Dispatcher {
     steps: Vec<Step>,
     command_buffers: CommandBuffers,
 }
 
 impl Dispatcher {
+    /// Creates a `DispatcherBuilder` to enable creating a `Dispatcher`
+    /// using the builder pattern.
     pub fn builder() -> DispatcherBuilder {
         DispatcherBuilder::default()
     }
 
+    /// Adds the required component storages to the `World` to avoid
+    /// having to add them manually via `World::register`.
     pub fn set_up(&self, world: &mut World) {
         for step in self.steps.iter() {
             match step {
@@ -100,6 +100,7 @@ impl Dispatcher {
         }
     }
 
+    /// Run all systems on the current thread.
     pub fn run_locally(&mut self, world: &mut World, resources: &mut Resources) {
         for step in self.steps.iter_mut() {
             match step {
@@ -136,6 +137,7 @@ impl Dispatcher {
         }
     }
 
+    /// Run all systems, potentially in parallel, on the given `ThreadPool`.
     pub fn run(&mut self, world: &mut World, resources: &mut Resources, thread_pool: &ThreadPool) {
         for step in self.steps.iter_mut() {
             match step {
@@ -178,6 +180,8 @@ impl Dispatcher {
         }
     }
 
+    /// Get the maximum number of systems which can run in parallel.
+    /// Mostly used for setting up the number of threads in the `ThreadPool`.
     pub fn max_parallel_systems(&self) -> usize {
         let mut max_parallel_systems = 0;
 
@@ -195,6 +199,18 @@ impl Dispatcher {
 
         max_parallel_systems
     }
+}
+
+enum SimpleStep {
+    RunSystem(System),
+    RunLocalSystem(LocalSystem),
+    FlushCommands,
+}
+
+enum Step {
+    RunSystems(Vec<System>),
+    RunLocalSystems(Vec<LocalSystem>),
+    FlushCommands,
 }
 
 fn required_command_buffers(steps: &[Step]) -> usize {
