@@ -1,9 +1,11 @@
-pub use self::common::*;
+pub use self::internal::*;
+pub use self::resource::*;
 pub use self::resources::*;
-pub use self::sync_resources::*;
-pub use self::unsafe_resources::*;
+pub use self::sync::*;
+pub use self::view::*;
 
-mod common;
+mod internal;
+mod resource;
 mod resources;
-mod sync_resources;
-mod unsafe_resources;
+mod sync;
+mod view;
