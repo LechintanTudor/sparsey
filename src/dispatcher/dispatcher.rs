@@ -51,7 +51,7 @@ impl DispatcherBuilder {
     }
 }
 
-/// Used to run systems, potentially in parallel.
+/// Used to run `Systems`, potentially in parallel.
 pub struct Dispatcher {
     steps: Vec<Step>,
     command_buffers: CommandBuffers,

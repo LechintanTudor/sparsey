@@ -51,7 +51,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{cmp, fmt};
 
 /// A threadsafe analogue to RefCell.
-pub struct AtomicRefCell<T>
+pub(crate) struct AtomicRefCell<T>
 where
     T: ?Sized,
 {
@@ -335,7 +335,7 @@ unsafe impl<T> Sync for AtomicRefCell<T> where T: ?Sized + Send + Sync {}
 //
 
 /// A wrapper type for an immutably borrowed value from an `AtomicRefCell<T>`.
-pub struct AtomicRef<'a, T>
+pub(crate) struct AtomicRef<'a, T>
 where
     T: ?Sized + 'a,
 {
@@ -391,7 +391,7 @@ where
     {
         MappedAtomicRef {
             value: f(orig.value),
-            borrow: orig.borrow,
+            _borrow: orig.borrow,
         }
     }
 
@@ -419,7 +419,7 @@ where
 }
 
 /// A wrapper type for a mutably borrowed value from an `AtomicRefCell<T>`.
-pub struct AtomicRefMut<'a, T>
+pub(crate) struct AtomicRefMut<'a, T>
 where
     T: ?Sized + 'a,
 {
@@ -477,7 +477,7 @@ where
     {
         MappedAtomicRefMut {
             value: f(orig.value),
-            borrow: orig.borrow,
+            _borrow: orig.borrow,
         }
     }
 
@@ -505,9 +505,9 @@ where
 }
 
 /// A wrapper type for a value created from an `AtomicRef<T>`.
-pub struct MappedAtomicRef<'a, T> {
+pub(crate) struct MappedAtomicRef<'a, T> {
     value: T,
-    borrow: AtomicBorrowRef<'a>,
+    _borrow: AtomicBorrowRef<'a>,
 }
 
 impl<'a, T> Deref for MappedAtomicRef<'a, T> {
@@ -528,14 +528,14 @@ impl<'a, T> DerefMut for MappedAtomicRef<'a, T> {
 
 impl<'a, T> MappedAtomicRef<'a, T> {
     /// Make a new `MappedAtomicRef` using the borrowed data.
-    #[inline]
+    #[allow(dead_code)]
     pub fn map_into<U, F>(orig: Self, f: F) -> MappedAtomicRef<'a, U>
     where
         F: FnOnce(T) -> U,
     {
         MappedAtomicRef {
             value: f(orig.value),
-            borrow: orig.borrow,
+            _borrow: orig._borrow,
         }
     }
 }
@@ -550,9 +550,9 @@ where
 }
 
 /// A wrapper type for a value created from an `AtomicRefMut<T>`.
-pub struct MappedAtomicRefMut<'a, T> {
+pub(crate) struct MappedAtomicRefMut<'a, T> {
     value: T,
-    borrow: AtomicBorrowRefMut<'a>,
+    _borrow: AtomicBorrowRefMut<'a>,
 }
 
 impl<'a, T> Deref for MappedAtomicRefMut<'a, T> {
@@ -573,14 +573,14 @@ impl<'a, T> DerefMut for MappedAtomicRefMut<'a, T> {
 
 impl<'a, T> MappedAtomicRefMut<'a, T> {
     /// Make a new `MappedAtomicRefMut` using the borrowed data.
-    #[inline]
+    #[allow(dead_code)]
     pub fn map_into<U, F>(orig: Self, f: F) -> MappedAtomicRefMut<'a, U>
     where
         F: FnOnce(T) -> U,
     {
         MappedAtomicRefMut {
             value: f(orig.value),
-            borrow: orig.borrow,
+            _borrow: orig._borrow,
         }
     }
 }

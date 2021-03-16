@@ -2,9 +2,8 @@ use std::alloc::Layout;
 use std::any::TypeId;
 use std::{any, mem, ptr};
 
-/// Holds various type information, like the `TypeId`,
-/// the `Layout` and destructor functions for a single
-/// element or a slice of elements of type `T`.
+/// Holds type information, including the `TypeId`, the `Layout`
+/// and destructor functions elements of type `T`.
 pub struct TypeInfo {
     id: TypeId,
     name: &'static str,

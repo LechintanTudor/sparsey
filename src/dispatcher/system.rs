@@ -2,7 +2,7 @@ use crate::dispatcher::{
     BorrowEnvironment, Environment, LocalSystemParam, SystemAccess, SystemParam,
 };
 
-/// Trait implemented by systems which can run on the thread
+/// Trait implemented by `Systems` which can run on the thread
 /// in which they were created.
 pub unsafe trait LocallyRunnable {
     /// Get a list of all data acessess in the `run` function.
@@ -13,8 +13,8 @@ pub unsafe trait LocallyRunnable {
     unsafe fn run(&mut self, environment: Environment);
 }
 
-/// Marker trait for systems which can be run in threads other than
-/// the one in which they were created.
+/// Marker trait for `Systems` which can be run in threads
+/// other than the one in which they were created.
 pub unsafe trait Runnable {}
 
 /// Encapsulates a locally runnable function. Implements the `LocallyRunnable` trait.
@@ -44,6 +44,7 @@ unsafe impl LocallyRunnable for LocalSystem {
     }
 }
 
+/// Trait implemented by functions which can be turned into `LocalSystems`.
 pub trait IntoLocalSystem<Params> {
     fn local_system(self) -> LocalSystem;
 }
@@ -86,6 +87,7 @@ impl IntoLocalSystem<()> for System {
     }
 }
 
+/// Trait implemented by functions which can be turned into `Systems`.
 pub trait IntoSystem<Params>
 where
     Self: IntoLocalSystem<Params>,

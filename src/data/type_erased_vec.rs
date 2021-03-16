@@ -9,8 +9,8 @@ use std::{mem, ptr, slice};
 /// Vector-like data structure which enables swapping two
 /// components without knowing their type. Elements cannot
 /// be added, removed or retrieved directly, `VecRefMut`
-/// must be used for those operations..
-pub struct TypeErasedVec {
+/// must be used for those operations.
+pub(crate) struct TypeErasedVec {
     type_info: TypeInfo,
     ptr: NonNull<u8>,
     cap: usize,
@@ -100,10 +100,12 @@ impl TypeErasedVec {
         }
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.len
     }
 
+    #[allow(dead_code)]
     pub fn capacity(&self) -> usize {
         self.cap
     }
@@ -127,7 +129,7 @@ impl Drop for TypeErasedVec {
     }
 }
 
-pub struct VecRef<'a, T>
+pub(crate) struct VecRef<'a, T>
 where
     T: Component,
 {
@@ -167,7 +169,7 @@ where
     }
 }
 
-pub struct VecRefMut<'a, T>
+pub(crate) struct VecRefMut<'a, T>
 where
     T: Component,
 {
@@ -194,6 +196,7 @@ where
         self.vec.len += 1;
     }
 
+    #[allow(dead_code)]
     pub fn pop(&mut self) -> Option<T> {
         if self.vec.len == 0 {
             None

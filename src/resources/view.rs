@@ -1,7 +1,7 @@
 use crate::data::{AtomicRef, AtomicRefMut};
 use std::ops::{Deref, DerefMut};
 
-/// Shared view over a resource.
+/// Shared view over a `Resource`.
 pub struct Res<'a, T>(AtomicRef<'a, T>)
 where
     T: ?Sized;
@@ -49,6 +49,7 @@ where
     }
 }
 
+/// Exclusive view over a `Resource`.
 pub struct ResMut<'a, T>(AtomicRefMut<'a, T>)
 where
     T: ?Sized;

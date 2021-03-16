@@ -6,7 +6,7 @@ use crate::world::{LayoutComponent, World};
 use std::any::TypeId;
 use std::marker::PhantomData;
 
-/// Represents the type of data which can be accessed by a system.
+/// Represents the type of data which can be accessed by a `System`.
 pub enum SystemAccess {
     /// Get a command buffer for queueing commands.
     Commands,
@@ -36,7 +36,7 @@ impl SystemAccess {
     }
 }
 
-/// Execution environment for systems.
+/// Execution environment for `Systems`.
 pub struct Environment<'a> {
     world: &'a World,
     resources: &'a UnsafeResources,
@@ -71,7 +71,7 @@ pub unsafe trait BorrowEnvironment<'a> {
     unsafe fn borrow(environment: &'a Environment) -> Self::Item;
 }
 
-/// Get a command buffer for queueing commands.
+/// Type used to get a command buffer for queueing commands.
 pub struct BorrowCommands;
 
 unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
@@ -89,7 +89,7 @@ unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
     }
 }
 
-/// Get a shared view over a set of components from the `World`.
+/// Type used to get a shared view over a set of components from the `World`.
 pub struct BorrowComp<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowComp<T>
@@ -107,7 +107,7 @@ where
     }
 }
 
-/// Get an exclusive view over a set of components from the `World`.
+/// Type used to get an exclusive view over a set of components from the `World`.
 pub struct BorrowCompMut<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowCompMut<T>
@@ -125,7 +125,7 @@ where
     }
 }
 
-/// Get a shared view over a resource from `Resources`.
+/// Type used to get a shared view over a resource from `Resources`.
 pub struct BorrowRes<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowRes<T>
@@ -143,7 +143,7 @@ where
     }
 }
 
-/// Get an exclusive view over a resource from `Resources`.
+/// Type used to get an exclusive view over a resource from `Resources`.
 pub struct BorrowResMut<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowResMut<T>

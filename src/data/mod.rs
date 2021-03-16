@@ -1,12 +1,13 @@
-pub use self::atomic_ref_cell::*;
 pub use self::component::*;
 pub use self::component_ref::*;
 pub use self::entity::*;
 pub use self::sparse_set_ref::*;
 pub use self::sparse_vec::*;
 pub use self::type_erased_sparse_set::*;
-pub use self::type_erased_vec::*;
 pub use self::type_info::*;
+
+pub(crate) use self::atomic_ref_cell::*;
+pub(crate) use self::type_erased_vec::*;
 
 mod atomic_ref_cell;
 mod component;
