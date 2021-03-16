@@ -84,7 +84,7 @@ unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
     unsafe fn borrow(environment: &'a Environment) -> Self::Item {
         Commands::new(
             environment.command_buffers.next().unwrap(),
-            environment.world.entities(),
+            environment.world.entity_storage(),
         )
     }
 }

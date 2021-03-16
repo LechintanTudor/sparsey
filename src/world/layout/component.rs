@@ -5,6 +5,7 @@ use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
+/// Holds information about a component type.
 pub struct LayoutComponent {
     component: Box<dyn AbstractType>,
 }
@@ -21,6 +22,7 @@ impl Clone for LayoutComponent {
 }
 
 impl LayoutComponent {
+    /// Create a new `LayoutComponent` for the given type.
     pub fn new<C>() -> Self
     where
         C: Component,
@@ -30,14 +32,17 @@ impl LayoutComponent {
         }
     }
 
+    /// Get the `TypeId` of the component type described by the `LayoutComponent`.
     pub fn type_id(&self) -> TypeId {
         self.component.type_id()
     }
 
+    /// Get the name of the component type described by the `LayoutComponent`.
     pub fn type_name(&self) -> &'static str {
         self.component.type_name()
     }
 
+    /// Create a `TypeErasedSparseSet` for the component type described by the `LayoutComponent`.
     pub fn new_sparse_set(&self) -> TypeErasedSparseSet {
         self.component.new_sparse_set()
     }

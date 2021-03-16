@@ -3,6 +3,7 @@ use crate::world::LayoutComponent;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
+/// Describes a set of component storages to be grouped together.
 pub struct LayoutGroup {
     components: HashSet<LayoutComponent>,
 }
@@ -64,6 +65,8 @@ impl LayoutGroupSet {
     }
 }
 
+/// Trait used for creating a `LayoutGroup`.
+/// Implemented for tuples up to arity 16.
 pub trait LayoutGroupDescriptor {
     fn group() -> LayoutGroup;
 }

@@ -1,11 +1,14 @@
 use crate::world::{LayoutGroup, LayoutGroupSet};
 use std::mem;
 
+/// Describes the layout of grouped component storages in the `World`.
 pub struct Layout {
     group_sets: Vec<LayoutGroupSet>,
 }
 
 impl Layout {
+    /// Create a `LayoutBuilder` to enable creating a `Layout`
+    /// using the builder pattern.
     pub fn builder() -> LayoutBuilder {
         LayoutBuilder::default()
     }
@@ -15,12 +18,14 @@ impl Layout {
     }
 }
 
+/// Implements the builder pattern to create `Layout`.
 #[derive(Default)]
 pub struct LayoutBuilder {
     group_sets: Vec<Vec<LayoutGroup>>,
 }
 
 impl LayoutBuilder {
+    /// Add a group to the `Layout`.
     pub fn add_group(&mut self, group: LayoutGroup) -> &mut Self {
         let mut group_set_index = Option::<usize>::None;
 
@@ -70,6 +75,7 @@ impl LayoutBuilder {
         self
     }
 
+    /// Build the `Layout` using the previously given `LayoutGroups`.
     pub fn build(&mut self) -> Layout {
         let group_sets = mem::take(&mut self.group_sets);
 

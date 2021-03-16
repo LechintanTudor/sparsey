@@ -6,37 +6,54 @@ use crate::world::Components;
 use std::any::TypeId;
 use std::marker::PhantomData;
 
+/// Trait implemented for component sets which can be
+/// added, appended or removed to/from the `World`.
 pub unsafe trait ComponentSet
 where
     Self: Sized + Send + Sync + 'static,
 {
+    /// Array containing the `TypeIds` of all components in the set.
     type Components: AsRef<[TypeId]>;
+    /// Storages to borrow from the `World` for adding/appending/removing components.
     type Storages: for<'a> BorrowStorages<'a>;
 
+    /// Get an array containing the `TypeIds` of all components in the set.
     fn components() -> Self::Components;
 
-    unsafe fn borrow_storages(components: &Components) -> <Self::Storages as BorrowStorages>::Item;
+    /// Borrow storages from the `World`.
+    unsafe fn borrow_storages(
+        components: &Components,
+    ) -> <Self::Storages as BorrowStorages>::StorageSet;
 
+    /// Insert the component in the borrowed storages.
     unsafe fn insert(
-        storages: &mut <Self::Storages as BorrowStorages>::Item,
+        storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
         entity: Entity,
         components: Self,
     );
 
+    /// Remove components from the borrowed storages and return them if they exist.
     unsafe fn remove(
-        storages: &mut <Self::Storages as BorrowStorages>::Item,
+        storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
         entity: Entity,
     ) -> Option<Self>;
 
-    unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::Item, entity: Entity);
+    /// Delete components from the borrowed storages. Faster than removing them.
+    unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::StorageSet, entity: Entity);
 }
 
+/// Trait implemented by `StorageBorrower` to borrow component storages.
+/// Only exists because we don't have GATs in stable rust :(
 pub trait BorrowStorages<'a> {
-    type Item;
+    /// Set of borrowed storages.
+    type StorageSet;
 
-    unsafe fn borrow(components: &'a Components) -> Self::Item;
+    /// Borrow storages from the `World`.
+    unsafe fn borrow(components: &'a Components) -> Self::StorageSet;
 }
 
+/// Struct used to borrow component storages. Implements `BorrowStorages` for all lifetimes.
+/// Only exists because we don't have GATs in stable rust :(
 pub struct StorageBorrower<T>
 where
     T: Send + Sync + 'static,
@@ -57,17 +74,26 @@ macro_rules! impl_component_set {
                 [$(TypeId::of::<$comp>()),+]
             }
 
-            unsafe fn borrow_storages(components: &Components) -> <Self::Storages as BorrowStorages>::Item {
+            unsafe fn borrow_storages(
+                components: &Components,
+            ) -> <Self::Storages as BorrowStorages>::StorageSet {
                 ($(components.borrow_sparse_set_mut::<$comp>().unwrap(),)+)
             }
 
-            unsafe fn insert(storages: &mut <Self::Storages as BorrowStorages>::Item, entity: Entity, components: Self) {
+            unsafe fn insert(
+                storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+                entity: Entity,
+                components: Self,
+            ) {
                 $(
                     storages.$idx.insert(entity, components.$idx);
                 )+
             }
 
-            unsafe fn remove(storages: &mut <Self::Storages as BorrowStorages>::Item, entity: Entity) -> Option<Self> {
+            unsafe fn remove(
+                storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+                entity: Entity,
+            ) -> Option<Self> {
                 let components = (
                     $(storages.$idx.remove(entity),)+
                 );
@@ -77,7 +103,10 @@ macro_rules! impl_component_set {
                 ))
             }
 
-            unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::Item, entity: Entity) {
+            unsafe fn delete(
+                storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+                entity: Entity,
+            ) {
                 $(
                     storages.$idx.remove(entity);
                 )+
@@ -88,9 +117,9 @@ macro_rules! impl_component_set {
         where
             $($comp: Component,)+
         {
-            type Item = ($(SparseSetRefMutBorrow<'a, $comp>,)+);
+            type StorageSet = ($(SparseSetRefMutBorrow<'a, $comp>,)+);
 
-            unsafe fn borrow(components: &'a Components) -> Self::Item {
+            unsafe fn borrow(components: &'a Components) -> Self::StorageSet {
                 (
                     $(components.borrow_sparse_set_mut::<$comp>().unwrap(),)+
                 )

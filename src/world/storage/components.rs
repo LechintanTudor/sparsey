@@ -4,6 +4,7 @@ use crate::world::{GroupedComponents, Layout, UngroupedComponents};
 use std::any::TypeId;
 use std::collections::HashMap;
 
+/// Container for grouped and ungrouped component storages.
 #[derive(Default)]
 pub struct Components {
     pub(crate) grouped: GroupedComponents,
@@ -11,17 +12,17 @@ pub struct Components {
 }
 
 impl Components {
-    pub fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         self.grouped.clear();
         self.ungrouped.clear();
     }
 
-    pub fn clear_flags(&mut self) {
+    pub(crate) fn clear_flags(&mut self) {
         self.iter_sparse_sets_mut()
             .for_each(|sparse_set| sparse_set.clear_flags())
     }
 
-    pub fn register<T>(&mut self)
+    pub(crate) fn register<T>(&mut self)
     where
         T: Component,
     {
@@ -30,13 +31,13 @@ impl Components {
         }
     }
 
-    pub fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
+    pub(crate) fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
         if !self.grouped.contains(&sparse_set.type_info().id()) {
             self.ungrouped.register_storage(sparse_set);
         }
     }
 
-    pub fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
+    pub(crate) fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
         let mut sparse_sets = HashMap::<TypeId, TypeErasedSparseSet>::new();
 
         for sparse_set in self.grouped.drain().chain(self.ungrouped.drain()) {
@@ -53,7 +54,7 @@ impl Components {
         }
     }
 
-    pub fn borrow_comp<T>(&self) -> Option<Comp<T>>
+    pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
     where
         T: Component,
     {
@@ -76,7 +77,7 @@ impl Components {
         }
     }
 
-    pub fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
+    pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
     where
         T: Component,
     {
@@ -99,6 +100,15 @@ impl Components {
         }
     }
 
+    pub(crate) fn iter_sparse_sets_mut(
+        &mut self,
+    ) -> impl Iterator<Item = &mut TypeErasedSparseSet> + '_ {
+        self.grouped
+            .iter_sparse_sets_mut()
+            .chain(self.ungrouped.iter_sparse_sets_mut())
+    }
+
+    /// Get an exclusive borrow of a component storage if it exists.
     pub fn borrow_sparse_set_mut<T>(&self) -> Option<SparseSetRefMutBorrow<T>>
     where
         T: Component,
@@ -116,11 +126,5 @@ impl Components {
                 )))
             }
         }
-    }
-
-    pub fn iter_sparse_sets_mut(&mut self) -> impl Iterator<Item = &mut TypeErasedSparseSet> + '_ {
-        self.grouped
-            .iter_sparse_sets_mut()
-            .chain(self.ungrouped.iter_sparse_sets_mut())
     }
 }

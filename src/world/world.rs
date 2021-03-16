@@ -3,7 +3,10 @@ use crate::query::{Comp, CompMut};
 use crate::world::{ComponentSet, Components, Entities, Layout};
 use std::any::TypeId;
 use std::collections::HashSet;
+use std::error::Error;
+use std::fmt;
 
+/// Container for component storages and entities.
 #[derive(Default)]
 pub struct World {
     entities: Entities,
@@ -12,17 +15,22 @@ pub struct World {
 }
 
 impl World {
+    /// Create a `World` with the given `Layout`.
     pub fn with_layout(layout: &Layout) -> Self {
         let mut world = Self::default();
         world.set_layout(layout);
         world
     }
 
+    /// Set the `Layout` of the `World`. Use this before adding
+    /// any entities to the `World` as this function has to iterate
+    /// all the entitiesin the `World` to group them properly.
     pub fn set_layout(&mut self, layout: &Layout) {
         self.entities.maintain();
         self.components.set_layout(&layout, self.entities.as_ref());
     }
 
+    /// Add a component storage for the given type if one does not exist already.
     pub fn register<T>(&mut self)
     where
         T: Component,
@@ -30,24 +38,23 @@ impl World {
         self.components.register::<T>()
     }
 
+    /// Add a component storage if one does not exist already for this type.
     pub fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
         self.components.register_storage(sparse_set);
     }
 
-    pub fn maintain(&mut self) {
-        self.entities.maintain();
-    }
-
-    pub fn finish_frame(&mut self) {
-        self.entities.maintain();
-        self.components.clear_flags();
-    }
-
+    /// Remove all entities and components.
     pub fn clear(&mut self) {
         self.entities.clear();
         self.components.clear();
     }
 
+    /// Clear all component flags.
+    pub fn clear_flags(&mut self) {
+        self.components.clear_flags();
+    }
+
+    /// Create an `Entity` with the given components and return it.
     pub fn create<C>(&mut self, components: C) -> Entity
     where
         C: ComponentSet,
@@ -57,6 +64,8 @@ impl World {
         entity
     }
 
+    /// Extend the `World` with a component iterator.
+    /// Return the newly created entities as a slice.
     pub fn extend<C, I>(&mut self, components_iter: I) -> &[Entity]
     where
         C: ComponentSet,
@@ -89,8 +98,10 @@ impl World {
         new_entities
     }
 
+    /// Destroy an `Entity` and all of its components.
+    /// Return whether or not there was an `Entity` to destroy.
     pub fn destroy(&mut self, entity: Entity) -> bool {
-        if !self.entities.contains(entity) {
+        if !self.entities.destroy(entity) {
             return false;
         }
 
@@ -105,12 +116,13 @@ impl World {
         true
     }
 
-    pub fn append<C>(&mut self, entity: Entity, components: C) -> Result<(), ()>
+    /// Append a set of components to the given `Entity`, if it exists.
+    pub fn append<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
     where
         C: ComponentSet,
     {
         if !self.entities.contains(entity) {
-            return Err(());
+            return Err(NoSuchEntity);
         }
 
         unsafe {
@@ -127,6 +139,8 @@ impl World {
         Ok(())
     }
 
+    /// Remove a set of components from an `Entity` and return them if they
+    /// were all present before calling this function.
     pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
     where
         C: ComponentSet,
@@ -147,6 +161,7 @@ impl World {
         }
     }
 
+    /// Delete a set of components from an `Entity`.
     pub fn delete<C>(&mut self, entity: Entity)
     where
         C: ComponentSet,
@@ -167,10 +182,12 @@ impl World {
         }
     }
 
-    pub fn entities(&self) -> &Entities {
-        &self.entities
+    /// Get a slice containing all entities in the `World`.
+    pub fn entities(&self) -> &[Entity] {
+        self.entities.as_ref()
     }
 
+    /// Get a shared view over a component storage.
     pub fn borrow_comp<T>(&self) -> Option<Comp<T>>
     where
         T: Component,
@@ -178,11 +195,20 @@ impl World {
         self.components.borrow_comp::<T>()
     }
 
+    /// Get an exclusive view over a component storage.
     pub fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
     where
         T: Component,
     {
         self.components.borrow_comp_mut::<T>()
+    }
+
+    pub(crate) fn maintain(&mut self) {
+        self.entities.maintain();
+    }
+
+    pub(crate) fn entity_storage(&self) -> &Entities {
+        &self.entities
     }
 
     fn update_group_indexes(&mut self, type_ids: &[TypeId]) {
@@ -194,5 +220,22 @@ impl World {
                 .iter()
                 .flat_map(|type_id| grouped_components.get_group_set_index(type_id)),
         );
+    }
+}
+
+/// Error returned when trying to access entities
+/// which are not contained in the `World`.
+#[derive(Debug)]
+pub struct NoSuchEntity;
+
+impl Error for NoSuchEntity {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl fmt::Display for NoSuchEntity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "No such entity was found in the World")
     }
 }

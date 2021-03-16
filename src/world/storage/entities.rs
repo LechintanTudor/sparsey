@@ -2,7 +2,7 @@ use crate::data::{Entity, IndexEntity, SparseVec};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
-pub struct Entities {
+pub(crate) struct Entities {
     storage: EntitySparseSet,
     allocator: EntityAllocator,
 }
@@ -50,10 +50,6 @@ impl Entities {
 
     pub fn contains(&self, entity: Entity) -> bool {
         self.storage.contains(entity)
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = Entity> + '_ {
-        self.storage.dense.iter().copied()
     }
 }
 
@@ -172,6 +168,7 @@ impl EntityAllocator {
     }
 }
 
+/// Like `fetch_sub`, but returns `None` on underflow instead of wrapping.
 fn atomic_decrement_usize(value: &AtomicUsize) -> Option<usize> {
     let mut prev = value.load(Ordering::Relaxed);
 
@@ -185,6 +182,7 @@ fn atomic_decrement_usize(value: &AtomicUsize) -> Option<usize> {
     None
 }
 
+/// Like `fetch_add`, but returns `None` on overflow instead of wrapping.
 fn atomic_increment_u32(value: &AtomicU32) -> Option<u32> {
     let mut prev = value.load(Ordering::Relaxed);
 

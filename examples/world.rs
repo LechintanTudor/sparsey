@@ -68,6 +68,7 @@ fn main() {
 
     dispatcher.set_up(&mut world);
 
+    world.clear_flags();
     world.extend(iter::repeat((1_u16, 2_u32, 3_u64)).take(10));
     world.extend((1..=5).into_iter().map(|i| (Droppable(i),)));
 
