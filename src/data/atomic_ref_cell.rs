@@ -44,6 +44,8 @@
 //! have been removed. We segment the concurrency logic from the rest of the code to
 //! keep the tricky parts small and easy to audit.
 
+#![allow(dead_code)]
+
 use std::cell::UnsafeCell;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
@@ -148,6 +150,7 @@ where
 }
 
 impl<T> From<T> for AtomicRefCell<T> {
+    #[inline]
     fn from(t: T) -> AtomicRefCell<T> {
         AtomicRefCell::new(t)
     }
@@ -573,7 +576,7 @@ impl<'a, T> DerefMut for MappedAtomicRefMut<'a, T> {
 
 impl<'a, T> MappedAtomicRefMut<'a, T> {
     /// Make a new `MappedAtomicRefMut` using the borrowed data.
-    #[allow(dead_code)]
+    #[inline]
     pub fn map_into<U, F>(orig: Self, f: F) -> MappedAtomicRefMut<'a, U>
     where
         F: FnOnce(T) -> U,
