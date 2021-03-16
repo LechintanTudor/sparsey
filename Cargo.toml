@@ -1,5 +1,5 @@
 [package]
-name = "ecstasy"
+name = "sparsey"
 version = "0.1.0"
 authors = ["Tudor Lechintan <lechintantudor02@gmail.com>"]
 edition = "2018"

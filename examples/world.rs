@@ -1,4 +1,4 @@
-use ecstasy::*;
+use sparsey::*;
 use std::iter;
 
 #[derive(Debug)]
