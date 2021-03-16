@@ -2,7 +2,7 @@ use crate::data::{
     Component, ComponentFlags, ComponentRefMut, Entity, MappedAtomicRef, MappedAtomicRefMut,
     SparseSetRef, SparseSetRefMut, SparseVec,
 };
-use crate::query::IterOne;
+use crate::query::iter::IterOne;
 use crate::world::GroupInfo;
 use std::ops::{Deref, DerefMut};
 use std::slice;

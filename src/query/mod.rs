@@ -1,9 +1,12 @@
-pub use self::iter::*;
+pub use self::iter::EntityIterator;
 pub use self::query::*;
 pub use self::view::*;
 
-pub mod filter;
+/// Filters for `ComponentViews`.
+pub mod filters;
 
-mod iter;
+/// `ComponentView` iterators.
+pub mod iter;
+
 mod query;
 mod view;
