@@ -2,7 +2,7 @@
 // Create entities with `Hp` and `HpRegen` components
 // and iterate over the individual component sets.
 
-use sparsey::{Comp, CompMut, Dispatcher, Entity, EntityIterator, IntoSystem, Resources, World};
+use sparsey::{Comp, Dispatcher, Entity, EntityIterator, IntoSystem, Resources, World};
 
 // Health points of the entity.
 #[derive(Copy, Clone, Debug)]
@@ -12,7 +12,8 @@ struct Hp(i32);
 #[derive(Copy, Clone, Debug)]
 struct HpRegen(i32);
 
-fn print_health(hps: CompMut<Hp>, hp_regens: Comp<HpRegen>) {
+// `Comp<T>` gives us a shared view over all components of type `T`.
+fn print_health(hps: Comp<Hp>, hp_regens: Comp<HpRegen>) {
     // Iterate over all `Hp` components.
     // Very fast, as the components are tightly packed in an array.
     for hp in hps.iter() {
@@ -21,8 +22,16 @@ fn print_health(hps: CompMut<Hp>, hp_regens: Comp<HpRegen>) {
 
     println!();
 
+    // Iterate over all entities which have `Hp` components.
+    // Very fast, as the entities are tightly packed in an array.
+    for entity in hps.entities() {
+        println!("{:?}", entity);
+    }
+
+    println!();
+
     // Iterate over all `HpRegen` components and their associated `Entity`.
-    // Still very fast as the components and entities are tightly packed.
+    // Very fast, as the components and entities are tightly packed.
     // The `entities` method is only available when the `EntityIterator`
     // trait is in scope.
     for (entity, hp_regen) in hp_regens.iter().entities() {
@@ -45,7 +54,7 @@ fn main() {
     let e1: Entity = world.create((Hp(100),));
 
     // Create a new `Entity` with multiple components.
-    let e2 = world.create((Hp(100), HpRegen(2)));
+    let e2 = world.create((Hp(50), HpRegen(3)));
 
     println!("e1: {:?}", e1);
     println!("e2: {:?}", e2);
@@ -53,7 +62,7 @@ fn main() {
 
     // Create some other entities.
     world.create((Hp(200), HpRegen(5)));
-    world.create((Hp(420), HpRegen(69)));
+    world.create((Hp(300), HpRegen(7)));
     world.create(()); // Entity with no components.
 
     let mut resources = Resources::default();
