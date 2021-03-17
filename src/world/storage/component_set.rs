@@ -62,24 +62,26 @@ where
 }
 
 macro_rules! impl_component_set {
-    ($len:tt, $(($comp:ident, $idx:tt)),+) => {
-        unsafe impl<$($comp),+> ComponentSet for ($($comp,)+)
+    ($len:tt, $(($comp:ident, $idx:tt)),*) => {
+        unsafe impl<$($comp),*> ComponentSet for ($($comp,)*)
         where
-            $($comp: Component,)+
+            $($comp: Component,)*
         {
             type Components = [TypeId; $len];
-            type Storages = StorageBorrower<($($comp,)+)>;
+            type Storages = StorageBorrower<($($comp,)*)>;
 
             fn components() -> Self::Components {
-                [$(TypeId::of::<$comp>()),+]
+                [$(TypeId::of::<$comp>()),*]
             }
 
+            #[allow(unused_variables)]
             unsafe fn borrow_storages(
                 components: &Components,
             ) -> <Self::Storages as BorrowStorages>::StorageSet {
-                ($(components.borrow_sparse_set_mut::<$comp>().unwrap(),)+)
+                ($(components.borrow_sparse_set_mut::<$comp>().unwrap(),)*)
             }
 
+            #[allow(unused_variables)]
             unsafe fn insert(
                 storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
                 entity: Entity,
@@ -87,41 +89,44 @@ macro_rules! impl_component_set {
             ) {
                 $(
                     storages.$idx.insert(entity, components.$idx);
-                )+
+                )*
             }
 
+            #[allow(unused_variables)]
             unsafe fn remove(
                 storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
                 entity: Entity,
             ) -> Option<Self> {
                 let components = (
-                    $(storages.$idx.remove(entity),)+
+                    $(storages.$idx.remove(entity),)*
                 );
 
                 Some((
-                    $(components.$idx?,)+
+                    $(components.$idx?,)*
                 ))
             }
 
+            #[allow(unused_variables)]
             unsafe fn delete(
                 storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
                 entity: Entity,
             ) {
                 $(
                     storages.$idx.remove(entity);
-                )+
+                )*
             }
         }
 
-        impl<'a, $($comp),+> BorrowStorages<'a> for StorageBorrower<($($comp,)+)>
+        impl<'a, $($comp),*> BorrowStorages<'a> for StorageBorrower<($($comp,)*)>
         where
-            $($comp: Component,)+
+            $($comp: Component,)*
         {
-            type StorageSet = ($(SparseSetRefMutBorrow<'a, $comp>,)+);
+            type StorageSet = ($(SparseSetRefMutBorrow<'a, $comp>,)*);
 
+            #[allow(unused_variables)]
             unsafe fn borrow(components: &'a Components) -> Self::StorageSet {
                 (
-                    $(components.borrow_sparse_set_mut::<$comp>().unwrap(),)+
+                    $(components.borrow_sparse_set_mut::<$comp>().unwrap(),)*
                 )
             }
         }
@@ -132,6 +137,7 @@ macro_rules! impl_component_set {
 mod impls {
     use super::*;
 
+    impl_component_set!(0,);
     impl_component_set!(1,  (A, 0));
     impl_component_set!(2,  (A, 0), (B, 1));
     impl_component_set!(3,  (A, 0), (B, 1), (C, 2));
