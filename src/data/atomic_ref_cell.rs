@@ -125,7 +125,7 @@ where
     #[inline]
     pub fn get_mut(&mut self) -> &mut T {
         debug_assert!(self.borrow.load(Ordering::Acquire) == 0);
-        unsafe { &mut *self.value.get() }
+        self.value.get_mut()
     }
 }
 
@@ -166,12 +166,7 @@ where
     }
 }
 
-impl<T> Eq for AtomicRefCell<T>
-where
-    T: ?Sized + PartialEq,
-{
-    // Marker
-}
+impl<T> Eq for AtomicRefCell<T> where T: ?Sized + PartialEq {}
 
 impl<T> PartialOrd for AtomicRefCell<T>
 where

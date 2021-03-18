@@ -58,7 +58,7 @@ impl<'a> Commands<'a> {
         });
     }
 
-    /// Queue appending a set of components to the given `Entity`.
+    /// Queue the appending of a set of components to the given `Entity`.
     pub fn append<C>(&mut self, entity: Entity, components: C)
     where
         C: ComponentSet,
@@ -76,6 +76,11 @@ impl<'a> Commands<'a> {
         self.run(move |world, _| {
             world.delete::<C>(entity);
         });
+    }
+
+    /// Get a slice containing all entities in the `World`.
+    pub fn entities(&self) -> &[Entity] {
+        self.entities.as_ref()
     }
 }
 
@@ -124,6 +129,6 @@ impl CommandBuffers {
         self.buffers
             .iter_mut()
             .take(used_buffers)
-            .flat_map(|buffer| unsafe { (&mut *buffer.get()).drain(..) })
+            .flat_map(|buffer| buffer.get_mut().drain(..))
     }
 }

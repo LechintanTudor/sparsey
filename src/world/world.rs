@@ -24,7 +24,7 @@ impl World {
 
     /// Set the `Layout` of the `World`. Use this before adding
     /// any entities to the `World` as this function has to iterate
-    /// all the entitiesin the `World` to group them properly.
+    /// all the entities in the `World` in order to group them.
     pub fn set_layout(&mut self, layout: &Layout) {
         self.entities.maintain();
         self.components.set_layout(&layout, self.entities.as_ref());
@@ -121,7 +121,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        if !self.entities.contains(entity) {
+        if !self.contains(entity) {
             return Err(NoSuchEntity);
         }
 
@@ -145,7 +145,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        if !self.entities.contains(entity) {
+        if !self.contains(entity) {
             return None;
         }
 
@@ -166,7 +166,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        if !self.entities.contains(entity) {
+        if !self.contains(entity) {
             return;
         }
 
@@ -180,6 +180,16 @@ impl World {
             let mut storages = C::borrow_storages(&self.components);
             C::delete(&mut storages, entity);
         }
+    }
+
+    // Check if the `World` contains the given `Entity`.
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.entities.contains(entity)
+    }
+
+    // Get the number of entities in the `World`.
+    pub fn len(&self) -> usize {
+        self.entities.as_ref().len()
     }
 
     /// Get a slice containing all entities in the `World`.
