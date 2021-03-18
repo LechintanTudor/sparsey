@@ -37,7 +37,7 @@ fn print_health(mut hps: CompMut<Hp>, hp_regens: Comp<HpRegen>) {
     let entity = hps.entities()[1];
 
     // `get` can be used to fetch components from multiple storages
-    // when you know the `Entity`. 
+    // when you know the `Entity`.
     if let Some((hp, hp_regen)) = (&hps, &hp_regens).get(entity) {
         println!("{:?} => {:?}, {:?}", entity, hp, hp_regen);
     }
