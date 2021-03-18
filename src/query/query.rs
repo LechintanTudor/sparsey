@@ -4,6 +4,8 @@ use crate::data::Entity;
 use crate::query::iter::*;
 use crate::query::{ComponentView, UnfilteredComponentView};
 use crate::world::get_group_len;
+use std::error::Error;
+use std::fmt;
 
 /// Query over one or more `ComponentViews`.
 pub trait Query<'a> {
@@ -33,16 +35,33 @@ where
 
     /// If the components forming the `UnfilteredQuery` are grouped,
     /// return all entities which match the query.
-    fn entities(self) -> Option<&'a [Entity]>;
+    fn entities(self) -> Result<&'a [Entity], StoragesNotGrouped>;
 
     /// If the components forming the `UnfilteredQuery` are grouped,
     /// return ordered slices of components which match the query.
-    fn slice(self) -> Option<Self::SliceSet>;
+    fn slice(self) -> Result<Self::SliceSet, StoragesNotGrouped>;
 
     /// If the components forming the `UnfilteredQuery` are grouped,
     /// return the entities which match the query and the ordered slices
     /// of components associated to the entities.
-    fn slice_entities(self) -> Option<(&'a [Entity], Self::SliceSet)>;
+    fn slice_entities(self) -> Result<(&'a [Entity], Self::SliceSet), StoragesNotGrouped>;
+}
+
+// Error returned when trying to use `UnfilteredQuery` methods
+// with ungrouped components.
+#[derive(Debug)]
+pub struct StoragesNotGrouped;
+
+impl Error for StoragesNotGrouped {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        None
+    }
+}
+
+impl fmt::Display for StoragesNotGrouped {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Storages are not grouped.")
+    }
 }
 
 macro_rules! impl_query {
@@ -80,16 +99,16 @@ macro_rules! impl_query {
         {
             type SliceSet = ($($comp::Slice,)+);
 
-            fn entities(self) -> Option<&'a [Entity]> {
-                let group_len = get_group_len(&[$(self.$idx.group_info()?),+])?;
-                Some(entities!(group_len, $((self.$idx))*))
+            fn entities(self) -> Result<&'a [Entity], StoragesNotGrouped> {
+                let group_len = get_group_len!($(self.$idx),+)?;
+                Ok(entities!(group_len, $((self.$idx))*))
             }
 
-            fn slice(self) -> Option<Self::SliceSet> {
-                let group_len = get_group_len(&[$(self.$idx.group_info()?),+])?;
+            fn slice(self) -> Result<Self::SliceSet, StoragesNotGrouped> {
+                let group_len = get_group_len!($(self.$idx),+)?;
 
                 unsafe {
-                    Some((
+                    Ok((
                         $(
                             $comp::get_slice(self.$idx.split().3, group_len),
                         )+
@@ -97,11 +116,21 @@ macro_rules! impl_query {
                 }
             }
 
-            fn slice_entities(self) -> Option<(&'a [Entity], Self::SliceSet)> {
-                let group_len = get_group_len(&[$(self.$idx.group_info()?),+])?;
-                Some(slice_entities!(group_len, $((self.$idx, $comp))+))
+            fn slice_entities(self) -> Result<(&'a [Entity], Self::SliceSet), StoragesNotGrouped> {
+                let group_len = get_group_len!($(self.$idx),+)?;
+                Ok(slice_entities!(group_len, $((self.$idx, $comp))+))
             }
         }
+    };
+}
+
+macro_rules! get_group_len {
+    ($($comp:expr),+) => {
+        (|| -> Option<usize> {
+            get_group_len(&[
+                $($comp.group_info()?),+
+            ])
+        })().ok_or(StoragesNotGrouped)
     };
 }
 
