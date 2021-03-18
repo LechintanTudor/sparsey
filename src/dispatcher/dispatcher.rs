@@ -3,9 +3,12 @@ use crate::dispatcher::{
 };
 use crate::resources::Resources;
 use crate::world::World;
-use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
-use rayon::ThreadPool;
 use std::mem;
+
+#[cfg(feature = "parallel")]
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
+#[cfg(feature = "parallel")]
+use rayon::ThreadPool;
 
 /// Implements the builder pattern to create a `Dispatcher`.
 #[derive(Default)]
@@ -138,6 +141,7 @@ impl Dispatcher {
     }
 
     /// Run all systems, potentially in parallel, on the given `ThreadPool`.
+    #[cfg(feature = "parallel")]
     pub fn run(&mut self, world: &mut World, resources: &mut Resources, thread_pool: &ThreadPool) {
         for step in self.steps.iter_mut() {
             match step {
