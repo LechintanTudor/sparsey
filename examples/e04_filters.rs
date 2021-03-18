@@ -1,4 +1,4 @@
-// Example 02 - Components
+// Example 04 - Filters
 // Create entities with `Hp` and `HpRegen` components
 // and iterate filtered ComponentViews.
 

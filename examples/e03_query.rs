@@ -1,4 +1,4 @@
-// Example 02 - Components
+// Example 03 - Query
 // Create entities with `Hp` and `HpRegen` components
 // and iterate over multiple component views.
 
