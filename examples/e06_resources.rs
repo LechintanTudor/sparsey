@@ -1,4 +1,4 @@
-use sparsey::{Res, ResMut, Resources, World, Dispatcher, IntoSystem};
+use sparsey::{Dispatcher, IntoSystem, Res, ResMut, Resources, World};
 
 // TODO: Better error messages on `Environment`.
 
