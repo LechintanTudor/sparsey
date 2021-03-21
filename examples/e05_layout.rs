@@ -1,4 +1,4 @@
-// Example 04 - Layout
+// Example 05 - Layout
 // Create a movement and collision system and
 // use `Layout` to optimize iteration speed.
 

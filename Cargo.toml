@@ -34,3 +34,7 @@ path = "examples/e04_filters.rs"
 [[example]]
 name = "layout"
 path = "examples/e05_layout.rs"
+
+[[example]]
+name = "resources"
+path = "examples/e06_resources.rs"
