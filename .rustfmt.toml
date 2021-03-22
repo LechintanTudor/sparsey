@@ -1,2 +1,4 @@
 imports_granularity = "Module"
+hard_tabs = true
 newline_style = "Unix"
+tab_spaces = 4

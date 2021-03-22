@@ -9,42 +9,42 @@ use std::fmt;
 
 /// Query over one or more `ComponentViews`.
 pub trait Query<'a> {
-    /// Item returned by `get`.
-    type Item: 'a;
-    /// Iterator returned by `iter`.
-    type Iterator: Iterator<Item = Self::Item> + 'a;
+	/// Item returned by `get`.
+	type Item: 'a;
+	/// Iterator returned by `iter`.
+	type Iterator: Iterator<Item = Self::Item> + 'a;
 
-    /// Get the components at the given `Entity`, if any.
-    fn get(self, entity: Entity) -> Option<Self::Item>;
+	/// Get the components at the given `Entity`, if any.
+	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-    /// Get an iterator over all components which match the `Query`.
-    fn iter(self) -> Self::Iterator;
+	/// Get an iterator over all components which match the `Query`.
+	fn iter(self) -> Self::Iterator;
 
-    /// Check if the views forming the `Query` are grouped (tightly packed).
-    fn is_grouped(&self) -> bool;
+	/// Check if the views forming the `Query` are grouped (tightly packed).
+	fn is_grouped(&self) -> bool;
 }
 
 /// Query over one or more `UnfilteredComponentViews`.
 /// Provides functions for working with grouped components.
 pub trait UnfilteredQuery<'a>
 where
-    Self: Query<'a>,
+	Self: Query<'a>,
 {
-    /// Set of slices returned by `slice`.
-    type SliceSet: 'a;
+	/// Set of slices returned by `slice`.
+	type SliceSet: 'a;
 
-    /// If the components forming the `UnfilteredQuery` are grouped,
-    /// return all entities which match the query.
-    fn entities(self) -> Result<&'a [Entity], StoragesNotGrouped>;
+	/// If the components forming the `UnfilteredQuery` are grouped,
+	/// return all entities which match the query.
+	fn entities(self) -> Result<&'a [Entity], StoragesNotGrouped>;
 
-    /// If the components forming the `UnfilteredQuery` are grouped,
-    /// return ordered slices of components which match the query.
-    fn slice(self) -> Result<Self::SliceSet, StoragesNotGrouped>;
+	/// If the components forming the `UnfilteredQuery` are grouped,
+	/// return ordered slices of components which match the query.
+	fn slice(self) -> Result<Self::SliceSet, StoragesNotGrouped>;
 
-    /// If the components forming the `UnfilteredQuery` are grouped,
-    /// return the entities which match the query and the ordered slices
-    /// of components associated to the entities.
-    fn slice_entities(self) -> Result<(&'a [Entity], Self::SliceSet), StoragesNotGrouped>;
+	/// If the components forming the `UnfilteredQuery` are grouped,
+	/// return the entities which match the query and the ordered slices
+	/// of components associated to the entities.
+	fn slice_entities(self) -> Result<(&'a [Entity], Self::SliceSet), StoragesNotGrouped>;
 }
 
 // Error returned when trying to use `UnfilteredQuery` methods
@@ -53,15 +53,15 @@ where
 pub struct StoragesNotGrouped;
 
 impl Error for StoragesNotGrouped {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        None
-    }
+	fn source(&self) -> Option<&(dyn Error + 'static)> {
+		None
+	}
 }
 
 impl fmt::Display for StoragesNotGrouped {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Storages are not grouped.")
-    }
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "Storages are not grouped.")
+	}
 }
 
 macro_rules! impl_query {
@@ -135,9 +135,9 @@ macro_rules! get_group_len {
 }
 
 macro_rules! entities {
-    ($group_len:tt, ($first:expr) $(($other:expr))*) => {
-        &$first.split().1[..$group_len]
-    };
+	($group_len:tt, ($first:expr) $(($other:expr))*) => {
+		&$first.split().1[..$group_len]
+	};
 }
 
 macro_rules! slice_entities {

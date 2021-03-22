@@ -4,7 +4,7 @@ use downcast_rs::{impl_downcast, Downcast};
 /// can be stored in `Resources`.
 pub trait Resource
 where
-    Self: Downcast,
+	Self: Downcast,
 {
 }
 

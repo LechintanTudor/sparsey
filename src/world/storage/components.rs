@@ -7,124 +7,124 @@ use std::collections::HashMap;
 /// Container for grouped and ungrouped component storages.
 #[derive(Default)]
 pub struct Components {
-    pub(crate) grouped: GroupedComponents,
-    pub(crate) ungrouped: UngroupedComponents,
+	pub(crate) grouped: GroupedComponents,
+	pub(crate) ungrouped: UngroupedComponents,
 }
 
 impl Components {
-    pub(crate) fn clear(&mut self) {
-        self.grouped.clear();
-        self.ungrouped.clear();
-    }
+	pub(crate) fn clear(&mut self) {
+		self.grouped.clear();
+		self.ungrouped.clear();
+	}
 
-    pub(crate) fn clear_flags(&mut self) {
-        self.iter_sparse_sets_mut()
-            .for_each(|sparse_set| sparse_set.clear_flags())
-    }
+	pub(crate) fn clear_flags(&mut self) {
+		self.iter_sparse_sets_mut()
+			.for_each(|sparse_set| sparse_set.clear_flags())
+	}
 
-    pub(crate) fn register<T>(&mut self)
-    where
-        T: Component,
-    {
-        if !self.grouped.contains(&TypeId::of::<T>()) {
-            self.ungrouped.register::<T>();
-        }
-    }
+	pub(crate) fn register<T>(&mut self)
+	where
+		T: Component,
+	{
+		if !self.grouped.contains(&TypeId::of::<T>()) {
+			self.ungrouped.register::<T>();
+		}
+	}
 
-    pub(crate) fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
-        if !self.grouped.contains(&sparse_set.type_info().id()) {
-            self.ungrouped.register_storage(sparse_set);
-        }
-    }
+	pub(crate) fn register_storage(&mut self, sparse_set: TypeErasedSparseSet) {
+		if !self.grouped.contains(&sparse_set.type_info().id()) {
+			self.ungrouped.register_storage(sparse_set);
+		}
+	}
 
-    pub(crate) fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
-        let mut sparse_sets = HashMap::<TypeId, TypeErasedSparseSet>::new();
+	pub(crate) fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
+		let mut sparse_sets = HashMap::<TypeId, TypeErasedSparseSet>::new();
 
-        for sparse_set in self.grouped.drain().chain(self.ungrouped.drain()) {
-            sparse_sets.insert(sparse_set.type_info().id(), sparse_set);
-        }
+		for sparse_set in self.grouped.drain().chain(self.ungrouped.drain()) {
+			sparse_sets.insert(sparse_set.type_info().id(), sparse_set);
+		}
 
-        self.grouped = GroupedComponents::with_layout(&layout, &mut sparse_sets);
-        self.ungrouped = UngroupedComponents::from_sparse_sets(&mut sparse_sets);
+		self.grouped = GroupedComponents::with_layout(&layout, &mut sparse_sets);
+		self.ungrouped = UngroupedComponents::from_sparse_sets(&mut sparse_sets);
 
-        for i in 0..self.grouped.group_set_count() {
-            for &entity in entities {
-                self.grouped.group_components(i, entity);
-            }
-        }
-    }
+		for i in 0..self.grouped.group_set_count() {
+			for &entity in entities {
+				self.grouped.group_components(i, entity);
+			}
+		}
+	}
 
-    pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
-    where
-        T: Component,
-    {
-        match self.grouped.borrow(&TypeId::of::<T>()) {
-            Some(sparse_set) => unsafe {
-                Some(Comp::new(
-                    AtomicRef::map_into(sparse_set, |sparse_set| sparse_set.to_ref()),
-                    self.grouped.get_group_info(&TypeId::of::<T>()),
-                ))
-            },
-            None => match self.ungrouped.borrow(&TypeId::of::<T>()) {
-                Some(sparse_set) => unsafe {
-                    Some(Comp::new(
-                        AtomicRef::map_into(sparse_set, |sparse_set| sparse_set.to_ref()),
-                        None,
-                    ))
-                },
-                None => None,
-            },
-        }
-    }
+	pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
+	where
+		T: Component,
+	{
+		match self.grouped.borrow(&TypeId::of::<T>()) {
+			Some(sparse_set) => unsafe {
+				Some(Comp::new(
+					AtomicRef::map_into(sparse_set, |sparse_set| sparse_set.to_ref()),
+					self.grouped.get_group_info(&TypeId::of::<T>()),
+				))
+			},
+			None => match self.ungrouped.borrow(&TypeId::of::<T>()) {
+				Some(sparse_set) => unsafe {
+					Some(Comp::new(
+						AtomicRef::map_into(sparse_set, |sparse_set| sparse_set.to_ref()),
+						None,
+					))
+				},
+				None => None,
+			},
+		}
+	}
 
-    pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
-    where
-        T: Component,
-    {
-        match self.grouped.borrow_mut(&TypeId::of::<T>()) {
-            Some(sparse_set) => unsafe {
-                Some(CompMut::new(
-                    AtomicRefMut::map_into(sparse_set, |sparse_set| sparse_set.to_ref_mut()),
-                    self.grouped.get_group_info(&TypeId::of::<T>()),
-                ))
-            },
-            None => match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {
-                Some(sparse_set) => unsafe {
-                    Some(CompMut::new(
-                        AtomicRefMut::map_into(sparse_set, |sparse_set| sparse_set.to_ref_mut()),
-                        None,
-                    ))
-                },
-                None => None,
-            },
-        }
-    }
+	pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
+	where
+		T: Component,
+	{
+		match self.grouped.borrow_mut(&TypeId::of::<T>()) {
+			Some(sparse_set) => unsafe {
+				Some(CompMut::new(
+					AtomicRefMut::map_into(sparse_set, |sparse_set| sparse_set.to_ref_mut()),
+					self.grouped.get_group_info(&TypeId::of::<T>()),
+				))
+			},
+			None => match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {
+				Some(sparse_set) => unsafe {
+					Some(CompMut::new(
+						AtomicRefMut::map_into(sparse_set, |sparse_set| sparse_set.to_ref_mut()),
+						None,
+					))
+				},
+				None => None,
+			},
+		}
+	}
 
-    pub(crate) fn iter_sparse_sets_mut(
-        &mut self,
-    ) -> impl Iterator<Item = &mut TypeErasedSparseSet> + '_ {
-        self.grouped
-            .iter_sparse_sets_mut()
-            .chain(self.ungrouped.iter_sparse_sets_mut())
-    }
+	pub(crate) fn iter_sparse_sets_mut(
+		&mut self,
+	) -> impl Iterator<Item = &mut TypeErasedSparseSet> + '_ {
+		self.grouped
+			.iter_sparse_sets_mut()
+			.chain(self.ungrouped.iter_sparse_sets_mut())
+	}
 
-    /// Get an exclusive borrow of a component storage if it exists.
-    pub fn borrow_sparse_set_mut<T>(&self) -> Option<SparseSetRefMutBorrow<T>>
-    where
-        T: Component,
-    {
-        match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {
-            Some(sparse_set) => Some(SparseSetRefMutBorrow::new(AtomicRefMut::map_into(
-                sparse_set,
-                |sparse_set| sparse_set.to_ref_mut::<T>(),
-            ))),
-            None => {
-                let sparse_set = self.grouped.borrow_mut(&TypeId::of::<T>())?;
-                Some(SparseSetRefMutBorrow::new(AtomicRefMut::map_into(
-                    sparse_set,
-                    |sparse_set| sparse_set.to_ref_mut::<T>(),
-                )))
-            }
-        }
-    }
+	/// Get an exclusive borrow of a component storage if it exists.
+	pub fn borrow_sparse_set_mut<T>(&self) -> Option<SparseSetRefMutBorrow<T>>
+	where
+		T: Component,
+	{
+		match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {
+			Some(sparse_set) => Some(SparseSetRefMutBorrow::new(AtomicRefMut::map_into(
+				sparse_set,
+				|sparse_set| sparse_set.to_ref_mut::<T>(),
+			))),
+			None => {
+				let sparse_set = self.grouped.borrow_mut(&TypeId::of::<T>())?;
+				Some(SparseSetRefMutBorrow::new(AtomicRefMut::map_into(
+					sparse_set,
+					|sparse_set| sparse_set.to_ref_mut::<T>(),
+				)))
+			}
+		}
+	}
 }

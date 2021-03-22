@@ -95,21 +95,21 @@ macro_rules! shortest_dense {
 }
 
 fn shortest_dense<'a>(a: &'a [Entity], b: &'a [Entity]) -> &'a [Entity] {
-    if a.len() <= b.len() {
-        a
-    } else {
-        b
-    }
+	if a.len() <= b.len() {
+		a
+	} else {
+		b
+	}
 }
 
 #[inline]
 fn strip_view<'a, V>(
-    view: (&'a SparseVec, &'a [Entity], V::Flags, V::Data),
+	view: (&'a SparseVec, &'a [Entity], V::Flags, V::Data),
 ) -> (&'a SparseVec, V::Flags, V::Data)
 where
-    V: ComponentView<'a>,
+	V: ComponentView<'a>,
 {
-    (view.0, view.2, view.3)
+	(view.0, view.2, view.3)
 }
 
 #[rustfmt::skip]

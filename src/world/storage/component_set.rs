@@ -10,55 +10,55 @@ use std::marker::PhantomData;
 /// added, appended or removed to/from the `World`.
 pub unsafe trait ComponentSet
 where
-    Self: Sized + Send + Sync + 'static,
+	Self: Sized + Send + Sync + 'static,
 {
-    /// Array containing the `TypeIds` of all components in the set.
-    type Components: AsRef<[TypeId]>;
-    /// Storages to borrow from the `World` for adding/appending/removing components.
-    type Storages: for<'a> BorrowStorages<'a>;
+	/// Array containing the `TypeIds` of all components in the set.
+	type Components: AsRef<[TypeId]>;
+	/// Storages to borrow from the `World` for adding/appending/removing components.
+	type Storages: for<'a> BorrowStorages<'a>;
 
-    /// Get an array containing the `TypeIds` of all components in the set.
-    fn components() -> Self::Components;
+	/// Get an array containing the `TypeIds` of all components in the set.
+	fn components() -> Self::Components;
 
-    /// Borrow storages from the `World`.
-    unsafe fn borrow_storages(
-        components: &Components,
-    ) -> <Self::Storages as BorrowStorages>::StorageSet;
+	/// Borrow storages from the `World`.
+	unsafe fn borrow_storages(
+		components: &Components,
+	) -> <Self::Storages as BorrowStorages>::StorageSet;
 
-    /// Insert the component in the borrowed storages.
-    unsafe fn insert(
-        storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
-        entity: Entity,
-        components: Self,
-    );
+	/// Insert the component in the borrowed storages.
+	unsafe fn insert(
+		storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+		entity: Entity,
+		components: Self,
+	);
 
-    /// Remove components from the borrowed storages and return them if they exist.
-    unsafe fn remove(
-        storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
-        entity: Entity,
-    ) -> Option<Self>;
+	/// Remove components from the borrowed storages and return them if they exist.
+	unsafe fn remove(
+		storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+		entity: Entity,
+	) -> Option<Self>;
 
-    /// Delete components from the borrowed storages. Faster than removing them.
-    unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::StorageSet, entity: Entity);
+	/// Delete components from the borrowed storages. Faster than removing them.
+	unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::StorageSet, entity: Entity);
 }
 
 /// Trait implemented by `StorageBorrower` to borrow component storages.
 /// Only exists because we don't have GATs in stable rust :(
 pub trait BorrowStorages<'a> {
-    /// Set of borrowed storages.
-    type StorageSet;
+	/// Set of borrowed storages.
+	type StorageSet;
 
-    /// Borrow storages from the `World`.
-    unsafe fn borrow(components: &'a Components) -> Self::StorageSet;
+	/// Borrow storages from the `World`.
+	unsafe fn borrow(components: &'a Components) -> Self::StorageSet;
 }
 
 /// Struct used to borrow component storages. Implements `BorrowStorages` for all lifetimes.
 /// Only exists because we don't have GATs in stable rust :(
 pub struct StorageBorrower<T>
 where
-    T: Send + Sync + 'static,
+	T: Send + Sync + 'static,
 {
-    _phantom: PhantomData<*const T>,
+	_phantom: PhantomData<*const T>,
 }
 
 macro_rules! impl_component_set {

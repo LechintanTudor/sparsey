@@ -5,39 +5,39 @@ use std::any::TypeId;
 /// The struct itself is `Send` and `Sync`.
 #[derive(Copy, Clone)]
 pub struct SyncResources<'a> {
-    internal: &'a UnsafeResources,
+	internal: &'a UnsafeResources,
 }
 
 impl<'a> SyncResources<'a> {
-    pub(crate) fn new(internal: &'a UnsafeResources) -> Self {
-        Self { internal }
-    }
+	pub(crate) fn new(internal: &'a UnsafeResources) -> Self {
+		Self { internal }
+	}
 
-    /// Check if the set contains a resource at the given `TypeId`.
-    pub fn contains(&self, type_id: &TypeId) -> bool {
-        self.internal.contains(type_id)
-    }
+	/// Check if the set contains a resource at the given `TypeId`.
+	pub fn contains(&self, type_id: &TypeId) -> bool {
+		self.internal.contains(type_id)
+	}
 
-    /// Get the number of resources in the set.
-    pub fn len(&self) -> usize {
-        self.internal.len()
-    }
+	/// Get the number of resources in the set.
+	pub fn len(&self) -> usize {
+		self.internal.len()
+	}
 
-    /// Get a shared borrow of a resource if it exists.
-    /// Safe because `T` is guaranteed to be `Sync`.
-    pub fn borrow<T>(&self) -> Option<Res<T>>
-    where
-        T: Resource + Sync,
-    {
-        unsafe { self.internal.borrow::<T>() }
-    }
+	/// Get a shared borrow of a resource if it exists.
+	/// Safe because `T` is guaranteed to be `Sync`.
+	pub fn borrow<T>(&self) -> Option<Res<T>>
+	where
+		T: Resource + Sync,
+	{
+		unsafe { self.internal.borrow::<T>() }
+	}
 
-    /// Get an exclusive borrow of a resource if it exists.
-    /// Safe because `T` is guaranteed to be `Send`.
-    pub fn borrow_mut<T>(&self) -> Option<ResMut<T>>
-    where
-        T: Resource + Send,
-    {
-        unsafe { self.internal.borrow_mut::<T>() }
-    }
+	/// Get an exclusive borrow of a resource if it exists.
+	/// Safe because `T` is guaranteed to be `Send`.
+	pub fn borrow_mut<T>(&self) -> Option<ResMut<T>>
+	where
+		T: Resource + Send,
+	{
+		unsafe { self.internal.borrow_mut::<T>() }
+	}
 }
