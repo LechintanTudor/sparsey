@@ -4,7 +4,7 @@
 
 use sparsey::{
 	Comp, CompMut, Dispatcher, Entity, IntoSystem, Layout, LayoutGroupDescriptor, Query, Resources,
-	UnfilteredQuery, World,
+	SystemResult, UnfilteredQuery, World,
 };
 
 const ROOM_HALF_WIDTH: f32 = 50.0;
@@ -28,7 +28,7 @@ fn collision(
 	mut positions: CompMut<Position>,
 	mut velocities: CompMut<Velocity>,
 	colliders: Comp<Collider>,
-) {
+) -> SystemResult {
 	// Check if `Position` and `Velocity` form a group. Should be TRUE.
 	println!(
 		"(Position, Velocity): {}",
@@ -70,14 +70,15 @@ fn collision(
 	// To access those slices we use methods available through the `UnfilteredQuery` trait.
 
 	// Get `Position` and `Velocity` slices.
-	let _: (&[Position], &[Velocity]) = (&positions, &velocities).slice().unwrap();
+	let _: (&[Position], &[Velocity]) = (&positions, &velocities).slice()?;
 
 	// Get all entities with `Position` and `Velocity` components.
-	let _: &[Entity] = (&positions, &velocities).entities().unwrap();
+	let _: &[Entity] = (&positions, &velocities).entities()?;
 
 	// Get `Entity` and component slices at the same time.
-	let _: (&[Entity], (&[Position], &[Velocity])) =
-		(&positions, &velocities).slice_entities().unwrap();
+	let _: (&[Entity], (&[Position], &[Velocity])) = (&positions, &velocities).slice_entities()?;
+
+	Ok(())
 }
 
 fn main() {
