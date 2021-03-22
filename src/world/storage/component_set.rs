@@ -23,7 +23,9 @@ where
 	/// Borrow storages from the `World`.
 	unsafe fn borrow_storages(
 		components: &Components,
-	) -> <Self::Storages as BorrowStorages>::StorageSet;
+	) -> <Self::Storages as BorrowStorages>::StorageSet {
+		Self::Storages::borrow(components)
+	}
 
 	/// Insert the component in the borrowed storages.
 	unsafe fn insert(
@@ -72,13 +74,6 @@ macro_rules! impl_component_set {
 
             fn components() -> Self::Components {
                 [$(TypeId::of::<$comp>()),*]
-            }
-
-            #[allow(unused_variables)]
-            unsafe fn borrow_storages(
-                components: &Components,
-            ) -> <Self::Storages as BorrowStorages>::StorageSet {
-                ($(components.borrow_sparse_set_mut::<$comp>().unwrap(),)*)
             }
 
             #[allow(unused_variables)]
