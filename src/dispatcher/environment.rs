@@ -3,6 +3,7 @@ use crate::dispatcher::{CommandBuffers, Commands};
 use crate::query::{Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource, UnsafeResources};
 use crate::world::{LayoutComponent, World};
+use std::any;
 use std::any::TypeId;
 use std::marker::PhantomData;
 
@@ -103,7 +104,10 @@ where
 	}
 
 	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		environment.world.borrow_comp::<T>().unwrap()
+		environment
+			.world
+			.borrow_comp::<T>()
+			.unwrap_or_else(|| panic_missing_comp::<T>())
 	}
 }
 
@@ -121,7 +125,10 @@ where
 	}
 
 	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		environment.world.borrow_comp_mut::<T>().unwrap()
+		environment
+			.world
+			.borrow_comp_mut::<T>()
+			.unwrap_or_else(|| panic_missing_comp::<T>())
 	}
 }
 
@@ -139,7 +146,10 @@ where
 	}
 
 	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		environment.resources.borrow::<T>().unwrap()
+		environment
+			.resources
+			.borrow::<T>()
+			.unwrap_or_else(|| panic_missing_res::<T>())
 	}
 }
 
@@ -157,6 +167,27 @@ where
 	}
 
 	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		environment.resources.borrow_mut::<T>().unwrap()
+		environment
+			.resources
+			.borrow_mut::<T>()
+			.unwrap_or_else(|| panic_missing_res::<T>())
 	}
+}
+
+#[cold]
+#[inline(never)]
+fn panic_missing_comp<T>() -> ! {
+	panic!(
+		"Tried to access missing component storage `{}`",
+		any::type_name::<T>()
+	)
+}
+
+#[cold]
+#[inline(never)]
+fn panic_missing_res<T>() -> ! {
+	panic!(
+		"Tried to access missing resource `{}`",
+		any::type_name::<T>()
+	)
 }
