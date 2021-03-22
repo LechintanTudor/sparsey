@@ -62,5 +62,5 @@ fn main() {
 
     let mut resources = Resources::default();
 
-    dispatcher.run_locally(&mut world, &mut resources);
+    dispatcher.run_locally(&mut world, &mut resources).unwrap();
 }

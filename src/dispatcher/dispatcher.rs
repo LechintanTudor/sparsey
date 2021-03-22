@@ -1,5 +1,6 @@
 use crate::dispatcher::{
-    CommandBuffers, Environment, LocalSystem, LocallyRunnable, System, SystemAccess,
+    CommandBuffers, Environment, LocalSystem, LocallyRunnable, RunError, RunResult, System,
+    SystemAccess, SystemError,
 };
 use crate::resources::Resources;
 use crate::world::World;
@@ -104,31 +105,29 @@ impl Dispatcher {
     }
 
     /// Run all systems on the current thread.
-    pub fn run_locally(&mut self, world: &mut World, resources: &mut Resources) {
+    pub fn run_locally(&mut self, world: &mut World, resources: &mut Resources) -> RunResult {
+        let mut errors = Vec::<SystemError>::new();
+
         for step in self.steps.iter_mut() {
             match step {
-                Step::RunSystems(systems) => {
-                    for system in systems {
-                        unsafe {
-                            system.run(Environment::new(
-                                world,
-                                resources.internal(),
-                                &self.command_buffers,
-                            ));
-                        }
-                    }
-                }
-                Step::RunLocalSystems(systems) => {
-                    for system in systems {
-                        unsafe {
-                            system.run(Environment::new(
-                                world,
-                                resources.internal(),
-                                &self.command_buffers,
-                            ));
-                        }
-                    }
-                }
+                Step::RunSystems(systems) => unsafe {
+                    run_locally(
+                        systems,
+                        world,
+                        resources,
+                        &self.command_buffers,
+                        &mut errors,
+                    );
+                },
+                Step::RunLocalSystems(systems) => unsafe {
+                    run_locally(
+                        systems,
+                        world,
+                        resources,
+                        &self.command_buffers,
+                        &mut errors,
+                    );
+                },
                 Step::FlushCommands => {
                     world.maintain();
 
@@ -138,49 +137,71 @@ impl Dispatcher {
                 }
             }
         }
+
+        if errors.len() != 0 {
+            Err(RunError::from(errors))
+        } else {
+            Ok(())
+        }
     }
 
     /// Run all systems, potentially in parallel, on the given `ThreadPool`.
     #[cfg(feature = "parallel")]
-    pub fn run(&mut self, world: &mut World, resources: &mut Resources, thread_pool: &ThreadPool) {
+    pub fn run(
+        &mut self,
+        world: &mut World,
+        resources: &mut Resources,
+        thread_pool: &ThreadPool,
+    ) -> RunResult {
+        let mut errors = Vec::<SystemError>::new();
+
         for step in self.steps.iter_mut() {
             match step {
                 Step::RunSystems(systems) => {
-                    let resources = unsafe { resources.internal() };
-                    let world = &world;
-                    let command_buffers = &self.command_buffers;
-
                     if systems.len() > 1 {
-                        thread_pool.install(|| {
-                            systems.par_iter_mut().for_each(|system| unsafe {
-                                system.run(Environment::new(world, resources, command_buffers));
-                            });
-                        });
-                    } else {
-                        if let Some(system) = systems.iter_mut().next() {
-                            unsafe {
-                                system.run(Environment::new(world, resources, command_buffers));
-                            }
-                        }
-                    }
-                }
-                Step::RunLocalSystems(systems) => {
-                    for system in systems {
                         unsafe {
-                            system.run(Environment::new(
+                            run(
+                                systems,
                                 world,
-                                resources.internal(),
+                                resources,
                                 &self.command_buffers,
-                            ));
+                                thread_pool,
+                                &mut errors,
+                            );
+                        }
+                    } else {
+                        unsafe {
+                            run_locally(
+                                systems,
+                                world,
+                                resources,
+                                &self.command_buffers,
+                                &mut errors,
+                            );
                         }
                     }
                 }
+                Step::RunLocalSystems(systems) => unsafe {
+                    run_locally(
+                        systems,
+                        world,
+                        resources,
+                        &self.command_buffers,
+                        &mut errors,
+                    );
+                },
                 Step::FlushCommands => {
                     for command in self.command_buffers.drain() {
                         command(world, resources);
                     }
                 }
             }
+        }
+
+        if errors.len() != 0 {
+            Err(RunError::from(errors))
+        } else {
+            Ok(())
         }
     }
 
@@ -295,4 +316,47 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
     }
 
     steps
+}
+
+unsafe fn run_locally<S>(
+    systems: &mut [S],
+    world: &World,
+    resources: &Resources,
+    command_buffers: &CommandBuffers,
+    errors: &mut Vec<SystemError>,
+) where
+    S: LocallyRunnable,
+{
+    let resources = resources.internal();
+
+    let new_errors = systems.iter_mut().flat_map(|sys| {
+        sys.run(Environment::new(world, resources, command_buffers))
+            .err()
+    });
+
+    errors.extend(new_errors);
+}
+
+#[cfg(feature = "parallel")]
+unsafe fn run(
+    systems: &mut [System],
+    world: &World,
+    resources: &Resources,
+    command_buffers: &CommandBuffers,
+    thread_pool: &ThreadPool,
+    errors: &mut Vec<SystemError>,
+) {
+    let resources = resources.internal();
+
+    thread_pool.install(|| {
+        let new_errors = systems
+            .par_iter_mut()
+            .flat_map_iter(|sys| {
+                sys.run(Environment::new(world, resources, command_buffers))
+                    .err()
+            })
+            .collect::<Vec<_>>();
+
+        errors.extend(new_errors);
+    });
 }

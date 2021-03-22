@@ -71,5 +71,5 @@ fn main() {
         .add_system(print_health.system())
         .build();
 
-    dispatcher.run_locally(&mut world, &mut resources);
+    dispatcher.run_locally(&mut world, &mut resources).unwrap();
 }

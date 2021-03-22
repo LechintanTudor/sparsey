@@ -1,5 +1,5 @@
 use crate::dispatcher::{
-    BorrowEnvironment, Environment, LocalSystemParam, SystemAccess, SystemParam,
+    BorrowEnvironment, Environment, LocalSystemParam, SystemAccess, SystemParam, SystemResult,
 };
 
 /// Trait implemented by `Systems` which can run on the thread
@@ -10,25 +10,29 @@ pub unsafe trait LocallyRunnable {
 
     /// Run the system in the given `Environment`.
     /// Always safe to call in the thread in which the system was created.
-    unsafe fn run(&mut self, environment: Environment);
+    unsafe fn run(&mut self, environment: Environment) -> SystemResult;
 }
 
 /// Marker trait for `Systems` which can be run in threads
 /// other than the one in which they were created.
-pub unsafe trait Runnable {}
+pub unsafe trait Runnable
+where
+    Self: LocallyRunnable,
+{
+}
 
 /// Encapsulates a locally runnable function. Implements the `LocallyRunnable` trait.
 pub struct LocalSystem {
-    runnable: Box<dyn FnMut(Environment) + 'static>,
+    runnable: Box<dyn FnMut(Environment) -> SystemResult + 'static>,
     accesses: Vec<SystemAccess>,
 }
 
 impl LocalSystem {
     /// Create a `LocalSystem` with the given function.
     /// Generally used for creating stateful local systems.
-    pub fn new<P, F>(function: F) -> Self
+    pub fn new<P, R, F>(function: F) -> Self
     where
-        F: IntoLocalSystem<P>,
+        F: IntoLocalSystem<P, R>,
     {
         function.local_system()
     }
@@ -39,28 +43,28 @@ unsafe impl LocallyRunnable for LocalSystem {
         &self.accesses
     }
 
-    unsafe fn run(&mut self, environment: Environment) {
-        (self.runnable)(environment);
+    unsafe fn run(&mut self, environment: Environment) -> SystemResult {
+        (self.runnable)(environment)
     }
 }
 
 /// Trait implemented by functions which can be turned into `LocalSystems`.
-pub trait IntoLocalSystem<Params> {
+pub trait IntoLocalSystem<Params, Return> {
     fn local_system(self) -> LocalSystem;
 }
 
 /// Encapsulates a runnable function. Implements the `Runnable` trait.
 pub struct System {
-    runnable: Box<dyn FnMut(Environment) + Send + 'static>,
+    runnable: Box<dyn FnMut(Environment) -> SystemResult + Send + 'static>,
     accesses: Vec<SystemAccess>,
 }
 
 impl System {
     /// Create a `System` with the given function.
     /// Generally used for creating stateful systems.
-    pub fn new<P, F>(function: F) -> Self
+    pub fn new<P, R, F>(function: F) -> Self
     where
-        F: IntoSystem<P>,
+        F: IntoSystem<P, R>,
     {
         function.system()
     }
@@ -71,14 +75,14 @@ unsafe impl LocallyRunnable for System {
         &self.accesses
     }
 
-    unsafe fn run(&mut self, environment: Environment) {
-        (self.runnable)(environment);
+    unsafe fn run(&mut self, environment: Environment) -> SystemResult {
+        (self.runnable)(environment)
     }
 }
 
 unsafe impl Runnable for System {}
 
-impl IntoLocalSystem<()> for System {
+impl IntoLocalSystem<(), ()> for System {
     fn local_system(self) -> LocalSystem {
         LocalSystem {
             runnable: self.runnable,
@@ -88,20 +92,43 @@ impl IntoLocalSystem<()> for System {
 }
 
 /// Trait implemented by functions which can be turned into `Systems`.
-pub trait IntoSystem<Params>
+pub trait IntoSystem<Params, Return>
 where
-    Self: IntoLocalSystem<Params>,
+    Self: IntoLocalSystem<Params, Return>,
 {
     fn system(self) -> System;
 }
 
 macro_rules! impl_into_system {
     ($($param:ident),*) => {
-        impl<Func, $($param),*> IntoLocalSystem<($($param,)*)> for Func
+        impl<Func, $($param),*> IntoLocalSystem<($($param,)*), ()> for Func
         where
             Func:
                 FnMut($($param),*) +
                 FnMut($(<$param::Borrow as BorrowEnvironment>::Item),*) +
+                'static,
+            $($param: LocalSystemParam,)*
+        {
+            #[allow(unused_unsafe)]
+            #[allow(unused_variables)]
+            fn local_system(mut self) -> LocalSystem {
+                LocalSystem {
+                    runnable: Box::new(move |environment| unsafe {
+                        self($(<$param::Borrow as BorrowEnvironment>::borrow(&environment)),*);
+                        Ok(())
+                    }),
+                    accesses: vec![
+                        $(<$param::Borrow as BorrowEnvironment>::access()),*
+                    ],
+                }
+            }
+        }
+
+        impl<Func, $($param),*> IntoLocalSystem<($($param,)*), SystemResult> for Func
+        where
+            Func:
+                FnMut($($param),*) -> SystemResult +
+                FnMut($(<$param::Borrow as BorrowEnvironment>::Item),*) -> SystemResult +
                 'static,
             $($param: LocalSystemParam,)*
         {
@@ -119,11 +146,34 @@ macro_rules! impl_into_system {
             }
         }
 
-        impl<Func, $($param),*> IntoSystem<($($param,)*)> for Func
+        impl<Func, $($param),*> IntoSystem<($($param,)*), ()> for Func
         where
             Func:
                 FnMut($($param),*) +
                 FnMut($(<$param::Borrow as BorrowEnvironment>::Item),*) +
+                Send + 'static,
+            $($param: SystemParam,)*
+        {
+            #[allow(unused_unsafe)]
+            #[allow(unused_variables)]
+            fn system(mut self) -> System {
+                System {
+                    runnable: Box::new(move |environment| unsafe {
+                        self($(<$param::Borrow as BorrowEnvironment>::borrow(&environment)),*);
+                        Ok(())
+                    }),
+                    accesses: vec![
+                        $(<$param::Borrow as BorrowEnvironment>::access()),*
+                    ],
+                }
+            }
+        }
+
+        impl<Func, $($param),*> IntoSystem<($($param,)*), SystemResult> for Func
+        where
+            Func:
+                FnMut($($param),*) -> SystemResult +
+                FnMut($(<$param::Borrow as BorrowEnvironment>::Item),*) -> SystemResult +
                 Send + 'static,
             $($param: SystemParam,)*
         {
