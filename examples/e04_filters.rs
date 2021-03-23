@@ -62,11 +62,10 @@ fn main() {
 	// Run the systems multiple times.
 	for i in 1..=2 {
 		println!("ITERATION: {}", i);
+		println!("------------------------------");
 		dispatcher.run_locally(&mut world, &mut resources).unwrap();
 
 		// Clear component flags after each iteration.
 		world.clear_flags();
-
-		println!("------------------------------");
 	}
 }
