@@ -2,8 +2,8 @@ use crate::data::Component;
 use crate::dispatcher::{CommandBuffers, Commands};
 use crate::query::{Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource, UnsafeResources};
+use crate::utils::{panic_missing_comp, panic_missing_res};
 use crate::world::{LayoutComponent, World};
-use std::any;
 use std::any::TypeId;
 use std::marker::PhantomData;
 
@@ -172,22 +172,4 @@ where
 			.borrow_mut::<T>()
 			.unwrap_or_else(|| panic_missing_res::<T>())
 	}
-}
-
-#[cold]
-#[inline(never)]
-fn panic_missing_comp<T>() -> ! {
-	panic!(
-		"Tried to access missing component storage `{}`",
-		any::type_name::<T>()
-	)
-}
-
-#[cold]
-#[inline(never)]
-fn panic_missing_res<T>() -> ! {
-	panic!(
-		"Tried to access missing resource `{}`",
-		any::type_name::<T>()
-	)
 }

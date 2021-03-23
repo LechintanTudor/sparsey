@@ -2,6 +2,7 @@ pub use self::impls::*;
 
 use crate::data::{Component, Entity};
 use crate::query::SparseSetRefMutBorrow;
+use crate::utils::panic_missing_comp;
 use crate::world::Components;
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -121,11 +122,20 @@ macro_rules! impl_component_set {
             #[allow(unused_variables)]
             unsafe fn borrow(components: &'a Components) -> Self::StorageSet {
                 (
-                    $(components.borrow_sparse_set_mut::<$comp>().unwrap(),)*
+                    $(borrow_sparse_set::<$comp>(components),)*
                 )
             }
         }
     };
+}
+
+fn borrow_sparse_set<T>(components: &Components) -> SparseSetRefMutBorrow<T>
+where
+	T: Component,
+{
+	components
+		.borrow_sparse_set_mut::<T>()
+		.unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
 #[rustfmt::skip]

@@ -108,8 +108,7 @@ impl Components {
 			.chain(self.ungrouped.iter_sparse_sets_mut())
 	}
 
-	/// Get an exclusive borrow of a component storage if it exists.
-	pub fn borrow_sparse_set_mut<T>(&self) -> Option<SparseSetRefMutBorrow<T>>
+	pub(crate) fn borrow_sparse_set_mut<T>(&self) -> Option<SparseSetRefMutBorrow<T>>
 	where
 		T: Component,
 	{
