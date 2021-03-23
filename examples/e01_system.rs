@@ -28,5 +28,5 @@ fn main() {
 
 	// `run_locally` runs all the systems sequentially
 	// in the order in which they were added to the `Dispatcher`.
-	dispatcher.run_locally(&mut world, &mut resources).unwrap();
+	dispatcher.run_seq(&mut world, &mut resources).unwrap();
 }

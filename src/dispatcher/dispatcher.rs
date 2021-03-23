@@ -105,13 +105,13 @@ impl Dispatcher {
 	}
 
 	/// Run all systems on the current thread.
-	pub fn run_locally(&mut self, world: &mut World, resources: &mut Resources) -> RunResult {
+	pub fn run_seq(&mut self, world: &mut World, resources: &mut Resources) -> RunResult {
 		let mut errors = Vec::<SystemError>::new();
 
 		for step in self.steps.iter_mut() {
 			match step {
 				Step::RunSystems(systems) => unsafe {
-					run_locally(
+					run_seq(
 						systems,
 						world,
 						resources,
@@ -120,7 +120,7 @@ impl Dispatcher {
 					);
 				},
 				Step::RunLocalSystems(systems) => unsafe {
-					run_locally(
+					run_seq(
 						systems,
 						world,
 						resources,
@@ -147,7 +147,7 @@ impl Dispatcher {
 
 	/// Run all systems, potentially in parallel, on the given `ThreadPool`.
 	#[cfg(feature = "parallel")]
-	pub fn run(
+	pub fn run_par(
 		&mut self,
 		world: &mut World,
 		resources: &mut Resources,
@@ -160,7 +160,7 @@ impl Dispatcher {
 				Step::RunSystems(systems) => {
 					if systems.len() > 1 {
 						unsafe {
-							run(
+							run_par(
 								systems,
 								world,
 								resources,
@@ -171,7 +171,7 @@ impl Dispatcher {
 						}
 					} else {
 						unsafe {
-							run_locally(
+							run_seq(
 								systems,
 								world,
 								resources,
@@ -182,7 +182,7 @@ impl Dispatcher {
 					}
 				}
 				Step::RunLocalSystems(systems) => unsafe {
-					run_locally(
+					run_seq(
 						systems,
 						world,
 						resources,
@@ -318,7 +318,7 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
 	steps
 }
 
-unsafe fn run_locally<S>(
+unsafe fn run_seq<S>(
 	systems: &mut [S],
 	world: &World,
 	resources: &Resources,
@@ -338,7 +338,7 @@ unsafe fn run_locally<S>(
 }
 
 #[cfg(feature = "parallel")]
-unsafe fn run(
+unsafe fn run_par(
 	systems: &mut [System],
 	world: &World,
 	resources: &Resources,

@@ -63,7 +63,7 @@ fn main() {
 	for i in 1..=2 {
 		println!("ITERATION: {}", i);
 		println!("------------------------------");
-		dispatcher.run_locally(&mut world, &mut resources).unwrap();
+		dispatcher.run_seq(&mut world, &mut resources).unwrap();
 
 		// Clear component flags after each iteration.
 		world.clear_flags();

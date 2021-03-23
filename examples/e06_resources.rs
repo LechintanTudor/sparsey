@@ -34,6 +34,6 @@ fn main() {
 		.build();
 
 	for _ in 0..5 {
-		dispatcher.run_locally(&mut world, &mut resources).unwrap();
+		dispatcher.run_seq(&mut world, &mut resources).unwrap();
 	}
 }
