@@ -1,6 +1,6 @@
 use crate::dispatcher::{
-	CommandBuffers, Environment, LocalSystem, LocallyRunnable, RunError, RunResult, System,
-	SystemAccess, SystemError,
+	CommandBuffers, Environment, LocalFn, LocalSystem, LocallyRunnable, RunError, RunResult,
+	System, SystemAccess, SystemError,
 };
 use crate::resources::Resources;
 use crate::world::World;
@@ -27,6 +27,12 @@ impl DispatcherBuilder {
 	/// Add a local system to the `Dispatcher` which runs on the current thread.
 	pub fn add_local_system(&mut self, system: LocalSystem) -> &mut Self {
 		self.simple_steps.push(SimpleStep::RunLocalSystem(system));
+		self
+	}
+
+	/// Add a local system function to the `Dispatcher` which runs on the current thread.
+	pub fn add_local_fn(&mut self, system: LocalFn) -> &mut Self {
+		self.simple_steps.push(SimpleStep::RunLocalFn(system));
 		self
 	}
 
@@ -111,7 +117,7 @@ impl Dispatcher {
 		for step in self.steps.iter_mut() {
 			match step {
 				Step::RunSystems(systems) => unsafe {
-					run_seq(
+					run_systems_seq(
 						systems,
 						world,
 						resources,
@@ -120,7 +126,7 @@ impl Dispatcher {
 					);
 				},
 				Step::RunLocalSystems(systems) => unsafe {
-					run_seq(
+					run_systems_seq(
 						systems,
 						world,
 						resources,
@@ -128,6 +134,9 @@ impl Dispatcher {
 						&mut errors,
 					);
 				},
+				Step::RunLocalFns(systems) => {
+					run_local_fns(systems, world, resources, &mut errors);
+				}
 				Step::FlushCommands => {
 					world.maintain();
 
@@ -160,7 +169,7 @@ impl Dispatcher {
 				Step::RunSystems(systems) => {
 					if systems.len() > 1 {
 						unsafe {
-							run_par(
+							run_systems_par(
 								systems,
 								world,
 								resources,
@@ -171,7 +180,7 @@ impl Dispatcher {
 						}
 					} else {
 						unsafe {
-							run_seq(
+							run_systems_seq(
 								systems,
 								world,
 								resources,
@@ -182,7 +191,7 @@ impl Dispatcher {
 					}
 				}
 				Step::RunLocalSystems(systems) => unsafe {
-					run_seq(
+					run_systems_seq(
 						systems,
 						world,
 						resources,
@@ -190,6 +199,9 @@ impl Dispatcher {
 						&mut errors,
 					);
 				},
+				Step::RunLocalFns(systems) => {
+					run_local_fns(systems, world, resources, &mut errors);
+				}
 				Step::FlushCommands => {
 					for command in self.command_buffers.drain() {
 						command(world, resources);
@@ -205,36 +217,32 @@ impl Dispatcher {
 		}
 	}
 
-	/// Get the maximum number of systems which can run in parallel.
-	/// Mostly used for setting up the number of threads in the `ThreadPool`.
-	pub fn max_parallel_systems(&self) -> usize {
-		let mut max_parallel_systems = 0;
+	/// Get the maximum number of systems which can run concurrently.
+	/// Can be used to set up the number of threads in the `rayon::ThreadPool`.
+	pub fn max_concurrecy(&self) -> usize {
+		let mut max_concurrecy = 1;
 
 		for step in self.steps.iter() {
-			match step {
-				Step::RunSystems(systems) => {
-					max_parallel_systems = max_parallel_systems.max(systems.len());
-				}
-				Step::RunLocalSystems(_) => {
-					max_parallel_systems = max_parallel_systems.max(1);
-				}
-				_ => (),
+			if let Step::RunSystems(systems) = step {
+				max_concurrecy = max_concurrecy.max(systems.len());
 			}
 		}
 
-		max_parallel_systems
+		max_concurrecy
 	}
 }
 
 enum SimpleStep {
 	RunSystem(System),
 	RunLocalSystem(LocalSystem),
+	RunLocalFn(LocalFn),
 	FlushCommands,
 }
 
 enum Step {
 	RunSystems(Vec<System>),
 	RunLocalSystems(Vec<LocalSystem>),
+	RunLocalFns(Vec<LocalFn>),
 	FlushCommands,
 }
 
@@ -265,6 +273,7 @@ fn required_command_buffers(steps: &[Step]) -> usize {
 			Step::FlushCommands => {
 				max_buffer_count = max_buffer_count.max(buffer_count);
 			}
+			_ => (),
 		}
 	}
 
@@ -303,10 +312,16 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
 				}
 			},
 			SimpleStep::RunLocalSystem(system) => match steps.last_mut() {
-				Some(Step::RunLocalSystems(thread_local_systems)) => {
-					thread_local_systems.push(system);
+				Some(Step::RunLocalSystems(systems)) => {
+					systems.push(system);
 				}
 				_ => steps.push(Step::RunLocalSystems(vec![system])),
+			},
+			SimpleStep::RunLocalFn(system) => match steps.last_mut() {
+				Some(Step::RunLocalFns(systems)) => {
+					systems.push(system);
+				}
+				_ => steps.push(Step::RunLocalFns(vec![system])),
 			},
 			SimpleStep::FlushCommands => match steps.last() {
 				Some(Step::FlushCommands) | None => (),
@@ -318,7 +333,7 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
 	steps
 }
 
-unsafe fn run_seq<S>(
+unsafe fn run_systems_seq<S>(
 	systems: &mut [S],
 	world: &World,
 	resources: &Resources,
@@ -338,7 +353,7 @@ unsafe fn run_seq<S>(
 }
 
 #[cfg(feature = "parallel")]
-unsafe fn run_par(
+unsafe fn run_systems_par(
 	systems: &mut [System],
 	world: &World,
 	resources: &Resources,
@@ -359,4 +374,17 @@ unsafe fn run_par(
 
 		errors.extend(new_errors);
 	});
+}
+
+fn run_local_fns(
+	systems: &mut [LocalFn],
+	world: &mut World,
+	resources: &mut Resources,
+	errors: &mut Vec<SystemError>,
+) {
+	let new_errors = systems
+		.iter_mut()
+		.flat_map(|sys| sys.run(world, resources).err());
+
+	errors.extend(new_errors);
 }

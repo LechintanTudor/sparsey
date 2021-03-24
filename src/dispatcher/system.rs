@@ -1,6 +1,8 @@
 use crate::dispatcher::{
 	BorrowEnvironment, Environment, LocalSystemParam, SystemAccess, SystemParam, SystemResult,
 };
+use crate::resources::Resources;
+use crate::world::World;
 
 /// Trait implemented by `Systems` which can run on the thread
 /// in which they were created.
@@ -23,7 +25,7 @@ where
 
 /// Encapsulates a locally runnable function. Implements the `LocallyRunnable` trait.
 pub struct LocalSystem {
-	runnable: Box<dyn FnMut(Environment) -> SystemResult + 'static>,
+	function: Box<dyn FnMut(Environment) -> SystemResult + 'static>,
 	accesses: Vec<SystemAccess>,
 }
 
@@ -44,18 +46,19 @@ unsafe impl LocallyRunnable for LocalSystem {
 	}
 
 	unsafe fn run(&mut self, environment: Environment) -> SystemResult {
-		(self.runnable)(environment)
+		(self.function)(environment)
 	}
 }
 
 /// Trait implemented by functions which can be turned into `LocalSystems`.
 pub trait IntoLocalSystem<Params, Return> {
+	/// Create a `LocalSystem` from `self`.
 	fn local_system(self) -> LocalSystem;
 }
 
 /// Encapsulates a runnable function. Implements the `Runnable` trait.
 pub struct System {
-	runnable: Box<dyn FnMut(Environment) -> SystemResult + Send + 'static>,
+	function: Box<dyn FnMut(Environment) -> SystemResult + Send + 'static>,
 	accesses: Vec<SystemAccess>,
 }
 
@@ -76,7 +79,7 @@ unsafe impl LocallyRunnable for System {
 	}
 
 	unsafe fn run(&mut self, environment: Environment) -> SystemResult {
-		(self.runnable)(environment)
+		(self.function)(environment)
 	}
 }
 
@@ -85,7 +88,7 @@ unsafe impl Runnable for System {}
 impl IntoLocalSystem<(), ()> for System {
 	fn local_system(self) -> LocalSystem {
 		LocalSystem {
-			runnable: self.runnable,
+			function: self.function,
 			accesses: self.accesses,
 		}
 	}
@@ -96,7 +99,60 @@ pub trait IntoSystem<Params, Return>
 where
 	Self: IntoLocalSystem<Params, Return>,
 {
+	/// Create a `System` from `self`.
 	fn system(self) -> System;
+}
+
+/// Encapsulates a system function with exclusive access to `World` and `Resources`.
+pub struct LocalFn {
+	function: Box<dyn FnMut(&mut World, &mut Resources) -> SystemResult + 'static>,
+}
+
+impl LocalFn {
+	/// Create a `LocalFn` with the given function.
+	/// Generally used for creating stateful systems.
+	pub fn new<R, F>(function: F) -> Self
+	where
+		F: IntoLocalFn<R>,
+	{
+		function.local_fn()
+	}
+
+	/// Run the system on the given `World` and `Resources`.
+	pub fn run(&mut self, world: &mut World, resources: &mut Resources) -> SystemResult {
+		(self.function)(world, resources)
+	}
+}
+
+/// Trait implemented by functions which can be turned into `LocalFns`.
+pub trait IntoLocalFn<Return> {
+	/// Create a `LocalSFn` from `self`.
+	fn local_fn(self) -> LocalFn;
+}
+
+impl<F> IntoLocalFn<()> for F
+where
+	F: FnMut(&mut World, &mut Resources) + 'static,
+{
+	fn local_fn(mut self) -> LocalFn {
+		LocalFn {
+			function: Box::new(move |world, resources| {
+				self(world, resources);
+				Ok(())
+			}),
+		}
+	}
+}
+
+impl<F> IntoLocalFn<SystemResult> for F
+where
+	F: FnMut(&mut World, &mut Resources) -> SystemResult + 'static,
+{
+	fn local_fn(self) -> LocalFn {
+		LocalFn {
+			function: Box::new(self),
+		}
+	}
 }
 
 macro_rules! impl_into_system {
@@ -113,7 +169,7 @@ macro_rules! impl_into_system {
             #[allow(unused_variables)]
             fn local_system(mut self) -> LocalSystem {
                 LocalSystem {
-                    runnable: Box::new(move |environment| unsafe {
+                    function: Box::new(move |environment| unsafe {
                         self($(<$param::Borrow as BorrowEnvironment>::borrow(&environment)),*);
                         Ok(())
                     }),
@@ -136,7 +192,7 @@ macro_rules! impl_into_system {
             #[allow(unused_variables)]
             fn local_system(mut self) -> LocalSystem {
                 LocalSystem {
-                    runnable: Box::new(move |environment| unsafe {
+                    function: Box::new(move |environment| unsafe {
                         self($(<$param::Borrow as BorrowEnvironment>::borrow(&environment)),*)
                     }),
                     accesses: vec![
@@ -158,7 +214,7 @@ macro_rules! impl_into_system {
             #[allow(unused_variables)]
             fn system(mut self) -> System {
                 System {
-                    runnable: Box::new(move |environment| unsafe {
+                    function: Box::new(move |environment| unsafe {
                         self($(<$param::Borrow as BorrowEnvironment>::borrow(&environment)),*);
                         Ok(())
                     }),
@@ -181,7 +237,7 @@ macro_rules! impl_into_system {
             #[allow(unused_variables)]
             fn system(mut self) -> System {
                 System {
-                    runnable: Box::new(move |environment| unsafe {
+                    function: Box::new(move |environment| unsafe {
                         self($(<$param::Borrow as BorrowEnvironment>::borrow(&environment)),*)
                     }),
                     accesses: vec![
