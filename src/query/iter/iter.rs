@@ -57,6 +57,16 @@ macro_rules! impl_iter {
                         Self::Dense(iter) => iter.next(),
                     }
                 }
+
+                fn for_each<Func>(self, f: Func)
+                where
+                    Func: FnMut(Self::Item),
+                {
+                    match self {
+                        Self::Sparse(iter) => iter.for_each(f),
+                        Self::Dense(iter) => iter.for_each(f),
+                    }
+                }
             }
 
             impl<'a, $($comp),+> EntityIterator for [<Iter $len>]<'a, $($comp),+>
