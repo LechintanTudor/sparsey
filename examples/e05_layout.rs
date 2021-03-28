@@ -24,7 +24,7 @@ struct Velocity(f32, f32);
 
 // Update the `Position` of the entity and set its
 // `Velocity` to zero if the entity is out of bounds.
-fn collision(
+fn handle_collisions(
 	mut positions: CompMut<Position>,
 	mut velocities: CompMut<Velocity>,
 	colliders: Comp<Collider>,
@@ -106,7 +106,10 @@ fn main() {
 	let mut world = World::default();
 	world.set_layout(&layout);
 
-	let mut dispatcher = Dispatcher::builder().add_system(collision.system()).build();
+	let mut dispatcher = Dispatcher::builder()
+		.add_system(handle_collisions.system())
+		.build();
+
 	dispatcher.set_up(&mut world);
 
 	let mut resources = Resources::default();

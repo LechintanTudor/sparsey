@@ -10,7 +10,7 @@ struct Hp(i32);
 #[derive(Copy, Clone, Debug)]
 struct HpRegen(i32);
 
-fn print_health(mut hps: CompMut<Hp>, _hp_regens: Comp<HpRegen>) {
+fn update_health(mut hps: CompMut<Hp>, _hp_regens: Comp<HpRegen>) {
 	use sparsey::filters::{added, changed};
 
 	// Only get entities with `Hp` and `HpRegen` components which
@@ -46,7 +46,7 @@ fn main() {
 	let mut world = World::default();
 
 	let mut dispatcher = Dispatcher::builder()
-		.add_system(print_health.system())
+		.add_system(update_health.system())
 		.build();
 
 	dispatcher.set_up(&mut world);
@@ -63,9 +63,10 @@ fn main() {
 	for i in 1..=2 {
 		println!("ITERATION: {}", i);
 		println!("------------------------------");
-		dispatcher.run_seq(&mut world, &mut resources).unwrap();
 
-		// Clear component flags after each iteration.
+		// Clear component flags before each iteration.
 		world.clear_flags();
+
+		dispatcher.run_seq(&mut world, &mut resources).unwrap();
 	}
 }

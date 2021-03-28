@@ -13,7 +13,7 @@ struct Hp(i32);
 struct HpRegen(i32);
 
 // `Comp<T>` gives us a shared view over all components of type `T`.
-fn print_health(hps: Comp<Hp>, hp_regens: Comp<HpRegen>) {
+fn update_health(hps: Comp<Hp>, hp_regens: Comp<HpRegen>) {
 	// Iterate over all `Hp` components.
 	// Very fast, as the components are tightly packed in an array.
 	for hp in hps.iter() {
@@ -68,7 +68,7 @@ fn main() {
 	let mut resources = Resources::default();
 
 	let mut dispatcher = Dispatcher::builder()
-		.add_system(print_health.system())
+		.add_system(update_health.system())
 		.build();
 
 	dispatcher.run_seq(&mut world, &mut resources).unwrap();

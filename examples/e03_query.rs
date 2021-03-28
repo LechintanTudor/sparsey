@@ -11,7 +11,7 @@ struct Hp(i32);
 struct HpRegen(i32);
 
 // `CompMut<T>` gives us an exclusive view over all components of type `T`.
-fn print_health(mut hps: CompMut<Hp>, hp_regens: Comp<HpRegen>) {
+fn update_health(mut hps: CompMut<Hp>, hp_regens: Comp<HpRegen>) {
 	// Iterate over the components of entities which have both `Hp` and `HpRegen`.
 	// The `iter` method for tuples is only available when the `Query` trait
 	// is in scope.
@@ -48,7 +48,7 @@ fn main() {
 
 	// Create the `Dispatcher` before adding any entities to the `World`.
 	let mut dispatcher = Dispatcher::builder()
-		.add_system(print_health.system())
+		.add_system(update_health.system())
 		.build();
 
 	// `set_up` registers all component types used by the added systems.
