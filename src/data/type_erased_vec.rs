@@ -55,13 +55,17 @@ impl TypeErasedVec {
 
 		if a != b {
 			unsafe {
-				ptr::swap_nonoverlapping(
-					self.ptr.as_ptr().add(a * self.type_info.size()),
-					self.ptr.as_ptr().add(b * self.type_info.size()),
-					self.type_info.size(),
-				);
+				self.swap_nonoverlapping_unchecked(a, b);
 			}
 		}
+	}
+
+	pub unsafe fn swap_nonoverlapping_unchecked(&mut self, a: usize, b: usize) {
+		ptr::swap_nonoverlapping(
+			self.ptr.as_ptr().add(a * self.type_info.size()),
+			self.ptr.as_ptr().add(b * self.type_info.size()),
+			self.type_info.size(),
+		);
 	}
 
 	pub fn swap_delete(&mut self, index: usize) {

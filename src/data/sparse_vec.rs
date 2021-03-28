@@ -95,9 +95,9 @@ impl SparseVec {
 		}
 	}
 
-	/// Swap the `IndexEntities` at the given indexes.
-	/// The indexes must be valid and must not overlap.
-	pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+	/// Swap the `IndexEntities` at the given indexes without checking if
+	/// the indexes are valid, different and in bounds.
+	pub unsafe fn swap_nonoverlapping_unchecked(&mut self, a: usize, b: usize) {
 		let p1 = self.get_unchecked_mut(a) as *mut _;
 		let p2 = self.get_unchecked_mut(b) as *mut _;
 		ptr::swap_nonoverlapping(p1, p2, 1);

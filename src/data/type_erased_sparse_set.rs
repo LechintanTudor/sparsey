@@ -2,6 +2,7 @@ use crate::data::{
 	Component, ComponentFlags, Entity, IndexEntity, SparseSetRef, SparseSetRefMut, SparseVec,
 	TypeErasedVec, TypeInfo,
 };
+use std::ptr;
 
 /// Data structure which uses type erasure to map `Entities` to components.
 /// Keeps components in a tightly packed array for fast iterations.
@@ -46,7 +47,7 @@ impl TypeErasedSparseSet {
 			.for_each(|flags| *flags = ComponentFlags::empty());
 	}
 
-	/// Swap the components and the given indexes.
+	/// Swap the components and entities at the given indexes.
 	pub fn swap(&mut self, a: usize, b: usize) {
 		if a == b {
 			return;
@@ -56,12 +57,26 @@ impl TypeErasedSparseSet {
 		let sparse_index_b = self.dense[b].index();
 
 		unsafe {
-			self.sparse.swap_unchecked(sparse_index_a, sparse_index_b);
+			self.sparse
+				.swap_nonoverlapping_unchecked(sparse_index_a, sparse_index_b);
 		}
 
 		self.dense.swap(a, b);
 		self.flags.swap(a, b);
 		self.data.swap(a, b);
+	}
+
+	/// Swap the components and entities at the given indexes without checking
+	/// if the indexes are different and in bounds.
+	pub unsafe fn swap_nonoverlapping_unchecked(&mut self, a: usize, b: usize) {
+		let sparse_index_a = self.dense.get_unchecked(a).index();
+		let sparse_index_b = self.dense.get_unchecked(b).index();
+		self.sparse
+			.swap_nonoverlapping_unchecked(sparse_index_a, sparse_index_b);
+
+		swap_nonoverlapping_unchecked(self.dense.as_mut_ptr(), a, b);
+		swap_nonoverlapping_unchecked(self.flags.as_mut_ptr(), a, b);
+		self.data.swap_nonoverlapping_unchecked(a, b);
 	}
 
 	/// Delete the component at the given `Entity`.
@@ -130,4 +145,8 @@ impl TypeErasedSparseSet {
 			)
 		}
 	}
+}
+
+unsafe fn swap_nonoverlapping_unchecked<T>(data: *mut T, a: usize, b: usize) {
+	ptr::swap_nonoverlapping(data.add(a), data.add(b), 1);
 }

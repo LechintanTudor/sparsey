@@ -271,7 +271,9 @@ unsafe fn group_components(
 			None => unreachable_unchecked(),
 		};
 
-		sparse_set.swap(index, *group_len);
+		if index != *group_len {
+			sparse_set.swap_nonoverlapping_unchecked(index, *group_len);
+		}
 	}
 
 	*group_len += 1;
@@ -294,7 +296,9 @@ unsafe fn ungroup_components(
 				None => unreachable_unchecked(),
 			};
 
-			sparse_set.swap(index, last_index);
+			if index != last_index {
+				sparse_set.swap_nonoverlapping_unchecked(index, last_index);
+			}
 		}
 
 		*group_len -= 1;
