@@ -16,6 +16,9 @@ paste = "1"
 
 rayon = { version = "1", optional = true }
 
+[dev-dependencies]
+rayon = "1"
+
 [[example]]
 name = "system"
 path = "examples/e01_system.rs"
@@ -39,3 +42,7 @@ path = "examples/e05_layout.rs"
 [[example]]
 name = "resources"
 path = "examples/e06_resources.rs"
+
+[[example]]
+name = "parallelism"
+path = "examples/e07_parallelism.rs"
