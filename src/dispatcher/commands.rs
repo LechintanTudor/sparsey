@@ -1,6 +1,6 @@
 use crate::data::Entity;
 use crate::resources::Resources;
-use crate::world::{ComponentSet, Entities, World};
+use crate::world::{ComponentSet, EntityStorage, World};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -8,11 +8,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 /// exclusive access to `World` and `Resources`.
 pub struct Commands<'a> {
 	buffer: &'a mut Vec<Command>,
-	entities: &'a Entities,
+	entities: &'a EntityStorage,
 }
 
 impl<'a> Commands<'a> {
-	pub(crate) fn new(buffer: &'a mut Vec<Command>, entities: &'a Entities) -> Self {
+	pub(crate) fn new(buffer: &'a mut Vec<Command>, entities: &'a EntityStorage) -> Self {
 		Self { buffer, entities }
 	}
 

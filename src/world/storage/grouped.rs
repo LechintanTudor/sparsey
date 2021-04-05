@@ -5,12 +5,12 @@ use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
 
 #[derive(Default)]
-pub(crate) struct GroupedComponents {
+pub(crate) struct GroupedComponentStorages {
 	group_sets: Vec<GroupSet>,
 	info: HashMap<TypeId, ComponentInfo>,
 }
 
-impl GroupedComponents {
+impl GroupedComponentStorages {
 	pub fn with_layout(
 		layout: &Layout,
 		sparse_set_map: &mut HashMap<TypeId, TypeErasedSparseSet>,

@@ -3,7 +3,7 @@ pub use self::impls::*;
 use crate::data::{Component, Entity};
 use crate::query::SparseSetRefMutBorrow;
 use crate::utils::panic_missing_comp;
-use crate::world::Components;
+use crate::world::ComponentStorages;
 use std::any::TypeId;
 use std::marker::PhantomData;
 
@@ -23,7 +23,7 @@ where
 
 	/// Borrow storages from the `World`.
 	unsafe fn borrow_storages(
-		components: &Components,
+		components: &ComponentStorages,
 	) -> <Self::Storages as BorrowStorages>::StorageSet {
 		Self::Storages::borrow(components)
 	}
@@ -52,7 +52,7 @@ pub trait BorrowStorages<'a> {
 	type StorageSet;
 
 	/// Borrow storages from the `World`.
-	unsafe fn borrow(components: &'a Components) -> Self::StorageSet;
+	unsafe fn borrow(components: &'a ComponentStorages) -> Self::StorageSet;
 }
 
 /// Struct used to borrow component storages. Implements `BorrowStorages` for all lifetimes.
@@ -120,7 +120,7 @@ macro_rules! impl_component_set {
             type StorageSet = ($(SparseSetRefMutBorrow<'a, $comp>,)*);
 
             #[allow(unused_variables)]
-            unsafe fn borrow(components: &'a Components) -> Self::StorageSet {
+            unsafe fn borrow(components: &'a ComponentStorages) -> Self::StorageSet {
                 (
                     $(borrow_sparse_set::<$comp>(components),)*
                 )
@@ -129,7 +129,7 @@ macro_rules! impl_component_set {
     };
 }
 
-fn borrow_sparse_set<T>(components: &Components) -> SparseSetRefMutBorrow<T>
+fn borrow_sparse_set<T>(components: &ComponentStorages) -> SparseSetRefMutBorrow<T>
 where
 	T: Component,
 {

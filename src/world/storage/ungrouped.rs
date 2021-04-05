@@ -3,11 +3,11 @@ use std::any::TypeId;
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub(crate) struct UngroupedComponents {
+pub(crate) struct UngroupedComponentStorages {
 	sparse_sets: HashMap<TypeId, AtomicRefCell<TypeErasedSparseSet>>,
 }
 
-impl UngroupedComponents {
+impl UngroupedComponentStorages {
 	pub fn from_sparse_sets(sparse_set_map: &mut HashMap<TypeId, TypeErasedSparseSet>) -> Self {
 		let mut sparse_sets = HashMap::<TypeId, AtomicRefCell<TypeErasedSparseSet>>::new();
 

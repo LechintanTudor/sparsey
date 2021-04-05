@@ -2,12 +2,12 @@ use crate::data::{Entity, IndexEntity, SparseVec};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
-pub(crate) struct Entities {
+pub(crate) struct EntityStorage {
 	storage: EntitySparseSet,
 	allocator: EntityAllocator,
 }
 
-impl Entities {
+impl EntityStorage {
 	pub fn create(&mut self) -> Entity {
 		self.maintain();
 
@@ -53,7 +53,7 @@ impl Entities {
 	}
 }
 
-impl AsRef<[Entity]> for Entities {
+impl AsRef<[Entity]> for EntityStorage {
 	fn as_ref(&self) -> &[Entity] {
 		&self.storage.dense
 	}

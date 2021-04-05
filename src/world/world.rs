@@ -1,6 +1,6 @@
 use crate::data::{Component, Entity, TypeErasedSparseSet};
 use crate::query::{Comp, CompMut};
-use crate::world::{ComponentSet, Components, Entities, Layout};
+use crate::world::{ComponentSet, ComponentStorages, EntityStorage, Layout};
 use std::any::TypeId;
 use std::collections::HashSet;
 use std::error::Error;
@@ -9,8 +9,8 @@ use std::fmt;
 /// Container for component storages and entities.
 #[derive(Default)]
 pub struct World {
-	entities: Entities,
-	components: Components,
+	entities: EntityStorage,
+	components: ComponentStorages,
 	group_indexes: HashSet<usize>,
 }
 
@@ -217,7 +217,7 @@ impl World {
 		self.entities.maintain();
 	}
 
-	pub(crate) fn entity_storage(&self) -> &Entities {
+	pub(crate) fn entity_storage(&self) -> &EntityStorage {
 		&self.entities
 	}
 

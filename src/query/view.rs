@@ -197,15 +197,6 @@ where
 	}
 }
 
-impl<T> AsMut<[T]> for CompMut<'_, T>
-where
-	T: Send + Sync + 'static,
-{
-	fn as_mut(&mut self) -> &mut [T] {
-		self.sparse_set.as_mut()
-	}
-}
-
 impl<T> Deref for CompMut<'_, T>
 where
 	T: Send + Sync + 'static,
@@ -217,15 +208,6 @@ where
 		T: Send + Sync + 'static,
 	{
 		self.sparse_set.as_ref()
-	}
-}
-
-impl<T> DerefMut for CompMut<'_, T>
-where
-	T: Send + Sync + 'static,
-{
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		self.sparse_set.as_mut()
 	}
 }
 

@@ -1,17 +1,17 @@
 use crate::data::{AtomicRef, AtomicRefMut, Component, Entity, TypeErasedSparseSet};
 use crate::query::{Comp, CompMut, SparseSetRefMutBorrow};
-use crate::world::{GroupedComponents, Layout, UngroupedComponents};
+use crate::world::{GroupedComponentStorages, Layout, UngroupedComponentStorages};
 use std::any::TypeId;
 use std::collections::HashMap;
 
 /// Container for grouped and ungrouped component storages.
 #[derive(Default)]
-pub struct Components {
-	pub(crate) grouped: GroupedComponents,
-	pub(crate) ungrouped: UngroupedComponents,
+pub struct ComponentStorages {
+	pub(crate) grouped: GroupedComponentStorages,
+	pub(crate) ungrouped: UngroupedComponentStorages,
 }
 
-impl Components {
+impl ComponentStorages {
 	pub(crate) fn clear(&mut self) {
 		self.grouped.clear();
 		self.ungrouped.clear();
@@ -44,8 +44,8 @@ impl Components {
 			sparse_sets.insert(sparse_set.type_info().id(), sparse_set);
 		}
 
-		self.grouped = GroupedComponents::with_layout(&layout, &mut sparse_sets);
-		self.ungrouped = UngroupedComponents::from_sparse_sets(&mut sparse_sets);
+		self.grouped = GroupedComponentStorages::with_layout(&layout, &mut sparse_sets);
+		self.ungrouped = UngroupedComponentStorages::from_sparse_sets(&mut sparse_sets);
 
 		for i in 0..self.grouped.group_set_count() {
 			for &entity in entities {
