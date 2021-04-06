@@ -1,4 +1,4 @@
-use std::ops::{BitOr, BitOrAssign};
+use crate::world::GroupMask;
 use std::ptr;
 
 /// Holds information about the layout in the `World`
@@ -28,7 +28,7 @@ impl<'a> GroupInfo<'a> {
 	}
 
 	pub(crate) fn mask(&self) -> GroupMask {
-		GroupMask::from_index(self.sparse_set_index)
+		GroupMask::new_include(self.sparse_set_index)
 	}
 
 	pub(crate) fn groups(&self) -> &[Group] {
@@ -52,34 +52,7 @@ impl Group {
 	}
 
 	pub fn mask(&self) -> GroupMask {
-		GroupMask::from_arity(self.arity)
-	}
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Default)]
-pub(crate) struct GroupMask(u32);
-
-impl GroupMask {
-	pub fn from_arity(arity: usize) -> Self {
-		Self((1 << arity) - 1)
-	}
-
-	pub fn from_index(index: usize) -> Self {
-		Self(1 << index)
-	}
-}
-
-impl BitOr for GroupMask {
-	type Output = Self;
-
-	fn bitor(self, other: Self) -> Self::Output {
-		Self(self.0 | other.0)
-	}
-}
-
-impl BitOrAssign for GroupMask {
-	fn bitor_assign(&mut self, other: Self) {
-		self.0 |= other.0
+		GroupMask::new_group(self.arity)
 	}
 }
 
