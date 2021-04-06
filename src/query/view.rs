@@ -16,7 +16,7 @@ where
 	type Data: 'a + Copy;
 	type Item: 'a;
 
-	/// Get group info for the component set.
+	/// Get layout info about the `ComponentView`.
 	fn group_info(&self) -> Option<GroupInfo>;
 
 	/// Split the view into its sparse, dense, flags and data arrays.
@@ -25,15 +25,20 @@ where
 	/// Get the item at the given entity, if any.
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		let (sparse, _, flags, data) = self.split();
-		let index = sparse.get_index_entity(entity)?.index();
+		let index = Self::get_id(sparse, entity)? as usize;
 
 		unsafe { Self::get_item(flags, data, index) }
 	}
 
-	/// Get the flags at the given index.
+	/// Get the id of the given entity.
+	fn get_id(sparse: &'a SparseVec, entity: Entity) -> Option<u32> {
+		sparse.get_id(entity)
+	}
+
+	/// Get the `ComponentFlags` at the given index.
 	unsafe fn get_flags(flags: Self::Flags, index: usize) -> ComponentFlags;
 
-	/// Get the item at the given index, if any.
+	/// Get the `Item` at the given index, if it matches the flags.
 	unsafe fn get_item(flags: Self::Flags, data: Self::Data, index: usize) -> Option<Self::Item>;
 }
 

@@ -42,7 +42,7 @@ macro_rules! impl_sparse_iter {
                                     $comp::get_item(
                                         self.[<comp_ $comp:lower>].1,
                                         self.[<comp_ $comp:lower>].2,
-                                        self.[<comp_ $comp:lower>].0.get_index_entity(entity)?.index(),
+                                        $comp::get_id(self.[<comp_ $comp:lower>].0, entity)? as usize,
                                     )?,
                                 )+
                             ))

@@ -64,9 +64,9 @@ fn main() {
 		println!("ITERATION: {}", i);
 		println!("------------------------------");
 
-		// Clear component flags before each iteration.
-		world.clear_flags();
-
 		dispatcher.run_seq(&mut world, &mut resources).unwrap();
+
+		// Clear component flags after each iteration.
+		world.clear_flags();
 	}
 }

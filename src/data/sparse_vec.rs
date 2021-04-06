@@ -49,6 +49,16 @@ impl SparseVec {
 			.filter(|e| e.ver() == entity.ver())
 	}
 
+	/// Get the id of the `IndexEntity` associated with the given `Entity`.
+	pub fn get_id(&self, entity: Entity) -> Option<u32> {
+		self.pages
+			.get(page_index(entity))
+			.and_then(|p| p.as_ref())
+			.and_then(|p| p[local_index(entity)])
+			.filter(|e| e.ver() == entity.ver())
+			.map(|e| e.id())
+	}
+
 	/// Get an exclusive reference to the `IndexEntity` slot at the given `Entity`.
 	pub fn get_mut(&mut self, entity: Entity) -> Option<&mut Option<IndexEntity>> {
 		self.pages
