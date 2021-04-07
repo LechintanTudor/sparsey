@@ -4,21 +4,28 @@ use std::ops::{BitOr, BitOrAssign, Deref};
 pub struct GroupMask(u32);
 
 impl GroupMask {
-	pub fn new_group(arity: usize) -> Self {
-		assert!(arity != 0, "Cannot create mask of group with 0 arity");
-		Self((1 << (arity % 17)) - 1)
+	pub fn include_group(arity: usize) -> Self {
+		Self((1 << arity) - 1)
 	}
 
-	pub fn new_include(index: usize) -> Self {
+	pub fn exclude_group(arity: usize, prev_arity: usize) -> Self {
+		if prev_arity != 0 {
+			let exclude_count = arity - prev_arity;
+			let exclude_mask = ((1 << exclude_count) - 1) << (16 + prev_arity);
+			let include_mask = (1 << prev_arity) - 1;
+
+			Self(include_mask | exclude_mask)
+		} else {
+			Self(0)
+		}
+	}
+
+	pub fn include_index(index: usize) -> Self {
 		Self(1 << (index % 16))
 	}
 
-	pub fn new_exclude(index: usize) -> Self {
-		Self(1 << (index % 16 + 15))
-	}
-
-	pub fn builder() -> GroupMaskBuilder {
-		GroupMaskBuilder::default()
+	pub fn exclude_index(index: usize) -> Self {
+		Self(1 << (index % 16 + 16))
 	}
 }
 
@@ -41,26 +48,5 @@ impl Deref for GroupMask {
 
 	fn deref(&self) -> &Self::Target {
 		&self.0
-	}
-}
-
-#[derive(Copy, Clone, Default, Debug)]
-pub struct GroupMaskBuilder {
-	mask: u32,
-}
-
-impl GroupMaskBuilder {
-	pub fn include(&mut self, index: usize) -> &mut GroupMaskBuilder {
-		self.mask |= 1 << (index % 16);
-		self
-	}
-
-	pub fn exclude(&mut self, index: usize) -> &mut GroupMaskBuilder {
-		self.mask |= 1 << (index % 16 + 15);
-		self
-	}
-
-	pub fn build(&self) -> GroupMask {
-		GroupMask(self.mask)
 	}
 }

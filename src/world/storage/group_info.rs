@@ -1,4 +1,4 @@
-use crate::world::GroupMask;
+use crate::world::{Group, GroupMask};
 use std::ptr;
 
 /// Holds information about the layout in the `World`
@@ -28,7 +28,7 @@ impl<'a> GroupInfo<'a> {
 	}
 
 	pub(crate) fn mask(&self) -> GroupMask {
-		GroupMask::new_include(self.sparse_set_index)
+		GroupMask::include_index(self.sparse_set_index)
 	}
 
 	pub(crate) fn groups(&self) -> &[Group] {
@@ -36,30 +36,8 @@ impl<'a> GroupInfo<'a> {
 	}
 }
 
-#[derive(Copy, Clone)]
-pub(crate) struct Group {
-	arity: usize,
-	pub(crate) len: usize,
-}
-
-impl Group {
-	pub fn with_arity(arity: usize) -> Self {
-		Self { arity, len: 0 }
-	}
-
-	pub fn arity(&self) -> usize {
-		self.arity
-	}
-
-	pub fn mask(&self) -> GroupMask {
-		GroupMask::new_group(self.arity)
-	}
-}
-
 pub(crate) fn get_group_len(group_infos: &[GroupInfo]) -> Option<usize> {
 	let (first, others) = group_infos.split_first()?;
-	let groups = first.groups();
-
 	let mut group_index = first.group_index();
 	let mut group_mask = first.mask();
 
@@ -72,6 +50,14 @@ pub(crate) fn get_group_len(group_infos: &[GroupInfo]) -> Option<usize> {
 		group_mask |= other.mask();
 	}
 
+	let groups = first.groups();
 	let group = unsafe { groups.get_unchecked(group_index) };
-	(group.mask() == group_mask).then(|| group.len)
+
+	if group.include_mask() == group_mask {
+		Some(group.len())
+	} else if group.exclude_mask() == group_mask {
+		todo!()
+	} else {
+		None
+	}
 }

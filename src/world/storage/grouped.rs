@@ -1,5 +1,5 @@
 use crate::data::{AtomicRef, AtomicRefCell, AtomicRefMut, Entity, TypeErasedSparseSet};
-use crate::world::{Group, GroupInfo, Layout};
+use crate::world::{GroupInfo, GroupMask, Layout};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
@@ -23,10 +23,10 @@ impl GroupedComponentStorages {
 			let mut groups = Vec::<Group>::new();
 
 			let components = group_layout.components();
-			let mut previous_arity = 0_usize;
+			let mut prev_arity = 0_usize;
 
 			for (group_index, &arity) in group_layout.arities().iter().enumerate() {
-				for component in &components[previous_arity..arity] {
+				for component in &components[prev_arity..arity] {
 					let type_id = component.type_id();
 
 					info.insert(
@@ -46,8 +46,8 @@ impl GroupedComponentStorages {
 					sparse_sets.push(AtomicRefCell::new(sparse_set));
 				}
 
-				groups.push(Group::with_arity(arity));
-				previous_arity = arity;
+				groups.push(Group::new(arity, prev_arity));
+				prev_arity = arity;
 			}
 
 			group_sets.push(GroupSet {
@@ -93,24 +93,21 @@ impl GroupedComponentStorages {
 			)
 		};
 
-		let mut previous_arity = 0_usize;
+		let mut prev_arity = 0_usize;
 
 		for group in groups.iter_mut() {
-			let status = get_group_status(
-				&mut sparse_sets[previous_arity..group.arity()],
-				group.len,
-				entity,
-			);
+			let status =
+				get_group_status(&mut sparse_sets[prev_arity..group.arity], group.len, entity);
 
 			match status {
 				GroupStatus::Grouped => (),
 				GroupStatus::Ungrouped => unsafe {
-					group_components(&mut sparse_sets[..group.arity()], &mut group.len, entity);
+					group_components(&mut sparse_sets[..group.arity], &mut group.len, entity);
 				},
 				GroupStatus::MissingComponents => break,
 			}
 
-			previous_arity = group.arity();
+			prev_arity = group.arity;
 		}
 	}
 
@@ -123,16 +120,13 @@ impl GroupedComponentStorages {
 			)
 		};
 
-		let mut previous_arity = 0_usize;
+		let mut prev_arity = 0_usize;
 		let mut ungroup_start = 0_usize;
 		let mut ungroup_len = 0_usize;
 
 		for (i, group) in groups.iter_mut().enumerate() {
-			let status = get_group_status(
-				&mut sparse_sets[previous_arity..group.arity()],
-				group.len,
-				entity,
-			);
+			let status =
+				get_group_status(&mut sparse_sets[prev_arity..group.arity], group.len, entity);
 
 			match status {
 				GroupStatus::Grouped => {
@@ -146,14 +140,14 @@ impl GroupedComponentStorages {
 				GroupStatus::MissingComponents => break,
 			}
 
-			previous_arity = group.arity();
+			prev_arity = group.arity;
 		}
 
 		let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
 		for group in (&mut groups[ungroup_range]).iter_mut().rev() {
 			unsafe {
-				ungroup_components(&mut sparse_sets[..group.arity()], &mut group.len, entity);
+				ungroup_components(&mut sparse_sets[..group.arity], &mut group.len, entity);
 			}
 		}
 	}
@@ -302,5 +296,36 @@ unsafe fn ungroup_components(
 		}
 
 		*group_len -= 1;
+	}
+}
+
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct Group {
+	arity: usize,
+	include_mask: GroupMask,
+	exclude_mask: GroupMask,
+	len: usize,
+}
+
+impl Group {
+	fn new(arity: usize, prev_arity: usize) -> Self {
+		Self {
+			arity,
+			include_mask: GroupMask::include_group(arity),
+			exclude_mask: GroupMask::exclude_group(arity, prev_arity),
+			len: 0,
+		}
+	}
+
+	pub fn include_mask(&self) -> GroupMask {
+		self.include_mask
+	}
+
+	pub fn exclude_mask(&self) -> GroupMask {
+		self.exclude_mask
+	}
+
+	pub fn len(&self) -> usize {
+		self.len
 	}
 }
