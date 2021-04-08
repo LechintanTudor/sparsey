@@ -2,7 +2,7 @@ use crate::data::{
 	Component, ComponentFlags, ComponentRefMut, Entity, IndexEntity, SparseVec, VecRef, VecRefMut,
 };
 use std::mem;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 /// Strongly-typed shared reference to a `TypeErasedSparseSet`.
 pub struct SparseSetRef<'a, T>
@@ -31,6 +31,11 @@ where
 			flags,
 			data,
 		}
+	}
+
+	/// Check if the set contains the given `Entity`.
+	pub fn contains(&self, entity: Entity) -> bool {
+		self.sparse.contains(entity)
 	}
 
 	/// Get s shared reference to the component at the given `Entity`.
@@ -147,6 +152,11 @@ where
 		Some(self.data.swap_remove(index_entity.index()))
 	}
 
+	/// Check if the set contains the given `Entity`.
+	pub fn contains(&self, entity: Entity) -> bool {
+		self.sparse.contains(entity)
+	}
+
 	/// Get a shared reference to the component at the given `Entity`, if any.
 	pub fn get(&self, entity: Entity) -> Option<&T> {
 		self.sparse
@@ -199,15 +209,6 @@ where
 	}
 }
 
-impl<T> AsMut<[T]> for SparseSetRefMut<'_, T>
-where
-	T: Component,
-{
-	fn as_mut(&mut self) -> &mut [T] {
-		self.data.as_mut()
-	}
-}
-
 impl<T> Deref for SparseSetRefMut<'_, T>
 where
 	T: Component,
@@ -216,14 +217,5 @@ where
 
 	fn deref(&self) -> &Self::Target {
 		self.data.as_ref()
-	}
-}
-
-impl<T> DerefMut for SparseSetRefMut<'_, T>
-where
-	T: Component,
-{
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		self.data.as_mut()
 	}
 }

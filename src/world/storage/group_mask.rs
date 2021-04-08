@@ -27,6 +27,10 @@ impl GroupMask {
 	pub fn exclude_index(index: usize) -> Self {
 		Self(1 << (index % 16 + 16))
 	}
+
+	pub fn to_exclude(self) -> GroupMask {
+		GroupMask(self.0 << 16)
+	}
 }
 
 impl BitOr for GroupMask {
