@@ -1,6 +1,8 @@
 use crate::data::{AtomicRef, AtomicRefMut, Component, Entity, TypeErasedSparseSet};
-use crate::query::{Comp, CompMut, SparseSetRefMutBorrow};
-use crate::world::{GroupedComponentStorages, Layout, UngroupedComponentStorages};
+use crate::world::{
+	Comp, CompMut, ComponentStorageRefMut, GroupedComponentStorages, Layout,
+	UngroupedComponentStorages,
+};
 use std::any::TypeId;
 use std::collections::HashMap;
 
@@ -108,18 +110,18 @@ impl ComponentStorages {
 			.chain(self.ungrouped.iter_sparse_sets_mut())
 	}
 
-	pub(crate) fn borrow_sparse_set_mut<T>(&self) -> Option<SparseSetRefMutBorrow<T>>
+	pub(crate) fn borrow_sparse_set_mut<T>(&self) -> Option<ComponentStorageRefMut<T>>
 	where
 		T: Component,
 	{
 		match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {
-			Some(sparse_set) => Some(SparseSetRefMutBorrow::new(AtomicRefMut::map_into(
+			Some(sparse_set) => Some(ComponentStorageRefMut::new(AtomicRefMut::map_into(
 				sparse_set,
 				|sparse_set| sparse_set.to_ref_mut::<T>(),
 			))),
 			None => {
 				let sparse_set = self.grouped.borrow_mut(&TypeId::of::<T>())?;
-				Some(SparseSetRefMutBorrow::new(AtomicRefMut::map_into(
+				Some(ComponentStorageRefMut::new(AtomicRefMut::map_into(
 					sparse_set,
 					|sparse_set| sparse_set.to_ref_mut::<T>(),
 				)))

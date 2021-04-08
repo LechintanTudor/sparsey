@@ -1,9 +1,8 @@
 use crate::data::Component;
 use crate::dispatcher::{CommandBuffers, Commands};
-use crate::query::{Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource, UnsafeResources};
 use crate::utils::{panic_missing_comp, panic_missing_res};
-use crate::world::{LayoutComponent, World};
+use crate::world::{Comp, CompMut, LayoutComponent, World};
 use std::any::TypeId;
 use std::marker::PhantomData;
 

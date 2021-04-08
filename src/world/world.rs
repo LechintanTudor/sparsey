@@ -1,6 +1,5 @@
 use crate::data::{Component, Entity, TypeErasedSparseSet};
-use crate::query::{Comp, CompMut};
-use crate::world::{ComponentSet, ComponentStorages, EntityStorage, Layout};
+use crate::world::{Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage, Layout};
 use std::any::TypeId;
 use std::collections::HashSet;
 use std::error::Error;

@@ -2,8 +2,8 @@ use crate::data::Component;
 use crate::dispatcher::{
 	BorrowCommands, BorrowComp, BorrowCompMut, BorrowEnvironment, BorrowRes, BorrowResMut, Commands,
 };
-use crate::query::{Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource};
+use crate::world::{Comp, CompMut};
 
 /// Trait used for marking system parameters and borrowing data from the `Environment`.
 pub trait LocalSystemParam {
