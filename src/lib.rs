@@ -1,9 +1,11 @@
+pub use self::components::*;
 pub use self::data::*;
 pub use self::dispatcher::*;
 pub use self::query::*;
 pub use self::resources::*;
 pub use self::world::*;
 
+mod components;
 mod data;
 mod dispatcher;
 mod query;
