@@ -7,3 +7,26 @@ where
 }
 
 impl<T> Component for T where T: Send + Sync + 'static {}
+
+#[derive(Copy, Clone, Default, Debug)]
+pub struct ComponentInfo {
+	pub(crate) tick_added: u32,
+	pub(crate) tick_mutated: u32,
+}
+
+impl ComponentInfo {
+	pub(crate) fn new(tick_added: u32, tick_mutated: u32) -> Self {
+		Self {
+			tick_added,
+			tick_mutated,
+		}
+	}
+
+	pub fn tick_added(&self) -> u32 {
+		self.tick_added
+	}
+
+	pub fn tick_mutated(&self) -> u32 {
+		self.tick_mutated
+	}
+}
