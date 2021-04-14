@@ -1,7 +1,7 @@
 #[derive(Copy, Clone, Default, Debug)]
 pub struct ComponentInfo {
-	pub(crate) tick_added: u32,
-	pub(crate) tick_mutated: u32,
+	pub(in crate::components) tick_added: u32,
+	pub(in crate::components) tick_mutated: u32,
 }
 
 impl ComponentInfo {

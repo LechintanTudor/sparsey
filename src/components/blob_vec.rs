@@ -1,3 +1,4 @@
+use crate::components::layout::repeat_layout;
 use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr;
 use std::ptr::NonNull;
@@ -12,11 +13,12 @@ pub struct BlobVec {
 }
 
 impl BlobVec {
-	pub fn new(item_layout: Layout, drop_item: unsafe fn(*mut u8)) -> Self {
-		let ptr = unsafe { NonNull::new_unchecked(item_layout.align() as *mut u8) };
+	pub unsafe fn new(item_layout: Layout, drop_item: unsafe fn(*mut u8)) -> Self {
+		let ptr = NonNull::new_unchecked(item_layout.align() as *mut u8);
 
 		if item_layout.size() == 0 {
-			let swap_space = unsafe { NonNull::new_unchecked(item_layout.align() as *mut u8) };
+			// Times 2 so we can use ptr::copy_nonoverlapping on ZST
+			let swap_space = NonNull::new_unchecked((item_layout.align() * 2) as *mut u8);
 
 			Self {
 				item_layout,
@@ -27,9 +29,8 @@ impl BlobVec {
 				len: 0,
 			}
 		} else {
-			let swap_space = unsafe {
-				NonNull::new(alloc(item_layout)).unwrap_or_else(|| handle_alloc_error(item_layout))
-			};
+			let swap_space =
+				NonNull::new(alloc(item_layout)).unwrap_or_else(|| handle_alloc_error(item_layout));
 
 			Self {
 				item_layout,
@@ -66,7 +67,7 @@ impl BlobVec {
 			self.grow();
 		}
 
-		ptr::copy_nonoverlapping(item, self.get_unchecked(self.len), self.item_layout.size());
+		ptr::copy(item, self.get_unchecked(self.len), self.item_layout.size());
 		self.len += 1;
 	}
 
@@ -130,8 +131,26 @@ impl BlobVec {
 	}
 
 	pub unsafe fn get_unchecked(&self, index: usize) -> *mut u8 {
-		debug_assert!(index < self.len, "Index out of range");
 		self.ptr.as_ptr().add(index * self.item_layout.size())
+	}
+
+	pub unsafe fn set_and_forget_prev_unchecked(
+		&mut self,
+		index: usize,
+		value: *const u8,
+	) -> *mut u8 {
+		ptr::copy_nonoverlapping(
+			self.get_unchecked(index),
+			self.swap_space.as_ptr(),
+			self.item_layout.size(),
+		);
+		ptr::copy(value, self.get_unchecked(index), self.item_layout.size());
+		self.swap_space.as_ptr()
+	}
+
+	pub unsafe fn set_and_drop_prev_unchecked(&mut self, index: usize, value: *const u8) {
+		(self.drop_item)(self.get_unchecked(index));
+		ptr::copy(value, self.get_unchecked(index), self.item_layout.size());
 	}
 
 	pub fn as_ptr(&self) -> *mut u8 {
@@ -187,48 +206,73 @@ impl Drop for BlobVec {
 	}
 }
 
-// From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
-fn padding_needed_for(layout: &Layout, align: usize) -> usize {
-	let len = layout.size();
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::{mem, ptr};
 
-	// Rounded up value is:
-	//   len_rounded_up = (len + align - 1) & !(align - 1);
-	// and then we return the padding difference: `len_rounded_up - len`.
-	//
-	// We use modular arithmetic throughout:
-	//
-	// 1. align is guaranteed to be > 0, so align - 1 is always
-	//    valid.
-	//
-	// 2. `len + align - 1` can overflow by at most `align - 1`,
-	//    so the &-mask with `!(align - 1)` will ensure that in the
-	//    case of overflow, `len_rounded_up` will itself be 0.
-	//    Thus the returned padding, when added to `len`, yields 0,
-	//    which trivially satisfies the alignment `align`.
-	//
-	// (Of course, attempts to allocate blocks of memory whose
-	// size and padding overflow in the above manner should cause
-	// the allocator to yield an error anyway.)
+	fn new() -> BlobVec {
+		unsafe {
+			BlobVec::new(Layout::new::<i32>(), |ptr| {
+				ptr::drop_in_place::<i32>(ptr as _)
+			})
+		}
+	}
 
-	let len_rounded_up = len.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
-	len_rounded_up.wrapping_sub(len)
-}
+	unsafe fn push(blob_vec: &mut BlobVec, item: i32) {
+		blob_vec.push(&item as *const i32 as *const _);
+		mem::forget(item);
+	}
 
-// From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
-fn repeat_layout(layout: &Layout, n: usize) -> Option<Layout> {
-	// This cannot overflow. Quoting from the invariant of Layout:
-	// > `size`, when rounded up to the nearest multiple of `align`,
-	// > must not overflow (i.e., the rounded value must be less than
-	// > `usize::MAX`)
-	let padded_size = layout.size() + padding_needed_for(layout, layout.align());
-	let alloc_size = padded_size.checked_mul(n)?;
+	unsafe fn get(blob_vec: &BlobVec, index: usize) -> i32 {
+		ptr::read(blob_vec.get_unchecked(index) as *mut i32)
+	}
 
-	// SAFETY: self.align is already known to be valid and alloc_size has been
-	// padded already.
-	unsafe {
-		Some(Layout::from_size_align_unchecked(
-			alloc_size,
-			layout.align(),
-		))
+	unsafe fn swap_remove(blob_vec: &mut BlobVec, index: usize) -> i32 {
+		ptr::read(blob_vec.swap_remove_and_forget_unchecked(index) as *mut i32)
+	}
+
+	#[test]
+	fn blob_vec() {
+		let mut blob_vec = new();
+
+		unsafe {
+			// Push
+			push(&mut blob_vec, 0);
+			assert_eq!(blob_vec.len(), 1);
+			assert_eq!(get(&blob_vec, 0), 0);
+
+			push(&mut blob_vec, 1);
+			assert_eq!(blob_vec.len(), 2);
+			assert_eq!(get(&blob_vec, 0), 0);
+			assert_eq!(get(&blob_vec, 1), 1);
+
+			push(&mut blob_vec, 2);
+			assert_eq!(blob_vec.len(), 3);
+			assert_eq!(get(&blob_vec, 0), 0);
+			assert_eq!(get(&blob_vec, 1), 1);
+			assert_eq!(get(&blob_vec, 2), 2);
+
+			// Swap
+			blob_vec.swap_unchecked(0, 2);
+			assert_eq!(get(&blob_vec, 0), 2);
+			assert_eq!(get(&blob_vec, 1), 1);
+			assert_eq!(get(&blob_vec, 2), 0);
+
+			blob_vec.swap_unchecked(1, 1);
+			assert_eq!(get(&blob_vec, 0), 2);
+			assert_eq!(get(&blob_vec, 1), 1);
+			assert_eq!(get(&blob_vec, 2), 0);
+
+			// Swap remove
+			assert_eq!(swap_remove(&mut blob_vec, 0), 2);
+			assert_eq!(blob_vec.len(), 2);
+			assert_eq!(get(&blob_vec, 0), 0);
+			assert_eq!(get(&blob_vec, 1), 1);
+
+			assert_eq!(swap_remove(&mut blob_vec, 1), 1);
+			assert_eq!(blob_vec.len(), 1);
+			assert_eq!(get(&blob_vec, 0), 0);
+		}
 	}
 }
