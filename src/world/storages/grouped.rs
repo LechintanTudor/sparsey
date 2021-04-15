@@ -1,5 +1,6 @@
-use crate::data::{AtomicRef, AtomicRefCell, AtomicRefMut, Entity, TypeErasedSparseSet};
+use crate::components::{ComponentStorage, Entity};
 use crate::world::{GroupInfo, GroupMask, Layout};
+use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
@@ -13,13 +14,13 @@ pub(crate) struct GroupedComponentStorages {
 impl GroupedComponentStorages {
 	pub fn with_layout(
 		layout: &Layout,
-		sparse_set_map: &mut HashMap<TypeId, TypeErasedSparseSet>,
+		sparse_set_map: &mut HashMap<TypeId, ComponentStorage>,
 	) -> Self {
 		let mut group_sets = Vec::<GroupSet>::new();
 		let mut info = HashMap::<TypeId, ComponentInfo>::new();
 
 		for group_layout in layout.group_sets() {
-			let mut sparse_sets = Vec::<AtomicRefCell<TypeErasedSparseSet>>::new();
+			let mut sparse_sets = Vec::<AtomicRefCell<ComponentStorage>>::new();
 			let mut groups = Vec::<Group>::new();
 
 			let components = group_layout.components();
@@ -71,7 +72,7 @@ impl GroupedComponentStorages {
 		}
 	}
 
-	pub fn drain(&mut self) -> impl Iterator<Item = TypeErasedSparseSet> + '_ {
+	pub fn drain(&mut self) -> impl Iterator<Item = ComponentStorage> + '_ {
 		self.info.clear();
 
 		self.group_sets
@@ -170,7 +171,7 @@ impl GroupedComponentStorages {
 		})
 	}
 
-	pub fn borrow(&self, type_id: &TypeId) -> Option<AtomicRef<TypeErasedSparseSet>> {
+	pub fn borrow(&self, type_id: &TypeId) -> Option<AtomicRef<ComponentStorage>> {
 		self.info.get(type_id).map(|info| unsafe {
 			self.group_sets
 				.get_unchecked(info.group_set_index)
@@ -180,7 +181,7 @@ impl GroupedComponentStorages {
 		})
 	}
 
-	pub fn borrow_mut(&self, type_id: &TypeId) -> Option<AtomicRefMut<TypeErasedSparseSet>> {
+	pub fn borrow_mut(&self, type_id: &TypeId) -> Option<AtomicRefMut<ComponentStorage>> {
 		self.info.get(type_id).map(|info| unsafe {
 			self.group_sets
 				.get_unchecked(info.group_set_index)
@@ -190,7 +191,7 @@ impl GroupedComponentStorages {
 		})
 	}
 
-	pub fn iter_sparse_sets_mut(&mut self) -> impl Iterator<Item = &mut TypeErasedSparseSet> {
+	pub fn iter_sparse_sets_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> {
 		self.group_sets.iter_mut().flat_map(|group| {
 			group
 				.sparse_sets
@@ -202,7 +203,7 @@ impl GroupedComponentStorages {
 
 #[derive(Default)]
 struct GroupSet {
-	sparse_sets: Vec<AtomicRefCell<TypeErasedSparseSet>>,
+	sparse_sets: Vec<AtomicRefCell<ComponentStorage>>,
 	groups: Vec<Group>,
 }
 
@@ -221,15 +222,15 @@ enum GroupStatus {
 }
 
 fn get_group_status(
-	sparse_sets: &mut [AtomicRefCell<TypeErasedSparseSet>],
+	sparse_sets: &mut [AtomicRefCell<ComponentStorage>],
 	group_len: usize,
 	entity: Entity,
 ) -> GroupStatus {
 	match sparse_sets.split_first_mut() {
 		Some((first, others)) => {
-			let status = match first.get_mut().get_index_entity(entity) {
-				Some(index_entity) => {
-					if index_entity.index() < group_len {
+			let status = match first.get_mut().index_for(entity) {
+				Some(index) => {
+					if *index < group_len {
 						GroupStatus::Grouped
 					} else {
 						GroupStatus::Ungrouped
@@ -252,7 +253,7 @@ fn get_group_status(
 }
 
 unsafe fn group_components(
-	sparse_sets: &mut [AtomicRefCell<TypeErasedSparseSet>],
+	sparse_sets: &mut [AtomicRefCell<ComponentStorage>],
 	group_len: &mut usize,
 	entity: Entity,
 ) {
@@ -260,21 +261,19 @@ unsafe fn group_components(
 		.iter_mut()
 		.map(|sparse_set| sparse_set.get_mut())
 	{
-		let index = match sparse_set.get_index_entity(entity) {
-			Some(index_entity) => index_entity.index(),
+		let index = match sparse_set.index_for(entity) {
+			Some(index) => *index,
 			None => unreachable_unchecked(),
 		};
 
-		if index != *group_len {
-			sparse_set.swap_nonoverlapping_unchecked(index, *group_len);
-		}
+		sparse_set.swap(index, *group_len);
 	}
 
 	*group_len += 1;
 }
 
 unsafe fn ungroup_components(
-	sparse_sets: &mut [AtomicRefCell<TypeErasedSparseSet>],
+	sparse_sets: &mut [AtomicRefCell<ComponentStorage>],
 	group_len: &mut usize,
 	entity: Entity,
 ) {
@@ -285,14 +284,12 @@ unsafe fn ungroup_components(
 			.iter_mut()
 			.map(|sparse_set| sparse_set.get_mut())
 		{
-			let index = match sparse_set.get_index_entity(entity) {
-				Some(index_entity) => index_entity.index(),
+			let index = match sparse_set.index_for(entity) {
+				Some(index) => *index,
 				None => unreachable_unchecked(),
 			};
 
-			if index != last_index {
-				sparse_set.swap_nonoverlapping_unchecked(index, last_index);
-			}
+			sparse_set.swap(index, last_index);
 		}
 
 		*group_len -= 1;

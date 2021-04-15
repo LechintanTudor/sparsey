@@ -1,7 +1,7 @@
 pub use self::layout::*;
-pub use self::storage::*;
+pub use self::storages::*;
 pub use self::world::*;
 
 mod layout;
-mod storage;
+mod storages;
 mod world;

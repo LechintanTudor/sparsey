@@ -10,6 +10,13 @@ pub struct ComponentStorage {
 }
 
 impl ComponentStorage {
+	pub fn for_type<T>() -> Self
+	where
+		T: 'static,
+	{
+		unsafe { Self::new(Layout::new::<T>(), |ptr| ptr::drop_in_place::<T>(ptr as _)) }
+	}
+
 	pub unsafe fn new(item_layout: Layout, drop_item: unsafe fn(*mut u8)) -> Self {
 		Self {
 			indexes: SparseArray::new(),
@@ -64,45 +71,64 @@ impl ComponentStorage {
 		}
 	}
 
-	pub unsafe fn remove_and_forget(&mut self, entity: Entity) -> *mut u8 {
-		// Get index only if entity versions match
-		let index_ref = match self.indexes.get_mut(entity.index()) {
-			Some(index_ref) => {
-				if self.entities.get_unchecked(*index_ref).version() == entity.version() {
-					index_ref
+	// DOESNT WORK!
+	pub fn remove_and_forget(&mut self, entity: Entity) -> *mut u8 {
+		let dense_index_ref = match self.indexes.get_mut(entity.index()) {
+			Some(dense_index) => unsafe {
+				if self.entities.get_unchecked(*dense_index).version() == entity.version() {
+					dense_index
 				} else {
 					return ptr::null_mut();
 				}
-			}
+			},
 			None => return ptr::null_mut(),
 		};
 
-		let index = *index_ref;
-		*index_ref = SparseArray::INVALID_INDEX;
+		let sparse_index = match self.entities.last() {
+			Some(entity) => entity.index(),
+			None => return ptr::null_mut(),
+		};
 
-		self.entities.swap_remove(index);
-		self.data.swap_remove_and_forget_unchecked(index)
+		let dense_index = *dense_index_ref;
+		self.entities.swap_remove(dense_index);
+		self.info.swap_remove(dense_index);
+
+		unsafe {
+			*dense_index_ref = SparseArray::INVALID_INDEX;
+			*self.indexes.get_unchecked_mut(sparse_index) = dense_index;
+
+			self.data.swap_remove_and_forget_unchecked(entity.index())
+		}
 	}
 
-	pub unsafe fn remove_and_drop(&mut self, entity: Entity) -> bool {
-		// Get index only if entity versions match
-		let index_ref = match self.indexes.get_mut(entity.index()) {
-			Some(index_ref) => {
-				if self.entities.get_unchecked(*index_ref).version() == entity.version() {
-					index_ref
+	pub fn remove_and_drop(&mut self, entity: Entity) -> bool {
+		let dense_index_ref = match self.indexes.get_mut(entity.index()) {
+			Some(dense_index) => unsafe {
+				if self.entities.get_unchecked(*dense_index).version() == entity.version() {
+					dense_index
 				} else {
 					return false;
 				}
-			}
+			},
 			None => return false,
 		};
 
-		let index = *index_ref;
-		*index_ref = SparseArray::INVALID_INDEX;
+		let sparse_index = match self.entities.last() {
+			Some(entity) => entity.index(),
+			None => return false,
+		};
 
-		self.entities.swap_remove(index);
-		self.data.swap_remove_and_drop_unchecked(index);
-		true
+		let dense_index = *dense_index_ref;
+		self.entities.swap_remove(dense_index);
+		self.info.swap_remove(dense_index);
+
+		unsafe {
+			*dense_index_ref = SparseArray::INVALID_INDEX;
+			*self.indexes.get_unchecked_mut(sparse_index) = entity.index();
+
+			self.data.swap_remove_and_drop_unchecked(entity.index());
+			true
+		}
 	}
 
 	pub fn swap(&mut self, a: usize, b: usize) {
@@ -129,7 +155,7 @@ impl ComponentStorage {
 		}
 	}
 
-	pub fn get_with_info_mut(&mut self, entity: Entity) -> Option<(*mut u8, &ComponentInfo)> {
+	pub fn get_with_info_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ComponentInfo)> {
 		let index = *self.index_for(entity)?;
 
 		unsafe {
@@ -158,7 +184,7 @@ impl ComponentStorage {
 		self.entities.is_empty()
 	}
 
-	fn index_for(&self, entity: Entity) -> Option<&usize> {
+	pub fn index_for(&self, entity: Entity) -> Option<&usize> {
 		self.indexes
 			.get(entity.index())
 			.filter(|&&i| unsafe { self.entities.get_unchecked(i).version() == entity.version() })
@@ -195,14 +221,12 @@ mod tests {
 	}
 
 	fn remove(storage: &mut ComponentStorage, entity: Entity) -> Option<i32> {
-		unsafe {
-			let prev = storage.remove_and_forget(entity);
+		let prev = storage.remove_and_forget(entity);
 
-			if !prev.is_null() {
-				Some(ptr::read(prev.cast::<i32>()))
-			} else {
-				None
-			}
+		if !prev.is_null() {
+			unsafe { Some(ptr::read(prev.cast::<i32>())) }
+		} else {
+			None
 		}
 	}
 

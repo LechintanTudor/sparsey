@@ -1,4 +1,4 @@
-use crate::data::{AtomicRef, AtomicRefMut};
+use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::ops::{Deref, DerefMut};
 
 /// Shared view over a `Resource`.

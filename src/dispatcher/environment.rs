@@ -1,4 +1,4 @@
-use crate::data::Component;
+use crate::components::Component;
 use crate::dispatcher::{CommandBuffers, Commands};
 use crate::resources::{Res, ResMut, Resource, UnsafeResources};
 use crate::utils::{panic_missing_comp, panic_missing_res};

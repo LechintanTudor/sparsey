@@ -1,4 +1,4 @@
-use crate::data::Component;
+use crate::components::Component;
 use crate::dispatcher::{
 	BorrowCommands, BorrowComp, BorrowCompMut, BorrowEnvironment, BorrowRes, BorrowResMut, Commands,
 };

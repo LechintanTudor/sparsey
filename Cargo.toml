@@ -10,6 +10,7 @@ parallel = ["rayon"]
 
 [dependencies]
 anyhow = "1"
+atomic_refcell = "0.1.7"
 bitflags = "1"
 downcast-rs = "1"
 paste = "1"

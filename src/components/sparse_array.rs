@@ -4,7 +4,7 @@ use std::{iter, mem, ptr};
 const PAGE_SIZE: usize = 32;
 type Page = Option<Box<[usize; PAGE_SIZE]>>;
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct SparseArray {
 	pages: Vec<Page>,
 }

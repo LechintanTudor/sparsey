@@ -1,4 +1,4 @@
-use crate::data::{Component, TypeErasedSparseSet};
+use crate::components::{Component, ComponentStorage};
 use std::any;
 use std::any::TypeId;
 use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
@@ -42,8 +42,8 @@ impl LayoutComponent {
 		self.component.type_name()
 	}
 
-	/// Create a `TypeErasedSparseSet` for the component type described by the `LayoutComponent`.
-	pub fn new_sparse_set(&self) -> TypeErasedSparseSet {
+	/// Create a `ComponentStorage` for the component type described by the `LayoutComponent`.
+	pub fn new_sparse_set(&self) -> ComponentStorage {
 		self.component.new_sparse_set()
 	}
 }
@@ -94,7 +94,7 @@ unsafe trait AbstractType {
 
 	fn type_name(&self) -> &'static str;
 
-	fn new_sparse_set(&self) -> TypeErasedSparseSet;
+	fn new_sparse_set(&self) -> ComponentStorage;
 
 	fn clone(&self) -> Box<dyn AbstractType>;
 }
@@ -111,8 +111,8 @@ where
 		any::type_name::<T>()
 	}
 
-	fn new_sparse_set(&self) -> TypeErasedSparseSet {
-		TypeErasedSparseSet::new::<T>()
+	fn new_sparse_set(&self) -> ComponentStorage {
+		ComponentStorage::for_type::<T>()
 	}
 
 	fn clone(&self) -> Box<dyn AbstractType> {

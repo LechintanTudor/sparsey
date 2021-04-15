@@ -5,6 +5,7 @@ pub use self::component_ref::*;
 pub use self::entity::*;
 pub use self::sparse_array::*;
 pub use self::storage::*;
+pub use self::typed_storage::*;
 
 mod blob_vec;
 mod component;
@@ -14,3 +15,4 @@ mod entity;
 mod layout;
 mod sparse_array;
 mod storage;
+mod typed_storage;

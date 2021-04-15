@@ -1,4 +1,4 @@
-use crate::data::{Entity, IndexEntity, SparseVec};
+use crate::components::{Entity, SparseArray};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
@@ -55,59 +55,71 @@ impl EntityStorage {
 
 impl AsRef<[Entity]> for EntityStorage {
 	fn as_ref(&self) -> &[Entity] {
-		&self.storage.dense
+		&self.storage.entities
 	}
 }
 
 #[derive(Clone, Default, Debug)]
 struct EntitySparseSet {
-	sparse: SparseVec,
-	dense: Vec<Entity>,
+	indexes: SparseArray,
+	entities: Vec<Entity>,
 }
 
 impl EntitySparseSet {
 	fn insert(&mut self, entity: Entity) {
-		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
-
-		match index_entity {
-			Some(e) => {
-				*e = IndexEntity::new(e.id(), entity.ver());
-
-				unsafe {
-					*self.dense.get_unchecked_mut(e.index()) = entity;
-				}
+		match self.indexes.get_mut_or_invalid(entity.index()) {
+			// New Entity
+			index @ &mut SparseArray::INVALID_INDEX => {
+				*index = self.entities.len();
+				self.entities.push(entity);
 			}
-			None => {
-				*index_entity = Some(IndexEntity::new(self.dense.len() as u32, entity.ver()));
-				self.dense.push(entity);
-			}
+			// Newer version of an Entity
+			index => unsafe {
+				*self.entities.get_unchecked_mut(*index) = entity;
+			},
 		}
 	}
 
 	fn remove(&mut self, entity: Entity) -> bool {
-		(|| -> Option<()> {
-			let index_entity = self.sparse.get_index_entity(entity)?;
+		let dense_index_ref = match self.indexes.get_mut(entity.index()) {
+			Some(index) => unsafe {
+				if self.entities.get_unchecked(*index).version() == entity.version() {
+					index
+				} else {
+					return false;
+				}
+			},
+			None => return false,
+		};
 
-			let last_index = self.dense.last()?.index();
-			self.dense.swap_remove(index_entity.index());
+		let sparse_index = match self.entities.last() {
+			Some(entity) => entity.index(),
+			None => return false,
+		};
 
-			unsafe {
-				*self.sparse.get_unchecked_mut(last_index) = Some(index_entity);
-				*self.sparse.get_unchecked_mut(entity.index()) = None;
-			}
+		let dense_index = *dense_index_ref;
+		self.entities.swap_remove(dense_index);
 
-			Some(())
-		})()
-		.is_some()
-	}
+		unsafe {
+			*dense_index_ref = SparseArray::INVALID_INDEX;
+			*self.indexes.get_unchecked_mut(sparse_index) = dense_index;
+		}
 
-	fn clear(&mut self) {
-		self.sparse.clear();
-		self.dense.clear();
+		true
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
-		self.sparse.contains(entity)
+		let index = match self.indexes.get(entity.index()) {
+			Some(index) => *index,
+			None => return false,
+		};
+
+		unsafe { self.entities.get_unchecked(index).version() == entity.version() }
+	}
+
+	fn clear(&mut self) {
+		self.indexes.clear();
+		self.entities.clear();
 	}
 }
 
@@ -129,7 +141,7 @@ impl EntityAllocator {
 			None => {
 				let current_id = *self.current_id.get_mut();
 				*self.current_id.get_mut() = self.current_id.get_mut().checked_add(1)?;
-				Some(Entity::with_id(current_id))
+				Some(Entity::with_index(current_id))
 			}
 		}
 	}
@@ -137,15 +149,16 @@ impl EntityAllocator {
 	fn allocate_atomic(&self) -> Option<Entity> {
 		match atomic_decrement_usize(&self.recycled_len) {
 			Some(recycled_len) => Some(self.recycled[recycled_len - 1]),
-			None => atomic_increment_u32(&self.current_id).map(|id| Entity::with_id(id)),
+			None => atomic_increment_u32(&self.current_id).map(|id| Entity::with_index(id)),
 		}
 	}
 
 	fn deallocate(&mut self, entity: Entity) {
-		if let Some(ver) = entity.ver().next() {
-			self.recycled.push(Entity::new(entity.id(), ver));
-			*self.recycled_len.get_mut() += 1;
-		}
+		// if let Some(ver) = entity.ver().next() {
+		// 	self.recycled.push(Entity::new(entity.id(), ver));
+		// 	*self.recycled_len.get_mut() += 1;
+		// }
+		todo!()
 	}
 
 	fn clear(&mut self) {
@@ -164,7 +177,7 @@ impl EntityAllocator {
 
 		self.recycled
 			.drain(remaining..)
-			.chain(new_id_range.into_iter().map(|id| Entity::with_id(id)))
+			.chain(new_id_range.into_iter().map(|id| Entity::with_index(id)))
 	}
 }
 

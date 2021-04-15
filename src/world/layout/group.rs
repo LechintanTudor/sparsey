@@ -1,4 +1,4 @@
-use crate::data::Component;
+use crate::components::Component;
 use crate::world::LayoutComponent;
 use std::collections::HashSet;
 use std::iter::FromIterator;
