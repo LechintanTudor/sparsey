@@ -1,4 +1,4 @@
-#[derive(Copy, Clone, Default, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Default, Debug)]
 pub struct ComponentInfo {
 	pub(in crate::components) tick_added: u32,
 	pub(in crate::components) tick_mutated: u32,

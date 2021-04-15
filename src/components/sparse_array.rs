@@ -1,5 +1,5 @@
 use std::hint::unreachable_unchecked;
-use std::{iter, mem};
+use std::{iter, mem, ptr};
 
 const PAGE_SIZE: usize = 32;
 type Page = Option<Box<[usize; PAGE_SIZE]>>;
@@ -25,6 +25,12 @@ impl SparseArray {
 			Some(value) => mem::replace(value, Self::INVALID_INDEX),
 			None => Self::INVALID_INDEX,
 		}
+	}
+
+	pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+		let ptr_a = self.get_unchecked_mut(a) as *mut _;
+		let ptr_b = self.get_unchecked_mut(b) as *mut _;
+		ptr::swap(ptr_a, ptr_b);
 	}
 
 	pub fn contains(&self, index: usize) -> bool {
@@ -119,11 +125,13 @@ mod tests {
 	fn sparse_array() {
 		let mut array = SparseArray::default();
 
+		// Insert
 		assert_eq!(array.insert(0, 1), SparseArray::INVALID_INDEX);
 		assert_eq!(array.insert(1, 2), SparseArray::INVALID_INDEX);
 		assert_eq!(array.insert(0, 0), 1);
 		assert_eq!(array.insert(1, 1), 2);
 
+		// Get
 		assert!(matches!(array.get(0), Some(&0)));
 		assert!(matches!(array.get(1), Some(&1)));
 		assert!(matches!(array.get(2), None));
@@ -134,14 +142,17 @@ mod tests {
 		assert!(matches!(array.get_mut(2), None));
 		assert!(matches!(array.get_mut(3), None));
 
+		// Set
 		*array.get_mut(0).unwrap() = 1;
 		*array.get_mut(1).unwrap() = 2;
 
+		// Get or invalid
 		assert_eq!(*array.get_mut_or_invalid(0), 1);
 		assert_eq!(*array.get_mut_or_invalid(1), 2);
 		assert_eq!(*array.get_mut_or_invalid(100), SparseArray::INVALID_INDEX);
 		assert_eq!(*array.get_mut_or_invalid(200), SparseArray::INVALID_INDEX);
 
+		// Remove
 		assert_eq!(array.remove(0), 1);
 		assert_eq!(array.remove(1), 2);
 		assert_eq!(array.remove(0), SparseArray::INVALID_INDEX);

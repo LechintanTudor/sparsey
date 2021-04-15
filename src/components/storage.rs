@@ -5,8 +5,8 @@ use std::ptr;
 pub struct ComponentStorage {
 	indexes: SparseArray,
 	entities: Vec<Entity>,
-	info: Vec<ComponentInfo>,
 	data: BlobVec,
+	info: Vec<ComponentInfo>,
 }
 
 impl ComponentStorage {
@@ -14,8 +14,8 @@ impl ComponentStorage {
 		Self {
 			indexes: SparseArray::new(),
 			entities: Vec::new(),
-			info: Vec::new(),
 			data: BlobVec::new(item_layout, drop_item),
+			info: Vec::new(),
 		}
 	}
 
@@ -105,6 +105,19 @@ impl ComponentStorage {
 		true
 	}
 
+	pub fn swap(&mut self, a: usize, b: usize) {
+		let sparse_a = self.entities[a].index();
+		let sparse_b = self.entities[b].index();
+
+		unsafe {
+			self.indexes.swap_unchecked(sparse_a, sparse_b);
+			self.data.swap_unchecked(a, b);
+		}
+
+		self.entities.swap(a, b);
+		self.info.swap(a, b);
+	}
+
 	pub fn get_with_info(&self, entity: Entity) -> Option<(*const u8, &ComponentInfo)> {
 		let index = *self.index_for(entity)?;
 
@@ -141,9 +154,101 @@ impl ComponentStorage {
 		self.entities.len()
 	}
 
+	pub fn is_empty(&self) -> bool {
+		self.entities.is_empty()
+	}
+
 	fn index_for(&self, entity: Entity) -> Option<&usize> {
 		self.indexes
 			.get(entity.index())
 			.filter(|&&i| unsafe { self.entities.get_unchecked(i).version() == entity.version() })
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn new() -> ComponentStorage {
+		unsafe {
+			ComponentStorage::new(Layout::new::<i32>(), |ptr| {
+				ptr::drop_in_place::<i32>(ptr as _)
+			})
+		}
+	}
+
+	fn insert(
+		storage: &mut ComponentStorage,
+		entity: Entity,
+		value: i32,
+		tick: u32,
+	) -> Option<i32> {
+		unsafe {
+			let prev = storage.insert_and_forget_prev(entity, &value as *const _ as *const _, tick);
+
+			if !prev.is_null() {
+				Some(ptr::read(prev.cast::<i32>()))
+			} else {
+				None
+			}
+		}
+	}
+
+	fn remove(storage: &mut ComponentStorage, entity: Entity) -> Option<i32> {
+		unsafe {
+			let prev = storage.remove_and_forget(entity);
+
+			if !prev.is_null() {
+				Some(ptr::read(prev.cast::<i32>()))
+			} else {
+				None
+			}
+		}
+	}
+
+	fn get(storage: &ComponentStorage, entity: Entity) -> Option<i32> {
+		storage
+			.get_with_info(entity)
+			.map(|(value, _)| unsafe { *value.cast::<i32>() })
+	}
+
+	fn get_info(storage: &ComponentStorage, entity: Entity) -> Option<ComponentInfo> {
+		storage.get_with_info(entity).map(|(_, info)| *info)
+	}
+
+	#[test]
+	fn component_storage() {
+		let mut storage = new();
+		let e1 = Entity::with_index(10);
+		let e2 = Entity::with_index(20);
+
+		// Insert
+		assert!(insert(&mut storage, e1, 1, 1).is_none());
+		assert_eq!(get(&storage, e1).unwrap(), 1);
+		assert_eq!(get_info(&storage, e1).unwrap(), ComponentInfo::new(1));
+
+		assert!(insert(&mut storage, e2, 2, 2).is_none());
+		assert_eq!(get(&storage, e1).unwrap(), 1);
+		assert_eq!(get(&storage, e2).unwrap(), 2);
+		assert_eq!(get_info(&storage, e1).unwrap(), ComponentInfo::new(1));
+		assert_eq!(get_info(&storage, e2).unwrap(), ComponentInfo::new(2));
+
+		// Swap
+		storage.swap(0, 1);
+		assert_eq!(get(&storage, e1).unwrap(), 1);
+		assert_eq!(get(&storage, e2).unwrap(), 2);
+		assert_eq!(get_info(&storage, e1).unwrap(), ComponentInfo::new(1));
+		assert_eq!(get_info(&storage, e2).unwrap(), ComponentInfo::new(2));
+
+		// Remove
+		assert_eq!(remove(&mut storage, e1), Some(1));
+		assert_eq!(storage.len(), 1);
+		assert!(!storage.contains(e1));
+		assert!(storage.contains(e2));
+
+		assert_eq!(remove(&mut storage, e2), Some(2));
+		assert_eq!(storage.len(), 0);
+		assert!(!storage.contains(e1));
+		assert!(!storage.contains(e2));
 	}
 }
