@@ -2,7 +2,7 @@ pub use self::impls::*;
 
 use crate::components::{Component, Entity};
 use crate::utils::panic_missing_comp;
-use crate::world::{CompMut, ComponentStorageRefMut, ComponentStorages};
+use crate::world::{ComponentStorageRefMut, ComponentStorages};
 use std::any::TypeId;
 use std::marker::PhantomData;
 

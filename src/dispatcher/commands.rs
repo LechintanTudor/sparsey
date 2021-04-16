@@ -1,6 +1,6 @@
 use crate::components::Entity;
 use crate::resources::Resources;
-use crate::world::{EntityStorage, World};
+use crate::world::{ComponentSet, EntityStorage, World};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -24,59 +24,59 @@ impl<'a> Commands<'a> {
 		self.buffer.push(Box::new(command));
 	}
 
-	// /// Queue the creation of an entity with given components and
-	// /// return the `Entity` to be created.
-	// pub fn create<C>(&mut self, components: C) -> Entity
-	// where
-	// 	C: ComponentSet,
-	// {
-	// 	let entity = self.entities.create_atomic();
+	/// Queue the creation of an entity with given components and
+	/// return the `Entity` to be created.
+	pub fn create<C>(&mut self, components: C) -> Entity
+	where
+		C: ComponentSet,
+	{
+		let entity = self.entities.create_atomic();
 
-	// 	self.run(move |world, _| {
-	// 		let _ = world.append(entity, components);
-	// 	});
+		self.run(move |world, _| {
+			let _ = world.append(entity, components);
+		});
 
-	// 	entity
-	// }
+		entity
+	}
 
-	// /// Queue the creation of a set of entities with
-	// /// components produced by the given iterator.
-	// pub fn extend<C, I>(&mut self, components_iter: I)
-	// where
-	// 	C: ComponentSet,
-	// 	I: IntoIterator<Item = C> + Send + 'static,
-	// {
-	// 	self.run(move |world, _| {
-	// 		world.extend(components_iter);
-	// 	});
-	// }
+	/// Queue the creation of a set of entities with
+	/// components produced by the given iterator.
+	pub fn extend<C, I>(&mut self, components_iter: I)
+	where
+		C: ComponentSet,
+		I: IntoIterator<Item = C> + Send + 'static,
+	{
+		self.run(move |world, _| {
+			world.extend(components_iter);
+		});
+	}
 
-	// /// Queue the destruction of the given `Entity`.
-	// pub fn destroy(&mut self, entity: Entity) {
-	// 	self.run(move |world, _| {
-	// 		world.destroy(entity);
-	// 	});
-	// }
+	/// Queue the destruction of the given `Entity`.
+	pub fn destroy(&mut self, entity: Entity) {
+		self.run(move |world, _| {
+			world.destroy(entity);
+		});
+	}
 
-	// /// Queue the appending of a set of components to the given `Entity`.
-	// pub fn append<C>(&mut self, entity: Entity, components: C)
-	// where
-	// 	C: ComponentSet,
-	// {
-	// 	self.run(move |world, _| {
-	// 		let _ = world.append(entity, components);
-	// 	});
-	// }
+	/// Queue the appending of a set of components to the given `Entity`.
+	pub fn append<C>(&mut self, entity: Entity, components: C)
+	where
+		C: ComponentSet,
+	{
+		self.run(move |world, _| {
+			let _ = world.append(entity, components);
+		});
+	}
 
-	// /// Queue the deletion of a set of components from the given `Entity`.
-	// pub fn delete<C>(&mut self, entity: Entity)
-	// where
-	// 	C: ComponentSet,
-	// {
-	// 	self.run(move |world, _| {
-	// 		world.delete::<C>(entity);
-	// 	});
-	// }
+	/// Queue the deletion of a set of components from the given `Entity`.
+	pub fn delete<C>(&mut self, entity: Entity)
+	where
+		C: ComponentSet,
+	{
+		self.run(move |world, _| {
+			world.delete::<C>(entity);
+		});
+	}
 
 	/// Get a slice containing all entities in the `World`.
 	pub fn entities(&self) -> &[Entity] {
