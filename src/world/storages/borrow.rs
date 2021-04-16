@@ -10,8 +10,8 @@ pub struct Comp<'a, T>
 where
 	T: Component,
 {
-	storage: ComponentStorageRef<'a, T>,
-	group: Option<GroupInfo<'a>>,
+	pub(crate) storage: ComponentStorageRef<'a, T>,
+	pub(crate) group_info: Option<GroupInfo<'a>>,
 }
 
 impl<'a, T> Comp<'a, T>
@@ -20,9 +20,12 @@ where
 {
 	pub(crate) unsafe fn new(
 		storage: ComponentStorageRef<'a, T>,
-		group: Option<GroupInfo<'a>>,
+		group_info: Option<GroupInfo<'a>>,
 	) -> Self {
-		Self { storage, group }
+		Self {
+			storage,
+			group_info,
+		}
 	}
 }
 
@@ -30,8 +33,8 @@ pub struct CompMut<'a, T>
 where
 	T: Component,
 {
-	storage: ComponentStorageRefMut<'a, T>,
-	group: Option<GroupInfo<'a>>,
+	pub(crate) storage: ComponentStorageRefMut<'a, T>,
+	pub(crate) group_info: Option<GroupInfo<'a>>,
 }
 
 impl<'a, T> CompMut<'a, T>
@@ -40,8 +43,11 @@ where
 {
 	pub(crate) unsafe fn new(
 		storage: ComponentStorageRefMut<'a, T>,
-		group: Option<GroupInfo<'a>>,
+		group_info: Option<GroupInfo<'a>>,
 	) -> Self {
-		Self { storage, group }
+		Self {
+			storage,
+			group_info,
+		}
 	}
 }

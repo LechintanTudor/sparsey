@@ -1,3 +1,4 @@
+pub use self::components::*;
 pub use self::dispatcher::*;
 pub use self::query::*;
 pub use self::resources::*;
