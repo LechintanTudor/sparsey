@@ -1,9 +1,8 @@
-use crate::components::{Component, ComponentStorage, Entity};
+use crate::components::{Component, ComponentStorage};
 use crate::world::{
-	Comp, CompMut, ComponentStorageRef, ComponentStorageRefMut, GroupedComponentStorages, Layout,
+	Comp, CompMut, ComponentStorageRef, ComponentStorageRefMut, GroupedComponentStorages,
 	UngroupedComponentStorages,
 };
-use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
 
 /// Container for grouped and ungrouped component storages.
@@ -80,6 +79,19 @@ impl ComponentStorages {
 				Some(storage) => unsafe {
 					Some(CompMut::new(ComponentStorageRefMut::new(storage), None))
 				},
+				None => None,
+			},
+		}
+	}
+
+	pub(crate) fn borrow_storage_mut<T>(&self) -> Option<ComponentStorageRefMut<T>>
+	where
+		T: Component,
+	{
+		match self.grouped.borrow_mut(&TypeId::of::<T>()) {
+			Some(storage) => unsafe { Some(ComponentStorageRefMut::new(storage)) },
+			None => match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {
+				Some(storage) => unsafe { Some(ComponentStorageRefMut::new(storage)) },
 				None => None,
 			},
 		}

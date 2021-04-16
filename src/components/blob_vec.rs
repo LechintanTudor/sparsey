@@ -134,6 +134,10 @@ impl BlobVec {
 		self.ptr.as_ptr().add(index * self.item_layout.size())
 	}
 
+	pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> *mut u8 {
+		self.ptr.as_ptr().add(index * self.item_layout.size())
+	}
+
 	pub unsafe fn set_and_forget_prev_unchecked(
 		&mut self,
 		index: usize,

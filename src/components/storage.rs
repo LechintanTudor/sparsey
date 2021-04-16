@@ -138,6 +138,20 @@ impl ComponentStorage {
 		self.info.swap(a, b);
 	}
 
+	pub fn get(&self, entity: Entity) -> *const u8 {
+		match self.dense_index_of(entity) {
+			Some(&index) => unsafe { self.data.get_unchecked(index) },
+			None => ptr::null(),
+		}
+	}
+
+	pub fn get_mut(&mut self, entity: Entity) -> *mut u8 {
+		match self.dense_index_of(entity) {
+			Some(&index) => unsafe { self.data.get_unchecked_mut(index) },
+			None => ptr::null_mut(),
+		}
+	}
+
 	pub fn get_with_info(&self, entity: Entity) -> Option<(*const u8, &ComponentInfo)> {
 		let index = *self.dense_index_of(entity)?;
 
