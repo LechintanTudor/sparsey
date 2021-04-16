@@ -8,6 +8,9 @@ pub(crate) struct UngroupedComponentStorages {
 	storages: HashMap<TypeId, AtomicRefCell<ComponentStorage>>,
 }
 
+unsafe impl Send for UngroupedComponentStorages {}
+unsafe impl Sync for UngroupedComponentStorages {}
+
 impl UngroupedComponentStorages {
 	pub fn from_storages(sparse_set_map: &mut HashMap<TypeId, ComponentStorage>) -> Self {
 		let mut storages = HashMap::<TypeId, AtomicRefCell<ComponentStorage>>::new();
@@ -38,7 +41,7 @@ impl UngroupedComponentStorages {
 			.or_insert_with(|| AtomicRefCell::new(ComponentStorage::for_type::<T>()));
 	}
 
-	pub fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
+	pub unsafe fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
 		self.storages
 			.entry(type_id)
 			.or_insert_with(|| AtomicRefCell::new(storage));
@@ -48,12 +51,6 @@ impl UngroupedComponentStorages {
 		for sparse_set in self.storages.values_mut() {
 			sparse_set.get_mut().clear();
 		}
-	}
-
-	pub fn drain(&mut self) -> impl Iterator<Item = ComponentStorage> + '_ {
-		self.storages
-			.drain()
-			.map(|(_, sparse_set)| sparse_set.into_inner())
 	}
 
 	pub fn borrow(&self, component: &TypeId) -> Option<AtomicRef<ComponentStorage>> {

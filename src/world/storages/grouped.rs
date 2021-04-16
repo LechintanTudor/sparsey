@@ -12,6 +12,9 @@ pub(crate) struct GroupedComponentStorages {
 	info: HashMap<TypeId, ComponentInfo>,
 }
 
+unsafe impl Send for GroupedComponentStorages {}
+unsafe impl Sync for GroupedComponentStorages {}
+
 impl GroupedComponentStorages {
 	pub fn with_layout(
 		layout: &Layout,

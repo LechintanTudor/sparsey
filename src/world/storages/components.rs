@@ -28,7 +28,7 @@ impl ComponentStorages {
 		}
 	}
 
-	pub(crate) fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
+	pub(crate) unsafe fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
 		if !self.grouped.contains(&type_id) {
 			self.ungrouped.register_storage(type_id, storage);
 		}

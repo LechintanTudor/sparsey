@@ -1,5 +1,5 @@
 use crate::components::{Component, ComponentStorage, Entity};
-use crate::world::{Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage};
+use crate::world::{Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage, Layout};
 use std::any::TypeId;
 use std::collections::HashSet;
 use std::error::Error;
@@ -15,6 +15,16 @@ pub struct World {
 }
 
 impl World {
+	pub fn with_layout(layout: &Layout) -> Self {
+		let mut world = Self::default();
+		world.set_layout(layout);
+		world
+	}
+
+	pub fn set_layout(&mut self, layout: &Layout) {
+		self.components.set_layout(layout, self.entities.as_ref());
+	}
+
 	pub fn register<T>(&mut self)
 	where
 		T: Component,
@@ -22,7 +32,7 @@ impl World {
 		self.components.register::<T>()
 	}
 
-	pub fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
+	pub unsafe fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
 		self.components.register_storage(type_id, storage);
 	}
 
@@ -173,8 +183,17 @@ impl World {
 		self.components.borrow_comp_mut::<T>()
 	}
 
+	pub fn clear(&mut self) {
+		self.entities.clear();
+		self.components.clear();
+	}
+
 	pub(crate) fn entity_storage(&self) -> &EntityStorage {
 		&self.entities
+	}
+
+	pub(crate) fn maintain(&mut self) {
+		self.entities.maintain();
 	}
 
 	fn update_group_indexes(&mut self, type_ids: &[TypeId]) {

@@ -244,17 +244,6 @@ mod tests {
 		storage.get_with_info(entity).map(|(_, info)| *info)
 	}
 
-	fn print_info(storage: &ComponentStorage) {
-		unsafe {
-			println!("e1: {:?}", storage.indexes.get(10));
-			println!("e2: {:?}", storage.indexes.get(20));
-			println!(
-				"Slice: {:?}",
-				std::slice::from_raw_parts(storage.data.as_ptr() as *const i32, storage.len(),)
-			);
-		}
-	}
-
 	#[test]
 	fn component_storage() {
 		let mut storage = new();

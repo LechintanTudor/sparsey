@@ -7,15 +7,15 @@ use std::ptr;
 pub struct GroupInfo<'a> {
 	groups: &'a [Group],
 	group_index: usize,
-	sparse_set_index: usize,
+	storage_index: usize,
 }
 
 impl<'a> GroupInfo<'a> {
-	pub(crate) fn new(groups: &'a [Group], group_index: usize, sparse_set_index: usize) -> Self {
+	pub(crate) fn new(groups: &'a [Group], group_index: usize, storage_index: usize) -> Self {
 		Self {
 			groups,
 			group_index,
-			sparse_set_index,
+			storage_index,
 		}
 	}
 
@@ -28,7 +28,7 @@ impl<'a> GroupInfo<'a> {
 	}
 
 	pub(crate) fn mask(&self) -> GroupMask {
-		GroupMask::include_index(self.sparse_set_index)
+		GroupMask::include_index(self.storage_index)
 	}
 
 	pub(crate) fn groups(&self) -> &[Group] {

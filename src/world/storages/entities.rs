@@ -154,11 +154,10 @@ impl EntityAllocator {
 	}
 
 	fn deallocate(&mut self, entity: Entity) {
-		// if let Some(ver) = entity.ver().next() {
-		// 	self.recycled.push(Entity::new(entity.id(), ver));
-		// 	*self.recycled_len.get_mut() += 1;
-		// }
-		todo!()
+		if let Some(next_entity) = entity.with_next_version() {
+			self.recycled.push(next_entity);
+			*self.recycled_len.get_mut() += 1;
+		}
 	}
 
 	fn clear(&mut self) {

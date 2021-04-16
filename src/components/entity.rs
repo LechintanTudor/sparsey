@@ -27,6 +27,19 @@ impl Entity {
 	pub const fn version(&self) -> Version {
 		self.version
 	}
+
+	pub const fn with_next_version(&self) -> Option<Entity> {
+		if self.version.get() < u32::MAX {
+			unsafe {
+				Some(Entity::new(
+					self.index,
+					Version::new_unchecked(self.version.get() + 1),
+				))
+			}
+		} else {
+			None
+		}
+	}
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]

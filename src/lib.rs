@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 pub use self::dispatcher::*;
 pub use self::query::*;
 pub use self::resources::*;
