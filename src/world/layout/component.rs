@@ -43,8 +43,8 @@ impl LayoutComponent {
 	}
 
 	/// Create a `ComponentStorage` for the component type described by the `LayoutComponent`.
-	pub fn new_sparse_set(&self) -> ComponentStorage {
-		self.component.new_sparse_set()
+	pub fn new_storage(&self) -> (TypeId, ComponentStorage) {
+		self.component.new_storage()
 	}
 }
 
@@ -94,7 +94,7 @@ unsafe trait AbstractType {
 
 	fn type_name(&self) -> &'static str;
 
-	fn new_sparse_set(&self) -> ComponentStorage;
+	fn new_storage(&self) -> (TypeId, ComponentStorage);
 
 	fn clone(&self) -> Box<dyn AbstractType>;
 }
@@ -111,8 +111,8 @@ where
 		any::type_name::<T>()
 	}
 
-	fn new_sparse_set(&self) -> ComponentStorage {
-		ComponentStorage::for_type::<T>()
+	fn new_storage(&self) -> (TypeId, ComponentStorage) {
+		(self.type_id(), ComponentStorage::for_type::<T>())
 	}
 
 	fn clone(&self) -> Box<dyn AbstractType> {

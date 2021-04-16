@@ -1,4 +1,4 @@
-use crate::components::{Component, Entity};
+use crate::components::{Component, ComponentStorage, Entity};
 use crate::world::{Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage};
 use std::any::TypeId;
 use std::collections::HashSet;
@@ -20,6 +20,10 @@ impl World {
 		T: Component,
 	{
 		self.components.register::<T>()
+	}
+
+	pub fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
+		self.components.register_storage(type_id, storage);
 	}
 
 	/// Create an `Entity` with the given components and return it.
@@ -78,8 +82,8 @@ impl World {
 			self.components.grouped.ungroup_components(i, entity);
 		}
 
-		for sparse_set in self.components.iter_sparse_sets_mut() {
-			sparse_set.remove_and_drop(entity);
+		for storage in self.components.iter_storages_mut() {
+			storage.remove_and_drop(entity);
 		}
 
 		true

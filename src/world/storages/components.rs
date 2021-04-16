@@ -1,9 +1,10 @@
-use crate::components::{Component, ComponentStorage};
+use crate::components::{Component, ComponentStorage, Entity};
 use crate::world::{
-	Comp, CompMut, ComponentStorageRef, ComponentStorageRefMut, GroupedComponentStorages,
+	Comp, CompMut, ComponentStorageRef, ComponentStorageRefMut, GroupedComponentStorages, Layout,
 	UngroupedComponentStorages,
 };
 use std::any::TypeId;
+use std::collections::HashMap;
 
 /// Container for grouped and ungrouped component storages.
 #[derive(Default)]
@@ -27,22 +28,26 @@ impl ComponentStorages {
 		}
 	}
 
-	// pub(crate) fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
-	// 	let mut sparse_sets = HashMap::<TypeId, ComponentStorage>::new();
+	pub(crate) fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
+		if !self.grouped.contains(&type_id) {
+			self.ungrouped.register_storage(type_id, storage);
+		}
+	}
 
-	// 	for sparse_set in self.grouped.drain().chain(self.ungrouped.drain()) {
-	// 		sparse_sets.insert(sparse_set.type_info().id(), sparse_set);
-	// 	}
+	pub(crate) fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
+		let mut storages = HashMap::<TypeId, ComponentStorage>::new();
+		self.grouped.drain_into(&mut storages);
+		self.ungrouped.drain_into(&mut storages);
 
-	// 	self.grouped = GroupedComponentStorages::with_layout(&layout, &mut sparse_sets);
-	// 	self.ungrouped = UngroupedComponentStorages::from_sparse_sets(&mut sparse_sets);
+		self.grouped = GroupedComponentStorages::with_layout(&layout, &mut storages);
+		self.ungrouped = UngroupedComponentStorages::from_storages(&mut storages);
 
-	// 	for i in 0..self.grouped.group_set_count() {
-	// 		for &entity in entities {
-	// 			self.grouped.group_components(i, entity);
-	// 		}
-	// 	}
-	// }
+		for i in 0..self.grouped.group_set_count() {
+			for &entity in entities {
+				self.grouped.group_components(i, entity);
+			}
+		}
+	}
 
 	pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
 	where
@@ -97,11 +102,9 @@ impl ComponentStorages {
 		}
 	}
 
-	pub(crate) fn iter_sparse_sets_mut(
-		&mut self,
-	) -> impl Iterator<Item = &mut ComponentStorage> + '_ {
+	pub(crate) fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> + '_ {
 		self.grouped
-			.iter_sparse_sets_mut()
-			.chain(self.ungrouped.iter_sparse_sets_mut())
+			.iter_storages_mut()
+			.chain(self.ungrouped.iter_storages_mut())
 	}
 }
