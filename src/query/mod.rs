@@ -1,6 +1,6 @@
-mod filter;
+mod group_filter;
 
-use self::filter::GroupFilter;
+use self::group_filter::GroupFilter;
 use crate::components::{Component, Entity};
 use crate::world::{Comp, CompMut, GroupInfo};
 
@@ -118,6 +118,21 @@ pub unsafe trait QueryComponent {
 }
 
 unsafe impl<'a, T> QueryComponent for &'a Comp<'a, T>
+where
+	T: Component,
+{
+	type Item = &'a T;
+
+	fn get(self, entity: Entity) -> Option<Self::Item> {
+		self.storage.get(entity)
+	}
+
+	fn group_info(&self) -> Option<&GroupInfo> {
+		self.group_info.as_ref()
+	}
+}
+
+unsafe impl<'a, 'b: 'a, T> QueryComponent for &'a CompMut<'b, T>
 where
 	T: Component,
 {
