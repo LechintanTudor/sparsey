@@ -1,6 +1,6 @@
 use crate::components::{BlobVec, ComponentInfo, Entity, SparseArray};
 use std::alloc::Layout;
-use std::ptr;
+use std::{mem, ptr};
 
 pub struct ComponentStorage {
 	indexes: SparseArray,
@@ -71,9 +71,8 @@ impl ComponentStorage {
 		}
 	}
 
-	// DOESNT WORK!
 	pub fn remove_and_forget(&mut self, entity: Entity) -> *mut u8 {
-		let dense_index_ref = match self.indexes.get_mut(entity.index()) {
+		let dense_index = match self.indexes.get_mut(entity.index()) {
 			Some(dense_index) => unsafe {
 				if self.entities.get_unchecked(*dense_index).version() == entity.version() {
 					dense_index
@@ -84,25 +83,21 @@ impl ComponentStorage {
 			None => return ptr::null_mut(),
 		};
 
-		let sparse_index = match self.entities.last() {
-			Some(entity) => entity.index(),
-			None => return ptr::null_mut(),
-		};
-
-		let dense_index = *dense_index_ref;
+		let dense_index = mem::replace(dense_index, SparseArray::INVALID_INDEX);
 		self.entities.swap_remove(dense_index);
 		self.info.swap_remove(dense_index);
 
-		unsafe {
-			*dense_index_ref = SparseArray::INVALID_INDEX;
-			*self.indexes.get_unchecked_mut(sparse_index) = dense_index;
-
-			self.data.swap_remove_and_forget_unchecked(entity.index())
+		if let Some(entity) = self.entities.last() {
+			unsafe {
+				*self.indexes.get_unchecked_mut(entity.index()) = self.entities.len() - 1;
+			}
 		}
+
+		unsafe { self.data.swap_remove_and_forget_unchecked(dense_index) }
 	}
 
 	pub fn remove_and_drop(&mut self, entity: Entity) -> bool {
-		let dense_index_ref = match self.indexes.get_mut(entity.index()) {
+		let dense_index = match self.indexes.get_mut(entity.index()) {
 			Some(dense_index) => unsafe {
 				if self.entities.get_unchecked(*dense_index).version() == entity.version() {
 					dense_index
@@ -113,22 +108,21 @@ impl ComponentStorage {
 			None => return false,
 		};
 
-		let sparse_index = match self.entities.last() {
-			Some(entity) => entity.index(),
-			None => return false,
-		};
-
-		let dense_index = *dense_index_ref;
+		let dense_index = mem::replace(dense_index, SparseArray::INVALID_INDEX);
 		self.entities.swap_remove(dense_index);
 		self.info.swap_remove(dense_index);
 
-		unsafe {
-			*dense_index_ref = SparseArray::INVALID_INDEX;
-			*self.indexes.get_unchecked_mut(sparse_index) = entity.index();
-
-			self.data.swap_remove_and_drop_unchecked(entity.index());
-			true
+		if let Some(entity) = self.entities.last() {
+			unsafe {
+				*self.indexes.get_unchecked_mut(entity.index()) = self.entities.len() - 1;
+			}
 		}
+
+		unsafe {
+			self.data.swap_remove_and_drop_unchecked(dense_index);
+		}
+
+		true
 	}
 
 	pub fn swap(&mut self, a: usize, b: usize) {
@@ -145,7 +139,7 @@ impl ComponentStorage {
 	}
 
 	pub fn get_with_info(&self, entity: Entity) -> Option<(*const u8, &ComponentInfo)> {
-		let index = *self.index_for(entity)?;
+		let index = *self.dense_index_of(entity)?;
 
 		unsafe {
 			Some((
@@ -156,7 +150,7 @@ impl ComponentStorage {
 	}
 
 	pub fn get_with_info_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ComponentInfo)> {
-		let index = *self.index_for(entity)?;
+		let index = *self.dense_index_of(entity)?;
 
 		unsafe {
 			Some((
@@ -167,7 +161,7 @@ impl ComponentStorage {
 	}
 
 	pub fn contains(&self, entity: Entity) -> bool {
-		self.index_for(entity).is_some()
+		self.dense_index_of(entity).is_some()
 	}
 
 	pub fn clear(&mut self) {
@@ -184,7 +178,7 @@ impl ComponentStorage {
 		self.entities.is_empty()
 	}
 
-	pub fn index_for(&self, entity: Entity) -> Option<&usize> {
+	pub fn dense_index_of(&self, entity: Entity) -> Option<&usize> {
 		self.indexes
 			.get(entity.index())
 			.filter(|&&i| unsafe { self.entities.get_unchecked(i).version() == entity.version() })
@@ -196,11 +190,7 @@ mod tests {
 	use super::*;
 
 	fn new() -> ComponentStorage {
-		unsafe {
-			ComponentStorage::new(Layout::new::<i32>(), |ptr| {
-				ptr::drop_in_place::<i32>(ptr as _)
-			})
-		}
+		ComponentStorage::for_type::<i32>()
 	}
 
 	fn insert(
@@ -238,6 +228,17 @@ mod tests {
 
 	fn get_info(storage: &ComponentStorage, entity: Entity) -> Option<ComponentInfo> {
 		storage.get_with_info(entity).map(|(_, info)| *info)
+	}
+
+	fn print_info(storage: &ComponentStorage) {
+		unsafe {
+			println!("e1: {:?}", storage.indexes.get(10));
+			println!("e2: {:?}", storage.indexes.get(20));
+			println!(
+				"Slice: {:?}",
+				std::slice::from_raw_parts(storage.data.as_ptr() as *const i32, storage.len(),)
+			);
+		}
 	}
 
 	#[test]

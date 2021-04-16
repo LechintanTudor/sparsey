@@ -228,7 +228,7 @@ fn get_group_status(
 ) -> GroupStatus {
 	match sparse_sets.split_first_mut() {
 		Some((first, others)) => {
-			let status = match first.get_mut().index_for(entity) {
+			let status = match first.get_mut().dense_index_of(entity) {
 				Some(index) => {
 					if *index < group_len {
 						GroupStatus::Grouped
@@ -261,7 +261,7 @@ unsafe fn group_components(
 		.iter_mut()
 		.map(|sparse_set| sparse_set.get_mut())
 	{
-		let index = match sparse_set.index_for(entity) {
+		let index = match sparse_set.dense_index_of(entity) {
 			Some(index) => *index,
 			None => unreachable_unchecked(),
 		};
@@ -284,7 +284,7 @@ unsafe fn ungroup_components(
 			.iter_mut()
 			.map(|sparse_set| sparse_set.get_mut())
 		{
-			let index = match sparse_set.index_for(entity) {
+			let index = match sparse_set.dense_index_of(entity) {
 				Some(index) => *index,
 				None => unreachable_unchecked(),
 			};
