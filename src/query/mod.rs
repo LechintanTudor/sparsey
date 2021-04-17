@@ -11,6 +11,8 @@ where
 	type Item;
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
+
+	fn contains(self, entity: Entity) -> bool;
 }
 
 pub unsafe trait SimpleQuery
@@ -72,6 +74,14 @@ where
 			None
 		}
 	}
+
+	fn contains(self, entity: Entity) -> bool {
+		if self.filter.includes_all(entity) {
+			self.query.contains(entity)
+		} else {
+			false
+		}
+	}
 }
 
 pub struct Exclude<Q, F>
@@ -107,12 +117,22 @@ where
 			None
 		}
 	}
+
+	fn contains(self, entity: Entity) -> bool {
+		if self.filter.excludes_all(entity) {
+			self.query.contains(entity)
+		} else {
+			false
+		}
+	}
 }
 
 pub unsafe trait QueryComponent {
 	type Item;
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
+
+	fn contains(self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> Option<&GroupInfo>;
 }
@@ -125,6 +145,10 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
+	}
+
+	fn contains(self, entity: Entity) -> bool {
+		self.storage.contains(entity)
 	}
 
 	fn group_info(&self) -> Option<&GroupInfo> {
@@ -140,6 +164,10 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
+	}
+
+	fn contains(self, entity: Entity) -> bool {
+		self.storage.contains(entity)
 	}
 
 	fn group_info(&self) -> Option<&GroupInfo> {
@@ -160,6 +188,11 @@ macro_rules! impl_query {
 				Some((
 					$(self.$idx.get(entity)?,)*
 				))
+			}
+
+			#[allow(unused_variables)]
+			fn contains(self, entity: Entity) -> bool {
+				true $(&& self.$idx.contains(entity))*
 			}
 		}
 
