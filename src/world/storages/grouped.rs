@@ -228,9 +228,9 @@ fn get_group_status(
 ) -> GroupStatus {
 	match storages.split_first_mut() {
 		Some((first, others)) => {
-			let status = match first.get_mut().dense_index_of(entity) {
+			let status = match first.get_mut().get_index(entity) {
 				Some(index) => {
-					if *index < group_len {
+					if (index as usize) < group_len {
 						GroupStatus::Grouped
 					} else {
 						GroupStatus::Ungrouped
@@ -258,8 +258,8 @@ unsafe fn group_components(
 	entity: Entity,
 ) {
 	for sparse_set in storages.iter_mut().map(|sparse_set| sparse_set.get_mut()) {
-		let index = match sparse_set.dense_index_of(entity) {
-			Some(index) => *index,
+		let index = match sparse_set.get_index(entity) {
+			Some(index) => index as usize,
 			None => unreachable_unchecked(),
 		};
 
@@ -278,8 +278,8 @@ unsafe fn ungroup_components(
 		let last_index = *group_len - 1;
 
 		for sparse_set in storages.iter_mut().map(|sparse_set| sparse_set.get_mut()) {
-			let index = match sparse_set.dense_index_of(entity) {
-				Some(index) => *index,
+			let index = match sparse_set.get_index(entity) {
+				Some(index) => index as usize,
 				None => unreachable_unchecked(),
 			};
 

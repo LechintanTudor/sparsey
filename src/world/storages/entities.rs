@@ -1,4 +1,4 @@
-use crate::components::{Entity, SparseArray};
+use crate::components::{Entity, IndexEntity, SparseArray};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
@@ -61,64 +61,53 @@ impl AsRef<[Entity]> for EntityStorage {
 
 #[derive(Clone, Default, Debug)]
 struct EntitySparseSet {
-	indexes: SparseArray,
+	sparse: SparseArray,
 	entities: Vec<Entity>,
 }
 
 impl EntitySparseSet {
 	fn insert(&mut self, entity: Entity) {
-		match self.indexes.get_mut_or_invalid(entity.index()) {
-			// New Entity
-			index @ &mut SparseArray::INVALID_INDEX => {
-				*index = self.entities.len();
+		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
+
+		match index_entity {
+			Some(index_entity) => unsafe {
+				*self.entities.get_unchecked_mut(index_entity.index()) = entity;
+			},
+			None => {
+				*index_entity = Some(IndexEntity::new(
+					self.entities.len() as u32,
+					entity.version(),
+				));
 				self.entities.push(entity);
 			}
-			// Newer version of an Entity
-			index => unsafe {
-				*self.entities.get_unchecked_mut(*index) = entity;
-			},
 		}
 	}
 
 	fn remove(&mut self, entity: Entity) -> bool {
-		let dense_index_ref = match self.indexes.get_mut(entity.index()) {
-			Some(index) => unsafe {
-				if self.entities.get_unchecked(*index).version() == entity.version() {
-					index
-				} else {
-					return false;
-				}
-			},
+		let dense_index = match self.sparse.remove(entity) {
+			Some(index_entity) => index_entity.index(),
 			None => return false,
 		};
 
-		let sparse_index = match self.entities.last() {
-			Some(entity) => entity.index(),
-			None => return false,
-		};
+		if let Some(entity) = self.entities.last() {
+			let new_index = (self.entities.len() - 1) as u32;
+			let new_index_entity = IndexEntity::new(new_index, entity.version());
 
-		let dense_index = *dense_index_ref;
-		self.entities.swap_remove(dense_index);
-
-		unsafe {
-			*dense_index_ref = SparseArray::INVALID_INDEX;
-			*self.indexes.get_unchecked_mut(sparse_index) = dense_index;
+			unsafe {
+				*self.sparse.get_unchecked_mut(entity.index()) = Some(new_index_entity);
+			}
 		}
 
+		self.entities.swap_remove(dense_index);
 		true
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
-		let index = match self.indexes.get(entity.index()) {
-			Some(index) => *index,
-			None => return false,
-		};
-
-		unsafe { self.entities.get_unchecked(index).version() == entity.version() }
+		self.sparse.contains(entity)
 	}
 
 	fn clear(&mut self) {
-		self.indexes.clear();
+		self.sparse.clear();
 		self.entities.clear();
 	}
 }

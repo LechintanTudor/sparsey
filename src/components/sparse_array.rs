@@ -1,64 +1,70 @@
+use crate::components::{Entity, IndexEntity};
 use std::hint::unreachable_unchecked;
-use std::{iter, mem, ptr};
+use std::{iter, ptr};
 
 const PAGE_SIZE: usize = 32;
-type Page = Option<Box<[usize; PAGE_SIZE]>>;
+type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
-#[derive(Clone, Default, Debug)]
+/// Data structure which maps `Entities` to indexes.
+#[derive(Clone, Debug, Default)]
 pub struct SparseArray {
-	pages: Vec<Page>,
+	pages: Vec<EntityPage>,
 }
 
 impl SparseArray {
-	pub const INVALID_INDEX: usize = usize::MAX;
-
-	pub const fn new() -> Self {
-		Self { pages: Vec::new() }
+	/// Remove the `IndexEntity` at the given `Entity`.
+	pub fn remove(&mut self, entity: Entity) -> Option<IndexEntity> {
+		self.get_mut(entity).map(|e| e.take()).flatten()
 	}
 
-	pub fn insert(&mut self, index: usize, value: usize) -> usize {
-		mem::replace(self.get_mut_or_invalid(index), value)
+	/// Delete the `IndexEntity` at the given `Entity`.
+	pub fn delete(&mut self, entity: Entity) {
+		self.get_mut(entity).map(|e| *e = None);
 	}
 
-	pub fn remove(&mut self, index: usize) -> usize {
-		match self.get_mut(index) {
-			Some(value) => mem::replace(value, Self::INVALID_INDEX),
-			None => Self::INVALID_INDEX,
+	/// Remove all `Entities` in the `SparseArray`.
+	pub fn clear(&mut self) {
+		self.pages.iter_mut().for_each(|p| *p = None);
+	}
+
+	/// Check if the `SparseArray` contains the given `Entity`.
+	pub fn contains(&self, entity: Entity) -> bool {
+		self.get_index(entity).is_some()
+	}
+
+	/// Get the `IndexEntity` at the given `Entity`.
+	pub fn get_index(&self, entity: Entity) -> Option<u32> {
+		self.pages
+			.get(page_index(entity))
+			.and_then(|p| p.as_ref())
+			.and_then(|p| p[local_index(entity)])
+			.filter(|e| e.version() == entity.version())
+			.map(|e| e.short_index())
+	}
+
+	/// Get an exclusive reference to the `IndexEntity` slot at the given `Entity`.
+	pub fn get_mut(&mut self, entity: Entity) -> Option<&mut Option<IndexEntity>> {
+		self.pages
+			.get_mut(page_index(entity))
+			.and_then(|page| page.as_mut())
+			.map(|page| &mut page[local_index(entity)])
+			.filter(|e| e.map(|e| e.version()) == Some(entity.version()))
+	}
+
+	/// Get an excusive reference to the `IndexEntity` slot at the given `index`
+	/// without checking the validity of the `index`.
+	pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<IndexEntity> {
+		match self.pages.get_unchecked_mut(index / PAGE_SIZE) {
+			Some(page) => page.get_unchecked_mut(index % PAGE_SIZE),
+			None => unreachable_unchecked(),
 		}
 	}
 
-	pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
-		let ptr_a = self.get_unchecked_mut(a) as *mut _;
-		let ptr_b = self.get_unchecked_mut(b) as *mut _;
-		ptr::swap(ptr_a, ptr_b);
-	}
-
-	pub fn contains(&self, index: usize) -> bool {
-		self.get(index).is_some()
-	}
-
-	pub fn get(&self, index: usize) -> Option<&usize> {
-		let (page_index, local_index) = indexes(index);
-
-		self.pages
-			.get(page_index)
-			.and_then(|page| page.as_ref())
-			.map(|page| &page[local_index])
-			.filter(|index| **index != Self::INVALID_INDEX)
-	}
-
-	pub fn get_mut(&mut self, index: usize) -> Option<&mut usize> {
-		let (page_index, local_index) = indexes(index);
-
-		self.pages
-			.get_mut(page_index)
-			.and_then(|page| page.as_mut())
-			.map(|page| &mut page[local_index])
-			.filter(|index| **index != Self::INVALID_INDEX)
-	}
-
-	pub fn get_mut_or_invalid(&mut self, index: usize) -> &mut usize {
-		let (page_index, local_index) = indexes(index);
+	/// Get an exclusive reference to the `IndexEntity` slot at the given `index`.
+	/// If the `index` is larger than the maximum capacity of the `SparseArray`,
+	/// extra memory is allocated to accomodate the new slot.
+	pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<IndexEntity> {
+		let page_index = index / PAGE_SIZE;
 
 		if page_index < self.pages.len() {
 			let page = &mut self.pages[page_index];
@@ -71,91 +77,38 @@ impl SparseArray {
 			self.pages.reserve(extra_uninit_pages + 1);
 			self.pages
 				.extend(iter::repeat(uninit_page()).take(extra_uninit_pages));
-			self.pages.push(empty_page());
+			self.pages.push(empty_page())
 		}
 
 		unsafe {
 			match self.pages.get_unchecked_mut(page_index) {
-				Some(page) => page.get_unchecked_mut(local_index),
+				Some(page) => page.get_unchecked_mut(index % PAGE_SIZE),
 				None => unreachable_unchecked(),
 			}
 		}
 	}
 
-	pub unsafe fn get_unchecked(&self, index: usize) -> &usize {
-		let (page_index, local_index) = indexes(index);
-
-		match self.pages.get_unchecked(page_index) {
-			Some(page) => page.get_unchecked(local_index),
-			None => unreachable_unchecked(),
-		}
-	}
-
-	pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut usize {
-		let (page_index, local_index) = indexes(index);
-
-		match self.pages.get_unchecked_mut(page_index) {
-			Some(page) => page.get_unchecked_mut(local_index),
-			None => unreachable_unchecked(),
-		}
-	}
-
-	pub fn clear(&mut self) {
-		self.pages.clear();
+	/// Swap the `IndexEntities` at the given indexes without checking if
+	/// the indexes are valid and in bounds.
+	pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+		let pa = self.get_unchecked_mut(a) as *mut _;
+		let pb = self.get_unchecked_mut(b) as *mut _;
+		ptr::swap(pa, pb);
 	}
 }
 
-fn indexes(index: usize) -> (usize, usize) {
-	(index / PAGE_SIZE, index % PAGE_SIZE)
+fn page_index(entity: Entity) -> usize {
+	entity.index() as usize / PAGE_SIZE
 }
 
-fn uninit_page() -> Page {
+fn local_index(entity: Entity) -> usize {
+	entity.index() as usize % PAGE_SIZE
+}
+
+fn uninit_page() -> EntityPage {
 	None
 }
 
-fn empty_page() -> Page {
-	Some(Box::new([SparseArray::INVALID_INDEX; PAGE_SIZE]))
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn sparse_array() {
-		let mut array = SparseArray::default();
-
-		// Insert
-		assert_eq!(array.insert(0, 1), SparseArray::INVALID_INDEX);
-		assert_eq!(array.insert(1, 2), SparseArray::INVALID_INDEX);
-		assert_eq!(array.insert(0, 0), 1);
-		assert_eq!(array.insert(1, 1), 2);
-
-		// Get
-		assert!(matches!(array.get(0), Some(&0)));
-		assert!(matches!(array.get(1), Some(&1)));
-		assert!(matches!(array.get(2), None));
-		assert!(matches!(array.get(3), None));
-
-		assert!(matches!(array.get_mut(0), Some(&mut 0)));
-		assert!(matches!(array.get_mut(1), Some(&mut 1)));
-		assert!(matches!(array.get_mut(2), None));
-		assert!(matches!(array.get_mut(3), None));
-
-		// Set
-		*array.get_mut(0).unwrap() = 1;
-		*array.get_mut(1).unwrap() = 2;
-
-		// Get or invalid
-		assert_eq!(*array.get_mut_or_invalid(0), 1);
-		assert_eq!(*array.get_mut_or_invalid(1), 2);
-		assert_eq!(*array.get_mut_or_invalid(100), SparseArray::INVALID_INDEX);
-		assert_eq!(*array.get_mut_or_invalid(200), SparseArray::INVALID_INDEX);
-
-		// Remove
-		assert_eq!(array.remove(0), 1);
-		assert_eq!(array.remove(1), 2);
-		assert_eq!(array.remove(0), SparseArray::INVALID_INDEX);
-		assert_eq!(array.remove(1), SparseArray::INVALID_INDEX);
-	}
+fn empty_page() -> EntityPage {
+	Some(Box::new([None; PAGE_SIZE]))
 }

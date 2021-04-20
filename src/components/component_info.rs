@@ -1,3 +1,5 @@
+pub type Ticks = u32;
+
 #[derive(Copy, Clone, Eq, PartialEq, Default, Debug)]
 pub struct ComponentInfo {
 	pub(in crate::components) tick_added: u32,

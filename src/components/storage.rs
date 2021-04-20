@@ -1,9 +1,9 @@
-use crate::components::{BlobVec, ComponentInfo, Entity, SparseArray};
+use crate::components::{BlobVec, ComponentInfo, Entity, IndexEntity, SparseArray};
 use std::alloc::Layout;
-use std::{mem, ptr};
+use std::{ptr, u32};
 
 pub struct ComponentStorage {
-	indexes: SparseArray,
+	sparse: SparseArray,
 	entities: Vec<Entity>,
 	data: BlobVec,
 	info: Vec<ComponentInfo>,
@@ -19,7 +19,7 @@ impl ComponentStorage {
 
 	pub unsafe fn new(item_layout: Layout, drop_item: unsafe fn(*mut u8)) -> Self {
 		Self {
-			indexes: SparseArray::new(),
+			sparse: SparseArray::default(),
 			entities: Vec::new(),
 			data: BlobVec::new(item_layout, drop_item),
 			info: Vec::new(),
@@ -32,64 +32,66 @@ impl ComponentStorage {
 		value: *const u8,
 		tick: u32,
 	) -> *mut u8 {
-		let index = self.indexes.get_mut_or_invalid(entity.index());
+		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
-		if *index == SparseArray::INVALID_INDEX {
-			*index = self.entities.len();
-			self.entities.push(entity);
-			self.info.push(ComponentInfo::new(tick));
-			self.data.push(value);
-			ptr::null_mut()
-		} else {
-			let index = *index;
-			*self.entities.get_unchecked_mut(index) = entity;
-			self.info.get_unchecked_mut(index).tick_mutated = tick;
-			self.data.set_and_forget_prev_unchecked(index, value)
+		match index_entity {
+			Some(index_entity) => {
+				let index = index_entity.index();
+				*self.entities.get_unchecked_mut(index) = entity;
+				self.info.get_unchecked_mut(index).tick_mutated = tick;
+				self.data.set_and_forget_prev_unchecked(index, value)
+			}
+			None => {
+				*index_entity = Some(IndexEntity::new(
+					self.entities.len() as u32,
+					entity.version(),
+				));
+				self.entities.push(entity);
+				self.info.push(ComponentInfo::new(tick));
+				self.data.push(value);
+				ptr::null_mut()
+			}
 		}
 	}
 
-	pub unsafe fn insert_and_drop_prev(
-		&mut self,
-		entity: Entity,
-		value: *const u8,
-		tick: u32,
-	) -> bool {
-		let index = self.indexes.get_mut_or_invalid(entity.index());
+	pub unsafe fn insert_and_drop_prev(&mut self, entity: Entity, value: *const u8, tick: u32) {
+		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
-		if *index == SparseArray::INVALID_INDEX {
-			*index = self.entities.len();
-			self.entities.push(entity);
-			self.info.push(ComponentInfo::new(tick));
-			self.data.push(value);
-			true
-		} else {
-			let index = *index;
-			*self.entities.get_unchecked_mut(index) = entity;
-			self.info.get_unchecked_mut(index).tick_mutated = tick;
-			self.data.set_and_drop_prev_unchecked(index, value);
-			false
+		match index_entity {
+			Some(index_entity) => {
+				let index = index_entity.index();
+				*self.entities.get_unchecked_mut(index) = entity;
+				self.info.get_unchecked_mut(index).tick_mutated = tick;
+				self.data.set_and_drop_prev_unchecked(index, value);
+			}
+			None => {
+				*index_entity = Some(IndexEntity::new(
+					self.entities.len() as u32,
+					entity.version(),
+				));
+				self.entities.push(entity);
+				self.info.push(ComponentInfo::new(tick));
+				self.data.push(value);
+			}
 		}
 	}
 
 	pub fn remove_and_forget(&mut self, entity: Entity) -> *mut u8 {
-		let dense_index = match self.indexes.get_mut(entity.index()) {
-			Some(dense_index) => unsafe {
-				if self.entities.get_unchecked(*dense_index).version() == entity.version() {
-					dense_index
-				} else {
-					return ptr::null_mut();
-				}
-			},
+		let index_entity = match self.sparse.remove(entity) {
+			Some(index_entity) => index_entity,
 			None => return ptr::null_mut(),
 		};
 
-		let dense_index = mem::replace(dense_index, SparseArray::INVALID_INDEX);
+		let dense_index = index_entity.index();
 		self.entities.swap_remove(dense_index);
 		self.info.swap_remove(dense_index);
 
 		if let Some(entity) = self.entities.last() {
+			let new_index = (self.entities.len() - 1) as u32;
+			let new_index_entity = IndexEntity::new(new_index, entity.version());
+
 			unsafe {
-				*self.indexes.get_unchecked_mut(entity.index()) = self.entities.len() - 1;
+				*self.sparse.get_unchecked_mut(entity.index()) = Some(new_index_entity);
 			}
 		}
 
@@ -97,24 +99,21 @@ impl ComponentStorage {
 	}
 
 	pub fn remove_and_drop(&mut self, entity: Entity) -> bool {
-		let dense_index = match self.indexes.get_mut(entity.index()) {
-			Some(dense_index) => unsafe {
-				if self.entities.get_unchecked(*dense_index).version() == entity.version() {
-					dense_index
-				} else {
-					return false;
-				}
-			},
+		let index_entity = match self.sparse.remove(entity) {
+			Some(index_entity) => index_entity,
 			None => return false,
 		};
 
-		let dense_index = mem::replace(dense_index, SparseArray::INVALID_INDEX);
+		let dense_index = index_entity.index();
 		self.entities.swap_remove(dense_index);
 		self.info.swap_remove(dense_index);
 
 		if let Some(entity) = self.entities.last() {
+			let new_index = (self.entities.len() - 1) as u32;
+			let new_index_entity = IndexEntity::new(new_index, entity.version());
+
 			unsafe {
-				*self.indexes.get_unchecked_mut(entity.index()) = self.entities.len() - 1;
+				*self.sparse.get_unchecked_mut(entity.index()) = Some(new_index_entity);
 			}
 		}
 
@@ -125,12 +124,18 @@ impl ComponentStorage {
 		true
 	}
 
+	pub fn clear(&mut self) {
+		self.sparse.clear();
+		self.entities.clear();
+		self.data.clear();
+	}
+
 	pub fn swap(&mut self, a: usize, b: usize) {
 		let sparse_a = self.entities[a].index();
 		let sparse_b = self.entities[b].index();
 
 		unsafe {
-			self.indexes.swap_unchecked(sparse_a, sparse_b);
+			self.sparse.swap_unchecked(sparse_a, sparse_b);
 			self.data.swap_unchecked(a, b);
 		}
 
@@ -139,21 +144,21 @@ impl ComponentStorage {
 	}
 
 	pub fn get(&self, entity: Entity) -> *const u8 {
-		match self.dense_index_of(entity) {
-			Some(&index) => unsafe { self.data.get_unchecked(index) },
+		match self.sparse.get_index(entity) {
+			Some(index) => unsafe { self.data.get_unchecked(index as usize) },
 			None => ptr::null(),
 		}
 	}
 
 	pub fn get_mut(&mut self, entity: Entity) -> *mut u8 {
-		match self.dense_index_of(entity) {
-			Some(&index) => unsafe { self.data.get_unchecked_mut(index) },
+		match self.sparse.get_index(entity) {
+			Some(index) => unsafe { self.data.get_unchecked_mut(index as usize) },
 			None => ptr::null_mut(),
 		}
 	}
 
 	pub fn get_with_info(&self, entity: Entity) -> Option<(*const u8, &ComponentInfo)> {
-		let index = *self.dense_index_of(entity)?;
+		let index = self.sparse.get_index(entity)? as usize;
 
 		unsafe {
 			Some((
@@ -164,7 +169,7 @@ impl ComponentStorage {
 	}
 
 	pub fn get_with_info_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ComponentInfo)> {
-		let index = *self.dense_index_of(entity)?;
+		let index = self.sparse.get_index(entity)? as usize;
 
 		unsafe {
 			Some((
@@ -174,14 +179,12 @@ impl ComponentStorage {
 		}
 	}
 
-	pub fn contains(&self, entity: Entity) -> bool {
-		self.dense_index_of(entity).is_some()
+	pub fn get_index(&self, entity: Entity) -> Option<u32> {
+		self.sparse.get_index(entity)
 	}
 
-	pub fn clear(&mut self) {
-		self.indexes.clear();
-		self.entities.clear();
-		self.data.clear();
+	pub fn contains(&self, entity: Entity) -> bool {
+		self.sparse.contains(entity)
 	}
 
 	pub fn len(&self) -> usize {
@@ -190,12 +193,6 @@ impl ComponentStorage {
 
 	pub fn is_empty(&self) -> bool {
 		self.entities.is_empty()
-	}
-
-	pub fn dense_index_of(&self, entity: Entity) -> Option<&usize> {
-		self.indexes
-			.get(entity.index())
-			.filter(|&&i| unsafe { self.entities.get_unchecked(i).version() == entity.version() })
 	}
 }
 
