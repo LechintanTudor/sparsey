@@ -1,10 +1,12 @@
-use crate::components::{Component, ComponentStorage, TypedComponentStorage};
+use crate::components::{Component, ComponentStorage, Ticks, TypedComponentStorage};
 use crate::world::GroupInfo;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 
 pub type ComponentStorageRef<'a, T> = TypedComponentStorage<AtomicRef<'a, ComponentStorage>, T>;
 pub type ComponentStorageRefMut<'a, T> =
 	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
+
+// TODO: Store system ticks in Comp/CompMut
 
 pub struct Comp<'a, T>
 where

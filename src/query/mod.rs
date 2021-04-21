@@ -4,20 +4,20 @@ use self::group_filter::GroupFilter;
 use crate::components::{Component, Entity};
 use crate::world::{Comp, CompMut, GroupInfo};
 
-pub unsafe trait Query
+pub unsafe trait Query<'a>
 where
 	Self: Sized,
 {
-	type Item;
+	type Item: 'a;
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn contains(self, entity: Entity) -> bool;
+	fn contains(&self, entity: Entity) -> bool;
 }
 
-pub unsafe trait SimpleQuery
+pub unsafe trait SimpleQuery<'a>
 where
-	Self: Query,
+	Self: Query<'a>,
 {
 	fn include<F>(self, filter: F) -> Include<Self, F>
 	where
@@ -34,35 +34,33 @@ where
 	}
 }
 
-pub struct Include<Q, F>
-where
-	Q: Query,
-	F: GroupFilter,
-{
+pub struct Include<Q, F> {
 	query: Q,
 	filter: F,
 }
 
-impl<Q, F> Include<Q, F>
-where
-	Q: Query,
-	F: GroupFilter,
-{
-	fn new(query: Q, filter: F) -> Self {
+impl<Q, F> Include<Q, F> {
+	fn new<'a>(query: Q, filter: F) -> Self
+	where
+		Q: Query<'a>,
+		F: GroupFilter,
+	{
 		Self { query, filter }
 	}
 
-	pub fn exclude<E>(self, filter: E) -> Exclude<Self, E>
+	pub fn exclude<'a, E>(self, filter: E) -> Exclude<Self, E>
 	where
+		Q: Query<'a>,
+		F: GroupFilter,
 		E: GroupFilter,
 	{
 		Exclude::new(self, filter)
 	}
 }
 
-unsafe impl<Q, F> Query for Include<Q, F>
+unsafe impl<'a, Q, F> Query<'a> for Include<Q, F>
 where
-	Q: Query,
+	Q: Query<'a>,
 	F: GroupFilter,
 {
 	type Item = Q::Item;
@@ -75,7 +73,7 @@ where
 		}
 	}
 
-	fn contains(self, entity: Entity) -> bool {
+	fn contains(&self, entity: Entity) -> bool {
 		if self.filter.includes_all(entity) {
 			self.query.contains(entity)
 		} else {
@@ -84,28 +82,24 @@ where
 	}
 }
 
-pub struct Exclude<Q, F>
-where
-	Q: Query,
-	F: GroupFilter,
-{
+pub struct Exclude<Q, F> {
 	query: Q,
 	filter: F,
 }
 
-impl<Q, F> Exclude<Q, F>
-where
-	Q: Query,
-	F: GroupFilter,
-{
-	fn new(query: Q, filter: F) -> Self {
+impl<Q, F> Exclude<Q, F> {
+	fn new<'a>(query: Q, filter: F) -> Self
+	where
+		Q: Query<'a>,
+		F: GroupFilter,
+	{
 		Self { query, filter }
 	}
 }
 
-unsafe impl<Q, F> Query for Exclude<Q, F>
+unsafe impl<'a, Q, F> Query<'a> for Exclude<Q, F>
 where
-	Q: Query,
+	Q: Query<'a>,
 	F: GroupFilter,
 {
 	type Item = Q::Item;
@@ -118,7 +112,7 @@ where
 		}
 	}
 
-	fn contains(self, entity: Entity) -> bool {
+	fn contains(&self, entity: Entity) -> bool {
 		if self.filter.excludes_all(entity) {
 			self.query.contains(entity)
 		} else {
@@ -127,17 +121,17 @@ where
 	}
 }
 
-pub unsafe trait QueryComponent {
-	type Item;
+pub unsafe trait QueryComponent<'a> {
+	type Item: 'a;
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn contains(self, entity: Entity) -> bool;
+	fn contains(&self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> Option<&GroupInfo>;
 }
 
-unsafe impl<'a, T> QueryComponent for &'a Comp<'a, T>
+unsafe impl<'a, T> QueryComponent<'a> for &'a Comp<'a, T>
 where
 	T: Component,
 {
@@ -147,7 +141,7 @@ where
 		self.storage.get(entity)
 	}
 
-	fn contains(self, entity: Entity) -> bool {
+	fn contains(&self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -156,7 +150,7 @@ where
 	}
 }
 
-unsafe impl<'a, 'b: 'a, T> QueryComponent for &'a CompMut<'b, T>
+unsafe impl<'a, T> QueryComponent<'a> for &'a CompMut<'a, T>
 where
 	T: Component,
 {
@@ -166,7 +160,7 @@ where
 		self.storage.get(entity)
 	}
 
-	fn contains(self, entity: Entity) -> bool {
+	fn contains(&self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -177,9 +171,9 @@ where
 
 macro_rules! impl_query {
 	($(($comp:ident, $idx:tt)),*) => {
-		unsafe impl<$($comp),*> Query for ($($comp,)*)
+		unsafe impl<'a, $($comp),*> Query<'a> for ($($comp,)*)
 		where
-			$($comp: QueryComponent,)*
+			$($comp: QueryComponent<'a>,)*
 		{
 			type Item = ($($comp::Item,)*);
 
@@ -191,14 +185,14 @@ macro_rules! impl_query {
 			}
 
 			#[allow(unused_variables)]
-			fn contains(self, entity: Entity) -> bool {
+			fn contains(&self, entity: Entity) -> bool {
 				true $(&& self.$idx.contains(entity))*
 			}
 		}
 
-		unsafe impl<$($comp),*> SimpleQuery for ($($comp,)*)
+		unsafe impl<'a, $($comp),*> SimpleQuery<'a> for ($($comp,)*)
 		where
-			$($comp: QueryComponent,)*
+			$($comp: QueryComponent<'a>,)*
 		{}
 	};
 }

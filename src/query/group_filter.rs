@@ -9,20 +9,6 @@ pub unsafe trait GroupFilter {
 	fn excludes_all(&self, entity: Entity) -> bool;
 }
 
-unsafe impl GroupFilter for () {
-	fn group_mask(&self) -> GroupMask {
-		GroupMask::default()
-	}
-
-	fn includes_all(&self, _: Entity) -> bool {
-		true
-	}
-
-	fn excludes_all(&self, _: Entity) -> bool {
-		true
-	}
-}
-
 unsafe impl<'a, T> GroupFilter for &'a Comp<'a, T>
 where
 	T: Component,
@@ -106,21 +92,23 @@ where
 }
 
 macro_rules! impl_filter {
-	($(($comp:ident, $idx:tt)),+) => {
-		unsafe impl<$($comp),+> GroupFilter for ($($comp,)+)
+	($(($comp:ident, $idx:tt)),*) => {
+		unsafe impl<$($comp),*> GroupFilter for ($($comp,)*)
 		where
-			$($comp: GroupFilterComponent,)+
+			$($comp: GroupFilterComponent,)*
 		{
 			fn group_mask(&self) -> GroupMask {
-				$(self.$idx.mask())|+
+				GroupMask::empty() $(| self.$idx.mask())*
 			}
 
+			#[allow(unused_variables)]
 			fn includes_all(&self, entity: Entity) -> bool {
-				$(self.$idx.includes(entity))&&+
+				true $(&& self.$idx.includes(entity))*
 			}
 
+			#[allow(unused_variables)]
 			fn excludes_all(&self, entity: Entity) -> bool {
-				$(self.$idx.excludes(entity))&&+
+				true $(&& self.$idx.excludes(entity))*
 			}
 		}
 	};
@@ -130,6 +118,7 @@ macro_rules! impl_filter {
 mod impls {
 	use super::*;
 
+	impl_filter!();
 	impl_filter!((A, 0));
 	impl_filter!((A, 0), (B, 1));
 	impl_filter!((A, 0), (B, 1), (C, 2));

@@ -4,11 +4,15 @@ use std::ops::{BitOr, BitOrAssign, Deref};
 pub struct GroupMask(u32);
 
 impl GroupMask {
-	pub fn include_group(arity: usize) -> Self {
+	pub const fn empty() -> Self {
+		Self(0)
+	}
+
+	pub const fn include_group(arity: usize) -> Self {
 		Self((1 << arity) - 1)
 	}
 
-	pub fn exclude_group(arity: usize, prev_arity: usize) -> Self {
+	pub const fn exclude_group(arity: usize, prev_arity: usize) -> Self {
 		if prev_arity != 0 {
 			let exclude_count = arity - prev_arity;
 			let exclude_mask = ((1 << exclude_count) - 1) << (16 + prev_arity);
@@ -20,15 +24,15 @@ impl GroupMask {
 		}
 	}
 
-	pub fn include_index(index: usize) -> Self {
+	pub const fn include_index(index: usize) -> Self {
 		Self(1 << (index % 16))
 	}
 
-	pub fn exclude_index(index: usize) -> Self {
+	pub const fn exclude_index(index: usize) -> Self {
 		Self(1 << (index % 16 + 16))
 	}
 
-	pub fn to_exclude(self) -> GroupMask {
+	pub const fn to_exclude(self) -> GroupMask {
 		GroupMask(self.0 << 16)
 	}
 }

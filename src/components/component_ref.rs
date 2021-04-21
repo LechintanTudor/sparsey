@@ -1,4 +1,4 @@
-use crate::components::{Component, ComponentInfo};
+use crate::components::{Component, ComponentInfo, Ticks};
 use std::ops::{Deref, DerefMut};
 
 pub struct ComponentRefMut<'a, T>
@@ -7,14 +7,14 @@ where
 {
 	data: &'a mut T,
 	info: &'a mut ComponentInfo,
-	tick: u32,
+	tick: Ticks,
 }
 
 impl<'a, T> ComponentRefMut<'a, T>
 where
 	T: Component,
 {
-	pub fn new(data: &'a mut T, info: &'a mut ComponentInfo, tick: u32) -> Self {
+	pub fn new(data: &'a mut T, info: &'a mut ComponentInfo, tick: Ticks) -> Self {
 		Self { data, info, tick }
 	}
 }

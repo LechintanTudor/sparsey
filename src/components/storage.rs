@@ -1,12 +1,12 @@
-use crate::components::{BlobVec, ComponentInfo, Entity, IndexEntity, SparseArray};
+use crate::components::{BlobVec, ComponentInfo, Entity, IndexEntity, SparseArray, Ticks};
 use std::alloc::Layout;
 use std::{ptr, u32};
 
 pub struct ComponentStorage {
 	sparse: SparseArray,
 	entities: Vec<Entity>,
-	data: BlobVec,
 	info: Vec<ComponentInfo>,
+	data: BlobVec,
 }
 
 impl ComponentStorage {
@@ -21,8 +21,8 @@ impl ComponentStorage {
 		Self {
 			sparse: SparseArray::default(),
 			entities: Vec::new(),
-			data: BlobVec::new(item_layout, drop_item),
 			info: Vec::new(),
+			data: BlobVec::new(item_layout, drop_item),
 		}
 	}
 
@@ -30,7 +30,7 @@ impl ComponentStorage {
 		&mut self,
 		entity: Entity,
 		value: *const u8,
-		tick: u32,
+		tick: Ticks,
 	) -> *mut u8 {
 		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
@@ -54,7 +54,7 @@ impl ComponentStorage {
 		}
 	}
 
-	pub unsafe fn insert_and_drop_prev(&mut self, entity: Entity, value: *const u8, tick: u32) {
+	pub unsafe fn insert_and_drop_prev(&mut self, entity: Entity, value: *const u8, tick: Ticks) {
 		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
 		match index_entity {
@@ -194,6 +194,24 @@ impl ComponentStorage {
 	pub fn is_empty(&self) -> bool {
 		self.entities.is_empty()
 	}
+
+	pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentInfo], *const u8) {
+		(
+			&self.sparse,
+			self.entities.as_slice(),
+			self.info.as_slice(),
+			self.data.as_ptr(),
+		)
+	}
+
+	pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [ComponentInfo], *mut u8) {
+		(
+			&self.sparse,
+			self.entities.as_slice(),
+			self.info.as_mut_slice(),
+			self.data.as_ptr(),
+		)
+	}
 }
 
 #[cfg(test)]
@@ -208,7 +226,7 @@ mod tests {
 		storage: &mut ComponentStorage,
 		entity: Entity,
 		value: i32,
-		tick: u32,
+		tick: Ticks,
 	) -> Option<i32> {
 		unsafe {
 			let prev = storage.insert_and_forget_prev(entity, &value as *const _ as *const _, tick);

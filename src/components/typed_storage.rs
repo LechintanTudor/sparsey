@@ -1,7 +1,7 @@
-use crate::components::{ComponentInfo, ComponentStorage, Entity};
+use crate::components::{ComponentInfo, ComponentStorage, Entity, SparseArray};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
-use std::{mem, ptr};
+use std::{mem, ptr, slice};
 
 pub struct TypedComponentStorage<S, T>
 where
@@ -56,6 +56,12 @@ where
 		self.storage
 			.get_with_info(entity)
 			.map(|(value, info)| unsafe { (&*value.cast::<T>(), info) })
+	}
+
+	pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentInfo], &[T]) {
+		let (sparse, entities, info, data) = self.storage.split();
+		let data = unsafe { slice::from_raw_parts(data as *const T, entities.len()) };
+		(sparse, entities, info, data)
 	}
 }
 
@@ -113,5 +119,11 @@ where
 		self.storage
 			.get_with_info_mut(entity)
 			.map(|(value, info)| unsafe { (&mut *value.cast::<T>(), info) })
+	}
+
+	pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [ComponentInfo], &mut [T]) {
+		let (sparse, entities, info, data) = self.storage.split_mut();
+		let data = unsafe { slice::from_raw_parts_mut(data as *mut T, entities.len()) };
+		(sparse, entities, info, data)
 	}
 }
