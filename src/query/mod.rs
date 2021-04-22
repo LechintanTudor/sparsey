@@ -1,7 +1,9 @@
 mod group_filter;
+mod info_filter;
+mod iter;
 
-use self::group_filter::GroupFilter;
-use crate::components::{Component, Entity};
+use crate::components::{Component, ComponentInfo, Entity, SparseArray};
+use crate::query::group_filter::GroupFilter;
 use crate::world::{Comp, CompMut, GroupInfo};
 
 pub unsafe trait Query<'a>
@@ -121,21 +123,37 @@ where
 	}
 }
 
-pub unsafe trait QueryComponent<'a> {
+pub type SplitQueryElement<'a, S, T> =
+	(S, &'a SparseArray, &'a [Entity], *mut ComponentInfo, *mut T);
+
+pub unsafe trait QueryElement<'a> {
 	type Item: 'a;
+	type Component: Component;
+	type IterState: 'a;
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
 	fn contains(&self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> Option<&GroupInfo>;
+
+	fn split(self) -> SplitQueryElement<'a, Self::IterState, Self::Component>;
+
+	unsafe fn get_from_split(
+		state: Self::IterState,
+		info: *mut ComponentInfo,
+		data: *mut Self::Component,
+		index: usize,
+	) -> Option<Self::Item>;
 }
 
-unsafe impl<'a, T> QueryComponent<'a> for &'a Comp<'a, T>
+unsafe impl<'a, T> QueryElement<'a> for &'a Comp<'a, T>
 where
 	T: Component,
 {
 	type Item = &'a T;
+	type Component = T;
+	type IterState = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
@@ -148,13 +166,29 @@ where
 	fn group_info(&self) -> Option<&GroupInfo> {
 		self.group_info.as_ref()
 	}
+
+	fn split(self) -> SplitQueryElement<'a, Self::IterState, Self::Component> {
+		let (sparse, entities, info, data) = self.storage.split();
+		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
+	}
+
+	unsafe fn get_from_split(
+		_state: Self::IterState,
+		_info: *mut ComponentInfo,
+		data: *mut Self::Component,
+		index: usize,
+	) -> Option<Self::Item> {
+		Some(&*data.add(index))
+	}
 }
 
-unsafe impl<'a, T> QueryComponent<'a> for &'a CompMut<'a, T>
+unsafe impl<'a, T> QueryElement<'a> for &'a CompMut<'a, T>
 where
 	T: Component,
 {
 	type Item = &'a T;
+	type Component = T;
+	type IterState = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
@@ -166,16 +200,30 @@ where
 
 	fn group_info(&self) -> Option<&GroupInfo> {
 		self.group_info.as_ref()
+	}
+
+	fn split(self) -> SplitQueryElement<'a, Self::IterState, Self::Component> {
+		let (sparse, entities, info, data) = self.storage.split();
+		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
+	}
+
+	unsafe fn get_from_split(
+		_state: Self::IterState,
+		_info: *mut ComponentInfo,
+		data: *mut Self::Component,
+		index: usize,
+	) -> Option<Self::Item> {
+		Some(&*data.add(index))
 	}
 }
 
 macro_rules! impl_query {
-	($(($comp:ident, $idx:tt)),*) => {
-		unsafe impl<'a, $($comp),*> Query<'a> for ($($comp,)*)
+	($(($elem:ident, $idx:tt)),*) => {
+		unsafe impl<'a, $($elem),*> Query<'a> for ($($elem,)*)
 		where
-			$($comp: QueryComponent<'a>,)*
+			$($elem: QueryElement<'a>,)*
 		{
-			type Item = ($($comp::Item,)*);
+			type Item = ($($elem::Item,)*);
 
 			#[allow(unused_variables)]
 			fn get(self, entity: Entity) -> Option<Self::Item> {
@@ -190,9 +238,9 @@ macro_rules! impl_query {
 			}
 		}
 
-		unsafe impl<'a, $($comp),*> SimpleQuery<'a> for ($($comp,)*)
+		unsafe impl<'a, $($elem),*> SimpleQuery<'a> for ($($elem,)*)
 		where
-			$($comp: QueryComponent<'a>,)*
+			$($elem: QueryElement<'a>,)*
 		{}
 	};
 }
