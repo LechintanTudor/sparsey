@@ -2,7 +2,7 @@ mod group_filter;
 mod info_filter;
 mod iter;
 
-use crate::components::{Component, ComponentInfo, Entity, SparseArray};
+use crate::components::{Component, ComponentInfo, Entity, SparseArray, Ticks};
 use crate::query::group_filter::GroupFilter;
 use crate::world::{Comp, CompMut, GroupInfo};
 
@@ -14,7 +14,7 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn contains(&self, entity: Entity) -> bool;
+	fn contains(self, entity: Entity) -> bool;
 }
 
 pub unsafe trait SimpleQuery<'a>
@@ -75,7 +75,7 @@ where
 		}
 	}
 
-	fn contains(&self, entity: Entity) -> bool {
+	fn contains(self, entity: Entity) -> bool {
 		if self.filter.includes_all(entity) {
 			self.query.contains(entity)
 		} else {
@@ -114,7 +114,7 @@ where
 		}
 	}
 
-	fn contains(&self, entity: Entity) -> bool {
+	fn contains(self, entity: Entity) -> bool {
 		if self.filter.excludes_all(entity) {
 			self.query.contains(entity)
 		} else {
@@ -126,21 +126,29 @@ where
 pub type SplitQueryElement<'a, S, T> =
 	(S, &'a SparseArray, &'a [Entity], *mut ComponentInfo, *mut T);
 
-pub unsafe trait QueryElement<'a> {
+pub unsafe trait QueryElement<'a>
+where
+	Self: Sized,
+{
 	type Item: 'a;
 	type Component: Component;
-	type IterState: 'a;
+	type SplitState: 'a;
 
-	fn get(self, entity: Entity) -> Option<Self::Item>;
+	fn get(self, entity: Entity) -> Option<Self::Item> {
+		let (state, sparse, _, info, data) = self.split();
+		let index = sparse.get_index(entity)? as usize;
 
-	fn contains(&self, entity: Entity) -> bool;
+		unsafe { Self::get_from_split(state, info, data, index) }
+	}
+
+	fn contains(self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> Option<&GroupInfo>;
 
-	fn split(self) -> SplitQueryElement<'a, Self::IterState, Self::Component>;
+	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component>;
 
 	unsafe fn get_from_split(
-		state: Self::IterState,
+		state: Self::SplitState,
 		info: *mut ComponentInfo,
 		data: *mut Self::Component,
 		index: usize,
@@ -153,13 +161,13 @@ where
 {
 	type Item = &'a T;
 	type Component = T;
-	type IterState = ();
+	type SplitState = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
 	}
 
-	fn contains(&self, entity: Entity) -> bool {
+	fn contains(self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -167,13 +175,13 @@ where
 		self.group_info.as_ref()
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::IterState, Self::Component> {
+	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
 		let (sparse, entities, info, data) = self.storage.split();
 		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
 	}
 
 	unsafe fn get_from_split(
-		_state: Self::IterState,
+		_state: Self::SplitState,
 		_info: *mut ComponentInfo,
 		data: *mut Self::Component,
 		index: usize,
@@ -188,13 +196,13 @@ where
 {
 	type Item = &'a T;
 	type Component = T;
-	type IterState = ();
+	type SplitState = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
 	}
 
-	fn contains(&self, entity: Entity) -> bool {
+	fn contains(self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -202,18 +210,53 @@ where
 		self.group_info.as_ref()
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::IterState, Self::Component> {
+	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
 		let (sparse, entities, info, data) = self.storage.split();
 		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
 	}
 
 	unsafe fn get_from_split(
-		_state: Self::IterState,
+		_state: Self::SplitState,
 		_info: *mut ComponentInfo,
 		data: *mut Self::Component,
 		index: usize,
 	) -> Option<Self::Item> {
 		Some(&*data.add(index))
+	}
+}
+
+pub unsafe trait UnfilteredQueryElement<'a>
+where
+	Self: QueryElement<'a, SplitState = ()>,
+{
+	fn world_tick(&self) -> Ticks;
+
+	fn last_system_tick(&self) -> Ticks;
+}
+
+unsafe impl<'a, T> UnfilteredQueryElement<'a> for &'a Comp<'a, T>
+where
+	T: Component,
+{
+	fn world_tick(&self) -> Ticks {
+		todo!()
+	}
+
+	fn last_system_tick(&self) -> Ticks {
+		todo!()
+	}
+}
+
+unsafe impl<'a, T> UnfilteredQueryElement<'a> for &'a CompMut<'a, T>
+where
+	T: Component,
+{
+	fn world_tick(&self) -> Ticks {
+		todo!()
+	}
+
+	fn last_system_tick(&self) -> Ticks {
+		todo!()
 	}
 }
 
@@ -233,7 +276,7 @@ macro_rules! impl_query {
 			}
 
 			#[allow(unused_variables)]
-			fn contains(&self, entity: Entity) -> bool {
+			fn contains(self, entity: Entity) -> bool {
 				true $(&& self.$idx.contains(entity))*
 			}
 		}
