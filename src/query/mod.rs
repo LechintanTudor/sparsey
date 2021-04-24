@@ -173,7 +173,7 @@ where
 	}
 
 	fn group_info(&self) -> Option<&GroupInfo> {
-		self.group_info.as_ref()
+		Comp::group_info(self)
 	}
 
 	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
@@ -208,7 +208,7 @@ where
 	}
 
 	fn group_info(&self) -> Option<&GroupInfo> {
-		self.group_info.as_ref()
+		CompMut::group_info(self)
 	}
 
 	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
@@ -240,11 +240,11 @@ where
 	T: Component,
 {
 	fn world_tick(&self) -> Ticks {
-		todo!()
+		Comp::world_tick(self)
 	}
 
 	fn last_system_tick(&self) -> Ticks {
-		todo!()
+		Comp::last_system_tick(self)
 	}
 }
 
@@ -253,11 +253,11 @@ where
 	T: Component,
 {
 	fn world_tick(&self) -> Ticks {
-		todo!()
+		CompMut::world_tick(self)
 	}
 
 	fn last_system_tick(&self) -> Ticks {
-		todo!()
+		CompMut::last_system_tick(self)
 	}
 }
 

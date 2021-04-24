@@ -1,3 +1,4 @@
+use crate::components::Ticks;
 use crate::dispatcher::{
 	CommandBuffers, Environment, LocalFn, LocalSystem, LocallyRunnable, RunError, RunResult,
 	System, SystemAccess, SystemError,
@@ -57,6 +58,7 @@ impl DispatcherBuilder {
 		Dispatcher {
 			command_buffers,
 			steps,
+			last_system_tick: 0,
 		}
 	}
 }
@@ -65,6 +67,7 @@ impl DispatcherBuilder {
 pub struct Dispatcher {
 	steps: Vec<Step>,
 	command_buffers: CommandBuffers,
+	last_system_tick: Ticks,
 }
 
 impl Dispatcher {
@@ -116,6 +119,7 @@ impl Dispatcher {
 
 	/// Run all systems on the current thread.
 	pub fn run_seq(&mut self, world: &mut World, resources: &mut Resources) -> RunResult {
+		let world_tick = world.tick();
 		let mut errors = Vec::<SystemError>::new();
 
 		for step in self.steps.iter_mut() {
@@ -126,6 +130,7 @@ impl Dispatcher {
 						world,
 						resources,
 						&self.command_buffers,
+						self.last_system_tick,
 						&mut errors,
 					);
 				},
@@ -135,6 +140,7 @@ impl Dispatcher {
 						world,
 						resources,
 						&self.command_buffers,
+						self.last_system_tick,
 						&mut errors,
 					);
 				},
@@ -151,6 +157,8 @@ impl Dispatcher {
 			}
 		}
 
+		self.last_system_tick = world_tick;
+
 		if errors.len() != 0 {
 			Err(RunError::from(errors))
 		} else {
@@ -166,6 +174,7 @@ impl Dispatcher {
 		resources: &mut Resources,
 		thread_pool: &ThreadPool,
 	) -> RunResult {
+		let world_tick = world.tick();
 		let mut errors = Vec::<SystemError>::new();
 
 		for step in self.steps.iter_mut() {
@@ -178,6 +187,7 @@ impl Dispatcher {
 								world,
 								resources,
 								&self.command_buffers,
+								self.last_system_tick,
 								thread_pool,
 								&mut errors,
 							);
@@ -189,6 +199,7 @@ impl Dispatcher {
 								world,
 								resources,
 								&self.command_buffers,
+								self.last_system_tick,
 								&mut errors,
 							);
 						}
@@ -200,6 +211,7 @@ impl Dispatcher {
 						world,
 						resources,
 						&self.command_buffers,
+						self.last_system_tick,
 						&mut errors,
 					);
 				},
@@ -213,6 +225,8 @@ impl Dispatcher {
 				}
 			}
 		}
+
+		self.last_system_tick = world_tick;
 
 		if errors.len() != 0 {
 			Err(RunError::from(errors))
@@ -342,6 +356,7 @@ unsafe fn run_systems_seq<S>(
 	world: &World,
 	resources: &Resources,
 	command_buffers: &CommandBuffers,
+	last_system_tick: Ticks,
 	errors: &mut Vec<SystemError>,
 ) where
 	S: LocallyRunnable,
@@ -349,8 +364,13 @@ unsafe fn run_systems_seq<S>(
 	let resources = resources.internal();
 
 	let new_errors = systems.iter_mut().flat_map(|sys| {
-		sys.run(Environment::new(world, resources, command_buffers))
-			.err()
+		sys.run(Environment::new(
+			world,
+			resources,
+			command_buffers,
+			last_system_tick,
+		))
+		.err()
 	});
 
 	errors.extend(new_errors);
@@ -362,6 +382,7 @@ unsafe fn run_systems_par(
 	world: &World,
 	resources: &Resources,
 	command_buffers: &CommandBuffers,
+	last_system_tick: Ticks,
 	thread_pool: &ThreadPool,
 	errors: &mut Vec<SystemError>,
 ) {
@@ -371,8 +392,13 @@ unsafe fn run_systems_par(
 		let new_errors = systems
 			.par_iter_mut()
 			.flat_map_iter(|sys| {
-				sys.run(Environment::new(world, resources, command_buffers))
-					.err()
+				sys.run(Environment::new(
+					world,
+					resources,
+					command_buffers,
+					last_system_tick,
+				))
+				.err()
 			})
 			.collect::<Vec<_>>();
 

@@ -1,4 +1,4 @@
-use crate::components::{Component, ComponentStorage, Entity};
+use crate::components::{Component, ComponentStorage, Entity, Ticks};
 use crate::world::{ComponentSet, ComponentStorages, EntityStorage, Layout};
 use std::any::TypeId;
 use std::collections::HashSet;
@@ -10,7 +10,7 @@ use std::fmt;
 pub struct World {
 	entities: EntityStorage,
 	components: ComponentStorages,
-	tick: u32,
+	tick: Ticks,
 	group_indexes: HashSet<usize>,
 }
 
@@ -184,6 +184,14 @@ impl World {
 
 	pub(crate) fn maintain(&mut self) {
 		self.entities.maintain();
+	}
+
+	pub fn advance_ticks(&mut self) {
+		self.tick += 1;
+	}
+
+	pub(crate) fn tick(&self) -> Ticks {
+		self.tick
 	}
 
 	fn update_group_indexes(&mut self, type_ids: &[TypeId]) {

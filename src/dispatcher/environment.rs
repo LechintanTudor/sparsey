@@ -1,4 +1,4 @@
-use crate::components::Component;
+use crate::components::{Component, Ticks};
 use crate::dispatcher::{CommandBuffers, Commands, Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource, UnsafeResources};
 use crate::utils::{panic_missing_comp, panic_missing_res};
@@ -41,6 +41,7 @@ pub struct Environment<'a> {
 	world: &'a World,
 	resources: &'a UnsafeResources,
 	command_buffers: &'a CommandBuffers,
+	last_system_tick: Ticks,
 }
 
 impl<'a> Environment<'a> {
@@ -48,11 +49,13 @@ impl<'a> Environment<'a> {
 		world: &'a World,
 		resources: &'a UnsafeResources,
 		command_buffers: &'a CommandBuffers,
+		last_system_tick: Ticks,
 	) -> Self {
 		Self {
 			world,
 			resources,
 			command_buffers,
+			last_system_tick,
 		}
 	}
 }
@@ -109,7 +112,12 @@ where
 			.borrow_with_info(&TypeId::of::<T>())
 			.unwrap_or_else(|| panic_missing_comp::<T>());
 
-		Comp::<T>::new(storage, info)
+		Comp::<T>::new(
+			storage,
+			info,
+			environment.world.tick(),
+			environment.last_system_tick,
+		)
 	}
 }
 
@@ -133,7 +141,12 @@ where
 			.borrow_with_info_mut(&TypeId::of::<T>())
 			.unwrap_or_else(|| panic_missing_comp::<T>());
 
-		CompMut::<T>::new(storage, info)
+		CompMut::<T>::new(
+			storage,
+			info,
+			environment.world.tick(),
+			environment.last_system_tick,
+		)
 	}
 }
 
