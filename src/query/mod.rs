@@ -3,8 +3,9 @@ mod info_filter;
 mod iter;
 
 use crate::components::{Component, ComponentInfo, Entity, SparseArray, Ticks};
+use crate::dispatcher::{Comp, CompMut};
 use crate::query::group_filter::GroupFilter;
-use crate::world::{Comp, CompMut, GroupInfo};
+use crate::world::GroupInfo;
 
 pub unsafe trait Query<'a>
 where

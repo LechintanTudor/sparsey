@@ -1,5 +1,5 @@
 use crate::components::{Component, ComponentStorage, Entity};
-use crate::world::{Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage, Layout};
+use crate::world::{ComponentSet, ComponentStorages, EntityStorage, Layout};
 use std::any::TypeId;
 use std::collections::HashSet;
 use std::error::Error;
@@ -32,8 +32,8 @@ impl World {
 		self.components.register::<T>()
 	}
 
-	pub unsafe fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
-		self.components.register_storage(type_id, storage);
+	pub unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
+		self.components.register_storage(component, storage);
 	}
 
 	/// Create an `Entity` with the given components and return it.
@@ -169,20 +169,6 @@ impl World {
 		self.entities.contains(entity)
 	}
 
-	pub fn borrow_comp<T>(&self) -> Option<Comp<T>>
-	where
-		T: Component,
-	{
-		self.components.borrow_comp::<T>()
-	}
-
-	pub fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
-	where
-		T: Component,
-	{
-		self.components.borrow_comp_mut::<T>()
-	}
-
 	pub fn clear(&mut self) {
 		self.entities.clear();
 		self.components.clear();
@@ -190,6 +176,10 @@ impl World {
 
 	pub(crate) fn entity_storage(&self) -> &EntityStorage {
 		&self.entities
+	}
+
+	pub(crate) fn component_storages(&self) -> &ComponentStorages {
+		&self.components
 	}
 
 	pub(crate) fn maintain(&mut self) {

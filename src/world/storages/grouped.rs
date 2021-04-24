@@ -161,13 +161,47 @@ impl GroupedComponentStorages {
 		self.info.get(type_id).map(|info| info.group_set_index)
 	}
 
-	pub fn get_group_info(&self, type_id: &TypeId) -> Option<GroupInfo> {
-		self.info.get(type_id).map(|info| unsafe {
-			let groups = &self.group_sets.get_unchecked(info.group_set_index).groups;
-			let group_index = info.group_index;
-			let sparse_set_index = info.storage_index;
+	pub fn borrow_with_info(
+		&self,
+		component: &TypeId,
+	) -> Option<(AtomicRef<ComponentStorage>, GroupInfo)> {
+		self.info.get(component).map(|info| unsafe {
+			let storage = self
+				.group_sets
+				.get_unchecked(info.group_set_index)
+				.storages
+				.get_unchecked(info.storage_index)
+				.borrow();
 
-			GroupInfo::new(groups, group_index, sparse_set_index)
+			let info = GroupInfo::new(
+				&self.group_sets.get_unchecked(info.group_set_index).groups,
+				info.group_index,
+				info.storage_index,
+			);
+
+			(storage, info)
+		})
+	}
+
+	pub fn borrow_with_info_mut(
+		&self,
+		component: &TypeId,
+	) -> Option<(AtomicRefMut<ComponentStorage>, GroupInfo)> {
+		self.info.get(component).map(|info| unsafe {
+			let storage = self
+				.group_sets
+				.get_unchecked(info.group_set_index)
+				.storages
+				.get_unchecked(info.storage_index)
+				.borrow_mut();
+
+			let info = GroupInfo::new(
+				&self.group_sets.get_unchecked(info.group_set_index).groups,
+				info.group_index,
+				info.storage_index,
+			);
+
+			(storage, info)
 		})
 	}
 

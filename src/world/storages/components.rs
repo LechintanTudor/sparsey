@@ -1,8 +1,6 @@
 use crate::components::{Component, ComponentStorage, Entity};
-use crate::world::{
-	Comp, CompMut, ComponentStorageRef, ComponentStorageRefMut, GroupedComponentStorages, Layout,
-	UngroupedComponentStorages,
-};
+use crate::world::{GroupInfo, GroupedComponentStorages, Layout, UngroupedComponentStorages};
+use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
 
@@ -28,9 +26,9 @@ impl ComponentStorages {
 		}
 	}
 
-	pub(crate) unsafe fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
-		if !self.grouped.contains(&type_id) {
-			self.ungrouped.register_storage(type_id, storage);
+	pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
+		if !self.grouped.contains(&component) {
+			self.ungrouped.register_storage(component, storage);
 		}
 	}
 
@@ -49,56 +47,43 @@ impl ComponentStorages {
 		}
 	}
 
-	pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
-	where
-		T: Component,
-	{
-		match self.grouped.borrow(&TypeId::of::<T>()) {
-			Some(storage) => unsafe {
-				Some(Comp::new(
-					ComponentStorageRef::new(storage),
-					self.grouped.get_group_info(&TypeId::of::<T>()),
-				))
-			},
-			None => match self.ungrouped.borrow(&TypeId::of::<T>()) {
-				Some(storage) => unsafe {
-					Some(Comp::new(ComponentStorageRef::new(storage), None))
-				},
-				None => None,
-			},
+	pub fn borrow(&self, component: &TypeId) -> Option<AtomicRef<ComponentStorage>> {
+		match self.grouped.borrow(component) {
+			storage @ Some(_) => storage,
+			None => self.ungrouped.borrow(component),
 		}
 	}
 
-	pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
-	where
-		T: Component,
-	{
-		match self.grouped.borrow_mut(&TypeId::of::<T>()) {
-			Some(storage) => unsafe {
-				Some(CompMut::new(
-					ComponentStorageRefMut::new(storage),
-					self.grouped.get_group_info(&TypeId::of::<T>()),
-				))
-			},
-			None => match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {
-				Some(storage) => unsafe {
-					Some(CompMut::new(ComponentStorageRefMut::new(storage), None))
-				},
-				None => None,
-			},
+	pub fn borrow_mut(&self, component: &TypeId) -> Option<AtomicRefMut<ComponentStorage>> {
+		match self.grouped.borrow_mut(component) {
+			storage @ Some(_) => storage,
+			None => self.ungrouped.borrow_mut(component),
 		}
 	}
 
-	pub(crate) fn borrow_storage_mut<T>(&self) -> Option<ComponentStorageRefMut<T>>
-	where
-		T: Component,
-	{
-		match self.grouped.borrow_mut(&TypeId::of::<T>()) {
-			Some(storage) => unsafe { Some(ComponentStorageRefMut::new(storage)) },
-			None => match self.ungrouped.borrow_mut(&TypeId::of::<T>()) {
-				Some(storage) => unsafe { Some(ComponentStorageRefMut::new(storage)) },
-				None => None,
-			},
+	pub(crate) fn borrow_with_info(
+		&self,
+		component: &TypeId,
+	) -> Option<(AtomicRef<ComponentStorage>, Option<GroupInfo>)> {
+		match self.grouped.borrow_with_info(component) {
+			Some((storage, info)) => Some((storage, Some(info))),
+			None => self
+				.ungrouped
+				.borrow(component)
+				.map(|storage| (storage, None)),
+		}
+	}
+
+	pub(crate) fn borrow_with_info_mut(
+		&self,
+		component: &TypeId,
+	) -> Option<(AtomicRefMut<ComponentStorage>, Option<GroupInfo>)> {
+		match self.grouped.borrow_with_info_mut(component) {
+			Some((storage, info)) => Some((storage, Some(info))),
+			None => self
+				.ungrouped
+				.borrow_mut(component)
+				.map(|storage| (storage, None)),
 		}
 	}
 

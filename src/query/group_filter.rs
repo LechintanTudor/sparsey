@@ -1,5 +1,6 @@
 use crate::components::{Component, Entity};
-use crate::world::{Comp, CompMut, GroupMask};
+use crate::dispatcher::{Comp, CompMut};
+use crate::world::GroupMask;
 
 pub unsafe trait GroupFilter {
 	fn group_mask(&self) -> GroupMask;

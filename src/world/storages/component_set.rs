@@ -1,10 +1,14 @@
 pub use self::impls::*;
 
-use crate::components::{Component, Entity};
+use crate::components::{Component, ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::panic_missing_comp;
-use crate::world::{ComponentStorageRefMut, ComponentStorages};
+use crate::world::ComponentStorages;
+use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::marker::PhantomData;
+
+pub type ComponentStorageRefMut<'a, T> =
+	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
 
 /// Trait implemented for component sets which can be
 /// added, appended or removed to/from the `World`.
@@ -123,20 +127,22 @@ macro_rules! impl_component_set {
             #[allow(unused_variables)]
             unsafe fn borrow(components: &'a ComponentStorages) -> Self::StorageSet {
                 (
-                    $(borrow_sparse_set::<$comp>(components),)*
+                    $(borrow_storage::<$comp>(components),)*
                 )
             }
         }
     };
 }
 
-fn borrow_sparse_set<T>(components: &ComponentStorages) -> ComponentStorageRefMut<T>
+fn borrow_storage<T>(components: &ComponentStorages) -> ComponentStorageRefMut<T>
 where
 	T: Component,
 {
-	components
-		.borrow_storage_mut::<T>()
-		.unwrap_or_else(|| panic_missing_comp::<T>())
+	let storage = components
+		.borrow_mut(&TypeId::of::<T>())
+		.unwrap_or_else(|| panic_missing_comp::<T>());
+
+	unsafe { ComponentStorageRefMut::<T>::new(storage) }
 }
 
 #[rustfmt::skip]

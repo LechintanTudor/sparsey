@@ -21,11 +21,11 @@ where
 	T: Component,
 {
 	pub(crate) unsafe fn new(
-		storage: ComponentStorageRef<'a, T>,
+		storage: AtomicRef<'a, ComponentStorage>,
 		group_info: Option<GroupInfo<'a>>,
 	) -> Self {
 		Self {
-			storage,
+			storage: ComponentStorageRef::new(storage),
 			group_info,
 		}
 	}
@@ -44,11 +44,11 @@ where
 	T: Component,
 {
 	pub(crate) unsafe fn new(
-		storage: ComponentStorageRefMut<'a, T>,
+		storage: AtomicRefMut<'a, ComponentStorage>,
 		group_info: Option<GroupInfo<'a>>,
 	) -> Self {
 		Self {
-			storage,
+			storage: ComponentStorageRefMut::new(storage),
 			group_info,
 		}
 	}

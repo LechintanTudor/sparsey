@@ -1,8 +1,8 @@
 use crate::components::Component;
-use crate::dispatcher::{CommandBuffers, Commands};
+use crate::dispatcher::{CommandBuffers, Commands, Comp, CompMut};
 use crate::resources::{Res, ResMut, Resource, UnsafeResources};
 use crate::utils::{panic_missing_comp, panic_missing_res};
-use crate::world::{Comp, CompMut, LayoutComponent, World};
+use crate::world::{LayoutComponent, World};
 use std::any::TypeId;
 use std::marker::PhantomData;
 
@@ -103,10 +103,13 @@ where
 	}
 
 	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		environment
+		let (storage, info) = environment
 			.world
-			.borrow_comp::<T>()
-			.unwrap_or_else(|| panic_missing_comp::<T>())
+			.component_storages()
+			.borrow_with_info(&TypeId::of::<T>())
+			.unwrap_or_else(|| panic_missing_comp::<T>());
+
+		Comp::<T>::new(storage, info)
 	}
 }
 
@@ -124,10 +127,13 @@ where
 	}
 
 	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		environment
+		let (storage, info) = environment
 			.world
-			.borrow_comp_mut::<T>()
-			.unwrap_or_else(|| panic_missing_comp::<T>())
+			.component_storages()
+			.borrow_with_info_mut(&TypeId::of::<T>())
+			.unwrap_or_else(|| panic_missing_comp::<T>());
+
+		CompMut::<T>::new(storage, info)
 	}
 }
 
