@@ -52,6 +52,10 @@ where
 		}
 	}
 
+	pub fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
+		self.storage.get_info(entity)
+	}
+
 	pub fn get_with_info(&self, entity: Entity) -> Option<(&T, &ComponentInfo)> {
 		self.storage
 			.get_with_info(entity)

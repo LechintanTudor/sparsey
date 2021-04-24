@@ -13,9 +13,9 @@ where
 	T: Component,
 {
 	pub(crate) storage: ComponentStorageRef<'a, T>,
-	group_info: Option<GroupInfo<'a>>,
-	world_tick: Ticks,
-	last_system_tick: Ticks,
+	pub(crate) group_info: Option<GroupInfo<'a>>,
+	pub(crate) world_tick: Ticks,
+	pub(crate) last_system_tick: Ticks,
 }
 
 impl<'a, T> Comp<'a, T>
@@ -35,18 +35,6 @@ where
 			last_system_tick,
 		}
 	}
-
-	pub(crate) fn group_info(&self) -> Option<&GroupInfo> {
-		self.group_info.as_ref()
-	}
-
-	pub(crate) fn world_tick(&self) -> Ticks {
-		self.world_tick
-	}
-
-	pub(crate) fn last_system_tick(&self) -> Ticks {
-		self.last_system_tick
-	}
 }
 
 pub struct CompMut<'a, T>
@@ -54,9 +42,9 @@ where
 	T: Component,
 {
 	pub(crate) storage: ComponentStorageRefMut<'a, T>,
-	group_info: Option<GroupInfo<'a>>,
-	world_tick: Ticks,
-	last_system_tick: Ticks,
+	pub(crate) group_info: Option<GroupInfo<'a>>,
+	pub(crate) world_tick: Ticks,
+	pub(crate) last_system_tick: Ticks,
 }
 
 impl<'a, T> CompMut<'a, T>
@@ -75,17 +63,5 @@ where
 			world_tick,
 			last_system_tick,
 		}
-	}
-
-	pub(crate) fn group_info(&self) -> Option<&GroupInfo> {
-		self.group_info.as_ref()
-	}
-
-	pub(crate) fn world_tick(&self) -> Ticks {
-		self.world_tick
-	}
-
-	pub(crate) fn last_system_tick(&self) -> Ticks {
-		self.last_system_tick
 	}
 }

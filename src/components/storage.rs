@@ -157,6 +157,11 @@ impl ComponentStorage {
 		}
 	}
 
+	pub fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
+		let index = self.sparse.get_index(entity)? as usize;
+		unsafe { Some(self.info.get_unchecked(index)) }
+	}
+
 	pub fn get_with_info(&self, entity: Entity) -> Option<(*const u8, &ComponentInfo)> {
 		let index = self.sparse.get_index(entity)? as usize;
 
