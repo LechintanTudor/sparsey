@@ -6,8 +6,6 @@ pub type ComponentStorageRef<'a, T> = TypedComponentStorage<AtomicRef<'a, Compon
 pub type ComponentStorageRefMut<'a, T> =
 	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
 
-// TODO: Store system ticks in Comp/CompMut
-
 pub struct Comp<'a, T>
 where
 	T: Component,

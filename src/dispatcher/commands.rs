@@ -33,7 +33,7 @@ impl<'a> Commands<'a> {
 		let entity = self.entities.create_atomic();
 
 		self.run(move |world, _| {
-			let _ = world.append(entity, components);
+			let _ = world.insert(entity, components);
 		});
 
 		entity
@@ -58,13 +58,13 @@ impl<'a> Commands<'a> {
 		});
 	}
 
-	/// Queue the appending of a set of components to the given `Entity`.
-	pub fn append<C>(&mut self, entity: Entity, components: C)
+	/// Queue the inserting of a set of components to the given `Entity`.
+	pub fn insert<C>(&mut self, entity: Entity, components: C)
 	where
 		C: ComponentSet,
 	{
 		self.run(move |world, _| {
-			let _ = world.append(entity, components);
+			let _ = world.insert(entity, components);
 		});
 	}
 

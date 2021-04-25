@@ -42,7 +42,7 @@ impl World {
 		C: ComponentSet,
 	{
 		let entity = self.entities.create();
-		let _ = self.append(entity, components);
+		let _ = self.insert(entity, components);
 		entity
 	}
 
@@ -99,8 +99,8 @@ impl World {
 		true
 	}
 
-	/// Append a set of `Components` to the given `Entity`, if it exists.
-	pub fn append<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
+	/// Insert a set of `Components` to the given `Entity`, if it exists.
+	pub fn insert<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
 	where
 		C: ComponentSet,
 	{

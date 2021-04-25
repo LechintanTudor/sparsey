@@ -57,10 +57,7 @@ where
 	T: Component,
 {
 	fn mask(&self) -> GroupMask {
-		match self.group_info {
-			Some(info) => info.mask(),
-			None => GroupMask::default(),
-		}
+		self.group_info.map(|info| info.mask()).unwrap_or_default()
 	}
 
 	fn includes(&self, entity: Entity) -> bool {
@@ -77,10 +74,7 @@ where
 	T: Component,
 {
 	fn mask(&self) -> GroupMask {
-		match self.group_info {
-			Some(info) => info.mask(),
-			None => GroupMask::default(),
-		}
+		self.group_info.map(|info| info.mask()).unwrap_or_default()
 	}
 
 	fn includes(&self, entity: Entity) -> bool {
