@@ -11,7 +11,7 @@ where
 {
 	type Item: 'a;
 	type Component: Component;
-	type SplitState: 'a;
+	type State: Copy + 'a;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		let world_tick = self.world_tick();
@@ -33,13 +33,13 @@ where
 
 	fn last_system_tick(&self) -> Ticks;
 
-	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component>;
+	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component>;
 
 	unsafe fn get_from_split(
 		data: *mut Self::Component,
 		info: *mut ComponentInfo,
 		index: usize,
-		state: Self::SplitState,
+		state: Self::State,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Option<Self::Item>;
@@ -51,7 +51,7 @@ where
 {
 	type Item = &'a T;
 	type Component = T;
-	type SplitState = ();
+	type State = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
@@ -77,7 +77,7 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
+	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component> {
 		let (sparse, entities, info, data) = self.storage.split();
 		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
 	}
@@ -86,7 +86,7 @@ where
 		data: *mut Self::Component,
 		_info: *mut ComponentInfo,
 		index: usize,
-		_state: Self::SplitState,
+		_state: Self::State,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
@@ -100,7 +100,7 @@ where
 {
 	type Item = &'a T;
 	type Component = T;
-	type SplitState = ();
+	type State = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
@@ -126,7 +126,7 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
+	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component> {
 		let (sparse, entities, info, data) = self.storage.split();
 		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
 	}
@@ -135,7 +135,7 @@ where
 		data: *mut Self::Component,
 		_info: *mut ComponentInfo,
 		index: usize,
-		_state: Self::SplitState,
+		_state: Self::State,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
@@ -149,7 +149,7 @@ where
 {
 	type Item = ComponentRefMut<'a, T>;
 	type Component = T;
-	type SplitState = ();
+	type State = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		let (data, info) = self.storage.get_with_info_mut(entity)?;
@@ -176,7 +176,7 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
+	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component> {
 		let (sparse, entities, info, data) = self.storage.split();
 		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
 	}
@@ -185,7 +185,7 @@ where
 		data: *mut Self::Component,
 		info: *mut ComponentInfo,
 		index: usize,
-		_state: Self::SplitState,
+		_state: Self::State,
 		world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {

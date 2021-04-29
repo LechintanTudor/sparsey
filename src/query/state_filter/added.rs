@@ -27,7 +27,7 @@ where
 {
 	type Item = Q::Item;
 	type Component = Q::Component;
-	type SplitState = Q::SplitState;
+	type State = Q::State;
 
 	fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
 		self.query_elem.get_info(entity)
@@ -40,7 +40,7 @@ where
 			.is_some()
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
+	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component> {
 		self.query_elem.split()
 	}
 
@@ -60,7 +60,7 @@ where
 		data: *mut Self::Component,
 		info: *mut ComponentInfo,
 		index: usize,
-		state: Self::SplitState,
+		state: Self::State,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Option<Self::Item> {
@@ -93,7 +93,7 @@ where
 {
 	type Item = Q::Item;
 	type Component = Q::Component;
-	type SplitState = Q::SplitState;
+	type State = Q::State;
 
 	fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
 		self.query_elem.get_info(entity)
@@ -106,7 +106,7 @@ where
 			.is_some()
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::SplitState, Self::Component> {
+	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component> {
 		self.query_elem.split()
 	}
 
@@ -126,7 +126,7 @@ where
 		data: *mut Self::Component,
 		info: *mut ComponentInfo,
 		index: usize,
-		state: Self::SplitState,
+		state: Self::State,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Option<Self::Item> {

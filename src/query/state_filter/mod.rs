@@ -1,10 +1,15 @@
 pub use self::added::*;
 pub use self::combinators::*;
 
+pub use self::added::*;
+pub use self::combinators::*;
+pub use self::passthrough::*;
+
 use crate::components::Entity;
 
 mod added;
 mod combinators;
+mod passthrough;
 
 pub trait StateFilter {
 	fn matches(&self, entity: Entity) -> bool;
