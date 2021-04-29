@@ -1,4 +1,5 @@
 use crate::world::{Group, GroupMask};
+use std::ops::Range;
 use std::ptr;
 
 /// Holds information about the layout in the `World`
@@ -36,7 +37,7 @@ impl<'a> GroupInfo<'a> {
 	}
 }
 
-pub(crate) fn get_group_len(group_infos: &[GroupInfo]) -> Option<usize> {
+pub(crate) fn get_group_len(group_infos: &[GroupInfo]) -> Option<Range<usize>> {
 	let (first, others) = group_infos.split_first()?;
 	let mut group_index = first.group_index();
 	let mut group_mask = first.mask();
@@ -54,9 +55,10 @@ pub(crate) fn get_group_len(group_infos: &[GroupInfo]) -> Option<usize> {
 	let group = unsafe { groups.get_unchecked(group_index) };
 
 	if group.include_mask() == group_mask {
-		Some(group.len())
+		Some(0..group.len())
 	} else if group.exclude_mask() == group_mask {
-		todo!()
+		let parent_group = unsafe { groups.get_unchecked(group_index - 1) };
+		Some(group.len()..parent_group.len())
 	} else {
 		None
 	}
