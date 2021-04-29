@@ -143,8 +143,9 @@ where
 	Q: QueryElement<'a>,
 {
 	fn matches(&self, entity: Entity) -> bool {
-		self.get_info(entity)
-			.filter(|info| info.tick_added() != self.world_tick())
-			.is_some()
+		match self.get_info(entity) {
+			Some(info) => info.tick_added() != self.world_tick(),
+			None => true,
+		}
 	}
 }

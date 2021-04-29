@@ -1,10 +1,10 @@
+pub use self::component_filter::*;
 pub use self::element::*;
-pub use self::group_filter::*;
 pub use self::iter::*;
 pub use self::state_filter::*;
 
+mod component_filter;
 mod element;
-mod group_filter;
 mod iter;
 mod state_filter;
 
@@ -27,14 +27,14 @@ where
 {
 	fn include<I>(self, include: I) -> Include<Self, I>
 	where
-		I: GroupFilter,
+		I: ComponentFilter,
 	{
 		Include::new(self, include)
 	}
 
 	fn exclude<E>(self, exclude: E) -> Exclude<Include<Self, ()>, E>
 	where
-		E: GroupFilter,
+		E: ComponentFilter,
 	{
 		Exclude::new(Include::new(self, ()), exclude)
 	}
@@ -69,7 +69,7 @@ impl<Q, I> Include<Q, I> {
 unsafe impl<'a, Q, I> Query<'a> for Include<Q, I>
 where
 	Q: Query<'a>,
-	I: GroupFilter,
+	I: ComponentFilter,
 {
 	type Item = Q::Item;
 
@@ -107,7 +107,7 @@ impl<Q, E> Exclude<Q, E> {
 unsafe impl<'a, Q, E> Query<'a> for Exclude<Q, E>
 where
 	Q: Query<'a>,
-	E: GroupFilter,
+	E: ComponentFilter,
 {
 	type Item = Q::Item;
 

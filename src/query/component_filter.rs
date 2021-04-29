@@ -2,7 +2,7 @@ use crate::components::{Component, Entity};
 use crate::dispatcher::{Comp, CompMut};
 use crate::world::GroupMask;
 
-pub unsafe trait GroupFilter {
+pub unsafe trait ComponentFilter {
 	fn group_mask(&self) -> GroupMask;
 
 	fn includes_all(&self, entity: Entity) -> bool;
@@ -10,7 +10,7 @@ pub unsafe trait GroupFilter {
 	fn excludes_all(&self, entity: Entity) -> bool;
 }
 
-unsafe impl<'a, T> GroupFilter for &'a Comp<'a, T>
+unsafe impl<'a, T> ComponentFilter for &'a Comp<'a, T>
 where
 	T: Component,
 {
@@ -27,7 +27,7 @@ where
 	}
 }
 
-unsafe impl<'a, 'b: 'a, T> GroupFilter for &'a CompMut<'b, T>
+unsafe impl<'a, 'b: 'a, T> ComponentFilter for &'a CompMut<'b, T>
 where
 	T: Component,
 {
@@ -44,7 +44,7 @@ where
 	}
 }
 
-pub unsafe trait GroupFilterComponent {
+pub unsafe trait ComponentFilterElement {
 	fn mask(&self) -> GroupMask;
 
 	fn includes(&self, entity: Entity) -> bool;
@@ -52,7 +52,7 @@ pub unsafe trait GroupFilterComponent {
 	fn excludes(&self, entity: Entity) -> bool;
 }
 
-unsafe impl<'a, T> GroupFilterComponent for &'a Comp<'a, T>
+unsafe impl<'a, T> ComponentFilterElement for &'a Comp<'a, T>
 where
 	T: Component,
 {
@@ -69,7 +69,7 @@ where
 	}
 }
 
-unsafe impl<'a, 'b: 'a, T> GroupFilterComponent for &'a CompMut<'b, T>
+unsafe impl<'a, 'b: 'a, T> ComponentFilterElement for &'a CompMut<'b, T>
 where
 	T: Component,
 {
@@ -88,9 +88,9 @@ where
 
 macro_rules! impl_filter {
 	($(($comp:ident, $idx:tt)),*) => {
-		unsafe impl<$($comp),*> GroupFilter for ($($comp,)*)
+		unsafe impl<$($comp),*> ComponentFilter for ($($comp,)*)
 		where
-			$($comp: GroupFilterComponent,)*
+			$($comp: ComponentFilterElement,)*
 		{
 			fn group_mask(&self) -> GroupMask {
 				GroupMask::empty() $(| self.$idx.mask())*
