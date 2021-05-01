@@ -183,7 +183,6 @@ macro_rules! impl_query {
 	};
 }
 
-impl_query!();
 impl_query!((A, 0));
 impl_query!((A, 0), (B, 1));
 impl_query!((A, 0), (B, 1), (C, 2));
