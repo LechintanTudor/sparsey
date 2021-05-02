@@ -1,122 +1,39 @@
-use crate::components::{Component, Entity};
+use crate::components::{Component, Entity, SparseArrayView, Ticks};
 use crate::dispatcher::{Comp, CompMut};
-use crate::world::GroupMask;
+use crate::world::{GroupInfo, GroupMask, QueryGroupInfo};
 
-pub unsafe trait ComponentFilter {
-	fn group_mask(&self) -> GroupMask;
+pub struct QueryInfo<'a> {
+	entities: &'a [Entity],
+	world_tick: Ticks,
+	last_system_tick: Ticks,
+}
 
+pub trait ComponentFilterElement {
+	fn includes(&self) -> bool;
+}
+
+pub trait ComponentFilter {
 	fn includes_all(&self, entity: Entity) -> bool;
 
 	fn excludes_all(&self, entity: Entity) -> bool;
 }
 
-unsafe impl<'a, T> ComponentFilter for &'a Comp<'a, T>
+pub trait ComponentFilterQuery<'a>
 where
-	T: Component,
+	Self: ComponentFilter,
 {
-	fn group_mask(&self) -> GroupMask {
-		self.group_info.map(|g| g.mask()).unwrap_or_default()
-	}
+	type Split: ComponentFilter;
 
-	fn includes_all(&self, entity: Entity) -> bool {
-		self.storage.contains(entity)
-	}
+	fn split(self) -> Option<(QueryInfo<'a>, Self::Split)>;
 
-	fn excludes_all(&self, entity: Entity) -> bool {
-		!self.storage.contains(entity)
-	}
+	fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 }
 
-unsafe impl<'a, 'b: 'a, T> ComponentFilter for &'a CompMut<'b, T>
+pub trait ComponentFilterQueryElement<'a>
 where
-	T: Component,
+	Self: ComponentFilterElement,
 {
-	fn group_mask(&self) -> GroupMask {
-		self.group_info.map(|g| g.mask()).unwrap_or_default()
-	}
+	fn split(self) -> (SparseArrayView<'a>, &'a [Entity]);
 
-	fn includes_all(&self, entity: Entity) -> bool {
-		self.storage.contains(entity)
-	}
-
-	fn excludes_all(&self, entity: Entity) -> bool {
-		!self.storage.contains(entity)
-	}
-}
-
-pub unsafe trait ComponentFilterElement {
-	fn mask(&self) -> GroupMask;
-
-	fn includes(&self, entity: Entity) -> bool;
-
-	fn excludes(&self, entity: Entity) -> bool;
-}
-
-unsafe impl<'a, T> ComponentFilterElement for &'a Comp<'a, T>
-where
-	T: Component,
-{
-	fn mask(&self) -> GroupMask {
-		self.group_info.map(|info| info.mask()).unwrap_or_default()
-	}
-
-	fn includes(&self, entity: Entity) -> bool {
-		self.storage.contains(entity)
-	}
-
-	fn excludes(&self, entity: Entity) -> bool {
-		!self.storage.contains(entity)
-	}
-}
-
-unsafe impl<'a, 'b: 'a, T> ComponentFilterElement for &'a CompMut<'b, T>
-where
-	T: Component,
-{
-	fn mask(&self) -> GroupMask {
-		self.group_info.map(|info| info.mask()).unwrap_or_default()
-	}
-
-	fn includes(&self, entity: Entity) -> bool {
-		self.storage.contains(entity)
-	}
-
-	fn excludes(&self, entity: Entity) -> bool {
-		!self.storage.contains(entity)
-	}
-}
-
-macro_rules! impl_filter {
-	($(($comp:ident, $idx:tt)),*) => {
-		unsafe impl<$($comp),*> ComponentFilter for ($($comp,)*)
-		where
-			$($comp: ComponentFilterElement,)*
-		{
-			fn group_mask(&self) -> GroupMask {
-				GroupMask::empty() $(| self.$idx.mask())*
-			}
-
-			#[allow(unused_variables)]
-			fn includes_all(&self, entity: Entity) -> bool {
-				true $(&& self.$idx.includes(entity))*
-			}
-
-			#[allow(unused_variables)]
-			fn excludes_all(&self, entity: Entity) -> bool {
-				true $(&& self.$idx.excludes(entity))*
-			}
-		}
-	};
-}
-
-#[rustfmt::skip]
-mod impls {
-	use super::*;
-
-	impl_filter!();
-	impl_filter!((A, 0));
-	impl_filter!((A, 0), (B, 1));
-	impl_filter!((A, 0), (B, 1), (C, 2));
-	impl_filter!((A, 0), (B, 1), (C, 2), (D, 3));
-	impl_filter!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+	fn group_info(&self) -> GroupInfo;
 }

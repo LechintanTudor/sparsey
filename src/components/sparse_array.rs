@@ -95,6 +95,32 @@ impl SparseArray {
 		let pb = self.get_unchecked_mut(b) as *mut _;
 		ptr::swap(pa, pb);
 	}
+
+	pub fn as_view(&self) -> SparseArrayView {
+		SparseArrayView { pages: &self.pages }
+	}
+}
+
+#[derive(Copy, Clone)]
+pub struct SparseArrayView<'a> {
+	pages: &'a [EntityPage],
+}
+
+impl SparseArrayView<'_> {
+	/// Check if the `SparseArray` contains the given `Entity`.
+	pub fn contains(&self, entity: Entity) -> bool {
+		self.get_index(entity).is_some()
+	}
+
+	/// Get the `IndexEntity` at the given `Entity`.
+	pub fn get_index(&self, entity: Entity) -> Option<u32> {
+		self.pages
+			.get(page_index(entity))
+			.and_then(|p| p.as_ref())
+			.and_then(|p| p[local_index(entity)])
+			.filter(|e| e.version() == entity.version())
+			.map(|e| e.short_index())
+	}
 }
 
 fn page_index(entity: Entity) -> usize {

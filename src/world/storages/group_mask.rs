@@ -1,39 +1,62 @@
-use std::ops::{BitOr, BitOrAssign, Deref};
+use std::ops::{BitOr, BitOrAssign};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Debug)]
-pub struct GroupMask(u32);
+pub struct GroupMask {
+	include: u16,
+	exclude: u16,
+}
 
 impl GroupMask {
 	pub const fn empty() -> Self {
-		Self(0)
-	}
-
-	pub const fn include_group(arity: usize) -> Self {
-		Self((1 << arity) - 1)
-	}
-
-	pub const fn exclude_group(arity: usize, prev_arity: usize) -> Self {
-		if prev_arity != 0 {
-			let exclude_count = arity - prev_arity;
-			let exclude_mask = ((1 << exclude_count) - 1) << (16 + prev_arity);
-			let include_mask = (1 << prev_arity) - 1;
-
-			Self(include_mask | exclude_mask)
-		} else {
-			Self(0)
+		Self {
+			include: 0,
+			exclude: 0,
 		}
 	}
 
-	pub const fn include_index(index: usize) -> Self {
-		Self(1 << (index % 16))
+	pub const fn new(include: u16, exclude: u16) -> Self {
+		Self { include, exclude }
 	}
 
-	pub const fn exclude_index(index: usize) -> Self {
-		Self(1 << (index % 16 + 16))
+	pub const fn new_include_group(arity: usize) -> Self {
+		Self {
+			include: (1 << arity) - 1,
+			exclude: 0,
+		}
 	}
 
-	pub const fn to_exclude(self) -> GroupMask {
-		GroupMask(self.0 << 16)
+	pub const fn new_exclude_group(arity: usize, prev_arity: usize) -> Self {
+		if prev_arity != 0 {
+			let exclude_count = arity - prev_arity;
+
+			Self {
+				include: (1 << prev_arity) - 1,
+				exclude: ((1 << exclude_count) - 1) << prev_arity,
+			}
+		} else {
+			Self::empty()
+		}
+	}
+
+	pub const fn include(&self, mask: u16) -> Self {
+		Self {
+			include: self.include | mask,
+			exclude: self.exclude,
+		}
+	}
+
+	pub const fn exclude(&self, mask: u16) -> Self {
+		Self {
+			include: self.include,
+			exclude: self.exclude | mask,
+		}
+	}
+
+	pub const fn swapped(&self) -> Self {
+		Self {
+			include: self.exclude,
+			exclude: self.include,
+		}
 	}
 }
 
@@ -41,20 +64,16 @@ impl BitOr for GroupMask {
 	type Output = Self;
 
 	fn bitor(self, other: Self) -> Self::Output {
-		Self(self.0 | other.0)
+		Self {
+			include: self.include | other.include,
+			exclude: self.exclude | other.exclude,
+		}
 	}
 }
 
 impl BitOrAssign for GroupMask {
 	fn bitor_assign(&mut self, other: Self) {
-		self.0 |= other.0;
-	}
-}
-
-impl Deref for GroupMask {
-	type Target = u32;
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
+		self.include |= other.include;
+		self.exclude |= other.exclude;
 	}
 }

@@ -2,81 +2,146 @@ use crate::world::{Group, GroupMask};
 use std::ops::Range;
 use std::ptr;
 
-/// Holds information about the layout in the `World`
-/// of the component storage from which it was created.
 #[derive(Copy, Clone)]
 pub struct GroupInfo<'a> {
-	groups: &'a [Group],
-	group_index: usize,
-	storage_index: usize,
+	family: &'a [Group],
+	group_index: u32,
+	storage_index: u32,
 }
 
 impl<'a> GroupInfo<'a> {
-	pub(crate) fn new(groups: &'a [Group], group_index: usize, storage_index: usize) -> Self {
+	pub(crate) fn new(family: &'a [Group], group_index: u32, storage_index: u32) -> Self {
 		Self {
-			groups,
+			family,
 			group_index,
 			storage_index,
 		}
 	}
 
-	pub(crate) fn has_same_group_set(&self, other: &GroupInfo) -> bool {
-		ptr::eq(self.groups, other.groups)
-	}
-
-	pub(crate) fn groups(&self) -> &[Group] {
-		self.groups
-	}
-
-	pub(crate) fn group_index(&self) -> usize {
-		self.group_index
-	}
-
-	pub(crate) fn mask(&self) -> GroupMask {
-		GroupMask::include_index(self.storage_index)
+	pub fn mask(&self) -> u16 {
+		1 << self.storage_index
 	}
 }
 
+#[derive(Copy, Clone)]
 pub enum QueryGroupInfo<'a> {
 	Empty,
-	Grouped(CombinedGroupInfo<'a>),
+	Grouped(QueryGroupInfoData<'a>),
 }
 
-impl Default for QueryGroupInfo<'_> {
-	fn default() -> Self {
+impl<'a> QueryGroupInfo<'a> {
+	pub const fn new() -> Self {
 		Self::Empty
+	}
+
+	pub fn add_group(self, info: GroupInfo<'a>) -> Option<Self> {
+		match self {
+			Self::Empty => Some(Self::Grouped(QueryGroupInfoData::new(info))),
+			Self::Grouped(data) => Some(Self::Grouped(data.add_group(info)?)),
+		}
 	}
 }
 
-pub struct CombinedGroupInfo<'a> {
-	groups: &'a [Group],
-	mask: GroupMask,
-	index: usize,
+#[derive(Copy, Clone)]
+pub struct QueryGroupInfoData<'a> {
+	family: &'a [Group],
+	mask: u16,
+	index: u32,
 }
 
-// pub(crate) fn get_group_len(group_infos: &[GroupInfo]) -> Option<Range<usize>> {
-// 	let (first, others) = group_infos.split_first()?;
-// 	let mut group_index = first.group_index();
-// 	let mut group_mask = first.mask();
+impl<'a> QueryGroupInfoData<'a> {
+	fn new(info: GroupInfo<'a>) -> Self {
+		Self {
+			family: info.family,
+			mask: info.mask(),
+			index: info.group_index,
+		}
+	}
 
-// 	for other in others {
-// 		if !first.has_same_group_set(other) {
-// 			return None;
-// 		}
+	fn add_group(self, info: GroupInfo) -> Option<Self> {
+		if !ptr::eq(self.family, info.family) {
+			return None;
+		}
 
-// 		group_index = group_index.max(other.group_index());
-// 		group_mask |= other.mask();
-// 	}
+		Some(Self {
+			family: self.family,
+			mask: self.mask | info.mask(),
+			index: self.index.max(info.group_index),
+		})
+	}
+}
 
-// 	let groups = first.groups();
-// 	let group = unsafe { groups.get_unchecked(group_index) };
+#[derive(Copy, Clone)]
+pub enum CombinedQueryGroupInfo<'a> {
+	Empty,
+	Grouped(CombinedQueryGroupInfoData<'a>),
+}
 
-// 	if group.include_mask() == group_mask {
-// 		Some(0..group.len())
-// 	} else if group.exclude_mask() == group_mask {
-// 		let parent_group = unsafe { groups.get_unchecked(group_index - 1) };
-// 		Some(group.len()..parent_group.len())
-// 	} else {
-// 		None
-// 	}
-// }
+impl<'a> CombinedQueryGroupInfo<'a> {
+	pub const fn new() -> Self {
+		Self::Empty
+	}
+
+	pub fn include(self, info: QueryGroupInfoData<'a>) -> Option<Self> {
+		match self {
+			Self::Empty => Some(Self::Grouped(CombinedQueryGroupInfoData::new_include(info))),
+			Self::Grouped(data) => Some(Self::Grouped(data.include(info)?)),
+		}
+	}
+
+	pub fn exclude(self, info: QueryGroupInfoData<'a>) -> Option<Self> {
+		match self {
+			Self::Empty => Some(Self::Grouped(CombinedQueryGroupInfoData::new_exclude(info))),
+			Self::Grouped(data) => Some(Self::Grouped(data.exclude(info)?)),
+		}
+	}
+}
+
+#[derive(Copy, Clone)]
+pub struct CombinedQueryGroupInfoData<'a> {
+	family: &'a [Group],
+	mask: GroupMask,
+	index: u32,
+}
+
+impl<'a> CombinedQueryGroupInfoData<'a> {
+	fn new_include(info: QueryGroupInfoData<'a>) -> Self {
+		Self {
+			family: info.family,
+			mask: GroupMask::new(info.mask, 0),
+			index: info.index,
+		}
+	}
+
+	fn new_exclude(info: QueryGroupInfoData<'a>) -> Self {
+		Self {
+			family: info.family,
+			mask: GroupMask::new(0, info.mask),
+			index: info.index,
+		}
+	}
+
+	fn include(self, info: QueryGroupInfoData) -> Option<Self> {
+		if !ptr::eq(self.family, info.family) {
+			return None;
+		}
+
+		Some(Self {
+			family: self.family,
+			mask: self.mask.include(info.mask),
+			index: self.index.max(info.index),
+		})
+	}
+
+	fn exclude(self, info: QueryGroupInfoData) -> Option<Self> {
+		if !ptr::eq(self.family, info.family) {
+			return None;
+		}
+
+		Some(Self {
+			family: self.family,
+			mask: self.mask.exclude(info.mask),
+			index: self.index.max(info.index),
+		})
+	}
+}

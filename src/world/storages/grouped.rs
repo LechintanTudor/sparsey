@@ -175,8 +175,8 @@ impl GroupedComponentStorages {
 
 			let info = GroupInfo::new(
 				&self.group_sets.get_unchecked(info.group_set_index).groups,
-				info.group_index,
-				info.storage_index,
+				info.group_index as _,
+				info.storage_index as _,
 			);
 
 			(storage, info)
@@ -197,8 +197,8 @@ impl GroupedComponentStorages {
 
 			let info = GroupInfo::new(
 				&self.group_sets.get_unchecked(info.group_set_index).groups,
-				info.group_index,
-				info.storage_index,
+				info.group_index as _,
+				info.storage_index as _,
 			);
 
 			(storage, info)
@@ -336,8 +336,8 @@ impl Group {
 	fn new(arity: usize, prev_arity: usize) -> Self {
 		Self {
 			arity,
-			include_mask: GroupMask::include_group(arity),
-			exclude_mask: GroupMask::exclude_group(arity, prev_arity),
+			include_mask: GroupMask::new_include_group(arity),
+			exclude_mask: GroupMask::new_exclude_group(arity, prev_arity),
 			len: 0,
 		}
 	}
