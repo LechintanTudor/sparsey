@@ -1,4 +1,4 @@
-use crate::components::{ComponentInfo, ComponentStorage, Entity, SparseArray};
+use crate::components::{ComponentInfo, ComponentStorage, Entity, SparseArray, SparseArrayView};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr, slice};
@@ -62,10 +62,10 @@ where
 			.map(|(value, info)| unsafe { (&*value.cast::<T>(), info) })
 	}
 
-	pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentInfo], &[T]) {
-		let (sparse, entities, info, data) = self.storage.split();
+	pub fn split(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentInfo]) {
+		let (sparse, entities, data, info) = self.storage.split();
 		let data = unsafe { slice::from_raw_parts(data as *const T, entities.len()) };
-		(sparse, entities, info, data)
+		(sparse, entities, data, info)
 	}
 }
 
@@ -125,9 +125,9 @@ where
 			.map(|(value, info)| unsafe { (&mut *value.cast::<T>(), info) })
 	}
 
-	pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [ComponentInfo], &mut [T]) {
-		let (sparse, entities, info, data) = self.storage.split_mut();
+	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], &mut [T], &mut [ComponentInfo]) {
+		let (sparse, entities, data, info) = self.storage.split_mut();
 		let data = unsafe { slice::from_raw_parts_mut(data as *mut T, entities.len()) };
-		(sparse, entities, info, data)
+		(sparse, entities, data, info)
 	}
 }

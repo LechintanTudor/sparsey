@@ -1,4 +1,6 @@
-use crate::components::{BlobVec, ComponentInfo, Entity, IndexEntity, SparseArray, Ticks};
+use crate::components::{
+	BlobVec, ComponentInfo, Entity, IndexEntity, SparseArray, SparseArrayView, Ticks,
+};
 use std::alloc::Layout;
 use std::{ptr, u32};
 
@@ -200,21 +202,21 @@ impl ComponentStorage {
 		self.entities.is_empty()
 	}
 
-	pub fn split(&self) -> (&SparseArray, &[Entity], &[ComponentInfo], *const u8) {
+	pub fn split(&self) -> (SparseArrayView, &[Entity], *const u8, &[ComponentInfo]) {
 		(
-			&self.sparse,
+			self.sparse.as_view(),
 			self.entities.as_slice(),
-			self.info.as_slice(),
 			self.data.as_ptr(),
+			self.info.as_slice(),
 		)
 	}
 
-	pub fn split_mut(&mut self) -> (&SparseArray, &[Entity], &mut [ComponentInfo], *mut u8) {
+	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], *mut u8, &mut [ComponentInfo]) {
 		(
-			&self.sparse,
+			self.sparse.as_view(),
 			self.entities.as_slice(),
-			self.info.as_mut_slice(),
 			self.data.as_ptr(),
+			self.info.as_mut_slice(),
 		)
 	}
 }

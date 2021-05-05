@@ -7,15 +7,19 @@ where
 {
 	data: &'a mut T,
 	info: &'a mut ComponentInfo,
-	tick: Ticks,
+	world_tick: Ticks,
 }
 
 impl<'a, T> ComponentRefMut<'a, T>
 where
 	T: Component,
 {
-	pub fn new(data: &'a mut T, info: &'a mut ComponentInfo, tick: Ticks) -> Self {
-		Self { data, info, tick }
+	pub fn new(data: &'a mut T, info: &'a mut ComponentInfo, world_tick: Ticks) -> Self {
+		Self {
+			data,
+			info,
+			world_tick,
+		}
 	}
 }
 
@@ -35,7 +39,7 @@ where
 	T: Component,
 {
 	fn deref_mut(&mut self) -> &mut Self::Target {
-		self.info.tick_mutated = self.tick;
+		self.info.tick_mutated = self.world_tick;
 		self.data
 	}
 }

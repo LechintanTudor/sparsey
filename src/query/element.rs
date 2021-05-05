@@ -1,45 +1,38 @@
-use crate::components::{Component, ComponentInfo, ComponentRefMut, Entity, SparseArray, Ticks};
+use crate::components::{
+	Component, ComponentInfo, ComponentRefMut, Entity, SparseArrayView, Ticks,
+};
 use crate::dispatcher::{Comp, CompMut};
 use crate::world::GroupInfo;
 
-pub type SplitQueryElement<'a, S, T> =
-	(S, &'a SparseArray, &'a [Entity], *mut ComponentInfo, *mut T);
+pub type SplitQueryElement<'a, T> = (
+	SparseArrayView<'a>,
+	&'a [Entity],
+	*mut T,
+	*mut ComponentInfo,
+);
 
-pub unsafe trait QueryElement<'a>
-where
-	Self: Sized,
-{
-	type Item: 'a;
+pub unsafe trait QueryElement<'a> {
+	type Item;
 	type Component: Component;
-	type State: Copy + 'a;
 
-	fn get(self, entity: Entity) -> Option<Self::Item> {
-		let world_tick = self.world_tick();
-		let last_system_tick = self.last_system_tick();
-
-		let (state, sparse, _, info, data) = self.split();
-		let index = sparse.get_index(entity)? as usize;
-
-		unsafe { Self::get_from_split(data, info, index, state, world_tick, last_system_tick) }
-	}
+	fn get(self, entity: Entity) -> Option<Self::Item>;
 
 	fn get_info(&self, entity: Entity) -> Option<&ComponentInfo>;
 
 	fn contains(&self, entity: Entity) -> bool;
 
-	fn group_info(&self) -> Option<&GroupInfo>;
+	fn group_info(&self) -> Option<GroupInfo>;
 
 	fn world_tick(&self) -> Ticks;
 
 	fn last_system_tick(&self) -> Ticks;
 
-	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component>;
+	fn split(self) -> SplitQueryElement<'a, Self::Component>;
 
-	unsafe fn get_from_split(
+	unsafe fn get_from_parts(
 		data: *mut Self::Component,
 		info: *mut ComponentInfo,
 		index: usize,
-		state: Self::State,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Option<Self::Item>;
@@ -51,7 +44,6 @@ where
 {
 	type Item = &'a T;
 	type Component = T;
-	type State = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
@@ -65,8 +57,8 @@ where
 		self.storage.contains(entity)
 	}
 
-	fn group_info(&self) -> Option<&GroupInfo> {
-		self.group_info.as_ref()
+	fn group_info(&self) -> Option<GroupInfo> {
+		self.group_info
 	}
 
 	fn world_tick(&self) -> Ticks {
@@ -77,16 +69,20 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component> {
-		let (sparse, entities, info, data) = self.storage.split();
-		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
+	fn split(self) -> SplitQueryElement<'a, Self::Component> {
+		let (sparse, entities, data, info) = self.storage.split();
+		(
+			sparse,
+			entities,
+			data.as_ptr() as *mut _,
+			info.as_ptr() as *mut _,
+		)
 	}
 
-	unsafe fn get_from_split(
+	unsafe fn get_from_parts(
 		data: *mut Self::Component,
 		_info: *mut ComponentInfo,
 		index: usize,
-		_state: Self::State,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
@@ -100,7 +96,6 @@ where
 {
 	type Item = &'a T;
 	type Component = T;
-	type State = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		self.storage.get(entity)
@@ -114,8 +109,8 @@ where
 		self.storage.contains(entity)
 	}
 
-	fn group_info(&self) -> Option<&GroupInfo> {
-		self.group_info.as_ref()
+	fn group_info(&self) -> Option<GroupInfo> {
+		self.group_info
 	}
 
 	fn world_tick(&self) -> Ticks {
@@ -126,16 +121,20 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component> {
-		let (sparse, entities, info, data) = self.storage.split();
-		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
+	fn split(self) -> SplitQueryElement<'a, Self::Component> {
+		let (sparse, entities, data, info) = self.storage.split();
+		(
+			sparse,
+			entities,
+			data.as_ptr() as *mut _,
+			info.as_ptr() as *mut _,
+		)
 	}
 
-	unsafe fn get_from_split(
+	unsafe fn get_from_parts(
 		data: *mut Self::Component,
 		_info: *mut ComponentInfo,
 		index: usize,
-		_state: Self::State,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
@@ -143,13 +142,12 @@ where
 	}
 }
 
-unsafe impl<'a, 'b: 'a, T> QueryElement<'a> for &'a mut CompMut<'b, T>
+unsafe impl<'a: 'b, 'b, T> QueryElement<'a> for &'a mut CompMut<'b, T>
 where
 	T: Component,
 {
 	type Item = ComponentRefMut<'a, T>;
 	type Component = T;
-	type State = ();
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		let (data, info) = self.storage.get_with_info_mut(entity)?;
@@ -164,8 +162,8 @@ where
 		self.storage.contains(entity)
 	}
 
-	fn group_info(&self) -> Option<&GroupInfo> {
-		self.group_info.as_ref()
+	fn group_info(&self) -> Option<GroupInfo> {
+		self.group_info
 	}
 
 	fn world_tick(&self) -> Ticks {
@@ -176,16 +174,20 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::State, Self::Component> {
-		let (sparse, entities, info, data) = self.storage.split();
-		((), sparse, entities, info.as_ptr() as _, data.as_ptr() as _)
+	fn split(self) -> SplitQueryElement<'a, Self::Component> {
+		let (sparse, entities, data, info) = self.storage.split();
+		(
+			sparse,
+			entities,
+			data.as_ptr() as *mut _,
+			info.as_ptr() as *mut _,
+		)
 	}
 
-	unsafe fn get_from_split(
+	unsafe fn get_from_parts(
 		data: *mut Self::Component,
 		info: *mut ComponentInfo,
 		index: usize,
-		_state: Self::State,
 		world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
@@ -195,4 +197,32 @@ where
 			world_tick,
 		))
 	}
+}
+
+pub unsafe trait UnfilteredQueryElement<'a>
+where
+	Self: QueryElement<'a>,
+{
+	// Marker
+}
+
+unsafe impl<'a, T> UnfilteredQueryElement<'a> for &'a Comp<'a, T>
+where
+	T: Component,
+{
+	// Marker
+}
+
+unsafe impl<'a, T> UnfilteredQueryElement<'a> for &'a CompMut<'a, T>
+where
+	T: Component,
+{
+	// Marker
+}
+
+unsafe impl<'a: 'b, 'b, T> UnfilteredQueryElement<'a> for &'a mut CompMut<'b, T>
+where
+	T: Component,
+{
+	// Marker
 }
