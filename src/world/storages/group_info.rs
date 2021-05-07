@@ -34,10 +34,10 @@ impl<'a> QueryGroupInfo<'a> {
 		Self::Empty
 	}
 
-	pub fn add_group(self, info: GroupInfo<'a>) -> Option<Self> {
+	pub fn with_group(self, info: GroupInfo<'a>) -> Option<Self> {
 		match self {
 			Self::Empty => Some(Self::Grouped(QueryGroupInfoData::new(info))),
-			Self::Grouped(data) => Some(Self::Grouped(data.add_group(info)?)),
+			Self::Grouped(data) => Some(Self::Grouped(data.with_group(info)?)),
 		}
 	}
 }
@@ -58,7 +58,7 @@ impl<'a> QueryGroupInfoData<'a> {
 		}
 	}
 
-	fn add_group(self, info: GroupInfo) -> Option<Self> {
+	fn with_group(self, info: GroupInfo) -> Option<Self> {
 		if !ptr::eq(self.family, info.family) {
 			return None;
 		}
@@ -82,14 +82,24 @@ impl<'a> CombinedQueryGroupInfo<'a> {
 		Self::Empty
 	}
 
-	pub fn include(self, info: QueryGroupInfoData<'a>) -> Option<Self> {
+	pub fn include(self, info: QueryGroupInfo<'a>) -> Option<Self> {
+		let info = match info {
+			QueryGroupInfo::Grouped(data) => data,
+			QueryGroupInfo::Empty => return Some(self),
+		};
+
 		match self {
 			Self::Empty => Some(Self::Grouped(CombinedQueryGroupInfoData::new_include(info))),
 			Self::Grouped(data) => Some(Self::Grouped(data.include(info)?)),
 		}
 	}
 
-	pub fn exclude(self, info: QueryGroupInfoData<'a>) -> Option<Self> {
+	pub fn exclude(self, info: QueryGroupInfo<'a>) -> Option<Self> {
+		let info = match info {
+			QueryGroupInfo::Grouped(data) => data,
+			QueryGroupInfo::Empty => return Some(self),
+		};
+
 		match self {
 			Self::Empty => Some(Self::Grouped(CombinedQueryGroupInfoData::new_exclude(info))),
 			Self::Grouped(data) => Some(Self::Grouped(data.exclude(info)?)),
