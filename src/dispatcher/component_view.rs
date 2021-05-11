@@ -11,7 +11,7 @@ where
 	T: Component,
 {
 	pub(crate) storage: ComponentStorageRef<'a, T>,
-	pub(crate) group_info: Option<GroupInfo<'a>>,
+	pub(crate) group_info: GroupInfo<'a>,
 	pub(crate) world_tick: Ticks,
 	pub(crate) last_system_tick: Ticks,
 }
@@ -22,7 +22,7 @@ where
 {
 	pub(crate) unsafe fn new(
 		storage: AtomicRef<'a, ComponentStorage>,
-		group_info: Option<GroupInfo<'a>>,
+		group_info: GroupInfo<'a>,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Self {
@@ -40,7 +40,7 @@ where
 	T: Component,
 {
 	pub(crate) storage: ComponentStorageRefMut<'a, T>,
-	pub(crate) group_info: Option<GroupInfo<'a>>,
+	pub(crate) group_info: GroupInfo<'a>,
 	pub(crate) world_tick: Ticks,
 	pub(crate) last_system_tick: Ticks,
 }
@@ -51,7 +51,7 @@ where
 {
 	pub(crate) unsafe fn new(
 		storage: AtomicRefMut<'a, ComponentStorage>,
-		group_info: Option<GroupInfo<'a>>,
+		group_info: GroupInfo<'a>,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Self {

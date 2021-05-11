@@ -1,5 +1,5 @@
 use crate::components::{ComponentStorage, Entity};
-use crate::world::{GroupInfo, GroupMask, Layout};
+use crate::world::{GroupInfoData, GroupMask, Layout};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -164,7 +164,7 @@ impl GroupedComponentStorages {
 	pub fn borrow_with_info(
 		&self,
 		component: &TypeId,
-	) -> Option<(AtomicRef<ComponentStorage>, GroupInfo)> {
+	) -> Option<(AtomicRef<ComponentStorage>, GroupInfoData)> {
 		self.info.get(component).map(|info| unsafe {
 			let storage = self
 				.group_sets
@@ -173,7 +173,7 @@ impl GroupedComponentStorages {
 				.get_unchecked(info.storage_index)
 				.borrow();
 
-			let info = GroupInfo::new(
+			let info = GroupInfoData::new(
 				&self.group_sets.get_unchecked(info.group_set_index).groups,
 				info.group_index as _,
 				info.storage_index as _,
@@ -186,7 +186,7 @@ impl GroupedComponentStorages {
 	pub fn borrow_with_info_mut(
 		&self,
 		component: &TypeId,
-	) -> Option<(AtomicRefMut<ComponentStorage>, GroupInfo)> {
+	) -> Option<(AtomicRefMut<ComponentStorage>, GroupInfoData)> {
 		self.info.get(component).map(|info| unsafe {
 			let storage = self
 				.group_sets
@@ -195,7 +195,7 @@ impl GroupedComponentStorages {
 				.get_unchecked(info.storage_index)
 				.borrow_mut();
 
-			let info = GroupInfo::new(
+			let info = GroupInfoData::new(
 				&self.group_sets.get_unchecked(info.group_set_index).groups,
 				info.group_index as _,
 				info.storage_index as _,

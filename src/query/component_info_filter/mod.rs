@@ -3,20 +3,26 @@ pub use self::added::*;
 mod added;
 
 use crate::components::{ComponentInfo, Entity, Ticks};
-use crate::query::{QueryElement, SplitQueryElement, UnfilteredQueryElement};
+use crate::query::{ComponentView, SplitComponentView, UnfilteredComponentView};
 use crate::world::GroupInfo;
 use std::marker::PhantomData;
 
-pub trait InfoFilter {
+pub trait ComponentInfoFilter {
 	fn matches(info: &ComponentInfo, world_tick: Ticks, last_system_tick: Ticks) -> bool;
 }
 
-pub struct FilteredQueryElement<E, F> {
+impl ComponentInfoFilter for () {
+	fn matches(_info: &ComponentInfo, _world_tick: Ticks, _last_system_tick: Ticks) -> bool {
+		true
+	}
+}
+
+pub struct FilteredComponentView<E, F> {
 	element: E,
 	_phantom: PhantomData<F>,
 }
 
-impl<E, F> FilteredQueryElement<E, F> {
+impl<E, F> FilteredComponentView<E, F> {
 	fn new(element: E) -> Self {
 		Self {
 			element,
@@ -25,10 +31,10 @@ impl<E, F> FilteredQueryElement<E, F> {
 	}
 }
 
-unsafe impl<'a, E, F> QueryElement<'a> for FilteredQueryElement<E, F>
+unsafe impl<'a, E, F> ComponentView<'a> for FilteredComponentView<E, F>
 where
-	E: UnfilteredQueryElement<'a>,
-	F: InfoFilter,
+	E: UnfilteredComponentView<'a>,
+	F: ComponentInfoFilter,
 {
 	type Item = E::Item;
 	type Component = E::Component;
@@ -64,7 +70,7 @@ where
 		)
 	}
 
-	fn group_info(&self) -> Option<GroupInfo> {
+	fn group_info(&self) -> GroupInfo {
 		self.element.group_info()
 	}
 
@@ -76,7 +82,7 @@ where
 		self.element.last_system_tick()
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::Component> {
+	fn split(self) -> SplitComponentView<'a, Self::Component> {
 		self.element.split()
 	}
 

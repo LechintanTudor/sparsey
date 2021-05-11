@@ -4,14 +4,59 @@ use crate::components::{
 use crate::dispatcher::{Comp, CompMut};
 use crate::world::GroupInfo;
 
-pub type SplitQueryElement<'a, T> = (
-	SparseArrayView<'a>,
-	&'a [Entity],
-	*mut T,
-	*mut ComponentInfo,
-);
+#[derive(Copy, Clone)]
+pub struct SplitComponentView<'a, T> {
+	pub sparse: SparseArrayView<'a>,
+	pub entities: &'a [Entity],
+	pub data: *mut T,
+	pub info: *mut ComponentInfo,
+}
 
-pub unsafe trait QueryElement<'a> {
+impl<'a, T> SplitComponentView<'a, T> {
+	fn new(
+		sparse: SparseArrayView<'a>,
+		entities: &'a [Entity],
+		data: *mut T,
+		info: *mut ComponentInfo,
+	) -> Self {
+		Self {
+			sparse,
+			entities,
+			data,
+			info,
+		}
+	}
+}
+
+#[derive(Copy, Clone)]
+pub struct SparseSplitComponentView<'a, T> {
+	pub sparse: SparseArrayView<'a>,
+	pub data: *mut T,
+	pub info: *mut ComponentInfo,
+}
+
+impl<'a, T> SparseSplitComponentView<'a, T> {
+	fn new(sparse: SparseArrayView<'a>, data: *mut T, info: *mut ComponentInfo) -> Self {
+		Self { sparse, data, info }
+	}
+}
+
+#[derive(Copy, Clone)]
+pub struct DenseSplitComponentView<T> {
+	pub data: *mut T,
+	pub info: *mut ComponentInfo,
+}
+
+impl<T> DenseSplitComponentView<T> {
+	fn new(data: *mut T, info: *mut ComponentInfo) -> Self {
+		Self { data, info }
+	}
+}
+
+pub unsafe trait ComponentView<'a>
+where
+	Self: Sized,
+{
 	type Item;
 	type Component: Component;
 
@@ -21,13 +66,13 @@ pub unsafe trait QueryElement<'a> {
 
 	fn contains(&self, entity: Entity) -> bool;
 
-	fn group_info(&self) -> Option<GroupInfo>;
+	fn group_info(&self) -> GroupInfo;
 
 	fn world_tick(&self) -> Ticks;
 
 	fn last_system_tick(&self) -> Ticks;
 
-	fn split(self) -> SplitQueryElement<'a, Self::Component>;
+	fn split(self) -> SplitComponentView<'a, Self::Component>;
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
@@ -36,9 +81,25 @@ pub unsafe trait QueryElement<'a> {
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Option<Self::Item>;
+
+	fn split_sparse(self) -> (&'a [Entity], SparseSplitComponentView<'a, Self::Component>) {
+		let split = self.split();
+		(
+			split.entities,
+			SparseSplitComponentView::new(split.sparse, split.data, split.info),
+		)
+	}
+
+	fn split_dense(self) -> (&'a [Entity], DenseSplitComponentView<Self::Component>) {
+		let split = self.split();
+		(
+			split.entities,
+			DenseSplitComponentView::new(split.data, split.info),
+		)
+	}
 }
 
-unsafe impl<'a, T> QueryElement<'a> for &'a Comp<'a, T>
+unsafe impl<'a, T> ComponentView<'a> for &'a Comp<'a, T>
 where
 	T: Component,
 {
@@ -57,7 +118,7 @@ where
 		self.storage.contains(entity)
 	}
 
-	fn group_info(&self) -> Option<GroupInfo> {
+	fn group_info(&self) -> GroupInfo {
 		self.group_info
 	}
 
@@ -69,14 +130,9 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::Component> {
+	fn split(self) -> SplitComponentView<'a, Self::Component> {
 		let (sparse, entities, data, info) = self.storage.split();
-		(
-			sparse,
-			entities,
-			data.as_ptr() as *mut _,
-			info.as_ptr() as *mut _,
-		)
+		SplitComponentView::new(sparse, entities, data.as_ptr() as _, info.as_ptr() as _)
 	}
 
 	unsafe fn get_from_parts(
@@ -90,7 +146,7 @@ where
 	}
 }
 
-unsafe impl<'a, T> QueryElement<'a> for &'a CompMut<'a, T>
+unsafe impl<'a, T> ComponentView<'a> for &'a CompMut<'a, T>
 where
 	T: Component,
 {
@@ -109,7 +165,7 @@ where
 		self.storage.contains(entity)
 	}
 
-	fn group_info(&self) -> Option<GroupInfo> {
+	fn group_info(&self) -> GroupInfo {
 		self.group_info
 	}
 
@@ -121,14 +177,9 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::Component> {
+	fn split(self) -> SplitComponentView<'a, Self::Component> {
 		let (sparse, entities, data, info) = self.storage.split();
-		(
-			sparse,
-			entities,
-			data.as_ptr() as *mut _,
-			info.as_ptr() as *mut _,
-		)
+		SplitComponentView::new(sparse, entities, data.as_ptr() as _, info.as_ptr() as _)
 	}
 
 	unsafe fn get_from_parts(
@@ -142,7 +193,7 @@ where
 	}
 }
 
-unsafe impl<'a: 'b, 'b, T> QueryElement<'a> for &'a mut CompMut<'b, T>
+unsafe impl<'a: 'b, 'b, T> ComponentView<'a> for &'a mut CompMut<'b, T>
 where
 	T: Component,
 {
@@ -162,7 +213,7 @@ where
 		self.storage.contains(entity)
 	}
 
-	fn group_info(&self) -> Option<GroupInfo> {
+	fn group_info(&self) -> GroupInfo {
 		self.group_info
 	}
 
@@ -174,14 +225,9 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitQueryElement<'a, Self::Component> {
+	fn split(self) -> SplitComponentView<'a, Self::Component> {
 		let (sparse, entities, data, info) = self.storage.split();
-		(
-			sparse,
-			entities,
-			data.as_ptr() as *mut _,
-			info.as_ptr() as *mut _,
-		)
+		SplitComponentView::new(sparse, entities, data.as_ptr() as _, info.as_ptr() as _)
 	}
 
 	unsafe fn get_from_parts(
@@ -199,28 +245,28 @@ where
 	}
 }
 
-pub unsafe trait UnfilteredQueryElement<'a>
+pub unsafe trait UnfilteredComponentView<'a>
 where
-	Self: QueryElement<'a>,
+	Self: ComponentView<'a>,
 {
 	// Marker
 }
 
-unsafe impl<'a, T> UnfilteredQueryElement<'a> for &'a Comp<'a, T>
-where
-	T: Component,
-{
-	// Marker
-}
-
-unsafe impl<'a, T> UnfilteredQueryElement<'a> for &'a CompMut<'a, T>
+unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a Comp<'a, T>
 where
 	T: Component,
 {
 	// Marker
 }
 
-unsafe impl<'a: 'b, 'b, T> UnfilteredQueryElement<'a> for &'a mut CompMut<'b, T>
+unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a CompMut<'a, T>
+where
+	T: Component,
+{
+	// Marker
+}
+
+unsafe impl<'a: 'b, 'b, T> UnfilteredComponentView<'a> for &'a mut CompMut<'b, T>
 where
 	T: Component,
 {

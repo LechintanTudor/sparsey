@@ -1,73 +1,68 @@
 pub use self::component_filter::*;
-pub use self::element::*;
-pub use self::info_filter::*;
-pub use self::iter::*;
+pub use self::component_info_filter::*;
+pub use self::component_view::*;
+//pub use self::iter::*;
 
 mod component_filter;
-mod element;
-mod info_filter;
-mod iter;
+mod component_info_filter;
+mod component_view;
+//mod iter;
 
 use crate::components::{Entity, Ticks};
-use crate::world::{CombinedQueryGroupInfo, QueryGroupInfo};
+use crate::world::{CombinedGroupInfo, QueryGroupInfo};
 
 #[derive(Debug)]
-pub struct IterInfo<'a> {
+pub struct IterData<'a> {
 	entities: &'a [Entity],
 	world_tick: Ticks,
 	last_system_tick: Ticks,
+}
+
+impl<'a> IterData<'a> {
+	pub fn new(entities: &'a [Entity], world_tick: Ticks, last_system_tick: Ticks) -> Self {
+		Self {
+			entities,
+			world_tick,
+			last_system_tick,
+		}
+	}
 }
 
 pub unsafe trait Query<'a> {
 	type Item;
 	type SparseSplit;
 	type DenseSplit;
-	type Include: BaseComponentFilter<'a>;
-	type Exclude: BaseComponentFilter<'a>;
-	type Filter: InfoFilter;
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn includes(&self, entity: Entity) -> bool;
+	fn contains(&self, entity: Entity) -> bool;
 
-	fn group_info(&self) -> Option<CombinedQueryGroupInfo>;
+	fn group_info(&self) -> CombinedGroupInfo;
 
-	fn split_sparse(
-		self,
-	) -> (
-		IterInfo<'a>,
-		Self::SparseSplit,
-		<Self::Include as BaseComponentFilter<'a>>::Split,
-		<Self::Exclude as BaseComponentFilter<'a>>::Split,
-		Self::Filter,
-	);
+	fn split_sparse(self) -> (IterData<'a>, Self::SparseSplit);
 
-	fn split_dense(self) -> (IterInfo<'a>, Self::DenseSplit, Self::Filter);
+	fn split_dense(self) -> (IterData<'a>, Self::DenseSplit);
 
 	unsafe fn get_from_sparse_split(
 		sparse: &mut Self::SparseSplit,
-		include: &<Self::Include as BaseComponentFilter<'a>>::Split,
-		exclude: &<Self::Exclude as BaseComponentFilter<'a>>::Split,
-		filter: &Self::Filter,
 		entity: Entity,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
-	);
+	) -> Option<Self::Item>;
 
 	unsafe fn get_from_dense_split(
 		dense: &mut Self::DenseSplit,
-		filter: &Self::Filter,
-		entity: Entity,
+		index: usize,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
-	);
+	) -> Option<Self::Item>;
 }
 
-pub trait SimpleQuery<'a>
-where
-	Self: Query<'a, Include = (), Exclude = ()>,
-{
-}
+pub struct Include {}
+
+pub struct Exclude {}
+
+pub struct Filter {}
 
 // macro_rules! impl_query {
 // 	($(($elem:ident, $idx:tt)),*) => {

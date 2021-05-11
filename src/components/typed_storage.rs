@@ -1,4 +1,4 @@
-use crate::components::{ComponentInfo, ComponentStorage, Entity, SparseArray, SparseArrayView};
+use crate::components::{ComponentInfo, ComponentStorage, Entity, SparseArrayView};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr, slice};

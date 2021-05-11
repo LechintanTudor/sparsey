@@ -2,156 +2,96 @@ use crate::world::{Group, GroupMask};
 use std::ops::Range;
 use std::ptr;
 
-#[derive(Copy, Clone)]
-pub struct GroupInfo<'a> {
-	family: &'a [Group],
-	group_index: u32,
-	storage_index: u32,
+#[derive(Copy, Clone, Debug)]
+pub enum GroupInfo<'a> {
+	Ungrouped,
+	Grouped(GroupInfoData<'a>),
 }
 
-impl<'a> GroupInfo<'a> {
-	pub(crate) fn new(family: &'a [Group], group_index: u32, storage_index: u32) -> Self {
+#[derive(Copy, Clone, Debug)]
+pub struct GroupInfoData<'a> {
+	family: &'a [Group],
+	group_index: u8,
+	storage_index: u8,
+}
+
+impl<'a> GroupInfoData<'a> {
+	pub(crate) fn new(family: &'a [Group], group_index: u8, storage_index: u8) -> Self {
 		Self {
 			family,
 			group_index,
 			storage_index,
 		}
 	}
+}
 
-	pub fn mask(&self) -> u16 {
-		1 << self.storage_index
+#[derive(Copy, Clone, Debug)]
+pub enum CombinedGroupInfo<'a> {
+	Empty,
+	Ungrouped,
+	Grouped(CombinedGroupInfoData<'a>),
+}
+
+impl<'a> CombinedGroupInfo<'a> {
+	pub const fn new() -> Self {
+		Self::Empty
+	}
+
+	pub fn combine(self, info: GroupInfo<'a>) -> Self {
+		match (self, info) {
+			(Self::Empty, GroupInfo::Grouped(data)) => {
+				Self::Grouped(CombinedGroupInfoData::new(data))
+			}
+			(Self::Grouped(combined_data), GroupInfo::Grouped(data)) => {
+				match combined_data.combine(data) {
+					Some(combined_data) => Self::Grouped(combined_data),
+					None => Self::Ungrouped,
+				}
+			}
+			(_, _) => Self::Ungrouped,
+		}
 	}
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
+pub struct CombinedGroupInfoData<'a> {
+	family: &'a [Group],
+	mask: u16,
+	index: u8,
+}
+
+impl<'a> CombinedGroupInfoData<'a> {
+	pub(crate) fn new(data: GroupInfoData<'a>) -> Self {
+		Self {
+			family: data.family,
+			mask: 1 << data.storage_index,
+			index: data.group_index,
+		}
+	}
+
+	pub(crate) fn combine(self, data: GroupInfoData<'a>) -> Option<Self> {
+		if !ptr::eq(self.family, data.family) {
+			return None;
+		}
+
+		Some(Self {
+			family: self.family,
+			mask: self.mask | (1 << data.storage_index),
+			index: self.index.max(data.group_index),
+		})
+	}
+}
+
+#[derive(Copy, Clone, Debug)]
 pub enum QueryGroupInfo<'a> {
 	Empty,
+	Ungrouped,
 	Grouped(QueryGroupInfoData<'a>),
 }
 
-impl<'a> QueryGroupInfo<'a> {
-	pub const fn new() -> Self {
-		Self::Empty
-	}
-
-	pub fn with_group(self, info: GroupInfo<'a>) -> Option<Self> {
-		match self {
-			Self::Empty => Some(Self::Grouped(QueryGroupInfoData::new(info))),
-			Self::Grouped(data) => Some(Self::Grouped(data.with_group(info)?)),
-		}
-	}
-}
-
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct QueryGroupInfoData<'a> {
 	family: &'a [Group],
-	mask: u16,
-	index: u32,
-}
-
-impl<'a> QueryGroupInfoData<'a> {
-	fn new(info: GroupInfo<'a>) -> Self {
-		Self {
-			family: info.family,
-			mask: info.mask(),
-			index: info.group_index,
-		}
-	}
-
-	fn with_group(self, info: GroupInfo) -> Option<Self> {
-		if !ptr::eq(self.family, info.family) {
-			return None;
-		}
-
-		Some(Self {
-			family: self.family,
-			mask: self.mask | info.mask(),
-			index: self.index.max(info.group_index),
-		})
-	}
-}
-
-#[derive(Copy, Clone)]
-pub enum CombinedQueryGroupInfo<'a> {
-	Empty,
-	Grouped(CombinedQueryGroupInfoData<'a>),
-}
-
-impl<'a> CombinedQueryGroupInfo<'a> {
-	pub const fn new() -> Self {
-		Self::Empty
-	}
-
-	pub fn include(self, info: QueryGroupInfo<'a>) -> Option<Self> {
-		let info = match info {
-			QueryGroupInfo::Grouped(data) => data,
-			QueryGroupInfo::Empty => return Some(self),
-		};
-
-		match self {
-			Self::Empty => Some(Self::Grouped(CombinedQueryGroupInfoData::new_include(info))),
-			Self::Grouped(data) => Some(Self::Grouped(data.include(info)?)),
-		}
-	}
-
-	pub fn exclude(self, info: QueryGroupInfo<'a>) -> Option<Self> {
-		let info = match info {
-			QueryGroupInfo::Grouped(data) => data,
-			QueryGroupInfo::Empty => return Some(self),
-		};
-
-		match self {
-			Self::Empty => Some(Self::Grouped(CombinedQueryGroupInfoData::new_exclude(info))),
-			Self::Grouped(data) => Some(Self::Grouped(data.exclude(info)?)),
-		}
-	}
-}
-
-#[derive(Copy, Clone)]
-pub struct CombinedQueryGroupInfoData<'a> {
-	family: &'a [Group],
 	mask: GroupMask,
-	index: u32,
-}
-
-impl<'a> CombinedQueryGroupInfoData<'a> {
-	fn new_include(info: QueryGroupInfoData<'a>) -> Self {
-		Self {
-			family: info.family,
-			mask: GroupMask::new(info.mask, 0),
-			index: info.index,
-		}
-	}
-
-	fn new_exclude(info: QueryGroupInfoData<'a>) -> Self {
-		Self {
-			family: info.family,
-			mask: GroupMask::new(0, info.mask),
-			index: info.index,
-		}
-	}
-
-	fn include(self, info: QueryGroupInfoData) -> Option<Self> {
-		if !ptr::eq(self.family, info.family) {
-			return None;
-		}
-
-		Some(Self {
-			family: self.family,
-			mask: self.mask.include(info.mask),
-			index: self.index.max(info.index),
-		})
-	}
-
-	fn exclude(self, info: QueryGroupInfoData) -> Option<Self> {
-		if !ptr::eq(self.family, info.family) {
-			return None;
-		}
-
-		Some(Self {
-			family: self.family,
-			mask: self.mask.exclude(info.mask),
-			index: self.index.max(info.index),
-		})
-	}
+	index: u8,
 }
