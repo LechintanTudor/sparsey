@@ -3,6 +3,7 @@ use crate::components::{
 };
 use crate::dispatcher::{Comp, CompMut};
 use crate::world::GroupInfo;
+use std::marker::PhantomData;
 
 #[derive(Copy, Clone)]
 pub struct SplitComponentView<'a, T> {
@@ -42,14 +43,19 @@ impl<'a, T> SparseSplitComponentView<'a, T> {
 }
 
 #[derive(Copy, Clone)]
-pub struct DenseSplitComponentView<T> {
+pub struct DenseSplitComponentView<'a, T> {
 	pub data: *mut T,
 	pub info: *mut ComponentInfo,
+	pub lifetime: PhantomData<&'a ()>,
 }
 
-impl<T> DenseSplitComponentView<T> {
+impl<'a, T> DenseSplitComponentView<'a, T> {
 	fn new(data: *mut T, info: *mut ComponentInfo) -> Self {
-		Self { data, info }
+		Self {
+			data,
+			info,
+			lifetime: PhantomData,
+		}
 	}
 }
 
@@ -90,7 +96,7 @@ where
 		)
 	}
 
-	fn split_dense(self) -> (&'a [Entity], DenseSplitComponentView<Self::Component>) {
+	fn split_dense(self) -> (&'a [Entity], DenseSplitComponentView<'a, Self::Component>) {
 		let split = self.split();
 		(
 			split.entities,

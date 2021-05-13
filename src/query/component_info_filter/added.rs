@@ -11,11 +11,11 @@ impl ComponentInfoFilter for AddedFilter {
 	}
 }
 
-pub fn added<'a, E>(element: E) -> FilteredComponentView<E, AddedFilter>
+pub fn added<'a, C>(view: C) -> FilteredComponentView<C, AddedFilter>
 where
-	E: UnfilteredComponentView<'a>,
+	C: UnfilteredComponentView<'a>,
 {
-	FilteredComponentView::new(element)
+	FilteredComponentView::new(view)
 }
 
 #[derive(Clone, Copy, Default, Debug)]
@@ -31,6 +31,6 @@ impl<E> Not for FilteredComponentView<E, AddedFilter> {
 	type Output = FilteredComponentView<E, NotAddedFilter>;
 
 	fn not(self) -> Self::Output {
-		FilteredComponentView::new(self.element)
+		FilteredComponentView::new(self.into_view())
 	}
 }
