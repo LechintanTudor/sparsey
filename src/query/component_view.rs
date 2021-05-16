@@ -31,22 +31,35 @@ impl<'a, T> SplitComponentView<'a, T> {
 
 #[derive(Copy, Clone)]
 pub struct SparseSplitComponentView<'a, T> {
-	pub sparse: SparseArrayView<'a>,
-	pub data: *mut T,
-	pub info: *mut ComponentInfo,
+	sparse: SparseArrayView<'a>,
+	data: *mut T,
+	info: *mut ComponentInfo,
 }
 
 impl<'a, T> SparseSplitComponentView<'a, T> {
 	fn new(sparse: SparseArrayView<'a>, data: *mut T, info: *mut ComponentInfo) -> Self {
 		Self { sparse, data, info }
 	}
+
+	pub unsafe fn get<V>(
+		&mut self,
+		entity: Entity,
+		world_tick: Ticks,
+		last_system_tick: Ticks,
+	) -> Option<V::Item>
+	where
+		V: ComponentView<'a, Component = T>,
+	{
+		let index = self.sparse.get_index(entity)? as usize;
+		V::get_from_parts(self.data, self.info, index, world_tick, last_system_tick)
+	}
 }
 
 #[derive(Copy, Clone)]
 pub struct DenseSplitComponentView<'a, T> {
-	pub data: *mut T,
-	pub info: *mut ComponentInfo,
-	pub lifetime: PhantomData<&'a ()>,
+	data: *mut T,
+	info: *mut ComponentInfo,
+	_phantom: PhantomData<&'a ()>,
 }
 
 impl<'a, T> DenseSplitComponentView<'a, T> {
@@ -54,8 +67,20 @@ impl<'a, T> DenseSplitComponentView<'a, T> {
 		Self {
 			data,
 			info,
-			lifetime: PhantomData,
+			_phantom: PhantomData,
 		}
+	}
+
+	pub unsafe fn get<V>(
+		&mut self,
+		index: usize,
+		world_tick: Ticks,
+		last_system_tick: Ticks,
+	) -> Option<V::Item>
+	where
+		V: ComponentView<'a, Component = T>,
+	{
+		V::get_from_parts(self.data, self.info, index, world_tick, last_system_tick)
 	}
 }
 

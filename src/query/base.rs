@@ -57,36 +57,36 @@ macro_rules! impl_base_query {
             }
 
             fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit) {
-                todo!()
+                split_sparse!(split_sparse, $(($view, self.$idx)),+)
             }
 
             fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit) {
-                todo!()
+                split_dense!(split_dense, $(($view, self.$idx)),+)
             }
 
             unsafe fn get_from_sparse_split(
-                sparse: &mut Self::SparseSplit,
+                split: &mut Self::SparseSplit,
                 entity: Entity,
                 world_tick: Ticks,
                 last_system_tick: Ticks,
             ) -> Option<Self::Item> {
-                todo!()
+                Some(($(
+                    split.$idx.get::<$view>(entity, world_tick, last_system_tick)?,
+                )+))
             }
 
             unsafe fn get_from_dense_split(
-                dense: &mut Self::DenseSplit,
+                split: &mut Self::DenseSplit,
                 index: usize,
                 world_tick: Ticks,
                 last_system_tick: Ticks,
             ) -> Option<Self::Item> {
-                todo!()
+                Some(($(
+                    split.$idx.get::<$view>(index, world_tick, last_system_tick)?,
+                )+))
             }
         }
     };
-}
-
-macro_rules! sparse_split_base_query {
-	() => {};
 }
 
 impl_base_query!((A, 0));
