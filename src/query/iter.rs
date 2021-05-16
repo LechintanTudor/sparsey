@@ -31,7 +31,7 @@ where
 
 		let data = match (data1, data2) {
 			(Some(data1), Some(data2)) => {
-				if data1.entities.len() <= data2.entities.len() {
+				if data1.entities().len() <= data2.entities().len() {
 					data1
 				} else {
 					data2
@@ -64,12 +64,12 @@ where
 
 	fn next(&mut self) -> Option<Self::Item> {
 		loop {
-			let entity = *self.data.entities.get(self.index)?;
+			let entity = *self.data.entities().get(self.index)?;
 			self.index += 1;
 
 			if self
 				.filter
-				.matches(entity, self.data.world_tick, self.data.last_system_tick)
+				.matches(entity, self.data.world_tick(), self.data.last_system_tick())
 				&& self.include.includes_all(entity)
 				&& self.exclude.excludes_all(entity)
 			{
@@ -77,8 +77,8 @@ where
 					Q::get_from_sparse_split(
 						&mut self.query,
 						entity,
-						self.data.world_tick,
-						self.data.last_system_tick,
+						self.data.world_tick(),
+						self.data.last_system_tick(),
 					)
 				};
 

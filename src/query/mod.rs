@@ -1,14 +1,19 @@
-pub use self::base::*;
-pub use self::component_filter::*;
-pub use self::component_info_filter::*;
-pub use self::component_view::*;
-pub use self::iter::*;
+#[macro_use]
+mod split;
 
 mod base;
 mod component_filter;
 mod component_info_filter;
 mod component_view;
 mod iter;
+mod iter_data;
+
+pub use self::base::*;
+pub use self::component_filter::*;
+pub use self::component_info_filter::*;
+pub use self::component_view::*;
+pub use self::iter::*;
+pub use self::iter_data::*;
 
 use crate::components::{Entity, Ticks};
 use crate::world::{CombinedGroupInfo, QueryGroupInfo};
@@ -37,16 +42,4 @@ pub unsafe trait Query {
 	fn contains(&self, entity: Entity) -> bool;
 
 	fn iter(self) -> Self::Iterator;
-}
-
-fn shortest_entity_slice<'a>(slices: &[&'a [Entity]]) -> Option<&'a [Entity]> {
-	let (mut shortest, others) = slices.split_first()?;
-
-	for slice in others {
-		if slice.len() < shortest.len() {
-			shortest = slice;
-		}
-	}
-
-	Some(shortest)
 }

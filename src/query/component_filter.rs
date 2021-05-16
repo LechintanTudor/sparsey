@@ -2,7 +2,6 @@ use crate::components::{Component, Entity, SparseArrayView, Ticks};
 use crate::dispatcher::{Comp, CompMut};
 use crate::query::IterData;
 use crate::world::{CombinedGroupInfo, GroupInfo};
-use paste::paste;
 
 pub trait ComponentFilterElement {
 	fn includes(&self, entity: Entity) -> bool;
@@ -110,6 +109,8 @@ where
 	fn group_info(&self) -> CombinedGroupInfo;
 
 	fn split_sparse(self) -> (Option<IterData<'a>>, Self::Split);
+
+	fn split_dense(self) -> (Option<IterData<'a>>, Self::Split);
 }
 
 impl ComponentFilter for () {
@@ -130,6 +131,10 @@ impl<'a> BaseComponentFilter<'a> for () {
 	}
 
 	fn split_sparse(self) -> (Option<IterData<'a>>, Self::Split) {
+		(None, ())
+	}
+
+	fn split_dense(self) -> (Option<IterData<'a>>, Self::Split) {
 		(None, ())
 	}
 }
@@ -160,63 +165,14 @@ macro_rules! impl_filter {
 			}
 
 			fn split_sparse(self) -> (Option<IterData<'a>>, Self::Split) {
-				sparse_split_filter!($(($elem, self.$idx)),+)
+				split_sparse!(split, $(($elem, self.$idx)),+)
+			}
+
+			fn split_dense(self) -> (Option<IterData<'a>>, Self::Split) {
+				split_dense!(split, $(($elem, self.$idx)),+)
 			}
 		}
 	};
-}
-
-macro_rules! sparse_split_filter {
-	(($first_elem:ident, $first:expr)) => {{
-		paste! {
-			let world_tick = $first.world_tick();
-			let last_system_tick = $first.last_system_tick();
-			let [<elem_ $first_elem:lower>] = $first.split();
-
-			(
-				Some(IterData::new([<elem_ $first_elem:lower>].0, world_tick, last_system_tick)),
-				([<elem_ $first_elem:lower>].1,),
-			)
-		}
-	}};
-	(($first_elem:ident, $first:expr), $(($other_elem:ident, $other:expr)),+) => {{
-		paste! {
-			let world_tick = $first.world_tick();
-			let last_system_tick = $first.last_system_tick();
-			let [<elem_ $first_elem:lower>] = $first.split();
-			$(let [<elem_ $other_elem:lower>] = $other.split();)+
-
-			let entities = shortest_entity_slice!(
-				[<elem_ $first_elem:lower>].0,
-				$([<elem_ $other_elem:lower>].0),+
-			);
-
-			(
-				Some(IterData::new(entities, world_tick, last_system_tick)),
-				(
-					[<elem_ $first_elem:lower>].1,
-					$([<elem_ $other_elem:lower>].1,)+
-				)
-			)
-		}
-	}};
-}
-
-macro_rules! shortest_entity_slice {
-	($first:expr) => {
-		$first
-	};
-	($first:expr, $($other:expr),+) => {
-		shortest_entity_slice($first, shortest_entity_slice!($($other),+))
-	}
-}
-
-fn shortest_entity_slice<'a>(a: &'a [Entity], b: &'a [Entity]) -> &'a [Entity] {
-	if a.len() <= b.len() {
-		a
-	} else {
-		b
-	}
 }
 
 impl_filter!((A, 0));

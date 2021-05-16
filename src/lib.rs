@@ -6,6 +6,7 @@ pub use self::world::*;
 
 mod components;
 mod dispatcher;
+#[macro_use]
 mod query;
 mod resources;
 mod world;

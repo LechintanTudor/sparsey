@@ -1,23 +1,6 @@
 use crate::components::{Entity, Ticks};
-use crate::query::{ComponentView, DenseSplitComponentView, SparseSplitComponentView};
+use crate::query::{ComponentView, DenseSplitComponentView, IterData, SparseSplitComponentView};
 use crate::world::CombinedGroupInfo;
-
-#[derive(Debug)]
-pub struct IterData<'a> {
-	pub entities: &'a [Entity],
-	pub world_tick: Ticks,
-	pub last_system_tick: Ticks,
-}
-
-impl<'a> IterData<'a> {
-	pub fn new(entities: &'a [Entity], world_tick: Ticks, last_system_tick: Ticks) -> Self {
-		Self {
-			entities,
-			world_tick,
-			last_system_tick,
-		}
-	}
-}
 
 pub unsafe trait BaseQuery<'a> {
 	type Item;
@@ -100,6 +83,10 @@ macro_rules! impl_base_query {
             }
         }
     };
+}
+
+macro_rules! sparse_split_base_query {
+	() => {};
 }
 
 impl_base_query!((A, 0));

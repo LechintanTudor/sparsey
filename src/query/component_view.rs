@@ -98,6 +98,7 @@ where
 
 	fn split_dense(self) -> (&'a [Entity], DenseSplitComponentView<'a, Self::Component>) {
 		let split = self.split();
+
 		(
 			split.entities,
 			DenseSplitComponentView::new(split.data, split.info),
