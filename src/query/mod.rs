@@ -6,14 +6,12 @@ mod component_filter;
 mod component_info_filter;
 mod component_view;
 mod iter;
-mod iter_data;
 
 pub use self::base::*;
 pub use self::component_filter::*;
 pub use self::component_info_filter::*;
 pub use self::component_view::*;
 pub use self::iter::*;
-pub use self::iter_data::*;
 
 use crate::components::{Entity, Ticks};
 use crate::world::{CombinedGroupInfo, QueryGroupInfo};

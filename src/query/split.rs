@@ -8,10 +8,10 @@ macro_rules! split_sparse {
 			let [<type_ $first_type:lower>] = $first.$split_fn();
 			$(let [<type_ $other_type:lower>] = $other.$split_fn();)*
 
-			let entities = shortest_entity_slice!(
+			let entities = crate::query::split::shortest_entity_slice(&[
 				[<type_ $first_type:lower>].0
 				$(, [<type_ $other_type:lower>].0)*
-			);
+			]).unwrap();
 
 			(
 				Some(crate::query::IterData::new(entities, world_tick, last_system_tick)),
@@ -45,19 +45,6 @@ macro_rules! split_dense {
 	}};
 }
 
-macro_rules! shortest_entity_slice {
-	($first:expr) => {
-		$first
-	};
-	($first:expr, $($other:expr),+) => {
-		crate::query::split::shortest_entity_slice($first, shortest_entity_slice!($($other),+))
-	}
-}
-
-pub(crate) fn shortest_entity_slice<'a>(a: &'a [Entity], b: &'a [Entity]) -> &'a [Entity] {
-	if a.len() <= b.len() {
-		a
-	} else {
-		b
-	}
+pub(crate) fn shortest_entity_slice<'a>(slices: &[&'a [Entity]]) -> Option<&'a [Entity]> {
+	slices.iter().min_by_key(|e| e.len()).copied()
 }
