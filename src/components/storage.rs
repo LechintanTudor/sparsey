@@ -126,6 +126,10 @@ impl ComponentStorage {
 		true
 	}
 
+	pub fn entities(&self) -> &[Entity] {
+		&self.entities
+	}
+
 	pub fn clear(&mut self) {
 		self.sparse.clear();
 		self.entities.clear();

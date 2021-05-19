@@ -24,24 +24,13 @@ where
 	E: BaseComponentFilter<'a>,
 	F: QueryComponentInfoFilter,
 {
-	pub fn new(query: Q, include: I, exclude: E, filter: F) -> Self {
-		let (data1, query) = query.split_sparse();
-		let (data2, include) = include.split_sparse();
-		let (_, exclude) = exclude.split_sparse();
-
-		let data = match (data1, data2) {
-			(Some(data1), Some(data2)) => {
-				if data1.entities().len() <= data2.entities().len() {
-					data1
-				} else {
-					data2
-				}
-			}
-			(Some(data1), None) => data1,
-			(None, Some(data2)) => data2,
-			(None, None) => panic!("Tried to iterate empty query"),
-		};
-
+	pub fn new(
+		data: IterData<'a>,
+		query: Q::SparseSplit,
+		include: I::Split,
+		exclude: E::Split,
+		filter: F,
+	) -> Self {
 		Self {
 			data,
 			index: 0,

@@ -43,6 +43,8 @@ where
 
 	fn group_info(&self) -> GroupInfo;
 
+	fn into_entities(self) -> &'a [Entity];
+
 	fn split(self) -> (&'a [Entity], Self::Split);
 }
 
@@ -62,6 +64,10 @@ where
 
 	fn group_info(&self) -> GroupInfo {
 		self.group_info
+	}
+
+	fn into_entities(self) -> &'a [Entity] {
+		self.storage.entities()
 	}
 
 	fn split(self) -> (&'a [Entity], Self::Split) {
@@ -88,6 +94,10 @@ where
 		self.group_info
 	}
 
+	fn into_entities(self) -> &'a [Entity] {
+		self.storage.entities()
+	}
+
 	fn split(self) -> (&'a [Entity], Self::Split) {
 		let (sparse, entities, _, _) = self.storage.split();
 		(entities, sparse)
@@ -108,9 +118,9 @@ where
 
 	fn group_info(&self) -> CombinedGroupInfo;
 
-	fn split_sparse(self) -> (Option<IterData<'a>>, Self::Split);
+	fn into_iter_data(self) -> Option<IterData<'a>>;
 
-	fn split_dense(self) -> (Option<IterData<'a>>, Self::Split);
+	fn split(self) -> (Option<IterData<'a>>, Self::Split);
 }
 
 impl ComponentFilter for () {
@@ -130,11 +140,11 @@ impl<'a> BaseComponentFilter<'a> for () {
 		CombinedGroupInfo::Empty
 	}
 
-	fn split_sparse(self) -> (Option<IterData<'a>>, Self::Split) {
-		(None, ())
+	fn into_iter_data(self) -> Option<IterData<'a>> {
+		None
 	}
 
-	fn split_dense(self) -> (Option<IterData<'a>>, Self::Split) {
+	fn split(self) -> (Option<IterData<'a>>, Self::Split) {
 		(None, ())
 	}
 }
@@ -164,12 +174,17 @@ macro_rules! impl_filter {
 				CombinedGroupInfo::new() $(.combine(self.$idx.group_info()))+
 			}
 
-			fn split_sparse(self) -> (Option<IterData<'a>>, Self::Split) {
-				split_sparse!(split, $(($elem, self.$idx)),+)
+			fn into_iter_data(self) -> Option<IterData<'a>> {
+				let element = first_of!($(self.$idx),+);
+				let world_tick = element.world_tick();
+				let last_system_tick = element.last_system_tick();
+				let entities = element.into_entities();
+
+				Some(IterData::new(entities, world_tick, last_system_tick))
 			}
 
-			fn split_dense(self) -> (Option<IterData<'a>>, Self::Split) {
-				split_dense!(split, $(($elem, self.$idx)),+)
+			fn split(self) -> (Option<IterData<'a>>, Self::Split) {
+				split_sparse!(split, $(($elem, self.$idx)),+)
 			}
 		}
 	};

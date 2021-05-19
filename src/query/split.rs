@@ -45,6 +45,12 @@ macro_rules! split_dense {
 	}};
 }
 
+macro_rules! first_of {
+	($first:expr $(, $other:expr)*) => {
+		$first
+	};
+}
+
 pub(crate) fn shortest_entity_slice<'a>(slices: &[&'a [Entity]]) -> Option<&'a [Entity]> {
 	slices.iter().min_by_key(|e| e.len()).copied()
 }

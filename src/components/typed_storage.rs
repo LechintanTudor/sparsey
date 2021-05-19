@@ -62,6 +62,10 @@ where
 			.map(|(value, info)| unsafe { (&*value.cast::<T>(), info) })
 	}
 
+	pub fn entities(&self) -> &[Entity] {
+		self.storage.entities()
+	}
+
 	pub fn split(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentInfo]) {
 		let (sparse, entities, data, info) = self.storage.split();
 		let data = unsafe { slice::from_raw_parts(data as *const T, entities.len()) };
