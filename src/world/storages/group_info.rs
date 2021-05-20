@@ -61,7 +61,7 @@ pub struct CombinedGroupInfoData<'a> {
 }
 
 impl<'a> CombinedGroupInfoData<'a> {
-	pub(crate) fn new(data: GroupInfoData<'a>) -> Self {
+	fn new(data: GroupInfoData<'a>) -> Self {
 		Self {
 			family: data.family,
 			mask: 1 << data.storage_index,
@@ -69,7 +69,7 @@ impl<'a> CombinedGroupInfoData<'a> {
 		}
 	}
 
-	pub(crate) fn combine(self, data: GroupInfoData<'a>) -> Option<Self> {
+	fn combine(self, data: GroupInfoData<'a>) -> Option<Self> {
 		if !ptr::eq(self.family, data.family) {
 			return None;
 		}

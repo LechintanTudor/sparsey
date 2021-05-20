@@ -41,3 +41,13 @@ pub unsafe trait Query {
 
 	fn iter(self) -> Self::Iterator;
 }
+
+fn new_iter<'a, Q, I, E, F>(query: Q, include: I, exclude: E, filter: F) -> Iter<'a, Q, I, E, F>
+where
+	Q: BaseQuery<'a>,
+	I: BaseComponentFilter<'a>,
+	E: BaseComponentFilter<'a>,
+	F: QueryComponentInfoFilter,
+{
+	todo!()
+}
