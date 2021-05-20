@@ -53,7 +53,7 @@ macro_rules! impl_base_query {
             }
 
             fn group_info(&self) -> CombinedGroupInfo {
-                CombinedGroupInfo::new() $(.combine(self.$idx.group_info()))+
+                CombinedGroupInfo::Empty $(.combine(self.$idx.group_info()))+
             }
 
             fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit) {

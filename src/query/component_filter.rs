@@ -171,7 +171,7 @@ macro_rules! impl_filter {
 			type Split = ($($elem::Split,)+);
 
 			fn group_info(&self) -> CombinedGroupInfo {
-				CombinedGroupInfo::new() $(.combine(self.$idx.group_info()))+
+				CombinedGroupInfo::Empty $(.combine(self.$idx.group_info()))+
 			}
 
 			fn into_iter_data(self) -> Option<IterData<'a>> {
