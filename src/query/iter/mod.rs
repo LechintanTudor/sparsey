@@ -6,7 +6,7 @@ pub use self::data::*;
 pub use self::dense::*;
 pub use self::sparse::*;
 
-use crate::query::{BaseComponentFilter, BaseQuery, QueryComponentInfoFilter};
+use crate::query::{BaseComponentFilter, BaseQuery, QueryComponentInfoFilter, QueryGroupInfo};
 
 pub enum Iter<'a, Q, I, E, F>
 where
@@ -17,6 +17,56 @@ where
 {
 	Sparse(SparseIter<'a, Q, I, E, F>),
 	Dense(DenseIter<'a, Q, F>),
+}
+
+impl<'a, Q, I, E, F> Iter<'a, Q, I, E, F>
+where
+	Q: BaseQuery<'a>,
+	I: BaseComponentFilter<'a>,
+	E: BaseComponentFilter<'a>,
+	F: QueryComponentInfoFilter,
+{
+	pub(crate) fn new(query: Q, include: I, exclude: E, filter: F) -> Self {
+		let group_info = QueryGroupInfo::new(
+			query.group_info(),
+			include.group_info(),
+			exclude.group_info(),
+		);
+
+		match group_info.group_range() {
+			Some(range) => {
+				let (query_data, query) = query.split_dense();
+				let include_data = include.into_iter_data();
+
+				let iter_data = query_data
+					.unwrap_or_else(|| include_data.unwrap())
+					.with_range(range);
+
+				unsafe { Iter::Dense(DenseIter::new_unchecked(iter_data, query, filter)) }
+			}
+			None => {
+				let (query_data, query) = query.split_sparse();
+				let (include_data, include) = include.split();
+				let (_, exclude) = exclude.split();
+
+				let iter_data = [query_data, include_data]
+					.iter()
+					.flat_map(|d| d)
+					.min_by_key(|d| d.entities().len())
+					.copied()
+					.unwrap_or(IterData::empty());
+
+				Iter::Sparse(SparseIter::new(iter_data, query, include, exclude, filter))
+			}
+		}
+	}
+
+	pub fn is_dense(&self) -> bool {
+		match self {
+			Self::Sparse(_) => false,
+			Self::Dense(_) => true,
+		}
+	}
 }
 
 impl<'a, Q, I, E, F> Iterator for Iter<'a, Q, I, E, F>
