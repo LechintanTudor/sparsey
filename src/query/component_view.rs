@@ -224,8 +224,7 @@ where
 		Some(&*data.add(index))
 	}
 }
-
-unsafe impl<'a: 'b, 'b, T> ComponentView<'a> for &'a mut CompMut<'b, T>
+unsafe impl<'a, 'b, T> ComponentView<'a> for &'a mut CompMut<'b, T>
 where
 	T: Component,
 {
@@ -298,7 +297,7 @@ where
 	// Marker
 }
 
-unsafe impl<'a: 'b, 'b, T> UnfilteredComponentView<'a> for &'a mut CompMut<'b, T>
+unsafe impl<'a, 'b, T> UnfilteredComponentView<'a> for &'a mut CompMut<'b, T>
 where
 	T: Component,
 {

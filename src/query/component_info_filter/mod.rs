@@ -13,3 +13,9 @@ pub trait ComponentInfoFilter {
 pub trait QueryComponentInfoFilter {
 	fn matches(&self, entity: Entity, world_tick: Ticks, last_system_tick: Ticks) -> bool;
 }
+
+impl QueryComponentInfoFilter for () {
+	fn matches(&self, _: Entity, _: Ticks, _: Ticks) -> bool {
+		true
+	}
+}

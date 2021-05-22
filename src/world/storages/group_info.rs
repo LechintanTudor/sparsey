@@ -104,6 +104,11 @@ impl<'a> QueryGroupInfo<'a> {
 	fn include(self, info: CombinedGroupInfo<'a>) -> Self {
 		match (self, info) {
 			(Self::Empty, CombinedGroupInfo::Empty) => Self::Empty,
+			(Self::Empty, CombinedGroupInfo::Related(info)) => Self::Related(QueryGroupInfoData {
+				family: info.family,
+				mask: GroupMask::new(info.mask, 0),
+				index: info.index,
+			}),
 			(Self::Related(_), CombinedGroupInfo::Empty) => self,
 			(Self::Related(query_info), CombinedGroupInfo::Related(info)) => {
 				if !ptr::eq(query_info.family, info.family) {
@@ -123,6 +128,11 @@ impl<'a> QueryGroupInfo<'a> {
 	fn exclude(self, info: CombinedGroupInfo<'a>) -> Self {
 		match (self, info) {
 			(Self::Empty, CombinedGroupInfo::Empty) => Self::Empty,
+			(Self::Empty, CombinedGroupInfo::Related(info)) => Self::Related(QueryGroupInfoData {
+				family: info.family,
+				mask: GroupMask::new(0, info.mask),
+				index: info.index,
+			}),
 			(Self::Related(_), CombinedGroupInfo::Empty) => self,
 			(Self::Related(query_info), CombinedGroupInfo::Related(info)) => {
 				if !ptr::eq(query_info.family, info.family) {
