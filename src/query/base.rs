@@ -1,8 +1,14 @@
 use crate::components::{Entity, Ticks};
-use crate::query::{ComponentView, DenseSplitComponentView, IterData, SparseSplitComponentView};
+use crate::query::{
+	BaseComponentFilter, ComponentView, DenseSplitComponentView, Include, IncludeExclude,
+	IncludeExcludeFilter, IterData, QueryComponentInfoFilter, SparseSplitComponentView,
+};
 use crate::world::CombinedGroupInfo;
 
-pub unsafe trait BaseQuery<'a> {
+pub unsafe trait BaseQuery<'a>
+where
+	Self: Sized,
+{
 	type Item;
 	type SparseSplit;
 	type DenseSplit;
@@ -31,6 +37,34 @@ pub unsafe trait BaseQuery<'a> {
 		last_system_tick: Ticks,
 	) -> Option<Self::Item>;
 }
+
+pub trait BaseQueryModifiers<'a>
+where
+	Self: Sized,
+{
+	fn include<I>(self, include: I) -> Include<Self, I>
+	where
+		I: BaseComponentFilter<'a>,
+	{
+		Include::new(self, include)
+	}
+
+	fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
+	where
+		E: BaseComponentFilter<'a>,
+	{
+		IncludeExclude::new(self, (), exclude)
+	}
+
+	fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, (), (), F>
+	where
+		F: QueryComponentInfoFilter,
+	{
+		IncludeExcludeFilter::new(self, (), (), filter)
+	}
+}
+
+impl<'a, Q> BaseQueryModifiers<'a> for Q where Q: BaseQuery<'a> {}
 
 macro_rules! impl_base_query {
     ($(($view:ident, $idx:tt)),+) => {

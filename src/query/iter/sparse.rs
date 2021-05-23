@@ -56,9 +56,7 @@ where
 			let entity = *self.data.entities().get(self.index)?;
 			self.index += 1;
 
-			if self
-				.filter
-				.matches(entity, self.data.world_tick(), self.data.last_system_tick())
+			if self.filter.matches(entity)
 				&& self.include.includes_all(entity)
 				&& self.exclude.excludes_all(entity)
 			{

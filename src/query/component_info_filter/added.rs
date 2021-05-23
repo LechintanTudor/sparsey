@@ -6,8 +6,9 @@ use std::ops::Not;
 pub struct AddedFilter;
 
 impl ComponentInfoFilter for AddedFilter {
-	fn matches(info: &ComponentInfo, world_tick: Ticks, _last_system_tick: Ticks) -> bool {
-		info.tick_added() == world_tick
+	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, _last_system_tick: Ticks) -> bool {
+		info.filter(|info| info.tick_added() == world_tick)
+			.is_some()
 	}
 }
 
@@ -22,8 +23,8 @@ where
 pub struct NotAddedFilter;
 
 impl ComponentInfoFilter for NotAddedFilter {
-	fn matches(info: &ComponentInfo, world_tick: Ticks, _last_system_tick: Ticks) -> bool {
-		info.tick_added() != world_tick
+	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, last_system_tick: Ticks) -> bool {
+		!AddedFilter::matches(info, world_tick, last_system_tick)
 	}
 }
 

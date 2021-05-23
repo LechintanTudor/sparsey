@@ -39,10 +39,7 @@ where
 			let index = self.index;
 			self.index += 1;
 
-			if self
-				.filter
-				.matches(entity, self.data.world_tick(), self.data.last_system_tick())
-			{
+			if self.filter.matches(entity) {
 				let item = unsafe {
 					Q::get_from_dense_split(
 						&mut self.query,
