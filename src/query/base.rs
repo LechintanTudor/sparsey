@@ -1,7 +1,7 @@
 use crate::components::{Entity, Ticks};
 use crate::query::{
-	BaseComponentFilter, ComponentView, DenseSplitComponentView, Include, IncludeExclude,
-	IncludeExcludeFilter, IterData, QueryComponentInfoFilter, SparseSplitComponentView,
+	ComponentView, DenseSplitComponentView, Include, IncludeExclude, IncludeExcludeFilter,
+	IterData, QueryComponentFilter, QueryComponentInfoFilter, SparseSplitComponentView,
 };
 use crate::world::CombinedGroupInfo;
 
@@ -44,14 +44,14 @@ where
 {
 	fn include<I>(self, include: I) -> Include<Self, I>
 	where
-		I: BaseComponentFilter<'a>,
+		I: QueryComponentFilter<'a>,
 	{
 		Include::new(self, include)
 	}
 
 	fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
 	where
-		E: BaseComponentFilter<'a>,
+		E: QueryComponentFilter<'a>,
 	{
 		IncludeExclude::new(self, (), exclude)
 	}

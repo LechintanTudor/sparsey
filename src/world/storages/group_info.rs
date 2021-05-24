@@ -40,6 +40,10 @@ pub struct CombinedGroupInfoData<'a> {
 }
 
 impl<'a> CombinedGroupInfo<'a> {
+	pub(crate) fn from_group_info(info: GroupInfo<'a>) -> Self {
+		Self::Empty.combine(info)
+	}
+
 	pub(crate) fn combine(self, info: GroupInfo<'a>) -> Self {
 		match (self, info) {
 			(Self::Empty, GroupInfo::Grouped(data)) => Self::Related(CombinedGroupInfoData {

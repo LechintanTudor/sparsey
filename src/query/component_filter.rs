@@ -3,56 +3,33 @@ use crate::dispatcher::{Comp, CompMut};
 use crate::query::IterData;
 use crate::world::{CombinedGroupInfo, GroupInfo};
 
-pub trait ComponentFilterElement {
+pub trait ComponentFilter<'a> {
+	type Split;
+
 	fn includes(&self, entity: Entity) -> bool;
-}
-
-impl<'a, T> ComponentFilterElement for &'a Comp<'a, T>
-where
-	T: Component,
-{
-	fn includes(&self, entity: Entity) -> bool {
-		self.storage.contains(entity)
-	}
-}
-
-impl<'a, T> ComponentFilterElement for &'a CompMut<'a, T>
-where
-	T: Component,
-{
-	fn includes(&self, entity: Entity) -> bool {
-		self.storage.contains(entity)
-	}
-}
-
-impl<'a> ComponentFilterElement for SparseArrayView<'a> {
-	fn includes(&self, entity: Entity) -> bool {
-		self.contains(entity)
-	}
-}
-
-pub trait BaseComponentFilterElement<'a>
-where
-	Self: ComponentFilterElement,
-{
-	type Split: ComponentFilterElement;
 
 	fn world_tick(&self) -> Ticks;
 
 	fn last_system_tick(&self) -> Ticks;
 
-	fn group_info(&self) -> GroupInfo;
+	fn group_info(&self) -> GroupInfo<'a>;
 
 	fn into_entities(self) -> &'a [Entity];
 
 	fn split(self) -> (&'a [Entity], Self::Split);
+
+	fn includes_split(split: &Self::Split, entity: Entity) -> bool;
 }
 
-impl<'a, T> BaseComponentFilterElement<'a> for &'a Comp<'a, T>
+impl<'a, T> ComponentFilter<'a> for &'a Comp<'a, T>
 where
 	T: Component,
 {
 	type Split = SparseArrayView<'a>;
+
+	fn includes(&self, entity: Entity) -> bool {
+		self.storage.contains(entity)
+	}
 
 	fn world_tick(&self) -> Ticks {
 		self.world_tick
@@ -62,7 +39,7 @@ where
 		self.last_system_tick
 	}
 
-	fn group_info(&self) -> GroupInfo {
+	fn group_info(&self) -> GroupInfo<'a> {
 		self.group_info
 	}
 
@@ -74,13 +51,21 @@ where
 		let (sparse, entities, _, _) = self.storage.split();
 		(entities, sparse)
 	}
+
+	fn includes_split(split: &Self::Split, entity: Entity) -> bool {
+		split.contains(entity)
+	}
 }
 
-impl<'a, T> BaseComponentFilterElement<'a> for &'a CompMut<'a, T>
+impl<'a, T> ComponentFilter<'a> for &'a CompMut<'a, T>
 where
 	T: Component,
 {
 	type Split = SparseArrayView<'a>;
+
+	fn includes(&self, entity: Entity) -> bool {
+		self.storage.contains(entity)
+	}
 
 	fn world_tick(&self) -> Ticks {
 		self.world_tick
@@ -90,7 +75,7 @@ where
 		self.last_system_tick
 	}
 
-	fn group_info(&self) -> GroupInfo {
+	fn group_info(&self) -> GroupInfo<'a> {
 		self.group_info
 	}
 
@@ -102,41 +87,87 @@ where
 		let (sparse, entities, _, _) = self.storage.split();
 		(entities, sparse)
 	}
+
+	fn includes_split(split: &Self::Split, entity: Entity) -> bool {
+		split.contains(entity)
+	}
 }
 
-pub trait ComponentFilter {
-	fn includes_all(&self, entity: Entity) -> bool;
+pub trait QueryComponentFilter<'a> {
+	type Split;
 
-	fn excludes_all(&self, entity: Entity) -> bool;
-}
+	fn includes(&self, entity: Entity) -> bool;
 
-pub trait BaseComponentFilter<'a>
-where
-	Self: ComponentFilter,
-{
-	type Split: ComponentFilter;
+	fn excludes(&self, entity: Entity) -> bool;
 
-	fn group_info(&self) -> CombinedGroupInfo;
+	fn group_info(&self) -> CombinedGroupInfo<'a>;
 
 	fn into_iter_data(self) -> Option<IterData<'a>>;
 
 	fn split(self) -> (Option<IterData<'a>>, Self::Split);
+
+	fn includes_split(split: &Self::Split, entity: Entity) -> bool;
+
+	fn excludes_split(split: &Self::Split, entity: Entity) -> bool;
 }
 
-impl ComponentFilter for () {
-	fn includes_all(&self, _entity: Entity) -> bool {
-		true
+impl<'a, F> QueryComponentFilter<'a> for F
+where
+	F: ComponentFilter<'a>,
+{
+	type Split = <F as ComponentFilter<'a>>::Split;
+
+	fn includes(&self, entity: Entity) -> bool {
+		<F as ComponentFilter<'a>>::includes(self, entity)
 	}
 
-	fn excludes_all(&self, _entity: Entity) -> bool {
-		true
+	fn excludes(&self, entity: Entity) -> bool {
+		!<F as ComponentFilter<'a>>::includes(self, entity)
+	}
+
+	fn group_info(&self) -> CombinedGroupInfo<'a> {
+		let group_info = <F as ComponentFilter<'a>>::group_info(self);
+		CombinedGroupInfo::from_group_info(group_info)
+	}
+
+	fn into_iter_data(self) -> Option<IterData<'a>> {
+		let world_tick = self.world_tick();
+		let last_system_tick = self.last_system_tick();
+		let entities = self.into_entities();
+
+		Some(IterData::new(entities, world_tick, last_system_tick))
+	}
+
+	fn split(self) -> (Option<IterData<'a>>, Self::Split) {
+		let world_tick = self.world_tick();
+		let last_system_tick = self.last_system_tick();
+		let (entities, split) = <F as ComponentFilter<'a>>::split(self);
+		let iter_data = IterData::new(entities, world_tick, last_system_tick);
+
+		(Some(iter_data), split)
+	}
+
+	fn includes_split(split: &Self::Split, entity: Entity) -> bool {
+		<F as ComponentFilter<'a>>::includes_split(split, entity)
+	}
+
+	fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
+		!<F as ComponentFilter<'a>>::includes_split(split, entity)
 	}
 }
 
-impl<'a> BaseComponentFilter<'a> for () {
+impl<'a> QueryComponentFilter<'a> for () {
 	type Split = ();
 
-	fn group_info(&self) -> CombinedGroupInfo {
+	fn includes(&self, _: Entity) -> bool {
+		true
+	}
+
+	fn excludes(&self, _: Entity) -> bool {
+		true
+	}
+
+	fn group_info(&self) -> CombinedGroupInfo<'a> {
 		CombinedGroupInfo::Empty
 	}
 
@@ -147,50 +178,61 @@ impl<'a> BaseComponentFilter<'a> for () {
 	fn split(self) -> (Option<IterData<'a>>, Self::Split) {
 		(None, ())
 	}
+
+	fn includes_split(_: &Self::Split, _: Entity) -> bool {
+		true
+	}
+
+	fn excludes_split(_: &Self::Split, _: Entity) -> bool {
+		true
+	}
 }
 
-macro_rules! impl_filter {
-	($(($elem:ident, $idx:tt)),+) => {
-		impl<$($elem),+> ComponentFilter for ($($elem,)+)
+macro_rules! impl_query_component_filter {
+	($(($filter:ident, $idx:tt)),+) => {
+		impl<'a, $($filter),+> QueryComponentFilter<'a> for ($($filter,)+)
 		where
-			$($elem: ComponentFilterElement,)+
+			$($filter: ComponentFilter<'a>,)+
 		{
-			fn includes_all(&self, entity: Entity) -> bool {
-				true && $(self.$idx.includes(entity))&&+
+			type Split = ($($filter::Split,)+);
+
+			fn includes(&self, entity: Entity) -> bool {
+				$(self.$idx.includes(entity))&&+
 			}
 
-			fn excludes_all(&self, entity: Entity) -> bool {
-				true && $(!self.$idx.includes(entity))&&+
+			fn excludes(&self, entity: Entity) -> bool {
+				$(!self.$idx.includes(entity))&&+
 			}
-		}
 
-		impl<'a, $($elem),+> BaseComponentFilter<'a> for ($($elem,)+)
-		where
-			$($elem: BaseComponentFilterElement<'a>,)+
-		{
-			type Split = ($($elem::Split,)+);
-
-			fn group_info(&self) -> CombinedGroupInfo {
+			fn group_info(&self) -> CombinedGroupInfo<'a> {
 				CombinedGroupInfo::Empty $(.combine(self.$idx.group_info()))+
 			}
 
 			fn into_iter_data(self) -> Option<IterData<'a>> {
-				let element = first_of!($(self.$idx),+);
-				let world_tick = element.world_tick();
-				let last_system_tick = element.last_system_tick();
-				let entities = element.into_entities();
+				let filter = self.0;
+				let world_tick = filter.world_tick();
+				let last_system_tick = filter.last_system_tick();
+				let entities = filter.into_entities();
 
 				Some(IterData::new(entities, world_tick, last_system_tick))
 			}
 
 			fn split(self) -> (Option<IterData<'a>>, Self::Split) {
-				split_sparse!(split, $(($elem, self.$idx)),+)
+				split_sparse!(split, $(($filter, self.$idx)),+)
+			}
+
+			fn includes_split(split: &Self::Split, entity: Entity) -> bool {
+				$($filter::includes_split(&split.$idx, entity))&&+
+			}
+
+			fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
+				$(!$filter::includes_split(&split.$idx, entity))&&+
 			}
 		}
 	};
 }
 
-impl_filter!((A, 0));
-impl_filter!((A, 0), (B, 1));
-impl_filter!((A, 0), (B, 1), (C, 2));
-impl_filter!((A, 0), (B, 1), (C, 2), (D, 3));
+impl_query_component_filter!((A, 0));
+impl_query_component_filter!((A, 0), (B, 1));
+impl_query_component_filter!((A, 0), (B, 1), (C, 2));
+impl_query_component_filter!((A, 0), (B, 1), (C, 2), (D, 3));

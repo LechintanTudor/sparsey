@@ -1,12 +1,10 @@
-use crate::query::{
-	BaseComponentFilter, BaseQuery, ComponentFilter, IterData, QueryComponentInfoFilter,
-};
+use crate::query::{BaseQuery, IterData, QueryComponentFilter, QueryComponentInfoFilter};
 
 pub struct SparseIter<'a, Q, I, E, F>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
-	E: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
+	E: QueryComponentFilter<'a>,
 	F: QueryComponentInfoFilter,
 {
 	data: IterData<'a>,
@@ -20,8 +18,8 @@ where
 impl<'a, Q, I, E, F> SparseIter<'a, Q, I, E, F>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
-	E: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
+	E: QueryComponentFilter<'a>,
 	F: QueryComponentInfoFilter,
 {
 	pub fn new(
@@ -45,8 +43,8 @@ where
 impl<'a, Q, I, E, F> Iterator for SparseIter<'a, Q, I, E, F>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
-	E: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
+	E: QueryComponentFilter<'a>,
 	F: QueryComponentInfoFilter,
 {
 	type Item = Q::Item;
@@ -57,8 +55,8 @@ where
 			self.index += 1;
 
 			if self.filter.matches(entity)
-				&& self.include.includes_all(entity)
-				&& self.exclude.excludes_all(entity)
+				&& I::includes_split(&self.include, entity)
+				&& E::excludes_split(&self.exclude, entity)
 			{
 				let item = unsafe {
 					Q::get_from_sparse_split(

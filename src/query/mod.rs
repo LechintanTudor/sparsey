@@ -15,9 +15,9 @@ pub use self::component_view::*;
 pub use self::iter::*;
 pub use self::modifiers::*;
 
-use crate::components::{Entity, Ticks};
+use crate::components::Entity;
 use crate::query::base::BaseQuery;
-use crate::world::{CombinedGroupInfo, QueryGroupInfo};
+use crate::world::QueryGroupInfo;
 
 pub unsafe trait Query<'a> {
 	type Item;
@@ -53,13 +53,13 @@ where
 unsafe impl<'a, Q, I> Query<'a> for Include<Q, I>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
 {
 	type Item = <Q as BaseQuery<'a>>::Item;
 	type Iterator = Iter<'a, Q, I, (), PassthroughFilter>;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
-		if self.include.includes_all(entity) {
+		if self.include.includes(entity) {
 			self.query.get(entity)
 		} else {
 			None
@@ -67,7 +67,7 @@ where
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
-		self.include.includes_all(entity) && self.query.contains(entity)
+		self.include.includes(entity) && self.query.contains(entity)
 	}
 
 	fn iter(self) -> Self::Iterator {
@@ -78,14 +78,14 @@ where
 unsafe impl<'a, Q, I, E> Query<'a> for IncludeExclude<Q, I, E>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
-	E: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
+	E: QueryComponentFilter<'a>,
 {
 	type Item = <Q as BaseQuery<'a>>::Item;
 	type Iterator = Iter<'a, Q, I, E, PassthroughFilter>;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
-		if self.exclude.excludes_all(entity) && self.include.includes_all(entity) {
+		if self.exclude.excludes(entity) && self.include.includes(entity) {
 			self.query.get(entity)
 		} else {
 			None
@@ -93,8 +93,8 @@ where
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
-		self.exclude.excludes_all(entity)
-			&& self.include.includes_all(entity)
+		self.exclude.excludes(entity)
+			&& self.include.includes(entity)
 			&& self.query.contains(entity)
 	}
 
@@ -106,8 +106,8 @@ where
 unsafe impl<'a, Q, I, E, F> Query<'a> for IncludeExcludeFilter<Q, I, E, F>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
-	E: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
+	E: QueryComponentFilter<'a>,
 	F: QueryComponentInfoFilter,
 {
 	type Item = <Q as BaseQuery<'a>>::Item;

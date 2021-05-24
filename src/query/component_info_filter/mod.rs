@@ -9,7 +9,6 @@ mod passthrough;
 mod view;
 
 use crate::components::{ComponentInfo, Entity, Ticks};
-use std::ops::{BitAnd, BitOr};
 
 pub trait ComponentInfoFilter {
 	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, last_system_tick: Ticks) -> bool;

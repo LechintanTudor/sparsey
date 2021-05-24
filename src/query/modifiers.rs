@@ -1,4 +1,4 @@
-use crate::query::{BaseComponentFilter, QueryComponentInfoFilter};
+use crate::query::{QueryComponentFilter, QueryComponentInfoFilter};
 
 pub struct Include<Q, I> {
 	pub(super) query: Q,
@@ -12,14 +12,14 @@ impl<Q, I> Include<Q, I> {
 
 	pub fn exclude<'a, E>(self, exclude: E) -> IncludeExclude<Q, I, E>
 	where
-		E: BaseComponentFilter<'a>,
+		E: QueryComponentFilter<'a>,
 	{
 		IncludeExclude::new(self.query, self.include, exclude)
 	}
 
 	pub fn filter<'a, F>(self, filter: F) -> IncludeExcludeFilter<Q, I, (), F>
 	where
-		F: BaseComponentFilter<'a>,
+		F: QueryComponentFilter<'a>,
 	{
 		IncludeExcludeFilter::new(self.query, self.include, (), filter)
 	}

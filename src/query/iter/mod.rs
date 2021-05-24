@@ -6,13 +6,13 @@ pub use self::data::*;
 pub use self::dense::*;
 pub use self::sparse::*;
 
-use crate::query::{BaseComponentFilter, BaseQuery, QueryComponentInfoFilter, QueryGroupInfo};
+use crate::query::{BaseQuery, QueryComponentFilter, QueryComponentInfoFilter, QueryGroupInfo};
 
 pub enum Iter<'a, Q, I, E, F>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
-	E: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
+	E: QueryComponentFilter<'a>,
 	F: QueryComponentInfoFilter,
 {
 	Sparse(SparseIter<'a, Q, I, E, F>),
@@ -22,8 +22,8 @@ where
 impl<'a, Q, I, E, F> Iter<'a, Q, I, E, F>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
-	E: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
+	E: QueryComponentFilter<'a>,
 	F: QueryComponentInfoFilter,
 {
 	pub(crate) fn new(query: Q, include: I, exclude: E, filter: F) -> Self {
@@ -72,8 +72,8 @@ where
 impl<'a, Q, I, E, F> Iterator for Iter<'a, Q, I, E, F>
 where
 	Q: BaseQuery<'a>,
-	I: BaseComponentFilter<'a>,
-	E: BaseComponentFilter<'a>,
+	I: QueryComponentFilter<'a>,
+	E: QueryComponentFilter<'a>,
 	F: QueryComponentInfoFilter,
 {
 	type Item = Q::Item;
