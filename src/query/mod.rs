@@ -2,21 +2,21 @@
 mod split;
 
 mod base;
-mod component_filter;
-mod component_info_filter;
 mod component_view;
+mod composite;
+mod filter;
 mod iter;
-mod modifiers;
+mod modifier;
 
-pub use self::base::BaseQueryModifiers;
-pub use self::component_filter::*;
-pub use self::component_info_filter::*;
+pub use self::base::QueryBaseModifiers;
 pub use self::component_view::*;
+pub use self::composite::*;
+pub use self::filter::*;
 pub use self::iter::*;
-pub use self::modifiers::*;
+pub use self::modifier::*;
 
 use crate::components::Entity;
-use crate::query::base::BaseQuery;
+use crate::query::base::QueryBase;
 use crate::world::QueryGroupInfo;
 
 pub unsafe trait Query<'a> {
@@ -32,17 +32,17 @@ pub unsafe trait Query<'a> {
 
 unsafe impl<'a, Q> Query<'a> for Q
 where
-	Q: BaseQuery<'a>,
+	Q: QueryBase<'a>,
 {
-	type Item = <Q as BaseQuery<'a>>::Item;
+	type Item = <Q as QueryBase<'a>>::Item;
 	type Iterator = Iter<'a, Q, (), (), PassthroughFilter>;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
-		<Q as BaseQuery<'a>>::get(self, entity)
+		<Q as QueryBase<'a>>::get(self, entity)
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
-		<Q as BaseQuery<'a>>::contains(self, entity)
+		<Q as QueryBase<'a>>::contains(self, entity)
 	}
 
 	fn iter(self) -> Self::Iterator {
@@ -52,10 +52,10 @@ where
 
 unsafe impl<'a, Q, I> Query<'a> for Include<Q, I>
 where
-	Q: BaseQuery<'a>,
-	I: QueryComponentFilter<'a>,
+	Q: QueryBase<'a>,
+	I: QueryModifier<'a>,
 {
-	type Item = <Q as BaseQuery<'a>>::Item;
+	type Item = <Q as QueryBase<'a>>::Item;
 	type Iterator = Iter<'a, Q, I, (), PassthroughFilter>;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
@@ -77,11 +77,11 @@ where
 
 unsafe impl<'a, Q, I, E> Query<'a> for IncludeExclude<Q, I, E>
 where
-	Q: BaseQuery<'a>,
-	I: QueryComponentFilter<'a>,
-	E: QueryComponentFilter<'a>,
+	Q: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
 {
-	type Item = <Q as BaseQuery<'a>>::Item;
+	type Item = <Q as QueryBase<'a>>::Item;
 	type Iterator = Iter<'a, Q, I, E, PassthroughFilter>;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
@@ -105,20 +105,30 @@ where
 
 unsafe impl<'a, Q, I, E, F> Query<'a> for IncludeExcludeFilter<Q, I, E, F>
 where
-	Q: BaseQuery<'a>,
-	I: QueryComponentFilter<'a>,
-	E: QueryComponentFilter<'a>,
-	F: QueryComponentInfoFilter,
+	Q: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
+	F: QueryFilter,
 {
-	type Item = <Q as BaseQuery<'a>>::Item;
+	type Item = <Q as QueryBase<'a>>::Item;
 	type Iterator = Iter<'a, Q, I, E, F>;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
-		todo!()
+		if self.filter.matches(entity)
+			&& self.exclude.excludes(entity)
+			&& self.include.includes(entity)
+		{
+			self.query.get(entity)
+		} else {
+			None
+		}
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
-		todo!()
+		self.filter.matches(entity)
+			&& self.exclude.excludes(entity)
+			&& self.include.includes(entity)
+			&& self.query.contains(entity)
 	}
 
 	fn iter(self) -> Self::Iterator {

@@ -14,6 +14,6 @@ pub trait ComponentInfoFilter {
 	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, last_system_tick: Ticks) -> bool;
 }
 
-pub trait QueryComponentInfoFilter {
+pub trait QueryFilter {
 	fn matches(&self, entity: Entity) -> bool;
 }

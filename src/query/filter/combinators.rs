@@ -1,5 +1,5 @@
 use crate::components::Entity;
-use crate::query::QueryComponentInfoFilter;
+use crate::query::QueryFilter;
 use std::ops::{BitAnd, BitOr};
 
 pub struct AndFilter<Q1, Q2>(Q1, Q2);
@@ -10,10 +10,10 @@ impl<Q1, Q2> AndFilter<Q1, Q2> {
 	}
 }
 
-impl<Q1, Q2> QueryComponentInfoFilter for AndFilter<Q1, Q2>
+impl<Q1, Q2> QueryFilter for AndFilter<Q1, Q2>
 where
-	Q1: QueryComponentInfoFilter,
-	Q2: QueryComponentInfoFilter,
+	Q1: QueryFilter,
+	Q2: QueryFilter,
 {
 	fn matches(&self, entity: Entity) -> bool {
 		self.0.matches(entity) && self.1.matches(entity)
@@ -22,9 +22,9 @@ where
 
 impl<Q1, Q2, Q3> BitAnd<Q3> for AndFilter<Q1, Q2>
 where
-	Q1: QueryComponentInfoFilter,
-	Q2: QueryComponentInfoFilter,
-	Q3: QueryComponentInfoFilter,
+	Q1: QueryFilter,
+	Q2: QueryFilter,
+	Q3: QueryFilter,
 {
 	type Output = AndFilter<Self, Q3>;
 
@@ -35,9 +35,9 @@ where
 
 impl<Q1, Q2, Q3> BitOr<Q3> for AndFilter<Q1, Q2>
 where
-	Q1: QueryComponentInfoFilter,
-	Q2: QueryComponentInfoFilter,
-	Q3: QueryComponentInfoFilter,
+	Q1: QueryFilter,
+	Q2: QueryFilter,
+	Q3: QueryFilter,
 {
 	type Output = OrFilter<Self, Q3>;
 
@@ -54,10 +54,10 @@ impl<Q1, Q2> OrFilter<Q1, Q2> {
 	}
 }
 
-impl<Q1, Q2> QueryComponentInfoFilter for OrFilter<Q1, Q2>
+impl<Q1, Q2> QueryFilter for OrFilter<Q1, Q2>
 where
-	Q1: QueryComponentInfoFilter,
-	Q2: QueryComponentInfoFilter,
+	Q1: QueryFilter,
+	Q2: QueryFilter,
 {
 	fn matches(&self, entity: Entity) -> bool {
 		self.0.matches(entity) || self.1.matches(entity)
@@ -66,9 +66,9 @@ where
 
 impl<Q1, Q2, Q3> BitAnd<Q3> for OrFilter<Q1, Q2>
 where
-	Q1: QueryComponentInfoFilter,
-	Q2: QueryComponentInfoFilter,
-	Q3: QueryComponentInfoFilter,
+	Q1: QueryFilter,
+	Q2: QueryFilter,
+	Q3: QueryFilter,
 {
 	type Output = AndFilter<Self, Q3>;
 
@@ -79,9 +79,9 @@ where
 
 impl<Q1, Q2, Q3> BitOr<Q3> for OrFilter<Q1, Q2>
 where
-	Q1: QueryComponentInfoFilter,
-	Q2: QueryComponentInfoFilter,
-	Q3: QueryComponentInfoFilter,
+	Q1: QueryFilter,
+	Q2: QueryFilter,
+	Q3: QueryFilter,
 {
 	type Output = OrFilter<Self, Q3>;
 

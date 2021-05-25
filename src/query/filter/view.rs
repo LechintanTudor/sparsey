@@ -1,7 +1,7 @@
 use crate::components::{ComponentInfo, Entity, Ticks};
 use crate::query::{
-	AndFilter, ComponentInfoFilter, ComponentView, OrFilter, QueryComponentInfoFilter,
-	SplitComponentView, UnfilteredComponentView,
+	AndFilter, ComponentInfoFilter, ComponentView, OrFilter, QueryFilter, SplitComponentView,
+	UnfilteredComponentView,
 };
 use crate::world::GroupInfo;
 use std::marker::PhantomData;
@@ -59,7 +59,7 @@ where
 		)
 	}
 
-	fn group_info(&self) -> GroupInfo {
+	fn group_info(&self) -> GroupInfo<'a> {
 		self.view.group_info()
 	}
 
@@ -90,7 +90,7 @@ where
 	}
 }
 
-impl<'a, C, F> QueryComponentInfoFilter for FilteredComponentView<C, F>
+impl<'a, C, F> QueryFilter for FilteredComponentView<C, F>
 where
 	C: UnfilteredComponentView<'a>,
 	F: ComponentInfoFilter,
@@ -108,7 +108,7 @@ impl<'a, C, F, Q> BitAnd<Q> for FilteredComponentView<C, F>
 where
 	C: UnfilteredComponentView<'a>,
 	F: ComponentInfoFilter,
-	Q: QueryComponentInfoFilter,
+	Q: QueryFilter,
 {
 	type Output = AndFilter<Self, Q>;
 
@@ -121,7 +121,7 @@ impl<'a, C, F, Q> BitOr<Q> for FilteredComponentView<C, F>
 where
 	C: UnfilteredComponentView<'a>,
 	F: ComponentInfoFilter,
-	Q: QueryComponentInfoFilter,
+	Q: QueryFilter,
 {
 	type Output = OrFilter<Self, Q>;
 

@@ -1,9 +1,9 @@
-use crate::query::{BaseQuery, IterData, QueryComponentInfoFilter};
+use crate::query::{IterData, QueryBase, QueryFilter};
 
 pub struct DenseIter<'a, Q, F>
 where
-	Q: BaseQuery<'a>,
-	F: QueryComponentInfoFilter,
+	Q: QueryBase<'a>,
+	F: QueryFilter,
 {
 	data: IterData<'a>,
 	index: usize,
@@ -13,8 +13,8 @@ where
 
 impl<'a, Q, F> DenseIter<'a, Q, F>
 where
-	Q: BaseQuery<'a>,
-	F: QueryComponentInfoFilter,
+	Q: QueryBase<'a>,
+	F: QueryFilter,
 {
 	pub unsafe fn new_unchecked(data: IterData<'a>, query: Q::DenseSplit, filter: F) -> Self {
 		Self {
@@ -28,8 +28,8 @@ where
 
 impl<'a, Q, F> Iterator for DenseIter<'a, Q, F>
 where
-	Q: BaseQuery<'a>,
-	F: QueryComponentInfoFilter,
+	Q: QueryBase<'a>,
+	F: QueryFilter,
 {
 	type Item = Q::Item;
 

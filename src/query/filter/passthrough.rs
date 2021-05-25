@@ -1,11 +1,11 @@
 use crate::components::Entity;
-use crate::query::{AndFilter, OrFilter, QueryComponentInfoFilter};
+use crate::query::{AndFilter, OrFilter, QueryFilter};
 use std::ops::{BitAnd, BitOr};
 
 #[derive(Copy, Clone, Debug)]
 pub struct PassthroughFilter;
 
-impl QueryComponentInfoFilter for PassthroughFilter {
+impl QueryFilter for PassthroughFilter {
 	fn matches(&self, _: Entity) -> bool {
 		true
 	}
@@ -13,7 +13,7 @@ impl QueryComponentInfoFilter for PassthroughFilter {
 
 impl<Q> BitAnd<Q> for PassthroughFilter
 where
-	Q: QueryComponentInfoFilter,
+	Q: QueryFilter,
 {
 	type Output = AndFilter<Self, Q>;
 
@@ -24,7 +24,7 @@ where
 
 impl<Q> BitOr<Q> for PassthroughFilter
 where
-	Q: QueryComponentInfoFilter,
+	Q: QueryFilter,
 {
 	type Output = OrFilter<Self, Q>;
 

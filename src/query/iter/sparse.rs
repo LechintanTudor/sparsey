@@ -1,11 +1,11 @@
-use crate::query::{BaseQuery, IterData, QueryComponentFilter, QueryComponentInfoFilter};
+use crate::query::{IterData, QueryBase, QueryFilter, QueryModifier};
 
 pub struct SparseIter<'a, Q, I, E, F>
 where
-	Q: BaseQuery<'a>,
-	I: QueryComponentFilter<'a>,
-	E: QueryComponentFilter<'a>,
-	F: QueryComponentInfoFilter,
+	Q: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
+	F: QueryFilter,
 {
 	data: IterData<'a>,
 	index: usize,
@@ -17,10 +17,10 @@ where
 
 impl<'a, Q, I, E, F> SparseIter<'a, Q, I, E, F>
 where
-	Q: BaseQuery<'a>,
-	I: QueryComponentFilter<'a>,
-	E: QueryComponentFilter<'a>,
-	F: QueryComponentInfoFilter,
+	Q: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
+	F: QueryFilter,
 {
 	pub fn new(
 		data: IterData<'a>,
@@ -42,10 +42,10 @@ where
 
 impl<'a, Q, I, E, F> Iterator for SparseIter<'a, Q, I, E, F>
 where
-	Q: BaseQuery<'a>,
-	I: QueryComponentFilter<'a>,
-	E: QueryComponentFilter<'a>,
-	F: QueryComponentInfoFilter,
+	Q: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
+	F: QueryFilter,
 {
 	type Item = Q::Item;
 

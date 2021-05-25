@@ -1,11 +1,11 @@
 use crate::components::{Entity, Ticks};
 use crate::query::{
 	ComponentView, DenseSplitComponentView, Include, IncludeExclude, IncludeExcludeFilter,
-	IterData, QueryComponentFilter, QueryComponentInfoFilter, SparseSplitComponentView,
+	IterData, QueryFilter, QueryModifier, SparseSplitComponentView,
 };
 use crate::world::CombinedGroupInfo;
 
-pub unsafe trait BaseQuery<'a>
+pub unsafe trait QueryBase<'a>
 where
 	Self: Sized,
 {
@@ -17,7 +17,7 @@ where
 
 	fn contains(&self, entity: Entity) -> bool;
 
-	fn group_info(&self) -> CombinedGroupInfo;
+	fn group_info(&self) -> CombinedGroupInfo<'a>;
 
 	fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit);
 
@@ -38,37 +38,37 @@ where
 	) -> Option<Self::Item>;
 }
 
-pub trait BaseQueryModifiers<'a>
+pub trait QueryBaseModifiers<'a>
 where
 	Self: Sized,
 {
 	fn include<I>(self, include: I) -> Include<Self, I>
 	where
-		I: QueryComponentFilter<'a>,
+		I: QueryModifier<'a>,
 	{
 		Include::new(self, include)
 	}
 
 	fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
 	where
-		E: QueryComponentFilter<'a>,
+		E: QueryModifier<'a>,
 	{
 		IncludeExclude::new(self, (), exclude)
 	}
 
 	fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, (), (), F>
 	where
-		F: QueryComponentInfoFilter,
+		F: QueryFilter,
 	{
 		IncludeExcludeFilter::new(self, (), (), filter)
 	}
 }
 
-impl<'a, Q> BaseQueryModifiers<'a> for Q where Q: BaseQuery<'a> {}
+impl<'a, Q> QueryBaseModifiers<'a> for Q where Q: QueryBase<'a> {}
 
 macro_rules! impl_base_query {
     ($(($view:ident, $idx:tt)),+) => {
-        unsafe impl<'a, $($view),+> BaseQuery<'a> for ($($view,)+)
+        unsafe impl<'a, $($view),+> QueryBase<'a> for ($($view,)+)
         where
             $($view: ComponentView<'a>,)+
         {
@@ -86,7 +86,7 @@ macro_rules! impl_base_query {
                 $(self.$idx.contains(entity))&&+
             }
 
-            fn group_info(&self) -> CombinedGroupInfo {
+            fn group_info(&self) -> CombinedGroupInfo<'a> {
                 CombinedGroupInfo::Empty $(.combine(self.$idx.group_info()))+
             }
 
