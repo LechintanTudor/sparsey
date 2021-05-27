@@ -1,5 +1,4 @@
-use crate::components::{Component, Entity, SparseArrayView};
-use crate::dispatcher::{Comp, CompMut};
+use crate::components::{Entity, SparseArrayView};
 use crate::query::{ComponentView, IterData, UnfilteredComponentView};
 use crate::world::CombinedGroupInfo;
 
@@ -18,16 +17,9 @@ where
 	}
 }
 
-impl<'a, T> QueryModifierElement<'a> for &'a Comp<'a, T>
+impl<'a, C> QueryModifierElement<'a> for C
 where
-	T: Component,
-{
-	// Empty
-}
-
-impl<'a, T> QueryModifierElement<'a> for &'a CompMut<'a, T>
-where
-	T: Component,
+	C: UnfilteredComponentView<'a>,
 {
 	// Empty
 }
