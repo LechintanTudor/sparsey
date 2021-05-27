@@ -1,4 +1,4 @@
-use crate::components::{ComponentInfo, Ticks};
+use crate::components::{ComponentTicks, Ticks};
 use crate::query::{ComponentInfoFilter, FilteredComponentView, UnfilteredComponentView};
 use std::ops::Not;
 
@@ -13,7 +13,7 @@ where
 pub struct Added;
 
 impl ComponentInfoFilter for Added {
-	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, _last_system_tick: Ticks) -> bool {
+	fn matches(info: Option<&ComponentTicks>, world_tick: Ticks, _last_system_tick: Ticks) -> bool {
 		info.filter(|info| info.tick_added() == world_tick)
 			.is_some()
 	}
@@ -23,7 +23,7 @@ impl ComponentInfoFilter for Added {
 pub struct NotAdded;
 
 impl ComponentInfoFilter for NotAdded {
-	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, last_system_tick: Ticks) -> bool {
+	fn matches(info: Option<&ComponentTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool {
 		!Added::matches(info, world_tick, last_system_tick)
 	}
 }

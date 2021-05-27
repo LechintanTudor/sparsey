@@ -12,10 +12,10 @@ mod passthrough;
 mod updated;
 mod view;
 
-use crate::components::{ComponentInfo, Entity, Ticks};
+use crate::components::{ComponentTicks, Entity, Ticks};
 
 pub trait ComponentInfoFilter {
-	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, last_system_tick: Ticks) -> bool;
+	fn matches(info: Option<&ComponentTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool;
 }
 
 pub trait QueryFilter {

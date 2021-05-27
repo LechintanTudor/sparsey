@@ -1,5 +1,5 @@
 use crate::components::{
-	BlobVec, ComponentInfo, Entity, IndexEntity, SparseArray, SparseArrayView, Ticks,
+	BlobVec, ComponentTicks, Entity, IndexEntity, SparseArray, SparseArrayView, Ticks,
 };
 use std::alloc::Layout;
 use std::{ptr, u32};
@@ -7,7 +7,7 @@ use std::{ptr, u32};
 pub struct ComponentStorage {
 	sparse: SparseArray,
 	entities: Vec<Entity>,
-	info: Vec<ComponentInfo>,
+	ticks: Vec<ComponentTicks>,
 	data: BlobVec,
 }
 
@@ -23,7 +23,7 @@ impl ComponentStorage {
 		Self {
 			sparse: SparseArray::default(),
 			entities: Vec::new(),
-			info: Vec::new(),
+			ticks: Vec::new(),
 			data: BlobVec::new(item_layout, drop_item),
 		}
 	}
@@ -40,7 +40,7 @@ impl ComponentStorage {
 			Some(index_entity) => {
 				let index = index_entity.index();
 				*self.entities.get_unchecked_mut(index) = entity;
-				self.info.get_unchecked_mut(index).tick_mutated = tick;
+				self.ticks.get_unchecked_mut(index).tick_mutated = tick;
 				self.data.set_and_forget_prev_unchecked(index, value)
 			}
 			None => {
@@ -49,7 +49,7 @@ impl ComponentStorage {
 					entity.version(),
 				));
 				self.entities.push(entity);
-				self.info.push(ComponentInfo::new(tick));
+				self.ticks.push(ComponentTicks::new(tick));
 				self.data.push(value);
 				ptr::null_mut()
 			}
@@ -63,7 +63,7 @@ impl ComponentStorage {
 			Some(index_entity) => {
 				let index = index_entity.index();
 				*self.entities.get_unchecked_mut(index) = entity;
-				self.info.get_unchecked_mut(index).tick_mutated = tick;
+				self.ticks.get_unchecked_mut(index).tick_mutated = tick;
 				self.data.set_and_drop_prev_unchecked(index, value);
 			}
 			None => {
@@ -72,7 +72,7 @@ impl ComponentStorage {
 					entity.version(),
 				));
 				self.entities.push(entity);
-				self.info.push(ComponentInfo::new(tick));
+				self.ticks.push(ComponentTicks::new(tick));
 				self.data.push(value);
 			}
 		}
@@ -86,7 +86,7 @@ impl ComponentStorage {
 
 		let dense_index = index_entity.index();
 		self.entities.swap_remove(dense_index);
-		self.info.swap_remove(dense_index);
+		self.ticks.swap_remove(dense_index);
 
 		if let Some(entity) = self.entities.last() {
 			let new_index = (self.entities.len() - 1) as u32;
@@ -108,7 +108,7 @@ impl ComponentStorage {
 
 		let dense_index = index_entity.index();
 		self.entities.swap_remove(dense_index);
-		self.info.swap_remove(dense_index);
+		self.ticks.swap_remove(dense_index);
 
 		if let Some(entity) = self.entities.last() {
 			let new_index = (self.entities.len() - 1) as u32;
@@ -146,7 +146,7 @@ impl ComponentStorage {
 		}
 
 		self.entities.swap(a, b);
-		self.info.swap(a, b);
+		self.ticks.swap(a, b);
 	}
 
 	pub fn get(&self, entity: Entity) -> *const u8 {
@@ -163,29 +163,29 @@ impl ComponentStorage {
 		}
 	}
 
-	pub fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
+	pub fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
 		let index = self.sparse.get_index(entity)? as usize;
-		unsafe { Some(self.info.get_unchecked(index)) }
+		unsafe { Some(self.ticks.get_unchecked(index)) }
 	}
 
-	pub fn get_with_info(&self, entity: Entity) -> Option<(*const u8, &ComponentInfo)> {
+	pub fn get_with_ticks(&self, entity: Entity) -> Option<(*const u8, &ComponentTicks)> {
 		let index = self.sparse.get_index(entity)? as usize;
 
 		unsafe {
 			Some((
 				self.data.get_unchecked(index),
-				self.info.get_unchecked(index),
+				self.ticks.get_unchecked(index),
 			))
 		}
 	}
 
-	pub fn get_with_info_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ComponentInfo)> {
+	pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ComponentTicks)> {
 		let index = self.sparse.get_index(entity)? as usize;
 
 		unsafe {
 			Some((
 				self.data.get_unchecked(index),
-				self.info.get_unchecked_mut(index),
+				self.ticks.get_unchecked_mut(index),
 			))
 		}
 	}
@@ -206,21 +206,21 @@ impl ComponentStorage {
 		self.entities.is_empty()
 	}
 
-	pub fn split(&self) -> (SparseArrayView, &[Entity], *const u8, &[ComponentInfo]) {
+	pub fn split(&self) -> (SparseArrayView, &[Entity], *const u8, &[ComponentTicks]) {
 		(
 			self.sparse.as_view(),
 			self.entities.as_slice(),
 			self.data.as_ptr(),
-			self.info.as_slice(),
+			self.ticks.as_slice(),
 		)
 	}
 
-	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], *mut u8, &mut [ComponentInfo]) {
+	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], *mut u8, &mut [ComponentTicks]) {
 		(
 			self.sparse.as_view(),
 			self.entities.as_slice(),
 			self.data.as_ptr(),
-			self.info.as_mut_slice(),
+			self.ticks.as_mut_slice(),
 		)
 	}
 }
@@ -262,12 +262,12 @@ mod tests {
 
 	fn get(storage: &ComponentStorage, entity: Entity) -> Option<i32> {
 		storage
-			.get_with_info(entity)
+			.get_with_ticks(entity)
 			.map(|(value, _)| unsafe { *value.cast::<i32>() })
 	}
 
-	fn get_info(storage: &ComponentStorage, entity: Entity) -> Option<ComponentInfo> {
-		storage.get_with_info(entity).map(|(_, info)| *info)
+	fn get_ticks(storage: &ComponentStorage, entity: Entity) -> Option<ComponentTicks> {
+		storage.get_with_ticks(entity).map(|(_, ticks)| *ticks)
 	}
 
 	#[test]
@@ -279,20 +279,20 @@ mod tests {
 		// Insert
 		assert!(insert(&mut storage, e1, 1, 1).is_none());
 		assert_eq!(get(&storage, e1).unwrap(), 1);
-		assert_eq!(get_info(&storage, e1).unwrap(), ComponentInfo::new(1));
+		assert_eq!(get_ticks(&storage, e1).unwrap(), ComponentTicks::new(1));
 
 		assert!(insert(&mut storage, e2, 2, 2).is_none());
 		assert_eq!(get(&storage, e1).unwrap(), 1);
 		assert_eq!(get(&storage, e2).unwrap(), 2);
-		assert_eq!(get_info(&storage, e1).unwrap(), ComponentInfo::new(1));
-		assert_eq!(get_info(&storage, e2).unwrap(), ComponentInfo::new(2));
+		assert_eq!(get_ticks(&storage, e1).unwrap(), ComponentTicks::new(1));
+		assert_eq!(get_ticks(&storage, e2).unwrap(), ComponentTicks::new(2));
 
 		// Swap
 		storage.swap(0, 1);
 		assert_eq!(get(&storage, e1).unwrap(), 1);
 		assert_eq!(get(&storage, e2).unwrap(), 2);
-		assert_eq!(get_info(&storage, e1).unwrap(), ComponentInfo::new(1));
-		assert_eq!(get_info(&storage, e2).unwrap(), ComponentInfo::new(2));
+		assert_eq!(get_ticks(&storage, e1).unwrap(), ComponentTicks::new(1));
+		assert_eq!(get_ticks(&storage, e2).unwrap(), ComponentTicks::new(2));
 
 		// Remove
 		assert_eq!(remove(&mut storage, e1), Some(1));

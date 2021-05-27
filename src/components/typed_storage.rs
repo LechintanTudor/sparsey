@@ -1,4 +1,4 @@
-use crate::components::{ComponentInfo, ComponentStorage, Entity, SparseArrayView};
+use crate::components::{ComponentStorage, ComponentTicks, Entity, SparseArrayView};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr, slice};
@@ -52,24 +52,24 @@ where
 		}
 	}
 
-	pub fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
-		self.storage.get_info(entity)
+	pub fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+		self.storage.get_ticks(entity)
 	}
 
-	pub fn get_with_info(&self, entity: Entity) -> Option<(&T, &ComponentInfo)> {
+	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
 		self.storage
-			.get_with_info(entity)
-			.map(|(value, info)| unsafe { (&*value.cast::<T>(), info) })
+			.get_with_ticks(entity)
+			.map(|(value, ticks)| unsafe { (&*value.cast::<T>(), ticks) })
 	}
 
 	pub fn entities(&self) -> &[Entity] {
 		self.storage.entities()
 	}
 
-	pub fn split(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentInfo]) {
-		let (sparse, entities, data, info) = self.storage.split();
+	pub fn split(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentTicks]) {
+		let (sparse, entities, data, ticks) = self.storage.split();
 		let data = unsafe { slice::from_raw_parts(data as *const T, entities.len()) };
-		(sparse, entities, data, info)
+		(sparse, entities, data, ticks)
 	}
 }
 
@@ -120,18 +120,18 @@ where
 		}
 	}
 
-	pub(crate) fn get_with_info_mut(
+	pub(crate) fn get_with_ticks_mut(
 		&mut self,
 		entity: Entity,
-	) -> Option<(&mut T, &mut ComponentInfo)> {
+	) -> Option<(&mut T, &mut ComponentTicks)> {
 		self.storage
-			.get_with_info_mut(entity)
-			.map(|(value, info)| unsafe { (&mut *value.cast::<T>(), info) })
+			.get_with_ticks_mut(entity)
+			.map(|(value, ticks)| unsafe { (&mut *value.cast::<T>(), ticks) })
 	}
 
-	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], &mut [T], &mut [ComponentInfo]) {
-		let (sparse, entities, data, info) = self.storage.split_mut();
+	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], &mut [T], &mut [ComponentTicks]) {
+		let (sparse, entities, data, ticks) = self.storage.split_mut();
 		let data = unsafe { slice::from_raw_parts_mut(data as *mut T, entities.len()) };
-		(sparse, entities, data, info)
+		(sparse, entities, data, ticks)
 	}
 }

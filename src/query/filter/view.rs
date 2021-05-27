@@ -1,4 +1,4 @@
-use crate::components::{ComponentInfo, Entity, Ticks};
+use crate::components::{ComponentTicks, Entity, Ticks};
 use crate::query::{
 	AndFilter, ComponentInfoFilter, ComponentView, OrFilter, QueryFilter, SplitComponentView,
 	UnfilteredComponentView,
@@ -35,7 +35,7 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		let matches = F::matches(
-			self.view.get_info(entity),
+			self.view.get_ticks(entity),
 			self.view.world_tick(),
 			self.view.last_system_tick(),
 		);
@@ -47,13 +47,13 @@ where
 		}
 	}
 
-	fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
-		self.view.get_info(entity)
+	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+		self.view.get_ticks(entity)
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
 		F::matches(
-			self.view.get_info(entity),
+			self.view.get_ticks(entity),
 			self.view.world_tick(),
 			self.view.last_system_tick(),
 		)
@@ -77,7 +77,7 @@ where
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
-		info: *mut ComponentInfo,
+		info: *mut ComponentTicks,
 		index: usize,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
@@ -97,7 +97,7 @@ where
 {
 	fn matches(&self, entity: Entity) -> bool {
 		F::matches(
-			self.view.get_info(entity),
+			self.view.get_ticks(entity),
 			self.view.world_tick(),
 			self.view.last_system_tick(),
 		)

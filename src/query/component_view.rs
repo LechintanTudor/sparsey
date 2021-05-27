@@ -1,5 +1,5 @@
 use crate::components::{
-	Component, ComponentInfo, ComponentRefMut, Entity, SparseArrayView, Ticks,
+	Component, ComponentRefMut, ComponentTicks, Entity, SparseArrayView, Ticks,
 };
 use crate::dispatcher::{Comp, CompMut};
 use crate::world::GroupInfo;
@@ -14,7 +14,7 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn get_info(&self, entity: Entity) -> Option<&ComponentInfo>;
+	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks>;
 
 	fn contains(&self, entity: Entity) -> bool;
 
@@ -27,18 +27,18 @@ where
 	fn split(self) -> SplitComponentView<'a, Self::Component>;
 
 	fn split_sparse(self) -> (&'a [Entity], SparseSplitComponentView<'a, Self::Component>) {
-		let (sparse, entities, data, info) = self.split();
-		(entities, SparseSplitComponentView::new(sparse, data, info))
+		let (sparse, entities, data, ticks) = self.split();
+		(entities, SparseSplitComponentView::new(sparse, data, ticks))
 	}
 
 	fn split_dense(self) -> (&'a [Entity], DenseSplitComponentView<'a, Self::Component>) {
-		let (_, entities, data, info) = self.split();
-		(entities, DenseSplitComponentView::new(data, info))
+		let (_, entities, data, ticks) = self.split();
+		(entities, DenseSplitComponentView::new(data, ticks))
 	}
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
-		info: *mut ComponentInfo,
+		info: *mut ComponentTicks,
 		index: usize,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
@@ -56,8 +56,8 @@ where
 		self.storage.get(entity)
 	}
 
-	fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
-		self.storage.get_info(entity)
+	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+		self.storage.get_ticks(entity)
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
@@ -77,13 +77,13 @@ where
 	}
 
 	fn split(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, info) = self.storage.split();
-		(sparse, entities, data.as_ptr() as _, info.as_ptr() as _)
+		let (sparse, entities, data, ticks) = self.storage.split();
+		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
-		_info: *mut ComponentInfo,
+		_info: *mut ComponentTicks,
 		index: usize,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
@@ -103,8 +103,8 @@ where
 		self.storage.get(entity)
 	}
 
-	fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
-		self.storage.get_info(entity)
+	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+		self.storage.get_ticks(entity)
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
@@ -124,13 +124,13 @@ where
 	}
 
 	fn split(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, info) = self.storage.split();
-		(sparse, entities, data.as_ptr() as _, info.as_ptr() as _)
+		let (sparse, entities, data, ticks) = self.storage.split();
+		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
-		_info: *mut ComponentInfo,
+		_info: *mut ComponentTicks,
 		index: usize,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
@@ -146,12 +146,12 @@ where
 	type Component = T;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
-		let (data, info) = self.storage.get_with_info_mut(entity)?;
-		Some(ComponentRefMut::new(data, info, self.world_tick))
+		let (data, ticks) = self.storage.get_with_ticks_mut(entity)?;
+		Some(ComponentRefMut::new(data, ticks, self.world_tick))
 	}
 
-	fn get_info(&self, entity: Entity) -> Option<&ComponentInfo> {
-		self.storage.get_info(entity)
+	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+		self.storage.get_ticks(entity)
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
@@ -171,13 +171,13 @@ where
 	}
 
 	fn split(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, info) = self.storage.split();
-		(sparse, entities, data.as_ptr() as _, info.as_ptr() as _)
+		let (sparse, entities, data, ticks) = self.storage.split();
+		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
-		info: *mut ComponentInfo,
+		info: *mut ComponentTicks,
 		index: usize,
 		world_tick: Ticks,
 		_last_system_tick: Ticks,
@@ -194,19 +194,23 @@ pub type SplitComponentView<'a, T> = (
 	SparseArrayView<'a>,
 	&'a [Entity],
 	*mut T,
-	*mut ComponentInfo,
+	*mut ComponentTicks,
 );
 
 #[derive(Copy, Clone)]
 pub struct SparseSplitComponentView<'a, T> {
 	sparse: SparseArrayView<'a>,
 	data: *mut T,
-	info: *mut ComponentInfo,
+	ticks: *mut ComponentTicks,
 }
 
 impl<'a, T> SparseSplitComponentView<'a, T> {
-	fn new(sparse: SparseArrayView<'a>, data: *mut T, info: *mut ComponentInfo) -> Self {
-		Self { sparse, data, info }
+	fn new(sparse: SparseArrayView<'a>, data: *mut T, ticks: *mut ComponentTicks) -> Self {
+		Self {
+			sparse,
+			data,
+			ticks,
+		}
 	}
 
 	pub unsafe fn get<V>(
@@ -219,22 +223,22 @@ impl<'a, T> SparseSplitComponentView<'a, T> {
 		V: ComponentView<'a, Component = T>,
 	{
 		let index = self.sparse.get_index(entity)? as usize;
-		V::get_from_parts(self.data, self.info, index, world_tick, last_system_tick)
+		V::get_from_parts(self.data, self.ticks, index, world_tick, last_system_tick)
 	}
 }
 
 #[derive(Copy, Clone)]
 pub struct DenseSplitComponentView<'a, T> {
 	data: *mut T,
-	info: *mut ComponentInfo,
+	ticks: *mut ComponentTicks,
 	_phantom: PhantomData<&'a ()>,
 }
 
 impl<'a, T> DenseSplitComponentView<'a, T> {
-	fn new(data: *mut T, info: *mut ComponentInfo) -> Self {
+	fn new(data: *mut T, ticks: *mut ComponentTicks) -> Self {
 		Self {
 			data,
-			info,
+			ticks,
 			_phantom: PhantomData,
 		}
 	}
@@ -248,7 +252,7 @@ impl<'a, T> DenseSplitComponentView<'a, T> {
 	where
 		V: ComponentView<'a, Component = T>,
 	{
-		V::get_from_parts(self.data, self.info, index, world_tick, last_system_tick)
+		V::get_from_parts(self.data, self.ticks, index, world_tick, last_system_tick)
 	}
 }
 

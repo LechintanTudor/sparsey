@@ -1,4 +1,4 @@
-use crate::components::{ComponentInfo, Ticks};
+use crate::components::{ComponentTicks, Ticks};
 use crate::query::{ComponentInfoFilter, FilteredComponentView, UnfilteredComponentView};
 use std::ops::Not;
 
@@ -13,7 +13,7 @@ where
 pub struct Mutated;
 
 impl ComponentInfoFilter for Mutated {
-	fn matches(info: Option<&ComponentInfo>, _world_tick: Ticks, last_system_tick: Ticks) -> bool {
+	fn matches(info: Option<&ComponentTicks>, _world_tick: Ticks, last_system_tick: Ticks) -> bool {
 		info.filter(|info| info.tick_mutated() > last_system_tick)
 			.is_some()
 	}
@@ -23,7 +23,7 @@ impl ComponentInfoFilter for Mutated {
 pub struct NotMutated;
 
 impl ComponentInfoFilter for NotMutated {
-	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, last_system_tick: Ticks) -> bool {
+	fn matches(info: Option<&ComponentTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool {
 		!Mutated::matches(info, world_tick, last_system_tick)
 	}
 }
