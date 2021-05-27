@@ -1,7 +1,7 @@
-use crate::dispatcher::{
+use crate::resources::Resources;
+use crate::systems::{
 	BorrowEnvironment, Environment, LocalSystemParam, SystemAccess, SystemParam, SystemResult,
 };
-use crate::resources::Resources;
 use crate::world::World;
 
 /// Trait implemented by `Systems` which can run on the thread

@@ -1,7 +1,7 @@
 use crate::components::{
 	Component, ComponentRefMut, ComponentTicks, Entity, SparseArrayView, Ticks,
 };
-use crate::dispatcher::{Comp, CompMut};
+use crate::systems::{Comp, CompMut};
 use crate::world::GroupInfo;
 use std::marker::PhantomData;
 

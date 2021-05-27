@@ -1,11 +1,11 @@
 pub use self::components::*;
-pub use self::dispatcher::*;
 pub use self::query::*;
 pub use self::resources::*;
+pub use self::systems::*;
 pub use self::world::*;
 
 mod components;
-mod dispatcher;
+mod systems;
 #[macro_use]
 mod query;
 mod resources;

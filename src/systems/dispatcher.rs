@@ -1,9 +1,9 @@
 use crate::components::Ticks;
-use crate::dispatcher::{
+use crate::resources::Resources;
+use crate::systems::{
 	CommandBuffers, Environment, LocalFn, LocalSystem, LocallyRunnable, RunError, RunResult,
 	System, SystemAccess, SystemError,
 };
-use crate::resources::Resources;
 use crate::world::World;
 use std::mem;
 
