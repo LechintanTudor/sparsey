@@ -1,11 +1,15 @@
 pub use self::added::*;
 pub use self::combinators::*;
+pub use self::mutated::*;
 pub use self::passthrough::*;
+pub use self::updated::*;
 pub use self::view::*;
 
 mod added;
 mod combinators;
+mod mutated;
 mod passthrough;
+mod updated;
 mod view;
 
 use crate::components::{ComponentInfo, Entity, Ticks};

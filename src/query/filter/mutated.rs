@@ -2,7 +2,7 @@ use crate::components::{ComponentInfo, Ticks};
 use crate::query::{ComponentInfoFilter, FilteredComponentView, UnfilteredComponentView};
 use std::ops::Not;
 
-pub fn added<'a, C>(view: C) -> FilteredComponentView<C, Added>
+pub fn mutated<'a, C>(view: C) -> FilteredComponentView<C, Mutated>
 where
 	C: UnfilteredComponentView<'a>,
 {
@@ -10,26 +10,26 @@ where
 }
 
 #[derive(Clone, Copy, Default, Debug)]
-pub struct Added;
+pub struct Mutated;
 
-impl ComponentInfoFilter for Added {
-	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, _last_system_tick: Ticks) -> bool {
-		info.filter(|info| info.tick_added() == world_tick)
+impl ComponentInfoFilter for Mutated {
+	fn matches(info: Option<&ComponentInfo>, _world_tick: Ticks, last_system_tick: Ticks) -> bool {
+		info.filter(|info| info.tick_mutated() > last_system_tick)
 			.is_some()
 	}
 }
 
 #[derive(Clone, Copy, Default, Debug)]
-pub struct NotAdded;
+pub struct NotMutated;
 
-impl ComponentInfoFilter for NotAdded {
+impl ComponentInfoFilter for NotMutated {
 	fn matches(info: Option<&ComponentInfo>, world_tick: Ticks, last_system_tick: Ticks) -> bool {
-		!Added::matches(info, world_tick, last_system_tick)
+		!Mutated::matches(info, world_tick, last_system_tick)
 	}
 }
 
-impl<E> Not for FilteredComponentView<E, Added> {
-	type Output = FilteredComponentView<E, NotAdded>;
+impl<E> Not for FilteredComponentView<E, Mutated> {
+	type Output = FilteredComponentView<E, NotMutated>;
 
 	fn not(self) -> Self::Output {
 		FilteredComponentView::new(self.into_view())
