@@ -69,7 +69,7 @@ impl World {
 			});
 		}
 
-		self.update_group_indexes(C::components().as_ref());
+		self.update_group_indexes(C::type_ids().as_ref());
 		let new_entities = &self.entities.as_ref()[initial_entity_count..];
 
 		for &entity in new_entities {
@@ -113,7 +113,7 @@ impl World {
 			C::insert(&mut storages, entity, components, self.tick);
 		}
 
-		self.update_group_indexes(C::components().as_ref());
+		self.update_group_indexes(C::type_ids().as_ref());
 
 		for &i in self.group_indexes.iter() {
 			self.components.grouped.group_components(i, entity);
@@ -132,7 +132,7 @@ impl World {
 			return None;
 		}
 
-		self.update_group_indexes(C::components().as_ref());
+		self.update_group_indexes(C::type_ids().as_ref());
 
 		for &i in self.group_indexes.iter() {
 			self.components.grouped.ungroup_components(i, entity);
@@ -153,7 +153,7 @@ impl World {
 			return;
 		}
 
-		self.update_group_indexes(C::components().as_ref());
+		self.update_group_indexes(C::type_ids().as_ref());
 
 		for &i in self.group_indexes.iter() {
 			self.components.grouped.ungroup_components(i, entity);

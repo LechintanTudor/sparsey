@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr, slice};
 
-pub struct TypedComponentStorage<S, T>
+pub(crate) struct TypedComponentStorage<S, T>
 where
 	S: Deref<Target = ComponentStorage>,
 	T: 'static,
@@ -31,7 +31,7 @@ where
 	S: Deref<Target = ComponentStorage>,
 	T: 'static,
 {
-	pub(crate) unsafe fn new(storage: S) -> Self {
+	pub unsafe fn new(storage: S) -> Self {
 		Self {
 			storage,
 			_marker: PhantomData,
@@ -78,7 +78,7 @@ where
 	S: Deref<Target = ComponentStorage> + DerefMut,
 	T: 'static,
 {
-	pub(crate) fn insert(&mut self, entity: Entity, value: T, tick: u32) -> Option<T> {
+	pub fn insert(&mut self, entity: Entity, value: T, tick: u32) -> Option<T> {
 		unsafe {
 			let raw_value = &value as *const _ as *const _;
 			let prev = self.storage.insert_and_forget_prev(entity, raw_value, tick);
@@ -92,7 +92,7 @@ where
 		}
 	}
 
-	pub(crate) fn remove(&mut self, entity: Entity) -> Option<T> {
+	pub fn remove(&mut self, entity: Entity) -> Option<T> {
 		let value = self.storage.remove_and_forget(entity);
 
 		if !value.is_null() {
@@ -102,28 +102,7 @@ where
 		}
 	}
 
-	pub(crate) fn delete(&mut self, entity: Entity) -> bool {
-		self.storage.remove_and_drop(entity)
-	}
-
-	pub(crate) fn clear(&mut self) {
-		self.storage.clear();
-	}
-
-	pub(crate) fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-		let value = self.storage.get_mut(entity);
-
-		if !value.is_null() {
-			unsafe { Some(&mut *value.cast::<T>()) }
-		} else {
-			None
-		}
-	}
-
-	pub(crate) fn get_with_ticks_mut(
-		&mut self,
-		entity: Entity,
-	) -> Option<(&mut T, &mut ComponentTicks)> {
+	pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(&mut T, &mut ComponentTicks)> {
 		self.storage
 			.get_with_ticks_mut(entity)
 			.map(|(value, ticks)| unsafe { (&mut *value.cast::<T>(), ticks) })

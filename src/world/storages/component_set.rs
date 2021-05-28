@@ -7,8 +7,11 @@ use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::marker::PhantomData;
 
-pub type ComponentStorageRefMut<'a, T> =
-	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
+pub struct BorrowedComponentStorage<'a, T>(
+	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>,
+)
+where
+	T: Component;
 
 /// Trait implemented for component sets which can be
 /// added, appended or removed to/from the `World`.
@@ -17,12 +20,12 @@ where
 	Self: Sized + Send + Sync + 'static,
 {
 	/// Array containing the `TypeIds` of all components in the set.
-	type Components: AsRef<[TypeId]>;
+	type TypeIds: AsRef<[TypeId]>;
 	/// Storages to borrow from the `World` for adding/appending/removing components.
 	type Storages: for<'a> BorrowStorages<'a>;
 
 	/// Get an array containing the `TypeIds` of all components in the set.
-	fn components() -> Self::Components;
+	fn type_ids() -> Self::TypeIds;
 
 	/// Borrow storages from the `World`.
 	unsafe fn borrow_storages(
@@ -74,10 +77,10 @@ macro_rules! impl_component_set {
         where
             $($comp: Component,)*
         {
-            type Components = [TypeId; $len];
+            type TypeIds = [TypeId; $len];
             type Storages = StorageBorrower<($($comp,)*)>;
 
-            fn components() -> Self::Components {
+            fn type_ids() -> Self::TypeIds {
                 [$(TypeId::of::<$comp>()),*]
             }
 
@@ -89,7 +92,7 @@ macro_rules! impl_component_set {
                 tick: u32,
             ) {
                 $(
-                    storages.$idx.insert(entity, components.$idx, tick);
+                    storages.$idx.0.insert(entity, components.$idx, tick);
                 )*
             }
 
@@ -99,7 +102,7 @@ macro_rules! impl_component_set {
                 entity: Entity,
             ) -> Option<Self> {
                 let components = (
-                    $(storages.$idx.remove(entity),)*
+                    $(storages.$idx.0.remove(entity),)*
                 );
 
                 Some((
@@ -113,7 +116,7 @@ macro_rules! impl_component_set {
                 entity: Entity,
             ) {
                 $(
-                    storages.$idx.remove(entity);
+                    storages.$idx.0.remove(entity);
                 )*
             }
         }
@@ -122,7 +125,7 @@ macro_rules! impl_component_set {
         where
             $($comp: Component,)*
         {
-            type StorageSet = ($(ComponentStorageRefMut<'a, $comp>,)*);
+            type StorageSet = ($(BorrowedComponentStorage<'a, $comp>,)*);
 
             #[allow(unused_variables)]
             unsafe fn borrow(components: &'a ComponentStorages) -> Self::StorageSet {
@@ -134,15 +137,16 @@ macro_rules! impl_component_set {
     };
 }
 
-fn borrow_storage<T>(components: &ComponentStorages) -> ComponentStorageRefMut<T>
+fn borrow_storage<T>(components: &ComponentStorages) -> BorrowedComponentStorage<T>
 where
 	T: Component,
 {
-	let storage = components
-		.borrow_mut(&TypeId::of::<T>())
-		.unwrap_or_else(|| panic_missing_comp::<T>());
-
-	unsafe { ComponentStorageRefMut::<T>::new(storage) }
+	unsafe {
+		components
+			.borrow_mut(&TypeId::of::<T>())
+			.map(|s| BorrowedComponentStorage(TypedComponentStorage::new(s)))
+			.unwrap_or_else(|| panic_missing_comp::<T>())
+	}
 }
 
 #[rustfmt::skip]
