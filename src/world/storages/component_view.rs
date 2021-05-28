@@ -2,8 +2,10 @@ use crate::components::{Component, ComponentStorage, Ticks, TypedComponentStorag
 use crate::world::GroupInfo;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 
-pub type ComponentStorageRef<'a, T> = TypedComponentStorage<AtomicRef<'a, ComponentStorage>, T>;
-pub type ComponentStorageRefMut<'a, T> =
+pub(crate) type ComponentStorageRef<'a, T> =
+	TypedComponentStorage<AtomicRef<'a, ComponentStorage>, T>;
+
+pub(crate) type ComponentStorageRefMut<'a, T> =
 	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
 
 pub struct Comp<'a, T>

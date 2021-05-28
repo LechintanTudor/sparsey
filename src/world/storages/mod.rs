@@ -1,4 +1,5 @@
 pub use self::component_set::*;
+pub use self::component_view::*;
 pub use self::components::*;
 pub use self::group_info::*;
 pub use self::group_mask::*;
@@ -8,6 +9,7 @@ pub(crate) use self::grouped::*;
 pub(crate) use self::ungrouped::*;
 
 mod component_set;
+mod component_view;
 mod components;
 mod entities;
 mod group_info;

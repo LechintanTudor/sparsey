@@ -1,8 +1,7 @@
 use crate::components::{
 	Component, ComponentRefMut, ComponentTicks, Entity, SparseArrayView, Ticks,
 };
-use crate::systems::{Comp, CompMut};
-use crate::world::GroupInfo;
+use crate::world::{Comp, CompMut, GroupInfo};
 use std::marker::PhantomData;
 
 pub unsafe trait ComponentView<'a>

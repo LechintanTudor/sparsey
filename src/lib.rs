@@ -5,10 +5,9 @@ pub use self::systems::*;
 pub use self::world::*;
 
 mod components;
-mod systems;
-#[macro_use]
 mod query;
 mod resources;
+mod systems;
 mod world;
 
 mod utils {
