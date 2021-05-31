@@ -37,7 +37,7 @@ impl GroupedComponentStorages {
 					info.insert(
 						type_id,
 						ComponentInfo {
-							group_set_index: group_sets.len(),
+							group_family_index: group_sets.len(),
 							storage_index: storages.len(),
 							group_index,
 						},
@@ -157,8 +157,8 @@ impl GroupedComponentStorages {
 		self.group_sets.len()
 	}
 
-	pub fn get_group_set_index(&self, type_id: &TypeId) -> Option<usize> {
-		self.info.get(type_id).map(|info| info.group_set_index)
+	pub fn group_family_index(&self, type_id: &TypeId) -> Option<usize> {
+		self.info.get(type_id).map(|info| info.group_family_index)
 	}
 
 	pub fn borrow_with_info(
@@ -168,13 +168,16 @@ impl GroupedComponentStorages {
 		self.info.get(component).map(|info| unsafe {
 			let storage = self
 				.group_sets
-				.get_unchecked(info.group_set_index)
+				.get_unchecked(info.group_family_index)
 				.storages
 				.get_unchecked(info.storage_index)
 				.borrow();
 
 			let info = GroupInfoData::new(
-				&self.group_sets.get_unchecked(info.group_set_index).groups,
+				&self
+					.group_sets
+					.get_unchecked(info.group_family_index)
+					.groups,
 				info.group_index as _,
 				info.storage_index as _,
 			);
@@ -190,13 +193,16 @@ impl GroupedComponentStorages {
 		self.info.get(component).map(|info| unsafe {
 			let storage = self
 				.group_sets
-				.get_unchecked(info.group_set_index)
+				.get_unchecked(info.group_family_index)
 				.storages
 				.get_unchecked(info.storage_index)
 				.borrow_mut();
 
 			let info = GroupInfoData::new(
-				&self.group_sets.get_unchecked(info.group_set_index).groups,
+				&self
+					.group_sets
+					.get_unchecked(info.group_family_index)
+					.groups,
 				info.group_index as _,
 				info.storage_index as _,
 			);
@@ -208,7 +214,7 @@ impl GroupedComponentStorages {
 	pub fn borrow(&self, type_id: &TypeId) -> Option<AtomicRef<ComponentStorage>> {
 		self.info.get(type_id).map(|info| unsafe {
 			self.group_sets
-				.get_unchecked(info.group_set_index)
+				.get_unchecked(info.group_family_index)
 				.storages
 				.get_unchecked(info.storage_index)
 				.borrow()
@@ -218,7 +224,7 @@ impl GroupedComponentStorages {
 	pub fn borrow_mut(&self, type_id: &TypeId) -> Option<AtomicRefMut<ComponentStorage>> {
 		self.info.get(type_id).map(|info| unsafe {
 			self.group_sets
-				.get_unchecked(info.group_set_index)
+				.get_unchecked(info.group_family_index)
 				.storages
 				.get_unchecked(info.storage_index)
 				.borrow_mut()
@@ -243,7 +249,7 @@ struct GroupSet {
 
 #[derive(Copy, Clone)]
 struct ComponentInfo {
-	group_set_index: usize,
+	group_family_index: usize,
 	storage_index: usize,
 	group_index: usize,
 }

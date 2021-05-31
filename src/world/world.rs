@@ -1,9 +1,10 @@
 use crate::components::{Component, ComponentStorage, Entity, Ticks};
 use crate::world::{ComponentSet, ComponentStorages, EntityStorage, Layout};
 use std::any::TypeId;
-use std::collections::HashSet;
 use std::error::Error;
 use std::fmt;
+
+pub(crate) const MAX_GROUP_FAMILIES: usize = 16;
 
 /// Container for component storages and entities.
 #[derive(Default)]
@@ -11,7 +12,6 @@ pub struct World {
 	entities: EntityStorage,
 	components: ComponentStorages,
 	tick: Ticks,
-	group_indexes: HashSet<usize>,
 }
 
 impl World {
@@ -69,11 +69,11 @@ impl World {
 			});
 		}
 
-		self.update_group_indexes(C::type_ids().as_ref());
+		let used_group_families = self.used_group_families(C::type_ids().as_ref());
 		let new_entities = &self.entities.as_ref()[initial_entity_count..];
 
 		for &entity in new_entities {
-			for &i in self.group_indexes.iter() {
+			for i in used_group_families.indexes() {
 				self.components.grouped.group_components(i, entity);
 			}
 		}
@@ -113,9 +113,9 @@ impl World {
 			C::insert(&mut storages, entity, components, self.tick);
 		}
 
-		self.update_group_indexes(C::type_ids().as_ref());
+		let used_group_families = self.used_group_families(C::type_ids().as_ref());
 
-		for &i in self.group_indexes.iter() {
+		for i in used_group_families.indexes() {
 			self.components.grouped.group_components(i, entity);
 		}
 
@@ -132,9 +132,9 @@ impl World {
 			return None;
 		}
 
-		self.update_group_indexes(C::type_ids().as_ref());
+		let used_group_families = self.used_group_families(C::type_ids().as_ref());
 
-		for &i in self.group_indexes.iter() {
+		for i in used_group_families.indexes() {
 			self.components.grouped.ungroup_components(i, entity);
 		}
 
@@ -153,9 +153,9 @@ impl World {
 			return;
 		}
 
-		self.update_group_indexes(C::type_ids().as_ref());
+		let used_group_families = self.used_group_families(C::type_ids().as_ref());
 
-		for &i in self.group_indexes.iter() {
+		for i in used_group_families.indexes() {
 			self.components.grouped.ungroup_components(i, entity);
 		}
 
@@ -194,15 +194,18 @@ impl World {
 		self.tick
 	}
 
-	fn update_group_indexes(&mut self, type_ids: &[TypeId]) {
-		let grouped_components = &self.components.grouped;
+	fn used_group_families(&self, type_ids: &[TypeId]) -> UsedGroupFamilies {
+		let mut used_group_families = UsedGroupFamilies::default();
 
-		self.group_indexes.clear();
-		self.group_indexes.extend(
-			type_ids
-				.iter()
-				.flat_map(|type_id| grouped_components.get_group_set_index(type_id)),
-		);
+		for type_id in type_ids {
+			if let Some(index) = self.components.grouped.group_family_index(type_id) {
+				unsafe {
+					*used_group_families.used.get_unchecked_mut(index) = true;
+				}
+			}
+		}
+
+		used_group_families
 	}
 }
 
@@ -220,5 +223,18 @@ impl Error for NoSuchEntity {
 impl fmt::Display for NoSuchEntity {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "No such entity was found in the World")
+	}
+}
+
+#[derive(Clone, Copy, Default, Debug)]
+struct UsedGroupFamilies {
+	used: [bool; MAX_GROUP_FAMILIES],
+}
+
+impl UsedGroupFamilies {
+	fn indexes(&self) -> impl Iterator<Item = usize> + '_ {
+		(0..MAX_GROUP_FAMILIES)
+			.into_iter()
+			.filter(move |&i| self.used[i])
 	}
 }
