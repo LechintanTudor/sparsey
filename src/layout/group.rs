@@ -1,5 +1,5 @@
 use crate::components::Component;
-use crate::world::LayoutComponent;
+use crate::layout::LayoutComponent;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 

@@ -5,7 +5,8 @@ pub use self::entity::*;
 pub use self::sparse_array::*;
 pub use self::storage::*;
 pub use self::ticks::*;
-pub use self::typed_storage::*;
+
+pub(crate) use self::typed_storage::*;
 
 mod blob_vec;
 mod component;

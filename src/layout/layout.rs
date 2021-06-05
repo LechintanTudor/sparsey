@@ -1,4 +1,4 @@
-use crate::world::{LayoutGroup, LayoutGroupSet};
+use crate::layout::{LayoutGroup, LayoutGroupSet};
 use std::mem;
 
 /// Describes the layout of grouped component storages in the `World`.

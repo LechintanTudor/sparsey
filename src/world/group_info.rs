@@ -11,12 +11,12 @@ pub enum GroupInfo<'a> {
 #[derive(Copy, Clone, Debug)]
 pub struct GroupInfoData<'a> {
 	family: &'a [Group],
-	group_index: u8,
-	storage_index: u8,
+	group_index: usize,
+	storage_index: usize,
 }
 
 impl<'a> GroupInfoData<'a> {
-	pub(crate) fn new(family: &'a [Group], group_index: u8, storage_index: u8) -> Self {
+	pub(crate) fn new(family: &'a [Group], group_index: usize, storage_index: usize) -> Self {
 		Self {
 			family,
 			group_index,
@@ -36,7 +36,7 @@ pub enum CombinedGroupInfo<'a> {
 pub struct CombinedGroupInfoData<'a> {
 	family: &'a [Group],
 	mask: u16,
-	index: u8,
+	index: usize,
 }
 
 impl<'a> CombinedGroupInfo<'a> {
@@ -78,7 +78,7 @@ pub enum QueryGroupInfo<'a> {
 pub struct QueryGroupInfoData<'a> {
 	family: &'a [Group],
 	mask: GroupMask,
-	index: u8,
+	index: usize,
 }
 
 impl<'a> QueryGroupInfoData<'a> {

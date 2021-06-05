@@ -1,10 +1,9 @@
 use crate::components::{Component, ComponentStorage, Entity, Ticks};
-use crate::world::{ComponentSet, ComponentStorages, EntityStorage, Layout};
+use crate::layout::Layout;
+use crate::world::{ComponentSet, ComponentStorages, EntityStorage, UsedGroupFamilies};
 use std::any::TypeId;
 use std::error::Error;
 use std::fmt;
-
-pub(crate) const MAX_GROUP_FAMILIES: usize = 16;
 
 /// Container for component storages and entities.
 #[derive(Default)]
@@ -72,8 +71,8 @@ impl World {
 		let used_group_families = self.used_group_families(C::type_ids().as_ref());
 		let new_entities = &self.entities.as_ref()[initial_entity_count..];
 
-		for &entity in new_entities {
-			for i in used_group_families.indexes() {
+		for i in used_group_families.indexes() {
+			for &entity in new_entities {
 				self.components.grouped.group_components(i, entity);
 			}
 		}
@@ -88,7 +87,7 @@ impl World {
 			return false;
 		}
 
-		for i in 0..self.components.grouped.group_set_count() {
+		for i in 0..self.components.grouped.group_family_count() {
 			self.components.grouped.ungroup_components(i, entity);
 		}
 
@@ -195,12 +194,12 @@ impl World {
 	}
 
 	fn used_group_families(&self, type_ids: &[TypeId]) -> UsedGroupFamilies {
-		let mut used_group_families = UsedGroupFamilies::default();
+		let mut used_group_families = UsedGroupFamilies::new();
 
 		for type_id in type_ids {
 			if let Some(index) = self.components.grouped.group_family_index(type_id) {
 				unsafe {
-					*used_group_families.used.get_unchecked_mut(index) = true;
+					used_group_families.add_unchecked(index);
 				}
 			}
 		}
@@ -223,18 +222,5 @@ impl Error for NoSuchEntity {
 impl fmt::Display for NoSuchEntity {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "No such entity was found in the World")
-	}
-}
-
-#[derive(Clone, Copy, Default, Debug)]
-struct UsedGroupFamilies {
-	used: [bool; MAX_GROUP_FAMILIES],
-}
-
-impl UsedGroupFamilies {
-	fn indexes(&self) -> impl Iterator<Item = usize> + '_ {
-		(0..MAX_GROUP_FAMILIES)
-			.into_iter()
-			.filter(move |&i| self.used[i])
 	}
 }

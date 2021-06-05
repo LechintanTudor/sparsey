@@ -1,5 +1,6 @@
 use crate::components::{Component, ComponentStorage, Entity};
-use crate::world::{GroupInfo, GroupedComponentStorages, Layout, UngroupedComponentStorages};
+use crate::layout::Layout;
+use crate::world::{GroupInfo, GroupedComponentStorages, UngroupedComponentStorages};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -40,7 +41,7 @@ impl ComponentStorages {
 		self.grouped = GroupedComponentStorages::with_layout(&layout, &mut storages);
 		self.ungrouped = UngroupedComponentStorages::from_storages(&mut storages);
 
-		for i in 0..self.grouped.group_set_count() {
+		for i in 0..self.grouped.group_family_count() {
 			for &entity in entities {
 				self.grouped.group_components(i, entity);
 			}

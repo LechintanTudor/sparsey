@@ -1,5 +1,6 @@
 use crate::components::{ComponentStorage, Entity};
-use crate::world::{GroupInfoData, GroupMask, Layout};
+use crate::layout::Layout;
+use crate::world::{GroupInfoData, GroupMask};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use std::any::TypeId;
 use std::collections::HashMap;
@@ -8,7 +9,7 @@ use std::mem;
 
 #[derive(Default)]
 pub(crate) struct GroupedComponentStorages {
-	group_sets: Vec<GroupSet>,
+	families: Vec<GroupFamily>,
 	info: HashMap<TypeId, ComponentInfo>,
 }
 
@@ -20,7 +21,7 @@ impl GroupedComponentStorages {
 		layout: &Layout,
 		sparse_set_map: &mut HashMap<TypeId, ComponentStorage>,
 	) -> Self {
-		let mut group_sets = Vec::<GroupSet>::new();
+		let mut group_sets = Vec::<GroupFamily>::new();
 		let mut info = HashMap::<TypeId, ComponentInfo>::new();
 
 		for group_layout in layout.group_sets() {
@@ -55,17 +56,20 @@ impl GroupedComponentStorages {
 				prev_arity = arity;
 			}
 
-			group_sets.push(GroupSet {
+			group_sets.push(GroupFamily {
 				storages: storages,
 				groups,
 			});
 		}
 
-		Self { group_sets, info }
+		Self {
+			families: group_sets,
+			info,
+		}
 	}
 
 	pub fn clear(&mut self) {
-		for group in self.group_sets.iter_mut() {
+		for group in self.families.iter_mut() {
 			for sparse_set in group.storages.iter_mut() {
 				sparse_set.get_mut().clear();
 			}
@@ -78,13 +82,13 @@ impl GroupedComponentStorages {
 
 	pub fn drain_into(&mut self, storages: &mut HashMap<TypeId, ComponentStorage>) {
 		for (&type_id, info) in self.info.iter() {
-			let storage = self.group_sets[info.group_index].storages[info.storage_index].get_mut();
+			let storage = self.families[info.group_index].storages[info.storage_index].get_mut();
 			let storage = mem::replace(storage, ComponentStorage::for_type::<()>());
 			storages.insert(type_id, storage);
 		}
 
 		self.info.clear();
-		self.group_sets.clear();
+		self.families.clear();
 	}
 
 	pub fn contains(&self, type_id: &TypeId) -> bool {
@@ -93,7 +97,7 @@ impl GroupedComponentStorages {
 
 	pub fn group_components(&mut self, group_index: usize, entity: Entity) {
 		let (storages, groups) = {
-			let group = &mut self.group_sets[group_index];
+			let group = &mut self.families[group_index];
 			(group.storages.as_mut_slice(), group.groups.as_mut_slice())
 		};
 
@@ -117,7 +121,7 @@ impl GroupedComponentStorages {
 
 	pub fn ungroup_components(&mut self, group_index: usize, entity: Entity) {
 		let (storages, groups) = {
-			let group = &mut self.group_sets[group_index];
+			let group = &mut self.families[group_index];
 			(group.storages.as_mut_slice(), group.groups.as_mut_slice())
 		};
 
@@ -153,8 +157,8 @@ impl GroupedComponentStorages {
 		}
 	}
 
-	pub fn group_set_count(&self) -> usize {
-		self.group_sets.len()
+	pub fn group_family_count(&self) -> usize {
+		self.families.len()
 	}
 
 	pub fn group_family_index(&self, type_id: &TypeId) -> Option<usize> {
@@ -167,17 +171,14 @@ impl GroupedComponentStorages {
 	) -> Option<(AtomicRef<ComponentStorage>, GroupInfoData)> {
 		self.info.get(component).map(|info| unsafe {
 			let storage = self
-				.group_sets
+				.families
 				.get_unchecked(info.group_family_index)
 				.storages
 				.get_unchecked(info.storage_index)
 				.borrow();
 
 			let info = GroupInfoData::new(
-				&self
-					.group_sets
-					.get_unchecked(info.group_family_index)
-					.groups,
+				&self.families.get_unchecked(info.group_family_index).groups,
 				info.group_index as _,
 				info.storage_index as _,
 			);
@@ -192,17 +193,14 @@ impl GroupedComponentStorages {
 	) -> Option<(AtomicRefMut<ComponentStorage>, GroupInfoData)> {
 		self.info.get(component).map(|info| unsafe {
 			let storage = self
-				.group_sets
+				.families
 				.get_unchecked(info.group_family_index)
 				.storages
 				.get_unchecked(info.storage_index)
 				.borrow_mut();
 
 			let info = GroupInfoData::new(
-				&self
-					.group_sets
-					.get_unchecked(info.group_family_index)
-					.groups,
+				&self.families.get_unchecked(info.group_family_index).groups,
 				info.group_index as _,
 				info.storage_index as _,
 			);
@@ -213,7 +211,7 @@ impl GroupedComponentStorages {
 
 	pub fn borrow(&self, type_id: &TypeId) -> Option<AtomicRef<ComponentStorage>> {
 		self.info.get(type_id).map(|info| unsafe {
-			self.group_sets
+			self.families
 				.get_unchecked(info.group_family_index)
 				.storages
 				.get_unchecked(info.storage_index)
@@ -223,7 +221,7 @@ impl GroupedComponentStorages {
 
 	pub fn borrow_mut(&self, type_id: &TypeId) -> Option<AtomicRefMut<ComponentStorage>> {
 		self.info.get(type_id).map(|info| unsafe {
-			self.group_sets
+			self.families
 				.get_unchecked(info.group_family_index)
 				.storages
 				.get_unchecked(info.storage_index)
@@ -232,7 +230,7 @@ impl GroupedComponentStorages {
 	}
 
 	pub fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> {
-		self.group_sets.iter_mut().flat_map(|group| {
+		self.families.iter_mut().flat_map(|group| {
 			group
 				.storages
 				.iter_mut()
@@ -242,7 +240,7 @@ impl GroupedComponentStorages {
 }
 
 #[derive(Default)]
-struct GroupSet {
+struct GroupFamily {
 	storages: Vec<AtomicRefCell<ComponentStorage>>,
 	groups: Vec<Group>,
 }
