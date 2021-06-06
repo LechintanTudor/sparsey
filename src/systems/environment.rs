@@ -1,8 +1,8 @@
 use crate::components::{Component, Ticks};
 use crate::layout::LayoutComponent;
+use crate::misc::{panic_missing_comp, panic_missing_res};
 use crate::resources::{Res, ResMut, Resource, UnsafeResources};
 use crate::systems::{CommandBuffers, Commands};
-use crate::utils::{panic_missing_comp, panic_missing_res};
 use crate::world::{Comp, CompMut, World};
 use std::any::TypeId;
 use std::marker::PhantomData;
