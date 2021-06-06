@@ -2,7 +2,7 @@ pub use self::impls::*;
 
 use crate::components::{Component, ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::panic_missing_comp;
-use crate::world::ComponentStorages;
+use crate::world::{ComponentStorages, UsedGroupFamilies};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -19,20 +19,8 @@ pub unsafe trait ComponentSet
 where
 	Self: Sized + Send + Sync + 'static,
 {
-	/// Array containing the `TypeIds` of all components in the set.
-	type TypeIds: AsRef<[TypeId]>;
 	/// Storages to borrow from the `World` for adding/appending/removing components.
 	type Storages: for<'a> BorrowStorages<'a>;
-
-	/// Get an array containing the `TypeIds` of all components in the set.
-	fn type_ids() -> Self::TypeIds;
-
-	/// Borrow storages from the `World`.
-	unsafe fn borrow_storages(
-		components: &ComponentStorages,
-	) -> <Self::Storages as BorrowStorages>::StorageSet {
-		Self::Storages::borrow(components)
-	}
 
 	/// Insert the component in the borrowed storages.
 	unsafe fn insert(
@@ -58,8 +46,13 @@ pub trait BorrowStorages<'a> {
 	/// Set of borrowed storages.
 	type StorageSet;
 
-	/// Borrow storages from the `World`.
-	unsafe fn borrow(components: &'a ComponentStorages) -> Self::StorageSet;
+	fn borrow(components: &'a ComponentStorages) -> Self::StorageSet;
+
+	fn families(components: &'a ComponentStorages) -> UsedGroupFamilies;
+
+	fn borrow_with_families(
+		components: &'a ComponentStorages,
+	) -> (Self::StorageSet, UsedGroupFamilies);
 }
 
 /// Struct used to borrow component storages. Implements `BorrowStorages` for all lifetimes.
@@ -77,12 +70,7 @@ macro_rules! impl_component_set {
         where
             $($comp: Component,)*
         {
-            type TypeIds = [TypeId; $len];
             type Storages = StorageBorrower<($($comp,)*)>;
-
-            fn type_ids() -> Self::TypeIds {
-                [$(TypeId::of::<$comp>()),*]
-            }
 
             #[allow(unused_variables)]
             unsafe fn insert(
@@ -127,25 +115,65 @@ macro_rules! impl_component_set {
         {
             type StorageSet = ($(BorrowedComponentStorage<'a, $comp>,)*);
 
+            #[allow(unused_mut)]
             #[allow(unused_variables)]
-            unsafe fn borrow(components: &'a ComponentStorages) -> Self::StorageSet {
-                (
-                    $(borrow_storage::<$comp>(components),)*
-                )
+            fn borrow_with_families(components: &'a ComponentStorages) -> (Self::StorageSet, UsedGroupFamilies) {
+                let mut families = UsedGroupFamilies::default();
+                (($(borrow_with_family::<$comp>(components, &mut families),)*), families)
+            }
+
+            #[allow(unused_variables)]
+            fn borrow(components: &'a ComponentStorages) -> Self::StorageSet {
+                ($(borrow::<$comp>(components),)*)
+            }
+
+            #[allow(unused_mut)]
+            #[allow(unused_variables)]
+            fn families(components: &'a ComponentStorages) -> UsedGroupFamilies {
+                let mut families = UsedGroupFamilies::default();
+                $(update_used_group_families::<$comp>(&mut families, components);)*
+                families
             }
         }
     };
 }
 
-fn borrow_storage<T>(components: &ComponentStorages) -> BorrowedComponentStorage<T>
+fn borrow_with_family<'a, T>(
+	components: &'a ComponentStorages,
+	families: &mut UsedGroupFamilies,
+) -> BorrowedComponentStorage<'a, T>
 where
 	T: Component,
 {
-	unsafe {
-		components
-			.borrow_mut(&TypeId::of::<T>())
-			.map(|s| BorrowedComponentStorage(TypedComponentStorage::new(s)))
-			.unwrap_or_else(|| panic_missing_comp::<T>())
+	components
+		.borrow_with_familiy_mut(&TypeId::of::<T>())
+		.map(|(storage, family)| unsafe {
+			if let Some(family) = family {
+				families.insert_unchecked(family);
+			}
+			BorrowedComponentStorage(TypedComponentStorage::new(storage))
+		})
+		.unwrap_or_else(|| panic_missing_comp::<T>())
+}
+
+fn borrow<'a, T>(components: &'a ComponentStorages) -> BorrowedComponentStorage<'a, T>
+where
+	T: Component,
+{
+	components
+		.borrow_mut(&TypeId::of::<T>())
+		.map(|storage| unsafe { BorrowedComponentStorage(TypedComponentStorage::new(storage)) })
+		.unwrap_or_else(|| panic_missing_comp::<T>())
+}
+
+fn update_used_group_families<T>(families: &mut UsedGroupFamilies, components: &ComponentStorages)
+where
+	T: Component,
+{
+	if let Some(index) = components.group_family_of(&TypeId::of::<T>()) {
+		unsafe {
+			families.insert_unchecked(index);
+		}
 	}
 }
 

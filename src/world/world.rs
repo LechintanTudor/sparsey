@@ -1,6 +1,6 @@
 use crate::components::{Component, ComponentStorage, Entity, Ticks};
 use crate::layout::Layout;
-use crate::world::{ComponentSet, ComponentStorages, EntityStorage, UsedGroupFamilies};
+use crate::world::{BorrowStorages, ComponentSet, ComponentStorages, EntityStorage};
 use std::any::TypeId;
 use std::error::Error;
 use std::fmt;
@@ -54,8 +54,8 @@ impl World {
 	{
 		let initial_entity_count = self.entities.as_ref().len();
 
-		{
-			let mut storages = unsafe { C::borrow_storages(&self.components) };
+		let families = {
+			let (mut storages, families) = C::Storages::borrow_with_families(&self.components);
 			let entities = &mut self.entities;
 			let tick = self.tick;
 
@@ -66,12 +66,13 @@ impl World {
 					C::insert(&mut storages, entity, components, tick);
 				}
 			});
-		}
 
-		let used_group_families = self.used_group_families(C::type_ids().as_ref());
+			families
+		};
+
 		let new_entities = &self.entities.as_ref()[initial_entity_count..];
 
-		for i in used_group_families.indexes() {
+		for i in families.indexes() {
 			for &entity in new_entities {
 				self.components.grouped.group_components(i, entity);
 			}
@@ -107,14 +108,13 @@ impl World {
 			return Err(NoSuchEntity);
 		}
 
-		unsafe {
-			let mut storages = C::borrow_storages(&self.components);
+		let families = unsafe {
+			let (mut storages, families) = C::Storages::borrow_with_families(&self.components);
 			C::insert(&mut storages, entity, components, self.tick);
-		}
+			families
+		};
 
-		let used_group_families = self.used_group_families(C::type_ids().as_ref());
-
-		for i in used_group_families.indexes() {
+		for i in families.indexes() {
 			self.components.grouped.group_components(i, entity);
 		}
 
@@ -131,14 +131,14 @@ impl World {
 			return None;
 		}
 
-		let used_group_families = self.used_group_families(C::type_ids().as_ref());
+		let families = C::Storages::families(&self.components);
 
-		for i in used_group_families.indexes() {
+		for i in families.indexes() {
 			self.components.grouped.ungroup_components(i, entity);
 		}
 
 		unsafe {
-			let mut storages = C::borrow_storages(&self.components);
+			let mut storages = C::Storages::borrow(&self.components);
 			C::remove(&mut storages, entity)
 		}
 	}
@@ -152,14 +152,14 @@ impl World {
 			return;
 		}
 
-		let used_group_families = self.used_group_families(C::type_ids().as_ref());
+		let families = C::Storages::families(&self.components);
 
-		for i in used_group_families.indexes() {
+		for i in families.indexes() {
 			self.components.grouped.ungroup_components(i, entity);
 		}
 
 		unsafe {
-			let mut storages = C::borrow_storages(&self.components);
+			let mut storages = C::Storages::borrow(&self.components);
 			C::delete(&mut storages, entity);
 		}
 	}
@@ -191,20 +191,6 @@ impl World {
 
 	pub(crate) fn tick(&self) -> Ticks {
 		self.tick
-	}
-
-	fn used_group_families(&self, type_ids: &[TypeId]) -> UsedGroupFamilies {
-		let mut used_group_families = UsedGroupFamilies::new();
-
-		for type_id in type_ids {
-			if let Some(index) = self.components.grouped.group_family_index(type_id) {
-				unsafe {
-					used_group_families.add_unchecked(index);
-				}
-			}
-		}
-
-		used_group_families
 	}
 }
 

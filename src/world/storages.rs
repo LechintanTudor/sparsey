@@ -88,6 +88,23 @@ impl ComponentStorages {
 		}
 	}
 
+	pub(crate) fn borrow_with_familiy_mut(
+		&self,
+		component: &TypeId,
+	) -> Option<(AtomicRefMut<ComponentStorage>, Option<usize>)> {
+		match self.grouped.borrow_with_familiy_mut(component) {
+			Some((storage, index)) => Some((storage, Some(index))),
+			None => self
+				.ungrouped
+				.borrow_mut(component)
+				.map(|storage| (storage, None)),
+		}
+	}
+
+	pub(crate) fn group_family_of(&self, component: &TypeId) -> Option<usize> {
+		self.grouped.group_family_of(component)
+	}
+
 	pub(crate) fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> + '_ {
 		self.grouped
 			.iter_storages_mut()

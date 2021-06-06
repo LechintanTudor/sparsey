@@ -161,8 +161,8 @@ impl GroupedComponentStorages {
 		self.families.len()
 	}
 
-	pub fn group_family_index(&self, type_id: &TypeId) -> Option<usize> {
-		self.info.get(type_id).map(|info| info.group_family_index)
+	pub fn group_family_of(&self, component: &TypeId) -> Option<usize> {
+		self.info.get(component).map(|info| info.group_family_index)
 	}
 
 	pub fn borrow_with_info(
@@ -206,6 +206,22 @@ impl GroupedComponentStorages {
 			);
 
 			(storage, info)
+		})
+	}
+
+	pub fn borrow_with_familiy_mut(
+		&self,
+		component: &TypeId,
+	) -> Option<(AtomicRefMut<ComponentStorage>, usize)> {
+		self.info.get(component).map(|info| unsafe {
+			let storage = self
+				.families
+				.get_unchecked(info.group_family_index)
+				.storages
+				.get_unchecked(info.storage_index)
+				.borrow_mut();
+
+			(storage, info.group_family_index)
 		})
 	}
 
