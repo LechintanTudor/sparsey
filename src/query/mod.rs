@@ -4,16 +4,20 @@ mod split;
 mod base;
 mod component_view;
 mod composite;
+mod errors;
 mod filter;
 mod iter;
 mod modifier;
+mod slice;
 
 pub use self::base::QueryBaseModifiers;
 pub use self::component_view::*;
 pub use self::composite::*;
+pub use self::errors::*;
 pub use self::filter::*;
 pub use self::iter::*;
 pub use self::modifier::*;
+pub use self::slice::*;
 
 use crate::components::Entity;
 use crate::query::base::QueryBase;

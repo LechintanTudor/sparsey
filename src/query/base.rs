@@ -1,7 +1,8 @@
 use crate::components::{Entity, Ticks};
 use crate::query::{
 	ComponentView, DenseSplitComponentView, Include, IncludeExclude, IncludeExcludeFilter,
-	IterData, QueryFilter, QueryModifier, SparseSplitComponentView,
+	IterData, QueryFilter, QueryModifier, SparseSplitComponentView, StoragesNotGrouped,
+	UnfilteredComponentView,
 };
 use crate::world::CombinedGroupInfo;
 
@@ -36,6 +37,25 @@ where
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Option<Self::Item>;
+}
+
+pub unsafe trait UnfilteredQueryBase<'a>
+where
+	Self: QueryBase<'a>,
+{
+	type Slices;
+
+	fn try_slice(self) -> Result<Self::Slices, StoragesNotGrouped> {
+		todo!()
+	}
+
+	fn try_entities(self) -> Result<&'a [Entity], StoragesNotGrouped> {
+		todo!()
+	}
+
+	fn try_slice_entities(self) -> Result<(&'a [Entity], Self::Slices), StoragesNotGrouped> {
+		todo!()
+	}
 }
 
 pub trait QueryBaseModifiers<'a>
@@ -118,6 +138,17 @@ macro_rules! impl_base_query {
                 Some(($(
                     split.$idx.get::<$view>(index, world_tick, last_system_tick)?,
                 )+))
+            }
+        }
+
+        unsafe impl<'a, $($view),+> UnfilteredQueryBase<'a> for ($($view,)+)
+        where
+            $($view: UnfilteredComponentView<'a>,)+
+        {
+            type Slices = ($(&'a [$view::Component],)+);
+
+            fn try_slice(self) -> Result<Self::Slices, StoragesNotGrouped> {
+                todo!()
             }
         }
     };

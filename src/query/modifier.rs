@@ -33,6 +33,8 @@ pub trait QueryModifier<'a> {
 
 	fn group_info(&self) -> CombinedGroupInfo<'a>;
 
+	fn into_entities(self) -> Option<&'a [Entity]>;
+
 	fn into_iter_data(self) -> Option<IterData<'a>>;
 
 	fn split(self) -> (Option<IterData<'a>>, Self::Split);
@@ -61,10 +63,14 @@ where
 		CombinedGroupInfo::from_group_info(group_info)
 	}
 
+	fn into_entities(self) -> Option<&'a [Entity]> {
+		Some(C::into_entities(self))
+	}
+
 	fn into_iter_data(self) -> Option<IterData<'a>> {
 		let world_tick = self.world_tick();
 		let last_system_tick = self.last_system_tick();
-		let entities = self.into_entities();
+		let entities = C::into_entities(self);
 
 		Some(IterData::new(entities, world_tick, last_system_tick))
 	}
@@ -102,6 +108,10 @@ impl<'a> QueryModifier<'a> for () {
 		CombinedGroupInfo::Empty
 	}
 
+	fn into_entities(self) -> Option<&'a [Entity]> {
+		None
+	}
+
 	fn into_iter_data(self) -> Option<IterData<'a>> {
 		None
 	}
@@ -125,7 +135,7 @@ macro_rules! to_sparse_array_view {
 	};
 }
 
-macro_rules! impl_query_component_filter {
+macro_rules! impl_query_modifier {
 	($(($view:ident, $idx:tt)),+) => {
 		impl<'a, $($view),+> QueryModifier<'a> for ($($view,)+)
 		where
@@ -143,6 +153,10 @@ macro_rules! impl_query_component_filter {
 
 			fn group_info(&self) -> CombinedGroupInfo<'a> {
 				CombinedGroupInfo::Empty $(.combine(self.$idx.group_info()))+
+			}
+
+			fn into_entities(self) -> Option<&'a [Entity]> {
+				Some(self.0.into_entities())
 			}
 
 			fn into_iter_data(self) -> Option<IterData<'a>> {
@@ -169,7 +183,7 @@ macro_rules! impl_query_component_filter {
 	};
 }
 
-impl_query_component_filter!((A, 0));
-impl_query_component_filter!((A, 0), (B, 1));
-impl_query_component_filter!((A, 0), (B, 1), (C, 2));
-impl_query_component_filter!((A, 0), (B, 1), (C, 2), (D, 3));
+impl_query_modifier!((A, 0));
+impl_query_modifier!((A, 0), (B, 1));
+impl_query_modifier!((A, 0), (B, 1), (C, 2));
+impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3));
