@@ -1,8 +1,8 @@
 use crate::components::{Entity, Ticks};
 use crate::query::{
 	ComponentView, DenseSplitComponentView, Include, IncludeExclude, IncludeExcludeFilter,
-	IterData, QueryFilter, QueryModifier, SparseSplitComponentView, UnfilteredComponentView,
-    IntoQueryParts, PassthroughFilter
+	IntoQueryParts, IterData, PassthroughFilter, QueryFilter, QueryModifier,
+	SparseSplitComponentView, UnfilteredComponentView,
 };
 use crate::world::CombinedGroupInfo;
 use std::ops::Range;
@@ -44,16 +44,16 @@ where
 
 impl<'a, Q> IntoQueryParts<'a> for Q
 where
-    Q: QueryBase<'a>,
+	Q: QueryBase<'a>,
 {
-    type Base = Self;
-    type Include = ();
-    type Exclude = ();
-    type Filter = PassthroughFilter;
+	type Base = Self;
+	type Include = ();
+	type Exclude = ();
+	type Filter = PassthroughFilter;
 
-    fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
-        (self, (), (), PassthroughFilter)
-    }
+	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
+		(self, (), (), PassthroughFilter)
+	}
 }
 
 pub unsafe trait UnfilteredQueryBase<'a>
@@ -96,6 +96,68 @@ where
 }
 
 impl<'a, Q> QueryBaseModifiers<'a> for Q where Q: QueryBase<'a> {}
+
+unsafe impl<'a> QueryBase<'a> for () {
+	const IS_VOID: bool = true;
+
+	type Item = ();
+	type SparseSplit = ();
+	type DenseSplit = ();
+
+	fn get(self, _: Entity) -> Option<Self::Item> {
+		Some(())
+	}
+
+	fn contains(&self, _: Entity) -> bool {
+		true
+	}
+
+	fn group_info(&self) -> CombinedGroupInfo<'a> {
+		CombinedGroupInfo::Empty
+	}
+
+	fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit) {
+		(None, ())
+	}
+
+	fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit) {
+		(None, ())
+	}
+
+	unsafe fn get_from_sparse_split(
+		_: &mut Self::SparseSplit,
+		_: Entity,
+		_: Ticks,
+		_: Ticks,
+	) -> Option<Self::Item> {
+		Some(())
+	}
+
+	unsafe fn get_from_dense_split(
+		_: &mut Self::DenseSplit,
+		_: usize,
+		_: Ticks,
+		_: Ticks,
+	) -> Option<Self::Item> {
+		Some(())
+	}
+}
+
+unsafe impl<'a> UnfilteredQueryBase<'a> for () {
+	type Slices = ();
+
+	unsafe fn slice_data(self, _: Range<usize>) -> Self::Slices {
+		()
+	}
+
+	unsafe fn slice_entities(self, _: Range<usize>) -> &'a [Entity] {
+		&[]
+	}
+
+	unsafe fn slice_entities_and_data(self, _: Range<usize>) -> (&'a [Entity], Self::Slices) {
+		(&[], ())
+	}
+}
 
 macro_rules! impl_base_query {
     ($(($view:ident, $idx:tt)),+) => {
