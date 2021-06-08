@@ -1,11 +1,14 @@
 mod data;
 mod dense;
+mod entities;
 mod sparse;
 
 pub use self::data::*;
 pub use self::dense::*;
+pub use self::entities::*;
 pub use self::sparse::*;
 
+use crate::components::Entity;
 use crate::query::{QueryBase, QueryFilter, QueryGroupInfo, QueryModifier};
 
 pub enum Iter<'a, Q, I, E, F>
@@ -93,6 +96,21 @@ where
 		match self {
 			Self::Sparse(sparse) => sparse.for_each(f),
 			Self::Dense(dense) => dense.for_each(f),
+		}
+	}
+}
+
+impl<'a, Q, I, E, F> EntityIterator for Iter<'a, Q, I, E, F>
+where
+	Q: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
+	F: QueryFilter,
+{
+	fn current_entity(&self) -> Option<Entity> {
+		match self {
+			Self::Sparse(sparse) => sparse.current_entity(),
+			Self::Dense(dense) => dense.current_entity(),
 		}
 	}
 }

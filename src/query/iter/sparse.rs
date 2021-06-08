@@ -1,4 +1,5 @@
-use crate::query::{IterData, QueryBase, QueryFilter, QueryModifier};
+use crate::components::Entity;
+use crate::query::{EntityIterator, IterData, QueryBase, QueryFilter, QueryModifier};
 
 pub struct SparseIter<'a, Q, I, E, F>
 where
@@ -72,5 +73,17 @@ where
 				}
 			}
 		}
+	}
+}
+
+impl<'a, Q, I, E, F> EntityIterator for SparseIter<'a, Q, I, E, F>
+where
+	Q: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
+	F: QueryFilter,
+{
+	fn current_entity(&self) -> Option<Entity> {
+		self.data.entities().get(self.index).copied()
 	}
 }

@@ -1,4 +1,4 @@
-use crate::query::{IterData, QueryBase, QueryFilter};
+use crate::query::{Entity, EntityIterator, IterData, QueryBase, QueryFilter};
 
 pub struct DenseIter<'a, Q, F>
 where
@@ -54,5 +54,15 @@ where
 				}
 			}
 		}
+	}
+}
+
+impl<'a, Q, F> EntityIterator for DenseIter<'a, Q, F>
+where
+	Q: QueryBase<'a>,
+	F: QueryFilter,
+{
+	fn current_entity(&self) -> Option<Entity> {
+		self.data.entities().get(self.index).copied()
 	}
 }
