@@ -1,4 +1,5 @@
-use crate::query::{Entity, EntityIterator, IterData, QueryBase, QueryFilter};
+use crate::components::Entity;
+use crate::query::{EntityIterator, IterData, QueryBase, QueryFilter};
 
 pub struct DenseIter<'a, Q, F>
 where
