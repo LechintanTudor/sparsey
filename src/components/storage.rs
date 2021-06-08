@@ -130,6 +130,10 @@ impl ComponentStorage {
 		&self.entities
 	}
 
+	pub fn data(&self) -> *const u8 {
+		self.data.as_ptr()
+	}
+
 	pub fn clear(&mut self) {
 		self.sparse.clear();
 		self.entities.clear();

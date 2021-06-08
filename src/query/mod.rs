@@ -10,7 +10,7 @@ mod iter;
 mod modifier;
 mod slice;
 
-pub use self::base::QueryBaseModifiers;
+pub use self::base::{QueryBaseModifiers, UnfilteredQueryBase};
 pub use self::component_view::*;
 pub use self::composite::*;
 pub use self::errors::*;
@@ -54,7 +54,7 @@ where
 		let (base, include, exclude, filter) = self.into_parts();
 
 		if filter.matches(entity) && exclude.excludes(entity) && include.includes(entity) {
-			base.get(entity)
+			QueryBase::get(base, entity)
 		} else {
 			None
 		}

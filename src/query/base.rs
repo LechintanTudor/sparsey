@@ -1,15 +1,18 @@
 use crate::components::{Entity, Ticks};
 use crate::query::{
 	ComponentView, DenseSplitComponentView, Include, IncludeExclude, IncludeExcludeFilter,
-	IterData, QueryFilter, QueryModifier, SparseSplitComponentView, StoragesNotGrouped,
-	UnfilteredComponentView,
+	IterData, QueryFilter, QueryModifier, SparseSplitComponentView, UnfilteredComponentView,
+    IntoQueryParts, PassthroughFilter
 };
 use crate::world::CombinedGroupInfo;
+use std::ops::Range;
 
 pub unsafe trait QueryBase<'a>
 where
 	Self: Sized,
 {
+	const IS_VOID: bool;
+
 	type Item;
 	type SparseSplit;
 	type DenseSplit;
@@ -39,23 +42,31 @@ where
 	) -> Option<Self::Item>;
 }
 
+impl<'a, Q> IntoQueryParts<'a> for Q
+where
+    Q: QueryBase<'a>,
+{
+    type Base = Self;
+    type Include = ();
+    type Exclude = ();
+    type Filter = PassthroughFilter;
+
+    fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
+        (self, (), (), PassthroughFilter)
+    }
+}
+
 pub unsafe trait UnfilteredQueryBase<'a>
 where
 	Self: QueryBase<'a>,
 {
 	type Slices;
 
-	fn try_slice(self) -> Result<Self::Slices, StoragesNotGrouped> {
-		todo!()
-	}
+	unsafe fn slice_data(self, range: Range<usize>) -> Self::Slices;
 
-	fn try_entities(self) -> Result<&'a [Entity], StoragesNotGrouped> {
-		todo!()
-	}
+	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
 
-	fn try_slice_entities(self) -> Result<(&'a [Entity], Self::Slices), StoragesNotGrouped> {
-		todo!()
-	}
+	unsafe fn slice_entities_and_data(self, range: Range<usize>) -> (&'a [Entity], Self::Slices);
 }
 
 pub trait QueryBaseModifiers<'a>
@@ -92,6 +103,8 @@ macro_rules! impl_base_query {
         where
             $($view: ComponentView<'a>,)+
         {
+            const IS_VOID: bool = false;
+
             type Item = ($($view::Item,)+);
             type SparseSplit = ($(SparseSplitComponentView<'a, $view::Component>,)+);
             type DenseSplit = ($(DenseSplitComponentView<'a, $view::Component>,)+);
@@ -147,11 +160,26 @@ macro_rules! impl_base_query {
         {
             type Slices = ($(&'a [$view::Component],)+);
 
-            fn try_slice(self) -> Result<Self::Slices, StoragesNotGrouped> {
-                todo!()
+            unsafe fn slice_data(self, range: Range<usize>) -> Self::Slices {
+                ($(self.$idx.slice_data(range.clone()),)+)
+            }
+
+            unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
+                self.0.slice_entities(range)
+            }
+
+            unsafe fn slice_entities_and_data(self, range: Range<usize>) -> (&'a [Entity], Self::Slices) {
+                slice_entities_and_data!(self, range, $($idx),+)
             }
         }
     };
+}
+
+macro_rules! slice_entities_and_data {
+    ($self:ident, $range:ident, $first:tt $(, $other:tt)*) => {{
+        let (entities, first_data) = $self.0.slice_entities_and_data($range.clone());
+        (entities, (first_data, $($self.$other.slice_data($range.clone())),*))
+    }};
 }
 
 impl_base_query!((A, 0));
