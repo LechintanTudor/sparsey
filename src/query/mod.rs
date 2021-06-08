@@ -29,113 +29,48 @@ pub unsafe trait Query<'a> {
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn contains(&self, entity: Entity) -> bool;
+	fn contains(self, entity: Entity) -> bool;
 
 	fn iter(self) -> Self::Iterator;
 }
 
+pub trait IntoQueryParts<'a> {
+	type Base: QueryBase<'a>;
+	type Include: QueryModifier<'a>;
+	type Exclude: QueryModifier<'a>;
+	type Filter: QueryFilter;
+
+	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter);
+}
+
 unsafe impl<'a, Q> Query<'a> for Q
 where
-	Q: QueryBase<'a>,
+	Q: IntoQueryParts<'a>,
 {
-	type Item = <Q as QueryBase<'a>>::Item;
-	type Iterator = Iter<'a, Q, (), (), PassthroughFilter>;
+	type Item = <Q::Base as QueryBase<'a>>::Item;
+	type Iterator = Iter<'a, Q::Base, Q::Include, Q::Exclude, Q::Filter>;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
-		<Q as QueryBase<'a>>::get(self, entity)
-	}
+		let (base, include, exclude, filter) = self.into_parts();
 
-	fn contains(&self, entity: Entity) -> bool {
-		<Q as QueryBase<'a>>::contains(self, entity)
-	}
-
-	fn iter(self) -> Self::Iterator {
-		Iter::new(self, (), (), PassthroughFilter)
-	}
-}
-
-unsafe impl<'a, Q, I> Query<'a> for Include<Q, I>
-where
-	Q: QueryBase<'a>,
-	I: QueryModifier<'a>,
-{
-	type Item = <Q as QueryBase<'a>>::Item;
-	type Iterator = Iter<'a, Q, I, (), PassthroughFilter>;
-
-	fn get(self, entity: Entity) -> Option<Self::Item> {
-		if self.include.includes(entity) {
-			self.query.get(entity)
+		if filter.matches(entity) && exclude.excludes(entity) && include.includes(entity) {
+			base.get(entity)
 		} else {
 			None
 		}
 	}
 
-	fn contains(&self, entity: Entity) -> bool {
-		self.include.includes(entity) && self.query.contains(entity)
+	fn contains(self, entity: Entity) -> bool {
+		let (base, include, exclude, filter) = self.into_parts();
+
+		filter.matches(entity)
+			&& exclude.excludes(entity)
+			&& include.includes(entity)
+			&& base.contains(entity)
 	}
 
 	fn iter(self) -> Self::Iterator {
-		Iter::new(self.query, self.include, (), PassthroughFilter)
-	}
-}
-
-unsafe impl<'a, Q, I, E> Query<'a> for IncludeExclude<Q, I, E>
-where
-	Q: QueryBase<'a>,
-	I: QueryModifier<'a>,
-	E: QueryModifier<'a>,
-{
-	type Item = <Q as QueryBase<'a>>::Item;
-	type Iterator = Iter<'a, Q, I, E, PassthroughFilter>;
-
-	fn get(self, entity: Entity) -> Option<Self::Item> {
-		if self.exclude.excludes(entity) && self.include.includes(entity) {
-			self.query.get(entity)
-		} else {
-			None
-		}
-	}
-
-	fn contains(&self, entity: Entity) -> bool {
-		self.exclude.excludes(entity)
-			&& self.include.includes(entity)
-			&& self.query.contains(entity)
-	}
-
-	fn iter(self) -> Self::Iterator {
-		Iter::new(self.query, self.include, self.exclude, PassthroughFilter)
-	}
-}
-
-unsafe impl<'a, Q, I, E, F> Query<'a> for IncludeExcludeFilter<Q, I, E, F>
-where
-	Q: QueryBase<'a>,
-	I: QueryModifier<'a>,
-	E: QueryModifier<'a>,
-	F: QueryFilter,
-{
-	type Item = <Q as QueryBase<'a>>::Item;
-	type Iterator = Iter<'a, Q, I, E, F>;
-
-	fn get(self, entity: Entity) -> Option<Self::Item> {
-		if self.filter.matches(entity)
-			&& self.exclude.excludes(entity)
-			&& self.include.includes(entity)
-		{
-			self.query.get(entity)
-		} else {
-			None
-		}
-	}
-
-	fn contains(&self, entity: Entity) -> bool {
-		self.filter.matches(entity)
-			&& self.exclude.excludes(entity)
-			&& self.include.includes(entity)
-			&& self.query.contains(entity)
-	}
-
-	fn iter(self) -> Self::Iterator {
-		Iter::new(self.query, self.include, self.exclude, self.filter)
+		let (base, include, exclude, filter) = self.into_parts();
+		Iter::new(base, include, exclude, filter)
 	}
 }

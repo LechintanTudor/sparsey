@@ -1,67 +1,115 @@
-use crate::query::{QueryFilter, QueryModifier};
+use crate::query::{IntoQueryParts, PassthroughFilter, QueryBase, QueryFilter, QueryModifier};
 
-pub struct Include<Q, I> {
-	pub(super) query: Q,
-	pub(super) include: I,
+pub struct Include<B, I> {
+	base: B,
+	include: I,
 }
 
-impl<Q, I> Include<Q, I> {
-	pub(super) fn new(query: Q, include: I) -> Self {
-		Self { query, include }
+impl<'b, B, I> Include<B, I> {
+	pub(crate) fn new(base: B, include: I) -> Self {
+		Self { base, include }
 	}
 
-	pub fn exclude<'a, E>(self, exclude: E) -> IncludeExclude<Q, I, E>
+	pub fn exclude<'a, E>(self, exclude: E) -> IncludeExclude<B, I, E>
 	where
 		E: QueryModifier<'a>,
 	{
-		IncludeExclude::new(self.query, self.include, exclude)
+		IncludeExclude::new(self.base, self.include, exclude)
 	}
 
-	pub fn filter<'a, F>(self, filter: F) -> IncludeExcludeFilter<Q, I, (), F>
+	pub fn filter<'a, F>(self, filter: F) -> IncludeExcludeFilter<B, I, (), F>
 	where
 		F: QueryModifier<'a>,
 	{
-		IncludeExcludeFilter::new(self.query, self.include, (), filter)
+		IncludeExcludeFilter::new(self.base, self.include, (), filter)
 	}
 }
 
-pub struct IncludeExclude<Q, I, E> {
-	pub(super) query: Q,
-	pub(super) include: I,
-	pub(super) exclude: E,
+impl<'a, B, I> IntoQueryParts<'a> for Include<B, I>
+where
+	B: QueryBase<'a>,
+	I: QueryModifier<'a>,
+{
+	type Base = B;
+	type Include = I;
+	type Exclude = ();
+	type Filter = PassthroughFilter;
+
+	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
+		(self.base, self.include, (), PassthroughFilter)
+	}
 }
 
-impl<Q, I, E> IncludeExclude<Q, I, E> {
-	pub(super) fn new(query: Q, include: I, exclude: E) -> Self {
+pub struct IncludeExclude<B, I, E> {
+	base: B,
+	include: I,
+	exclude: E,
+}
+
+impl<B, I, E> IncludeExclude<B, I, E> {
+	pub(crate) fn new(base: B, include: I, exclude: E) -> Self {
 		Self {
-			query,
+			base,
 			include,
 			exclude,
 		}
 	}
 
-	pub fn filter<'a, F>(self, filter: F) -> IncludeExcludeFilter<Q, I, E, F>
+	pub fn filter<'a, F>(self, filter: F) -> IncludeExcludeFilter<B, I, E, F>
 	where
 		F: QueryFilter,
 	{
-		IncludeExcludeFilter::new(self.query, self.include, self.exclude, filter)
+		IncludeExcludeFilter::new(self.base, self.include, self.exclude, filter)
 	}
 }
 
-pub struct IncludeExcludeFilter<Q, I, E, F> {
-	pub(super) query: Q,
-	pub(super) include: I,
-	pub(super) exclude: E,
-	pub(super) filter: F,
+impl<'a, B, I, E> IntoQueryParts<'a> for IncludeExclude<B, I, E>
+where
+	B: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
+{
+	type Base = B;
+	type Include = I;
+	type Exclude = E;
+	type Filter = PassthroughFilter;
+
+	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
+		(self.base, self.include, self.exclude, PassthroughFilter)
+	}
 }
 
-impl<Q, I, E, F> IncludeExcludeFilter<Q, I, E, F> {
-	pub(super) fn new(query: Q, include: I, exclude: E, filter: F) -> Self {
+pub struct IncludeExcludeFilter<B, I, E, F> {
+	base: B,
+	include: I,
+	exclude: E,
+	filter: F,
+}
+
+impl<B, I, E, F> IncludeExcludeFilter<B, I, E, F> {
+	pub(crate) fn new(base: B, include: I, exclude: E, filter: F) -> Self {
 		Self {
-			query,
+			base,
 			include,
 			exclude,
 			filter,
 		}
+	}
+}
+
+impl<'a, B, I, E, F> IntoQueryParts<'a> for IncludeExcludeFilter<B, I, E, F>
+where
+	B: QueryBase<'a>,
+	I: QueryModifier<'a>,
+	E: QueryModifier<'a>,
+	F: QueryFilter,
+{
+	type Base = B;
+	type Include = I;
+	type Exclude = E;
+	type Filter = F;
+
+	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
+		(self.base, self.include, self.exclude, self.filter)
 	}
 }
