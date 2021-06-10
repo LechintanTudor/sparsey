@@ -1,8 +1,8 @@
 use crate::components::{Entity, Ticks};
 use crate::query::{
 	ComponentView, DenseSplitComponentView, Include, IncludeExclude, IncludeExcludeFilter,
-	IntoQueryParts, IterData, PassthroughFilter, QueryFilter, QueryModifier,
-	SparseSplitComponentView, UnfilteredComponentView,
+	IntoQueryParts, IterData, Passthrough, QueryFilter, QueryModifier, SparseSplitComponentView,
+	UnfilteredComponentView,
 };
 use crate::world::CombinedGroupInfo;
 use std::ops::Range;
@@ -49,10 +49,10 @@ where
 	type Base = Self;
 	type Include = ();
 	type Exclude = ();
-	type Filter = PassthroughFilter;
+	type Filter = Passthrough;
 
 	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
-		(self, (), (), PassthroughFilter)
+		(self, (), (), Passthrough::default())
 	}
 }
 

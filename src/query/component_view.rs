@@ -1,6 +1,5 @@
-use crate::components::{
-	Component, ComponentRefMut, ComponentTicks, Entity, SparseArrayView, Ticks,
-};
+use crate::components::{Component, ComponentTicks, Entity, SparseArrayView, Ticks};
+use crate::query::ComponentRefMut;
 use crate::world::{Comp, CompMut, GroupInfo};
 use std::marker::PhantomData;
 use std::ops::Range;

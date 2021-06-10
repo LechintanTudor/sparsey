@@ -1,4 +1,3 @@
-use crate::components::layout::repeat_layout;
 use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr;
 use std::ptr::NonNull;
@@ -210,73 +209,48 @@ impl Drop for BlobVec {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use std::{mem, ptr};
+// From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
+pub fn repeat_layout(layout: &Layout, n: usize) -> Option<Layout> {
+	// This cannot overflow. Quoting from the invariant of Layout:
+	// > `size`, when rounded up to the nearest multiple of `align`,
+	// > must not overflow (i.e., the rounded value must be less than
+	// > `usize::MAX`)
+	let padded_size = layout.size() + padding_needed_for(layout, layout.align());
+	let alloc_size = padded_size.checked_mul(n)?;
 
-	fn new() -> BlobVec {
-		unsafe {
-			BlobVec::new(Layout::new::<i32>(), |ptr| {
-				ptr::drop_in_place::<i32>(ptr as _)
-			})
-		}
+	// SAFETY: self.align is already known to be valid and alloc_size has been
+	// padded already.
+	unsafe {
+		Some(Layout::from_size_align_unchecked(
+			alloc_size,
+			layout.align(),
+		))
 	}
+}
 
-	unsafe fn push(blob_vec: &mut BlobVec, item: i32) {
-		blob_vec.push(&item as *const i32 as *const _);
-		mem::forget(item);
-	}
+// From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
+fn padding_needed_for(layout: &Layout, align: usize) -> usize {
+	let len = layout.size();
 
-	unsafe fn get(blob_vec: &BlobVec, index: usize) -> i32 {
-		ptr::read(blob_vec.get_unchecked(index) as *mut i32)
-	}
+	// Rounded up value is:
+	//   len_rounded_up = (len + align - 1) & !(align - 1);
+	// and then we return the padding difference: `len_rounded_up - len`.
+	//
+	// We use modular arithmetic throughout:
+	//
+	// 1. align is guaranteed to be > 0, so align - 1 is always
+	//    valid.
+	//
+	// 2. `len + align - 1` can overflow by at most `align - 1`,
+	//    so the &-mask with `!(align - 1)` will ensure that in the
+	//    case of overflow, `len_rounded_up` will itself be 0.
+	//    Thus the returned padding, when added to `len`, yields 0,
+	//    which trivially satisfies the alignment `align`.
+	//
+	// (Of course, attempts to allocate blocks of memory whose
+	// size and padding overflow in the above manner should cause
+	// the allocator to yield an error anyway.)
 
-	unsafe fn swap_remove(blob_vec: &mut BlobVec, index: usize) -> i32 {
-		ptr::read(blob_vec.swap_remove_and_forget_unchecked(index) as *mut i32)
-	}
-
-	#[test]
-	fn blob_vec() {
-		let mut blob_vec = new();
-
-		unsafe {
-			// Push
-			push(&mut blob_vec, 0);
-			assert_eq!(blob_vec.len(), 1);
-			assert_eq!(get(&blob_vec, 0), 0);
-
-			push(&mut blob_vec, 1);
-			assert_eq!(blob_vec.len(), 2);
-			assert_eq!(get(&blob_vec, 0), 0);
-			assert_eq!(get(&blob_vec, 1), 1);
-
-			push(&mut blob_vec, 2);
-			assert_eq!(blob_vec.len(), 3);
-			assert_eq!(get(&blob_vec, 0), 0);
-			assert_eq!(get(&blob_vec, 1), 1);
-			assert_eq!(get(&blob_vec, 2), 2);
-
-			// Swap
-			blob_vec.swap_unchecked(0, 2);
-			assert_eq!(get(&blob_vec, 0), 2);
-			assert_eq!(get(&blob_vec, 1), 1);
-			assert_eq!(get(&blob_vec, 2), 0);
-
-			blob_vec.swap_unchecked(1, 1);
-			assert_eq!(get(&blob_vec, 0), 2);
-			assert_eq!(get(&blob_vec, 1), 1);
-			assert_eq!(get(&blob_vec, 2), 0);
-
-			// Swap remove
-			assert_eq!(swap_remove(&mut blob_vec, 0), 2);
-			assert_eq!(blob_vec.len(), 2);
-			assert_eq!(get(&blob_vec, 0), 0);
-			assert_eq!(get(&blob_vec, 1), 1);
-
-			assert_eq!(swap_remove(&mut blob_vec, 1), 1);
-			assert_eq!(blob_vec.len(), 1);
-			assert_eq!(get(&blob_vec, 0), 0);
-		}
-	}
+	let len_rounded_up = len.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
+	len_rounded_up.wrapping_sub(len)
 }

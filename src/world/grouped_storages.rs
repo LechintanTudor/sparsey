@@ -24,14 +24,14 @@ impl GroupedComponentStorages {
 		let mut group_sets = Vec::<GroupFamily>::new();
 		let mut info = HashMap::<TypeId, ComponentInfo>::new();
 
-		for group_layout in layout.group_sets() {
+		for group_layout in layout.group_families() {
 			let mut storages = Vec::<AtomicRefCell<ComponentStorage>>::new();
 			let mut groups = Vec::<Group>::new();
 
 			let components = group_layout.components();
 			let mut prev_arity = 0_usize;
 
-			for (group_index, &arity) in group_layout.arities().iter().enumerate() {
+			for (group_index, &arity) in group_layout.group_arities().iter().enumerate() {
 				for component in &components[prev_arity..arity] {
 					let type_id = component.type_id();
 

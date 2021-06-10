@@ -1,9 +1,9 @@
 use crate::components::{Component, ComponentStorage, Entity, Ticks};
 use crate::layout::Layout;
-use crate::world::{BorrowStorages, ComponentSet, ComponentStorages, EntityStorage};
+use crate::world::{
+	BorrowStorages, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity, TickOverflow,
+};
 use std::any::TypeId;
-use std::error::Error;
-use std::fmt;
 
 /// Container for component storages and entities.
 #[derive(Default)]
@@ -173,6 +173,20 @@ impl World {
 		self.components.clear();
 	}
 
+	pub fn advance_ticks(&mut self) -> Result<(), TickOverflow> {
+		if self.tick != Ticks::MAX {
+			self.tick += 1;
+			Ok(())
+		} else {
+			self.tick = 0;
+			Err(TickOverflow)
+		}
+	}
+
+	pub fn entities(&self) -> &[Entity] {
+		self.entities.as_ref()
+	}
+
 	pub(crate) fn entity_storage(&self) -> &EntityStorage {
 		&self.entities
 	}
@@ -181,32 +195,11 @@ impl World {
 		&self.components
 	}
 
-	pub(crate) fn maintain(&mut self) {
-		self.entities.maintain();
-	}
-
-	pub fn advance_ticks(&mut self) {
-		self.tick += 1;
-	}
-
 	pub(crate) fn tick(&self) -> Ticks {
 		self.tick
 	}
-}
 
-/// Error returned when trying to access entities
-/// which are not contained in the `World`.
-#[derive(Debug)]
-pub struct NoSuchEntity;
-
-impl Error for NoSuchEntity {
-	fn source(&self) -> Option<&(dyn Error + 'static)> {
-		None
-	}
-}
-
-impl fmt::Display for NoSuchEntity {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "No such entity was found in the World")
+	pub(crate) fn maintain(&mut self) {
+		self.entities.maintain();
 	}
 }

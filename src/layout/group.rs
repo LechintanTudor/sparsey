@@ -3,6 +3,9 @@ use crate::layout::LayoutComponent;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
+pub const MIN_GROUP_ARITY: usize = 2;
+pub const MAX_GROUP_ARITY: usize = 16;
+
 /// Describes a set of component storages to be grouped together.
 pub struct LayoutGroup {
 	components: HashSet<LayoutComponent>,
@@ -11,13 +14,15 @@ pub struct LayoutGroup {
 impl LayoutGroup {
 	pub(crate) fn new(components: HashSet<LayoutComponent>) -> Self {
 		assert!(
-			components.len() > 1,
-			"Groups must have at least 2 component types",
+			components.len() >= MIN_GROUP_ARITY,
+			"Groups must have at least {} component types",
+			MIN_GROUP_ARITY,
 		);
 
 		assert!(
-			components.len() <= 16,
-			"Groups must have at most 16 component types",
+			components.len() <= MAX_GROUP_ARITY,
+			"Groups must have at most {} component types",
+			MAX_GROUP_ARITY,
 		);
 
 		Self { components }
@@ -28,31 +33,31 @@ impl LayoutGroup {
 	}
 }
 
-pub(crate) struct LayoutGroupSet {
+pub(crate) struct LayoutGroupFamily {
 	components: Vec<LayoutComponent>,
-	arities: Vec<usize>,
+	group_arities: Vec<usize>,
 }
 
-impl LayoutGroupSet {
+impl LayoutGroupFamily {
 	pub unsafe fn new_unchecked(groups: &[LayoutGroup]) -> Self {
 		let mut components = Vec::<LayoutComponent>::new();
-		let mut arities = Vec::<usize>::new();
+		let mut group_arities = Vec::<usize>::new();
 
 		components.extend(groups[0].components().iter().cloned());
-		arities.push(groups[0].components().len());
+		group_arities.push(groups[0].components().len());
 
 		for (g1, g2) in groups.windows(2).map(|g| (&g[0], &g[1])) {
 			let component_count = components.len();
 			components.extend(g2.components().difference(g1.components()).cloned());
 
 			if components.len() > component_count {
-				arities.push(components.len());
+				group_arities.push(components.len());
 			}
 		}
 
 		Self {
 			components,
-			arities,
+			group_arities,
 		}
 	}
 
@@ -60,8 +65,8 @@ impl LayoutGroupSet {
 		&self.components
 	}
 
-	pub fn arities(&self) -> &[usize] {
-		&self.arities
+	pub fn group_arities(&self) -> &[usize] {
+		&self.group_arities
 	}
 }
 

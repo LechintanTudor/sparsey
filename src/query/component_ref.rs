@@ -39,7 +39,7 @@ where
 	T: Component,
 {
 	fn deref_mut(&mut self) -> &mut Self::Target {
-		self.info.tick_mutated = self.world_tick;
+		self.info.set_tick_mutated(self.world_tick);
 		self.data
 	}
 }

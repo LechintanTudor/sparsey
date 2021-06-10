@@ -68,21 +68,21 @@ impl<'a> CombinedGroupInfo<'a> {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub enum QueryGroupInfo<'a> {
+enum QueryGroupInfo<'a> {
 	Empty,
 	Unrelated,
 	Related(QueryGroupInfoData<'a>),
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct QueryGroupInfoData<'a> {
+struct QueryGroupInfoData<'a> {
 	family: &'a [Group],
 	mask: GroupMask,
 	index: usize,
 }
 
 impl<'a> QueryGroupInfoData<'a> {
-	pub fn group_range(&self) -> Option<Range<usize>> {
+	fn group_range(&self) -> Option<Range<usize>> {
 		let group = self.family[self.index as usize];
 
 		if self.mask == group.include_mask() {
@@ -97,7 +97,7 @@ impl<'a> QueryGroupInfoData<'a> {
 }
 
 impl<'a> QueryGroupInfo<'a> {
-	pub(crate) fn new(
+	fn new(
 		query: CombinedGroupInfo<'a>,
 		include: CombinedGroupInfo<'a>,
 		exclude: CombinedGroupInfo<'a>,
@@ -153,10 +153,18 @@ impl<'a> QueryGroupInfo<'a> {
 		}
 	}
 
-	pub fn group_range(&self) -> Option<Range<usize>> {
+	fn group_range(&self) -> Option<Range<usize>> {
 		match self {
 			Self::Related(data) => data.group_range(),
 			_ => None,
 		}
 	}
+}
+
+pub fn group_range<'a>(
+	base: CombinedGroupInfo<'a>,
+	include: CombinedGroupInfo<'a>,
+	exclude: CombinedGroupInfo<'a>,
+) -> Option<Range<usize>> {
+	QueryGroupInfo::new(base, include, exclude).group_range()
 }

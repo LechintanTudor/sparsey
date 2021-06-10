@@ -2,6 +2,7 @@
 mod split;
 
 mod base;
+mod component_ref;
 mod component_view;
 mod composite;
 mod errors;
@@ -12,6 +13,7 @@ mod query;
 mod slice;
 
 pub use self::base::*;
+pub use self::component_ref::*;
 pub use self::component_view::*;
 pub use self::composite::*;
 pub use self::errors::*;
@@ -20,5 +22,3 @@ pub use self::iter::*;
 pub use self::modifier::*;
 pub use self::query::*;
 pub use self::slice::*;
-
-pub use crate::world::QueryGroupInfo;

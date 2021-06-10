@@ -40,7 +40,7 @@ impl ComponentStorage {
 			Some(index_entity) => {
 				let index = index_entity.index();
 				*self.entities.get_unchecked_mut(index) = entity;
-				self.ticks.get_unchecked_mut(index).tick_mutated = tick;
+				self.ticks.get_unchecked_mut(index).set_tick_mutated(tick);
 				self.data.set_and_forget_prev_unchecked(index, value)
 			}
 			None => {
@@ -49,7 +49,7 @@ impl ComponentStorage {
 					entity.version(),
 				));
 				self.entities.push(entity);
-				self.ticks.push(ComponentTicks::new(tick));
+				self.ticks.push(ComponentTicks::added(tick));
 				self.data.push(value);
 				ptr::null_mut()
 			}
@@ -63,7 +63,7 @@ impl ComponentStorage {
 			Some(index_entity) => {
 				let index = index_entity.index();
 				*self.entities.get_unchecked_mut(index) = entity;
-				self.ticks.get_unchecked_mut(index).tick_mutated = tick;
+				self.ticks.get_unchecked_mut(index).set_tick_mutated(tick);
 				self.data.set_and_drop_prev_unchecked(index, value);
 			}
 			None => {
@@ -72,7 +72,7 @@ impl ComponentStorage {
 					entity.version(),
 				));
 				self.entities.push(entity);
-				self.ticks.push(ComponentTicks::new(tick));
+				self.ticks.push(ComponentTicks::added(tick));
 				self.data.push(value);
 			}
 		}
@@ -226,87 +226,5 @@ impl ComponentStorage {
 			self.data.as_ptr(),
 			self.ticks.as_mut_slice(),
 		)
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	fn new() -> ComponentStorage {
-		ComponentStorage::for_type::<i32>()
-	}
-
-	fn insert(
-		storage: &mut ComponentStorage,
-		entity: Entity,
-		value: i32,
-		tick: Ticks,
-	) -> Option<i32> {
-		unsafe {
-			let prev = storage.insert_and_forget_prev(entity, &value as *const _ as *const _, tick);
-
-			if !prev.is_null() {
-				Some(ptr::read(prev.cast::<i32>()))
-			} else {
-				None
-			}
-		}
-	}
-
-	fn remove(storage: &mut ComponentStorage, entity: Entity) -> Option<i32> {
-		let prev = storage.remove_and_forget(entity);
-
-		if !prev.is_null() {
-			unsafe { Some(ptr::read(prev.cast::<i32>())) }
-		} else {
-			None
-		}
-	}
-
-	fn get(storage: &ComponentStorage, entity: Entity) -> Option<i32> {
-		storage
-			.get_with_ticks(entity)
-			.map(|(value, _)| unsafe { *value.cast::<i32>() })
-	}
-
-	fn get_ticks(storage: &ComponentStorage, entity: Entity) -> Option<ComponentTicks> {
-		storage.get_with_ticks(entity).map(|(_, ticks)| *ticks)
-	}
-
-	#[test]
-	fn component_storage() {
-		let mut storage = new();
-		let e1 = Entity::with_index(10);
-		let e2 = Entity::with_index(20);
-
-		// Insert
-		assert!(insert(&mut storage, e1, 1, 1).is_none());
-		assert_eq!(get(&storage, e1).unwrap(), 1);
-		assert_eq!(get_ticks(&storage, e1).unwrap(), ComponentTicks::new(1));
-
-		assert!(insert(&mut storage, e2, 2, 2).is_none());
-		assert_eq!(get(&storage, e1).unwrap(), 1);
-		assert_eq!(get(&storage, e2).unwrap(), 2);
-		assert_eq!(get_ticks(&storage, e1).unwrap(), ComponentTicks::new(1));
-		assert_eq!(get_ticks(&storage, e2).unwrap(), ComponentTicks::new(2));
-
-		// Swap
-		storage.swap(0, 1);
-		assert_eq!(get(&storage, e1).unwrap(), 1);
-		assert_eq!(get(&storage, e2).unwrap(), 2);
-		assert_eq!(get_ticks(&storage, e1).unwrap(), ComponentTicks::new(1));
-		assert_eq!(get_ticks(&storage, e2).unwrap(), ComponentTicks::new(2));
-
-		// Remove
-		assert_eq!(remove(&mut storage, e1), Some(1));
-		assert_eq!(storage.len(), 1);
-		assert!(!storage.contains(e1));
-		assert!(storage.contains(e2));
-
-		assert_eq!(remove(&mut storage, e2), Some(2));
-		assert_eq!(storage.len(), 0);
-		assert!(!storage.contains(e1));
-		assert!(!storage.contains(e2));
 	}
 }

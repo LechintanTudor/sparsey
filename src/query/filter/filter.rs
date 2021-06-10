@@ -1,34 +1,53 @@
 use crate::components::{ComponentTicks, Entity, Ticks};
-use crate::query::{
-	AndFilter, ComponentInfoFilter, ComponentView, OrFilter, QueryFilter, SplitComponentView,
-	UnfilteredComponentView,
-};
+use crate::query::{ComponentView, SplitComponentView, UnfilteredComponentView};
 use crate::world::GroupInfo;
 use std::marker::PhantomData;
-use std::ops::{BitAnd, BitOr};
 
-pub struct FilteredComponentView<C, F> {
-	view: C,
-	_phantom: PhantomData<F>,
+pub trait QueryFilter {
+	fn matches(&self, entity: Entity) -> bool;
 }
 
-impl<C, F> FilteredComponentView<C, F> {
+pub trait ComponentTicksFilter {
+	fn matches(info: Option<&ComponentTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool;
+}
+
+#[derive(Default)]
+pub struct Filter<C, F> {
+	view: C,
+	filter: PhantomData<F>,
+}
+
+impl<C, F> Filter<C, F> {
 	pub(crate) fn new(view: C) -> Self {
 		Self {
 			view,
-			_phantom: PhantomData,
+			filter: PhantomData,
 		}
 	}
 
-	pub(crate) fn into_view(self) -> C {
-		self.view
+	pub(crate) fn view(&self) -> &C {
+		&self.view
 	}
 }
 
-unsafe impl<'a, C, F> ComponentView<'a> for FilteredComponentView<C, F>
+impl<'a, C, F> QueryFilter for Filter<C, F>
 where
 	C: UnfilteredComponentView<'a>,
-	F: ComponentInfoFilter,
+	F: ComponentTicksFilter,
+{
+	fn matches(&self, entity: Entity) -> bool {
+		F::matches(
+			self.view.get_ticks(entity),
+			self.view.world_tick(),
+			self.view.last_system_tick(),
+		)
+	}
+}
+
+unsafe impl<'a, C, F> ComponentView<'a> for Filter<C, F>
+where
+	C: UnfilteredComponentView<'a>,
+	F: ComponentTicksFilter,
 {
 	type Item = C::Item;
 	type Component = C::Component;
@@ -87,45 +106,5 @@ where
 		} else {
 			None
 		}
-	}
-}
-
-impl<'a, C, F> QueryFilter for FilteredComponentView<C, F>
-where
-	C: UnfilteredComponentView<'a>,
-	F: ComponentInfoFilter,
-{
-	fn matches(&self, entity: Entity) -> bool {
-		F::matches(
-			self.view.get_ticks(entity),
-			self.view.world_tick(),
-			self.view.last_system_tick(),
-		)
-	}
-}
-
-impl<'a, C, F, Q> BitAnd<Q> for FilteredComponentView<C, F>
-where
-	C: UnfilteredComponentView<'a>,
-	F: ComponentInfoFilter,
-	Q: QueryFilter,
-{
-	type Output = AndFilter<Self, Q>;
-
-	fn bitand(self, other: Q) -> Self::Output {
-		AndFilter::new(self, other)
-	}
-}
-
-impl<'a, C, F, Q> BitOr<Q> for FilteredComponentView<C, F>
-where
-	C: UnfilteredComponentView<'a>,
-	F: ComponentInfoFilter,
-	Q: QueryFilter,
-{
-	type Output = OrFilter<Self, Q>;
-
-	fn bitor(self, other: Q) -> Self::Output {
-		OrFilter::new(self, other)
 	}
 }

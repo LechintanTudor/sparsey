@@ -1,8 +1,8 @@
 use crate::components::Entity;
 use crate::query::{
-	DenseIter, EntityIterator, IterData, QueryBase, QueryFilter, QueryGroupInfo, QueryModifier,
-	SparseIter,
+	DenseIter, EntityIterator, IterData, QueryBase, QueryFilter, QueryModifier, SparseIter,
 };
+use crate::world::group_range;
 
 pub enum Iter<'a, Q, I, E, F>
 where
@@ -23,13 +23,13 @@ where
 	F: QueryFilter,
 {
 	pub(crate) fn new(query: Q, include: I, exclude: E, filter: F) -> Self {
-		let group_info = QueryGroupInfo::new(
+		let group_range = group_range(
 			query.group_info(),
 			include.group_info(),
 			exclude.group_info(),
 		);
 
-		match group_info.group_range() {
+		match group_range {
 			Some(range) => {
 				let (query_data, query) = query.split_dense();
 				let include_data = include.into_iter_data();

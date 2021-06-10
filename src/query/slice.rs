@@ -1,8 +1,8 @@
 use crate::components::Entity;
 use crate::query::{
-	IntoQueryParts, PassthroughFilter, QueryBase, QueryGroupInfo, QueryModifier,
-	StoragesNotGrouped, UnfilteredQueryBase,
+	IntoQueryParts, Passthrough, QueryBase, QueryModifier, StoragesNotGrouped, UnfilteredQueryBase,
 };
+use crate::world;
 use std::hint::unreachable_unchecked;
 use std::ops::Range;
 
@@ -33,7 +33,7 @@ where
 
 impl<'a, Q> SliceQuery<'a> for Q
 where
-	Q: IntoQueryParts<'a, Filter = PassthroughFilter>,
+	Q: IntoQueryParts<'a, Filter = Passthrough>,
 	Q::Base: UnfilteredQueryBase<'a>,
 {
 	type Slices = <Q::Base as UnfilteredQueryBase<'a>>::Slices;
@@ -92,11 +92,10 @@ where
 	I: QueryModifier<'a>,
 	E: QueryModifier<'a>,
 {
-	QueryGroupInfo::new(
+	world::group_range(
 		base.group_info(),
 		include.group_info(),
 		exclude.group_info(),
 	)
-	.group_range()
 	.ok_or(StoragesNotGrouped)
 }
