@@ -1,5 +1,3 @@
-pub use self::impls::*;
-
 use crate::components::{Component, ComponentStorage, Entity, TypedComponentStorage};
 use crate::misc::panic_missing_comp;
 use crate::world::{ComponentStorages, UsedGroupFamilies};
