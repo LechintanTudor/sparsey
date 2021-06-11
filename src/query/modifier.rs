@@ -2,28 +2,6 @@ use crate::components::{Entity, SparseArrayView};
 use crate::query::{ComponentView, IterData, UnfilteredComponentView};
 use crate::world::CombinedGroupInfo;
 
-pub trait QueryModifierElement<'a>
-where
-	Self: UnfilteredComponentView<'a>,
-{
-	fn into_entities(self) -> &'a [Entity] {
-		let (_, entities, _, _) = self.split();
-		entities
-	}
-
-	fn split_modifier(self) -> (&'a [Entity], SparseArrayView<'a>) {
-		let (sparse, entities, _, _) = self.split();
-		(entities, sparse)
-	}
-}
-
-impl<'a, C> QueryModifierElement<'a> for C
-where
-	C: UnfilteredComponentView<'a>,
-{
-	// Empty
-}
-
 pub trait QueryModifier<'a> {
 	type Split;
 
@@ -46,7 +24,7 @@ pub trait QueryModifier<'a> {
 
 impl<'a, C> QueryModifier<'a> for C
 where
-	C: QueryModifierElement<'a>,
+	C: UnfilteredComponentView<'a>,
 {
 	type Split = SparseArrayView<'a>;
 
@@ -129,17 +107,11 @@ impl<'a> QueryModifier<'a> for () {
 	}
 }
 
-macro_rules! to_sparse_array_view {
-	($ident:ident) => {
-		SparseArrayView<'a>
-	};
-}
-
 macro_rules! impl_query_modifier {
 	($(($view:ident, $idx:tt)),+) => {
 		impl<'a, $($view),+> QueryModifier<'a> for ($($view,)+)
 		where
-			$($view: QueryModifierElement<'a>,)+
+			$($view: UnfilteredComponentView<'a>,)+
 		{
 			type Split = ($(to_sparse_array_view!($view),)+);
 
@@ -183,7 +155,30 @@ macro_rules! impl_query_modifier {
 	};
 }
 
-impl_query_modifier!((A, 0));
-impl_query_modifier!((A, 0), (B, 1));
-impl_query_modifier!((A, 0), (B, 1), (C, 2));
-impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3));
+macro_rules! to_sparse_array_view {
+	($ident:ident) => {
+		SparseArrayView<'a>
+	};
+}
+
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_query_modifier!((A, 0));
+    impl_query_modifier!((A, 0), (B, 1));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
+}

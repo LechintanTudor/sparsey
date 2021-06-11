@@ -35,6 +35,16 @@ where
 		(entities, DenseSplitComponentView::new(data, ticks))
 	}
 
+	fn split_modifier(self) -> (&'a [Entity], SparseArrayView<'a>) {
+		let (sparse, entities, _, _) = self.split();
+		(entities, sparse)
+	}
+
+	fn into_entities(self) -> &'a [Entity] {
+		let (_, entities, _, _) = self.split();
+		entities
+	}
+
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
 		info: *mut ComponentTicks,
