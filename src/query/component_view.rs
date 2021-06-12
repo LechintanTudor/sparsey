@@ -54,6 +54,27 @@ where
 	) -> Option<Self::Item>;
 }
 
+pub unsafe trait UnfilteredComponentView<'a>
+where
+	Self: ComponentView<'a>,
+{
+	// Empty
+}
+
+pub unsafe trait ImmutableUnfilteredComponentView<'a>
+where
+	Self: UnfilteredComponentView<'a>,
+{
+	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component];
+
+	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
+
+	unsafe fn slice_entities_and_data(
+		self,
+		range: Range<usize>,
+	) -> (&'a [Entity], &'a [Self::Component]);
+}
+
 unsafe impl<'a, T> ComponentView<'a> for &'a Comp<'a, T>
 where
 	T: Component,
@@ -98,6 +119,36 @@ where
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
 		Some(&*data.add(index))
+	}
+}
+
+unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a Comp<'a, T>
+where
+	T: Component,
+{
+	// Empty
+}
+
+unsafe impl<'a, T> ImmutableUnfilteredComponentView<'a> for &'a Comp<'a, T>
+where
+	T: Component,
+{
+	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component] {
+		self.storage.data().get_unchecked(range)
+	}
+
+	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
+		self.storage.entities().get_unchecked(range)
+	}
+
+	unsafe fn slice_entities_and_data(
+		self,
+		range: Range<usize>,
+	) -> (&'a [Entity], &'a [Self::Component]) {
+		(
+			self.storage.entities().get_unchecked(range.clone()),
+			self.storage.data().get_unchecked(range),
+		)
 	}
 }
 
@@ -147,6 +198,37 @@ where
 		Some(&*data.add(index))
 	}
 }
+
+unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a CompMut<'a, T>
+where
+	T: Component,
+{
+	// Empty
+}
+
+unsafe impl<'a, T> ImmutableUnfilteredComponentView<'a> for &'a CompMut<'a, T>
+where
+	T: Component,
+{
+	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component] {
+		self.storage.data().get_unchecked(range)
+	}
+
+	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
+		self.storage.entities().get_unchecked(range)
+	}
+
+	unsafe fn slice_entities_and_data(
+		self,
+		range: Range<usize>,
+	) -> (&'a [Entity], &'a [Self::Component]) {
+		(
+			self.storage.entities().get_unchecked(range.clone()),
+			self.storage.data().get_unchecked(range),
+		)
+	}
+}
+
 unsafe impl<'a, 'b, T> ComponentView<'a> for &'a mut CompMut<'b, T>
 where
 	T: Component,
@@ -197,6 +279,13 @@ where
 			world_tick,
 		))
 	}
+}
+
+unsafe impl<'a, 'b, T> UnfilteredComponentView<'a> for &'a mut CompMut<'b, T>
+where
+	T: Component,
+{
+	// Empty
 }
 
 pub type SplitComponentView<'a, T> = (
@@ -262,88 +351,5 @@ impl<'a, T> DenseSplitComponentView<'a, T> {
 		V: ComponentView<'a, Component = T>,
 	{
 		V::get_from_parts(self.data, self.ticks, index, world_tick, last_system_tick)
-	}
-}
-
-pub unsafe trait UnfilteredComponentView<'a>
-where
-	Self: ComponentView<'a>,
-{
-	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component];
-
-	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
-
-	unsafe fn slice_entities_and_data(
-		self,
-		range: Range<usize>,
-	) -> (&'a [Entity], &'a [Self::Component]);
-}
-
-unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a Comp<'a, T>
-where
-	T: Component,
-{
-	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component] {
-		self.storage.data().get_unchecked(range)
-	}
-
-	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
-		self.storage.entities().get_unchecked(range)
-	}
-
-	unsafe fn slice_entities_and_data(
-		self,
-		range: Range<usize>,
-	) -> (&'a [Entity], &'a [Self::Component]) {
-		(
-			self.storage.entities().get_unchecked(range.clone()),
-			self.storage.data().get_unchecked(range),
-		)
-	}
-}
-
-unsafe impl<'a, T> UnfilteredComponentView<'a> for &'a CompMut<'a, T>
-where
-	T: Component,
-{
-	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component] {
-		self.storage.data().get_unchecked(range)
-	}
-
-	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
-		self.storage.entities().get_unchecked(range)
-	}
-
-	unsafe fn slice_entities_and_data(
-		self,
-		range: Range<usize>,
-	) -> (&'a [Entity], &'a [Self::Component]) {
-		(
-			self.storage.entities().get_unchecked(range.clone()),
-			self.storage.data().get_unchecked(range),
-		)
-	}
-}
-
-unsafe impl<'a, 'b, T> UnfilteredComponentView<'a> for &'a mut CompMut<'b, T>
-where
-	T: Component,
-{
-	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component] {
-		self.storage.data().get_unchecked(range)
-	}
-
-	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
-		self.storage.entities().get_unchecked(range)
-	}
-
-	unsafe fn slice_entities_and_data(
-		self,
-		range: Range<usize>,
-	) -> (&'a [Entity], &'a [Self::Component]) {
-		(
-			self.storage.entities().get_unchecked(range.clone()),
-			self.storage.data().get_unchecked(range),
-		)
 	}
 }

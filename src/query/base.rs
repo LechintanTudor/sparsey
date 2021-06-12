@@ -1,8 +1,8 @@
 use crate::components::{Entity, Ticks};
 use crate::query::{
-	ComponentView, DenseSplitComponentView, Include, IncludeExclude, IncludeExcludeFilter,
-	IntoQueryParts, IterData, Passthrough, QueryFilter, QueryModifier, SparseSplitComponentView,
-	UnfilteredComponentView,
+	ComponentView, DenseSplitComponentView, ImmutableUnfilteredComponentView, Include,
+	IncludeExclude, IncludeExcludeFilter, IntoQueryParts, IterData, Passthrough, QueryFilter,
+	QueryModifier, SparseSplitComponentView,
 };
 use crate::world::CombinedGroupInfo;
 use std::ops::Range;
@@ -56,7 +56,7 @@ where
 	}
 }
 
-pub unsafe trait UnfilteredQueryBase<'a>
+pub unsafe trait SliceableQueryBase<'a>
 where
 	Self: QueryBase<'a>,
 {
@@ -143,7 +143,7 @@ unsafe impl<'a> QueryBase<'a> for () {
 	}
 }
 
-unsafe impl<'a> UnfilteredQueryBase<'a> for () {
+unsafe impl<'a> SliceableQueryBase<'a> for () {
 	type Slices = ();
 
 	unsafe fn slice_data(self, _: Range<usize>) -> Self::Slices {
@@ -216,9 +216,9 @@ macro_rules! impl_base_query {
             }
         }
 
-        unsafe impl<'a, $($view),+> UnfilteredQueryBase<'a> for ($($view,)+)
+        unsafe impl<'a, $($view),+> SliceableQueryBase<'a> for ($($view,)+)
         where
-            $($view: UnfilteredComponentView<'a>,)+
+            $($view: ImmutableUnfilteredComponentView<'a>,)+
         {
             type Slices = ($(&'a [$view::Component],)+);
 

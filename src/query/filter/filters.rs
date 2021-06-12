@@ -1,5 +1,8 @@
 use crate::components::{ComponentTicks, Entity, Ticks};
-use crate::query::{ComponentTicksFilter, Filter, QueryFilter, UnfilteredComponentView};
+use crate::query::{
+	ComponentTicksFilter, Filter, ImmutableUnfilteredComponentView, QueryFilter,
+	UnfilteredComponentView,
+};
 
 pub type Passthrough = Filter<(), ()>;
 
@@ -67,14 +70,14 @@ pub struct Contains;
 
 pub fn contains<'a, C>(view: C) -> Filter<C, Contains>
 where
-	C: UnfilteredComponentView<'a>,
+	C: ImmutableUnfilteredComponentView<'a>,
 {
 	Filter::new(view)
 }
 
 impl<'a, C> QueryFilter for Filter<C, Contains>
 where
-	C: UnfilteredComponentView<'a>,
+	C: ImmutableUnfilteredComponentView<'a>,
 {
 	fn matches(&self, entity: Entity) -> bool {
 		self.view().contains(entity)

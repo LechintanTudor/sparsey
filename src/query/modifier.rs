@@ -1,5 +1,5 @@
 use crate::components::{Entity, SparseArrayView};
-use crate::query::{ComponentView, IterData, UnfilteredComponentView};
+use crate::query::{ComponentView, ImmutableUnfilteredComponentView, IterData};
 use crate::world::CombinedGroupInfo;
 
 pub trait QueryModifier<'a> {
@@ -24,7 +24,7 @@ pub trait QueryModifier<'a> {
 
 impl<'a, C> QueryModifier<'a> for C
 where
-	C: UnfilteredComponentView<'a>,
+	C: ImmutableUnfilteredComponentView<'a>,
 {
 	type Split = SparseArrayView<'a>;
 
@@ -111,7 +111,7 @@ macro_rules! impl_query_modifier {
 	($(($view:ident, $idx:tt)),+) => {
 		impl<'a, $($view),+> QueryModifier<'a> for ($($view,)+)
 		where
-			$($view: UnfilteredComponentView<'a>,)+
+			$($view: ImmutableUnfilteredComponentView<'a>,)+
 		{
 			type Split = ($(to_sparse_array_view!($view),)+);
 

@@ -1,6 +1,6 @@
 use crate::components::Entity;
 use crate::query::{
-	IntoQueryParts, Passthrough, QueryBase, QueryModifier, StoragesNotGrouped, UnfilteredQueryBase,
+	IntoQueryParts, Passthrough, QueryBase, QueryModifier, SliceableQueryBase, StoragesNotGrouped,
 };
 use crate::world;
 use std::hint::unreachable_unchecked;
@@ -34,9 +34,9 @@ where
 impl<'a, Q> SliceQuery<'a> for Q
 where
 	Q: IntoQueryParts<'a, Filter = Passthrough>,
-	Q::Base: UnfilteredQueryBase<'a>,
+	Q::Base: SliceableQueryBase<'a>,
 {
-	type Slices = <Q::Base as UnfilteredQueryBase<'a>>::Slices;
+	type Slices = <Q::Base as SliceableQueryBase<'a>>::Slices;
 
 	fn try_slices(self) -> Result<Self::Slices, StoragesNotGrouped> {
 		let (base, include, exclude, _) = self.into_parts();

@@ -1,5 +1,7 @@
 use crate::components::{ComponentTicks, Entity, Ticks};
-use crate::query::{ComponentView, SplitComponentView, UnfilteredComponentView};
+use crate::query::{
+	ComponentView, ImmutableUnfilteredComponentView, SplitComponentView, UnfilteredComponentView,
+};
 use crate::world::GroupInfo;
 use std::marker::PhantomData;
 
@@ -32,7 +34,7 @@ impl<C, F> Filter<C, F> {
 
 impl<'a, C, F> QueryFilter for Filter<C, F>
 where
-	C: UnfilteredComponentView<'a>,
+	C: ImmutableUnfilteredComponentView<'a>,
 	F: ComponentTicksFilter,
 {
 	fn matches(&self, entity: Entity) -> bool {
