@@ -5,19 +5,19 @@ macro_rules! split_sparse {
 		paste::paste! {
 			let world_tick = $first.world_tick();
 			let last_system_tick = $first.last_system_tick();
-			let [<type_ $first_type:lower>] = $first.$split_fn();
-			$(let [<type_ $other_type:lower>] = $other.$split_fn();)*
+			let [<split_ $first_type:lower>] = $first.$split_fn();
+			$(let [<split_ $other_type:lower>] = $other.$split_fn();)*
 
 			let entities = crate::query::split::shortest_entity_slice(&[
-				[<type_ $first_type:lower>].0
-				$(, [<type_ $other_type:lower>].0)*
+				[<split_ $first_type:lower>].0
+				$(, [<split_ $other_type:lower>].0)*
 			]).unwrap();
 
 			(
 				Some(crate::query::IterData::new(entities, world_tick, last_system_tick)),
 				(
-					[<type_ $first_type:lower>].1,
-					$([<type_ $other_type:lower>].1,)*
+					[<split_ $first_type:lower>].1,
+					$([<split_ $other_type:lower>].1,)*
 				)
 			)
 		}
@@ -29,16 +29,14 @@ macro_rules! split_dense {
 		paste::paste! {
 			let world_tick = $first.world_tick();
 			let last_system_tick = $first.last_system_tick();
-			let [<type_ $first_type:lower>] = $first.$split_fn();
-			$(let [<type_ $other_type:lower>] = $other.$split_fn();)*
-
-			let entities = [<type_ $first_type:lower>].0;
+			let (entities, [<split_ $first_type:lower>]) = $first.$split_fn();
+			$(let [<split_ $other_type:lower>] = $other.$split_fn().1;)*
 
 			(
 				Some(crate::query::IterData::new(entities, world_tick, last_system_tick)),
 				(
-					[<type_ $first_type:lower>].1,
-					$([<type_ $other_type:lower>].1,)*
+					[<split_ $first_type:lower>],
+					$([<split_ $other_type:lower>],)*
 				)
 			)
 		}
