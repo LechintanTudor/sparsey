@@ -22,3 +22,4 @@ pub use self::iter::*;
 pub use self::modifier::*;
 pub use self::query::*;
 pub use self::slice::*;
+pub use self::split::*;

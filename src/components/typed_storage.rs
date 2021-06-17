@@ -70,7 +70,7 @@ where
 		unsafe { slice::from_raw_parts(self.storage.data().cast::<T>(), self.storage.len()) }
 	}
 
-	pub fn split(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentTicks]) {
+	pub fn into_parts(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentTicks]) {
 		let (sparse, entities, data, ticks) = self.storage.split();
 		let data = unsafe { slice::from_raw_parts(data.cast::<T>(), entities.len()) };
 		(sparse, entities, data, ticks)

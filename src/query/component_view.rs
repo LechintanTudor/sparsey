@@ -1,8 +1,14 @@
 use crate::components::{Component, ComponentTicks, Entity, SparseArrayView, Ticks};
 use crate::query::ComponentRefMut;
 use crate::world::{Comp, CompMut, GroupInfo};
-use std::marker::PhantomData;
 use std::ops::Range;
+
+pub type SplitComponentView<'a, T> = (
+	SparseArrayView<'a>,
+	&'a [Entity],
+	*mut T,
+	*mut ComponentTicks,
+);
 
 pub unsafe trait ComponentView<'a>
 where
@@ -23,27 +29,7 @@ where
 
 	fn last_system_tick(&self) -> Ticks;
 
-	fn split(self) -> SplitComponentView<'a, Self::Component>;
-
-	fn split_sparse(self) -> (&'a [Entity], SparseSplitComponentView<'a, Self::Component>) {
-		let (sparse, entities, data, ticks) = self.split();
-		(entities, SparseSplitComponentView::new(sparse, data, ticks))
-	}
-
-	fn split_dense(self) -> (&'a [Entity], DenseSplitComponentView<'a, Self::Component>) {
-		let (_, entities, data, ticks) = self.split();
-		(entities, DenseSplitComponentView::new(data, ticks))
-	}
-
-	fn split_modifier(self) -> (&'a [Entity], SparseArrayView<'a>) {
-		let (sparse, entities, _, _) = self.split();
-		(entities, sparse)
-	}
-
-	fn into_entities(self) -> &'a [Entity] {
-		let (_, entities, _, _) = self.split();
-		entities
-	}
+	fn into_parts(self) -> SplitComponentView<'a, Self::Component>;
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
@@ -106,8 +92,8 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.split();
+	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
+		let (sparse, entities, data, ticks) = self.storage.into_parts();
 		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 
@@ -183,8 +169,8 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.split();
+	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
+		let (sparse, entities, data, ticks) = self.storage.into_parts();
 		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 
@@ -261,8 +247,8 @@ where
 		self.last_system_tick
 	}
 
-	fn split(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.split();
+	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
+		let (sparse, entities, data, ticks) = self.storage.into_parts();
 		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 
@@ -286,70 +272,4 @@ where
 	T: Component,
 {
 	// Empty
-}
-
-pub type SplitComponentView<'a, T> = (
-	SparseArrayView<'a>,
-	&'a [Entity],
-	*mut T,
-	*mut ComponentTicks,
-);
-
-#[derive(Copy, Clone)]
-pub struct SparseSplitComponentView<'a, T> {
-	sparse: SparseArrayView<'a>,
-	data: *mut T,
-	ticks: *mut ComponentTicks,
-}
-
-impl<'a, T> SparseSplitComponentView<'a, T> {
-	fn new(sparse: SparseArrayView<'a>, data: *mut T, ticks: *mut ComponentTicks) -> Self {
-		Self {
-			sparse,
-			data,
-			ticks,
-		}
-	}
-
-	pub unsafe fn get<V>(
-		&mut self,
-		entity: Entity,
-		world_tick: Ticks,
-		last_system_tick: Ticks,
-	) -> Option<V::Item>
-	where
-		V: ComponentView<'a, Component = T>,
-	{
-		let index = self.sparse.get_index(entity)? as usize;
-		V::get_from_parts(self.data, self.ticks, index, world_tick, last_system_tick)
-	}
-}
-
-#[derive(Copy, Clone)]
-pub struct DenseSplitComponentView<'a, T> {
-	data: *mut T,
-	ticks: *mut ComponentTicks,
-	_phantom: PhantomData<&'a ()>,
-}
-
-impl<'a, T> DenseSplitComponentView<'a, T> {
-	fn new(data: *mut T, ticks: *mut ComponentTicks) -> Self {
-		Self {
-			data,
-			ticks,
-			_phantom: PhantomData,
-		}
-	}
-
-	pub unsafe fn get<V>(
-		&mut self,
-		index: usize,
-		world_tick: Ticks,
-		last_system_tick: Ticks,
-	) -> Option<V::Item>
-	where
-		V: ComponentView<'a, Component = T>,
-	{
-		V::get_from_parts(self.data, self.ticks, index, world_tick, last_system_tick)
-	}
 }

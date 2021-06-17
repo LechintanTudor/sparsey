@@ -92,8 +92,8 @@ where
 		self.view.last_system_tick()
 	}
 
-	fn split(self) -> SplitComponentView<'a, Self::Component> {
-		self.view.split()
+	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
+		self.view.into_parts()
 	}
 
 	unsafe fn get_from_parts(

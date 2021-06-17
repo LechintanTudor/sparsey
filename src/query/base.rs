@@ -186,11 +186,11 @@ macro_rules! impl_base_query {
             }
 
             fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit) {
-                split_sparse!(split_sparse, $(($view, self.$idx)),+)
+                split_sparse!($(($view, self.$idx)),+)
             }
 
             fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit) {
-                split_dense!(split_dense, $(($view, self.$idx)),+)
+                split_dense!($(($view, self.$idx)),+)
             }
 
             unsafe fn get_from_sparse_split(

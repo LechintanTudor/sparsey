@@ -42,13 +42,13 @@ where
 	}
 
 	fn into_entities(self) -> Option<&'a [Entity]> {
-		Some(C::into_entities(self))
+		Some(C::into_parts(self).1)
 	}
 
 	fn into_iter_data(self) -> Option<IterData<'a>> {
 		let world_tick = self.world_tick();
 		let last_system_tick = self.last_system_tick();
-		let entities = C::into_entities(self);
+		let entities = C::into_parts(self).1;
 
 		Some(IterData::new(entities, world_tick, last_system_tick))
 	}
@@ -56,10 +56,10 @@ where
 	fn split(self) -> (Option<IterData<'a>>, Self::Split) {
 		let world_tick = self.world_tick();
 		let last_system_tick = self.last_system_tick();
-		let (entities, split) = self.split_modifier();
+		let (sparse, entities, _, _) = self.into_parts();
 		let iter_data = IterData::new(entities, world_tick, last_system_tick);
 
-		(Some(iter_data), split)
+		(Some(iter_data), sparse)
 	}
 
 	fn includes_split(split: &Self::Split, entity: Entity) -> bool {
@@ -128,20 +128,20 @@ macro_rules! impl_query_modifier {
 			}
 
 			fn into_entities(self) -> Option<&'a [Entity]> {
-				Some(self.0.into_entities())
+				Some(self.0.into_parts().1)
 			}
 
 			fn into_iter_data(self) -> Option<IterData<'a>> {
 				let view = self.0;
 				let world_tick = view.world_tick();
 				let last_system_tick = view.last_system_tick();
-				let entities = view.into_entities();
+				let entities = view.into_parts().1;
 
 				Some(IterData::new(entities, world_tick, last_system_tick))
 			}
 
 			fn split(self) -> (Option<IterData<'a>>, Self::Split) {
-				split_sparse!(split_modifier, $(($view, self.$idx)),+)
+				split_modifier!($(($view, self.$idx)),+)
 			}
 
 			fn includes_split(split: &Self::Split, entity: Entity) -> bool {
