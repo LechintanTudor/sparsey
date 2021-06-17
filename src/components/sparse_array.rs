@@ -44,7 +44,8 @@ impl SparseArray {
 			.map(|e| e.short_index())
 	}
 
-	/// Get an exclusive reference to the `IndexEntity` slot at the given `Entity`.
+	/// Get an exclusive reference to the `IndexEntity` slot at the given
+	/// `Entity`.
 	pub fn get_mut(&mut self, entity: Entity) -> Option<&mut Option<IndexEntity>> {
 		self.pages
 			.get_mut(page_index(entity))
@@ -62,9 +63,9 @@ impl SparseArray {
 		}
 	}
 
-	/// Get an exclusive reference to the `IndexEntity` slot at the given `index`.
-	/// If the `index` is larger than the maximum capacity of the `SparseArray`,
-	/// extra memory is allocated to accomodate the new slot.
+	/// Get an exclusive reference to the `IndexEntity` slot at the given
+	/// `index`. If the `index` is larger than the maximum capacity of the
+	/// `SparseArray`, extra memory is allocated to accomodate the new slot.
 	pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<IndexEntity> {
 		let page_index = index / PAGE_SIZE;
 

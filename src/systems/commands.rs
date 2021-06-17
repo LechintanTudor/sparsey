@@ -16,7 +16,8 @@ impl<'a> Commands<'a> {
 		Self { buffer, entities }
 	}
 
-	/// Queue a function to run with exclusive access to the `World` and `Resources`.
+	/// Queue a function to run with exclusive access to the `World` and
+	/// `Resources`.
 	pub fn run<F>(&mut self, command: F)
 	where
 		F: FnOnce(&mut World, &mut Resources) + Send + 'static,

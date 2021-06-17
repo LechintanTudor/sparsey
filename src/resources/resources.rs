@@ -61,7 +61,8 @@ impl Resources {
 		unsafe { self.internal.remove::<T>() }
 	}
 
-	/// Remove the resource at the given `TypeId` and return it if it was successfully removed.
+	/// Remove the resource at the given `TypeId` and return it if it was
+	/// successfully removed.
 	pub fn remove_dyn(&mut self, type_id: &TypeId) -> Option<Box<dyn Resource>> {
 		unsafe { self.internal.remove_dyn(type_id) }
 	}
@@ -101,7 +102,8 @@ impl Resources {
 		unsafe { self.internal.borrow_dyn(type_id) }
 	}
 
-	/// Get an exclusive borrow of the resource at the given `TypeId`, if it exists.
+	/// Get an exclusive borrow of the resource at the given `TypeId`, if it
+	/// exists.
 	pub fn borrow_dyn_mut(&self, type_id: &TypeId) -> Option<ResMut<dyn Resource>> {
 		unsafe { self.internal.borrow_dyn_mut(type_id) }
 	}

@@ -162,7 +162,7 @@ impl ComponentStorage {
 
 	pub fn get_mut(&mut self, entity: Entity) -> *mut u8 {
 		match self.sparse.get_index(entity) {
-			Some(index) => unsafe { self.data.get_unchecked_mut(index as usize) },
+			Some(index) => unsafe { self.data.get_unchecked(index as usize) },
 			None => ptr::null_mut(),
 		}
 	}

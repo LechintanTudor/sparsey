@@ -17,7 +17,8 @@ pub unsafe trait ComponentSet
 where
 	Self: Sized + Send + Sync + 'static,
 {
-	/// Storages to borrow from the `World` for adding/appending/removing components.
+	/// Storages to borrow from the `World` for adding/appending/removing
+	/// components.
 	type Storages: for<'a> BorrowStorages<'a>;
 
 	/// Insert the component in the borrowed storages.
@@ -28,7 +29,8 @@ where
 		tick: u32,
 	);
 
-	/// Remove components from the borrowed storages and return them if they exist.
+	/// Remove components from the borrowed storages and return them if they
+	/// exist.
 	unsafe fn remove(
 		storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
 		entity: Entity,
@@ -53,8 +55,8 @@ pub trait BorrowStorages<'a> {
 	) -> (Self::StorageSet, UsedGroupFamilies);
 }
 
-/// Struct used to borrow component storages. Implements `BorrowStorages` for all lifetimes.
-/// Only exists because we don't have GATs in stable rust :(
+/// Struct used to borrow component storages. Implements `BorrowStorages` for
+/// all lifetimes. Only exists because we don't have GATs in stable rust :(
 pub struct StorageBorrower<T>
 where
 	T: Send + Sync + 'static,

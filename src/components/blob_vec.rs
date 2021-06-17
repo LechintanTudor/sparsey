@@ -2,6 +2,7 @@ use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr;
 use std::ptr::NonNull;
 
+/// Container for blobs of data with a given [`Layout`] and destructor.
 pub struct BlobVec {
 	item_layout: Layout,
 	drop_item: unsafe fn(*mut u8),
@@ -12,6 +13,8 @@ pub struct BlobVec {
 }
 
 impl BlobVec {
+	/// Creates a new, empty `BlobVec` capable of holding items with the
+	/// given `Layout` and destructor.
 	pub unsafe fn new(item_layout: Layout, drop_item: unsafe fn(*mut u8)) -> Self {
 		let ptr = NonNull::new_unchecked(item_layout.align() as *mut u8);
 
@@ -42,29 +45,8 @@ impl BlobVec {
 		}
 	}
 
-	pub fn len(&self) -> usize {
-		self.len
-	}
-
-	pub fn is_empty(&self) -> bool {
-		self.len == 0
-	}
-
-	pub fn capacity(&self) -> usize {
-		self.cap
-	}
-
-	pub fn clear(&mut self) {
-		let len = self.len;
-		self.len = 0;
-
-		for i in 0..len {
-			unsafe {
-				(self.drop_item)(self.ptr.as_ptr().add(i * self.item_layout.size()));
-			}
-		}
-	}
-
+	/// Copies the item at the given address to the end of the vector.
+	/// This will cause a reallocation if the vector is full.
 	pub unsafe fn push(&mut self, item: *const u8) {
 		if self.len == self.cap {
 			self.grow();
@@ -74,6 +56,75 @@ impl BlobVec {
 		self.len += 1;
 	}
 
+	/// Replaces the item at `index` with the item at the given address.
+	/// The destructor of the replaced item is not called.
+	/// Returns the address of the replaced item which is valid until
+	/// the next call to any of the vector's functions.
+	pub unsafe fn set_and_forget_prev_unchecked(
+		&mut self,
+		index: usize,
+		value: *const u8,
+	) -> *mut u8 {
+		ptr::copy_nonoverlapping(
+			self.get_unchecked(index),
+			self.swap_space.as_ptr(),
+			self.item_layout.size(),
+		);
+		ptr::copy(value, self.get_unchecked(index), self.item_layout.size());
+		self.swap_space.as_ptr()
+	}
+
+	/// Replaces the item at `index` with the item at the given address
+	/// and calls the destructor for the replaced item..
+	pub unsafe fn set_and_drop_prev_unchecked(&mut self, index: usize, value: *const u8) {
+		(self.drop_item)(self.get_unchecked(index));
+		ptr::copy(value, self.get_unchecked(index), self.item_layout.size());
+	}
+
+	/// Removes the item at the given `index` by swapping it with the item at
+	/// the last position and decrementing the length. The destructor of the
+	/// removed items is not called. Returns the address of the removed item
+	/// which is valid until the next call to any of the vector's functions.
+	pub unsafe fn swap_remove_and_forget_unchecked(&mut self, index: usize) -> *mut u8 {
+		let last_index = self.len - 1;
+
+		// Copy current element to swap space
+		ptr::copy_nonoverlapping(
+			self.get_unchecked(index),
+			self.swap_space.as_ptr(),
+			self.item_layout.size(),
+		);
+
+		// Overwrite current element with last element
+		ptr::copy(
+			self.get_unchecked(last_index),
+			self.get_unchecked(index),
+			self.item_layout.size(),
+		);
+
+		self.len = last_index;
+		self.swap_space.as_ptr()
+	}
+
+	/// Removes the item at the given `index` by swapping it with the item at
+	/// the last position and decrementing the length. The destructor of the
+	/// removed items is called.
+	pub unsafe fn swap_remove_and_drop_unchecked(&mut self, index: usize) {
+		(self.drop_item)(self.get_unchecked(index));
+
+		let last_index = self.len - 1;
+
+		// Overwrite current element with last element
+		ptr::copy(
+			self.get_unchecked(last_index),
+			self.get_unchecked(index),
+			self.item_layout.size(),
+		);
+
+		self.len = last_index;
+	}
+
+	/// Swaps the items at the given positions.
 	pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
 		// Copy first element to swap space
 		ptr::copy_nonoverlapping(
@@ -97,73 +148,46 @@ impl BlobVec {
 		);
 	}
 
-	pub unsafe fn swap_remove_and_forget_unchecked(&mut self, index: usize) -> *mut u8 {
-		let last_index = self.len - 1;
-
-		// Copy current element to swap space
-		ptr::copy_nonoverlapping(
-			self.get_unchecked(index),
-			self.swap_space.as_ptr(),
-			self.item_layout.size(),
-		);
-
-		// Overwrite current element with last element
-		ptr::copy(
-			self.get_unchecked(last_index),
-			self.get_unchecked(index),
-			self.item_layout.size(),
-		);
-
-		self.len = last_index;
-		self.swap_space.as_ptr()
-	}
-
-	pub unsafe fn swap_remove_and_drop_unchecked(&mut self, index: usize) {
-		(self.drop_item)(self.get_unchecked(index));
-
-		let last_index = self.len - 1;
-
-		// Overwrite current element with last element
-		ptr::copy(
-			self.get_unchecked(last_index),
-			self.get_unchecked(index),
-			self.item_layout.size(),
-		);
-
-		self.len = last_index;
-	}
-
+	/// Returns the address of the item at the given `index`.
 	pub unsafe fn get_unchecked(&self, index: usize) -> *mut u8 {
 		self.ptr.as_ptr().add(index * self.item_layout.size())
 	}
 
-	pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> *mut u8 {
-		self.ptr.as_ptr().add(index * self.item_layout.size())
-	}
-
-	pub unsafe fn set_and_forget_prev_unchecked(
-		&mut self,
-		index: usize,
-		value: *const u8,
-	) -> *mut u8 {
-		ptr::copy_nonoverlapping(
-			self.get_unchecked(index),
-			self.swap_space.as_ptr(),
-			self.item_layout.size(),
-		);
-		ptr::copy(value, self.get_unchecked(index), self.item_layout.size());
-		self.swap_space.as_ptr()
-	}
-
-	pub unsafe fn set_and_drop_prev_unchecked(&mut self, index: usize, value: *const u8) {
-		(self.drop_item)(self.get_unchecked(index));
-		ptr::copy(value, self.get_unchecked(index), self.item_layout.size());
-	}
-
+	/// Returns a pointer to the buffer where the items are stored.
 	pub fn as_ptr(&self) -> *mut u8 {
 		self.ptr.as_ptr()
 	}
 
+	/// Returns the number of items in the vector.
+	pub fn len(&self) -> usize {
+		self.len
+	}
+
+	/// Returns `true` if the vector contains no items.
+	pub fn is_empty(&self) -> bool {
+		self.len == 0
+	}
+
+	/// Returns the number of items the vector can hold without reallocating.
+	pub fn capacity(&self) -> usize {
+		self.cap
+	}
+
+	/// Calls the destructor for all items and sets the length of the vector to
+	/// zero.
+	pub fn clear(&mut self) {
+		let len = self.len;
+		self.len = 0;
+
+		for i in 0..len {
+			unsafe {
+				(self.drop_item)(self.ptr.as_ptr().add(i * self.item_layout.size()));
+			}
+		}
+	}
+
+	/// Copies all elements to a larger buffer, increasing the capacity of the
+	/// vector.
 	fn grow(&mut self) {
 		assert!(self.item_layout.size() != 0, "BlobVec is overfull");
 
@@ -214,7 +238,7 @@ impl Drop for BlobVec {
 }
 
 // From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
-pub fn repeat_layout(layout: &Layout, n: usize) -> Option<Layout> {
+fn repeat_layout(layout: &Layout, n: usize) -> Option<Layout> {
 	// This cannot overflow. Quoting from the invariant of Layout:
 	// > `size`, when rounded up to the nearest multiple of `align`,
 	// > must not overflow (i.e., the rounded value must be less than

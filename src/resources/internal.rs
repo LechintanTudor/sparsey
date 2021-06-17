@@ -65,7 +65,8 @@ impl UnsafeResources {
 			})
 	}
 
-	/// Remove the resource at the given `TypeId` and return it if it was successfully removed.
+	/// Remove the resource at the given `TypeId` and return it if it was
+	/// successfully removed.
 	pub unsafe fn remove_dyn(&mut self, type_id: &TypeId) -> Option<Box<dyn Resource>> {
 		self.values.remove(type_id).map(|res| res.into_inner())
 	}
@@ -117,7 +118,8 @@ impl UnsafeResources {
 			.map(|res| Res::new(AtomicRef::map(res.borrow(), Box::as_ref)))
 	}
 
-	/// Get an exclusive borrow of the resource at the given `TypeId`, if it exists.
+	/// Get an exclusive borrow of the resource at the given `TypeId`, if it
+	/// exists.
 	pub unsafe fn borrow_dyn_mut(&self, type_id: &TypeId) -> Option<ResMut<dyn Resource>> {
 		self.values
 			.get(type_id)

@@ -23,7 +23,8 @@ where
 {
 }
 
-/// Encapsulates a locally runnable function. Implements the `LocallyRunnable` trait.
+/// Encapsulates a locally runnable function. Implements the `LocallyRunnable`
+/// trait.
 pub struct LocalSystem {
 	function: Box<dyn FnMut(Environment) -> SystemResult + 'static>,
 	accesses: Vec<SystemAccess>,
@@ -103,7 +104,8 @@ where
 	fn system(self) -> System;
 }
 
-/// Encapsulates a system function with exclusive access to `World` and `Resources`.
+/// Encapsulates a system function with exclusive access to `World` and
+/// `Resources`.
 pub struct LocalFn {
 	function: Box<dyn FnMut(&mut World, &mut Resources) -> SystemResult + 'static>,
 }

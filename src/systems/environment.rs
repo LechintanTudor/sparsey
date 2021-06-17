@@ -122,7 +122,8 @@ where
 	}
 }
 
-/// Type used to get an exclusive view over a set of components from the `World`.
+/// Type used to get an exclusive view over a set of components from the
+/// `World`.
 pub struct BorrowCompMut<T>(PhantomData<*const T>);
 
 unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowCompMut<T>

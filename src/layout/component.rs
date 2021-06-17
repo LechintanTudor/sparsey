@@ -32,7 +32,8 @@ impl LayoutComponent {
 		}
 	}
 
-	/// Get the `TypeId` of the component type described by the `LayoutComponent`.
+	/// Get the `TypeId` of the component type described by the
+	/// `LayoutComponent`.
 	pub fn type_id(&self) -> TypeId {
 		self.component.type_id()
 	}
@@ -42,7 +43,8 @@ impl LayoutComponent {
 		self.component.type_name()
 	}
 
-	/// Create a `ComponentStorage` for the component type described by the `LayoutComponent`.
+	/// Create a `ComponentStorage` for the component type described by the
+	/// `LayoutComponent`.
 	pub fn new_storage(&self) -> (TypeId, ComponentStorage) {
 		self.component.new_storage()
 	}

@@ -31,14 +31,15 @@ impl DispatcherBuilder {
 		self
 	}
 
-	/// Add a local system function to the `Dispatcher` which runs on the current thread.
+	/// Add a local system function to the `Dispatcher` which runs on the
+	/// current thread.
 	pub fn add_local_fn(&mut self, system: LocalFn) -> &mut Self {
 		self.simple_steps.push(SimpleStep::RunLocalFn(system));
 		self
 	}
 
-	/// Add a flush barrier which runs all the commands which need exclusive access
-	/// to the `World` and `Resources`.
+	/// Add a flush barrier which runs all the commands which need exclusive
+	/// access to the `World` and `Resources`.
 	pub fn add_flush(&mut self) -> &mut Self {
 		self.simple_steps.push(SimpleStep::FlushCommands);
 		self

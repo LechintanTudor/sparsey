@@ -5,7 +5,8 @@ use crate::systems::{
 };
 use crate::world::{Comp, CompMut};
 
-/// Trait used for marking system parameters and borrowing data from the `Environment`.
+/// Trait used for marking system parameters and borrowing data from the
+/// `Environment`.
 pub trait LocalSystemParam {
 	type Borrow: for<'a> BorrowEnvironment<'a>;
 }
