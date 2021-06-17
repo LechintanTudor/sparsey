@@ -19,7 +19,7 @@ unsafe impl Sync for GroupedComponentStorages {}
 impl GroupedComponentStorages {
 	pub fn with_layout(
 		layout: &Layout,
-		sparse_set_map: &mut HashMap<TypeId, ComponentStorage>,
+		storage_map: &mut HashMap<TypeId, ComponentStorage>,
 	) -> Self {
 		let mut group_sets = Vec::<GroupFamily>::new();
 		let mut info = HashMap::<TypeId, ComponentInfo>::new();
@@ -44,12 +44,12 @@ impl GroupedComponentStorages {
 						},
 					);
 
-					let sparse_set = match sparse_set_map.remove(&type_id) {
-						Some(sparse_set) => sparse_set,
+					let storage = match storage_map.remove(&type_id) {
+						Some(storage) => storage,
 						None => component.new_storage().1,
 					};
 
-					storages.push(AtomicRefCell::new(sparse_set));
+					storages.push(AtomicRefCell::new(storage));
 				}
 
 				groups.push(Group::new(arity, prev_arity));
@@ -70,8 +70,8 @@ impl GroupedComponentStorages {
 
 	pub fn clear(&mut self) {
 		for group in self.families.iter_mut() {
-			for sparse_set in group.storages.iter_mut() {
-				sparse_set.get_mut().clear();
+			for storage in group.storages.iter_mut() {
+				storage.get_mut().clear();
 			}
 
 			for group in group.groups.iter_mut() {
@@ -246,12 +246,9 @@ impl GroupedComponentStorages {
 	}
 
 	pub fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> {
-		self.families.iter_mut().flat_map(|group| {
-			group
-				.storages
-				.iter_mut()
-				.map(|sparse_set| sparse_set.get_mut())
-		})
+		self.families
+			.iter_mut()
+			.flat_map(|group| group.storages.iter_mut().map(|storage| storage.get_mut()))
 	}
 }
 
@@ -295,7 +292,7 @@ fn get_group_status(
 
 			if others
 				.iter_mut()
-				.all(|sparse_set| sparse_set.get_mut().contains(entity))
+				.all(|storage| storage.get_mut().contains(entity))
 			{
 				status
 			} else {
@@ -311,13 +308,13 @@ unsafe fn group_components(
 	group_len: &mut usize,
 	entity: Entity,
 ) {
-	for sparse_set in storages.iter_mut().map(|sparse_set| sparse_set.get_mut()) {
-		let index = match sparse_set.get_index(entity) {
+	for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
+		let index = match storage.get_index(entity) {
 			Some(index) => index as usize,
 			None => unreachable_unchecked(),
 		};
 
-		sparse_set.swap(index, *group_len);
+		storage.swap(index, *group_len);
 	}
 
 	*group_len += 1;
@@ -331,13 +328,13 @@ unsafe fn ungroup_components(
 	if *group_len > 0 {
 		let last_index = *group_len - 1;
 
-		for sparse_set in storages.iter_mut().map(|sparse_set| sparse_set.get_mut()) {
-			let index = match sparse_set.get_index(entity) {
+		for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
+			let index = match storage.get_index(entity) {
 				Some(index) => index as usize,
 				None => unreachable_unchecked(),
 			};
 
-			sparse_set.swap(index, last_index);
+			storage.swap(index, last_index);
 		}
 
 		*group_len -= 1;

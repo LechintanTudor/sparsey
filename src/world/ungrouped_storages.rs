@@ -12,11 +12,11 @@ unsafe impl Send for UngroupedComponentStorages {}
 unsafe impl Sync for UngroupedComponentStorages {}
 
 impl UngroupedComponentStorages {
-	pub fn from_storages(sparse_set_map: &mut HashMap<TypeId, ComponentStorage>) -> Self {
+	pub fn from_storages(storage_map: &mut HashMap<TypeId, ComponentStorage>) -> Self {
 		let mut storages = HashMap::<TypeId, AtomicRefCell<ComponentStorage>>::new();
 
-		for (type_id, sparse_set) in sparse_set_map.drain() {
-			storages.insert(type_id, AtomicRefCell::new(sparse_set));
+		for (type_id, storage) in storage_map.drain() {
+			storages.insert(type_id, AtomicRefCell::new(storage));
 		}
 
 		Self { storages }
@@ -48,26 +48,22 @@ impl UngroupedComponentStorages {
 	}
 
 	pub fn clear(&mut self) {
-		for sparse_set in self.storages.values_mut() {
-			sparse_set.get_mut().clear();
+		for storage in self.storages.values_mut() {
+			storage.get_mut().clear();
 		}
 	}
 
 	pub fn borrow(&self, component: &TypeId) -> Option<AtomicRef<ComponentStorage>> {
-		self.storages
-			.get(component)
-			.map(|sparse_set| sparse_set.borrow())
+		self.storages.get(component).map(|storage| storage.borrow())
 	}
 
 	pub fn borrow_mut(&self, component: &TypeId) -> Option<AtomicRefMut<ComponentStorage>> {
 		self.storages
 			.get(component)
-			.map(|sparse_set| sparse_set.borrow_mut())
+			.map(|storage| storage.borrow_mut())
 	}
 
 	pub fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> {
-		self.storages
-			.values_mut()
-			.map(|sparse_set| sparse_set.get_mut())
+		self.storages.values_mut().map(|storage| storage.get_mut())
 	}
 }
