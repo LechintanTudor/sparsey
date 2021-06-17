@@ -56,6 +56,7 @@ where
 		self.storage.get_ticks(entity)
 	}
 
+	#[allow(dead_code)]
 	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
 		self.storage
 			.get_with_ticks(entity)
@@ -70,7 +71,7 @@ where
 		unsafe { slice::from_raw_parts(self.storage.data().cast::<T>(), self.storage.len()) }
 	}
 
-	pub fn into_parts(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentTicks]) {
+	pub fn split(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentTicks]) {
 		let (sparse, entities, data, ticks) = self.storage.split();
 		let data = unsafe { slice::from_raw_parts(data.cast::<T>(), entities.len()) };
 		(sparse, entities, data, ticks)
@@ -112,6 +113,7 @@ where
 			.map(|(value, ticks)| unsafe { (&mut *value.cast::<T>(), ticks) })
 	}
 
+	#[allow(dead_code)]
 	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], &mut [T], &mut [ComponentTicks]) {
 		let (sparse, entities, data, ticks) = self.storage.split_mut();
 		let data = unsafe { slice::from_raw_parts_mut(data as *mut T, entities.len()) };

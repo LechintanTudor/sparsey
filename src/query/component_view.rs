@@ -93,7 +93,7 @@ where
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.into_parts();
+		let (sparse, entities, data, ticks) = self.storage.split();
 		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 
@@ -170,7 +170,7 @@ where
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.into_parts();
+		let (sparse, entities, data, ticks) = self.storage.split();
 		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 
@@ -248,7 +248,7 @@ where
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.into_parts();
+		let (sparse, entities, data, ticks) = self.storage.split();
 		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
 	}
 

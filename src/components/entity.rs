@@ -2,8 +2,8 @@ use std::num::NonZeroU32;
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Entity {
-	version: Version,
 	index: u32,
+	version: Version,
 }
 
 impl Entity {
@@ -48,8 +48,8 @@ impl Entity {
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct IndexEntity {
-	version: Version,
 	index: u32,
+	version: Version,
 }
 
 impl IndexEntity {

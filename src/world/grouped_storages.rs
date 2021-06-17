@@ -56,10 +56,7 @@ impl GroupedComponentStorages {
 				prev_arity = arity;
 			}
 
-			group_sets.push(GroupFamily {
-				storages: storages,
-				groups,
-			});
+			group_sets.push(GroupFamily { storages, groups });
 		}
 
 		Self {

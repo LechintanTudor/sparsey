@@ -154,7 +154,7 @@ where
 		.unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
-fn borrow<'a, T>(components: &'a ComponentStorages) -> BorrowedComponentStorage<'a, T>
+fn borrow<T>(components: &ComponentStorages) -> BorrowedComponentStorage<T>
 where
 	T: Component,
 {

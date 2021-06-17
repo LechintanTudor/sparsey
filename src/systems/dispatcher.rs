@@ -159,7 +159,7 @@ impl Dispatcher {
 
 		self.last_system_tick = world_tick;
 
-		if errors.len() != 0 {
+		if !errors.is_empty() {
 			Err(RunError::from(errors))
 		} else {
 			Ok(())
@@ -228,7 +228,7 @@ impl Dispatcher {
 
 		self.last_system_tick = world_tick;
 
-		if errors.len() != 0 {
+		if !errors.is_empty() {
 			Err(RunError::from(errors))
 		} else {
 			Ok(())

@@ -80,6 +80,10 @@ impl UnsafeResources {
 		self.values.len()
 	}
 
+	pub fn is_empty(&self) -> bool {
+		self.values.is_empty()
+	}
+
 	/// Get a shared borrow of a resource if it exists.
 	pub unsafe fn borrow<T>(&self) -> Option<Res<T>>
 	where

@@ -9,13 +9,7 @@ pub struct IterData<'a> {
 }
 
 impl<'a> IterData<'a> {
-	pub const fn empty() -> Self {
-		Self {
-			entities: &[],
-			world_tick: 0,
-			last_system_tick: 0,
-		}
-	}
+	pub const EMPTY: Self = Self::new(&[], 0, 0);
 
 	pub const fn new(entities: &'a [Entity], world_tick: Ticks, last_system_tick: Ticks) -> Self {
 		Self {

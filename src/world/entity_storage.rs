@@ -138,7 +138,7 @@ impl EntityAllocator {
 	fn allocate_atomic(&self) -> Option<Entity> {
 		match atomic_decrement_usize(&self.recycled_len) {
 			Some(recycled_len) => Some(self.recycled[recycled_len - 1]),
-			None => atomic_increment_u32(&self.current_id).map(|id| Entity::with_index(id)),
+			None => atomic_increment_u32(&self.current_id).map(Entity::with_index),
 		}
 	}
 
@@ -165,7 +165,7 @@ impl EntityAllocator {
 
 		self.recycled
 			.drain(remaining..)
-			.chain(new_id_range.into_iter().map(|id| Entity::with_index(id)))
+			.chain(new_id_range.into_iter().map(Entity::with_index))
 	}
 }
 

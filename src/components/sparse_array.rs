@@ -19,7 +19,9 @@ impl SparseArray {
 
 	/// Delete the `IndexEntity` at the given `Entity`.
 	pub fn delete(&mut self, entity: Entity) {
-		self.get_mut(entity).map(|e| *e = None);
+		if let Some(entity) = self.get_mut(entity) {
+			*entity = None;
+		}
 	}
 
 	/// Remove all `Entities` in the `SparseArray`.

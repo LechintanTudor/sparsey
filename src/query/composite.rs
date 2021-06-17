@@ -55,7 +55,7 @@ impl<B, I, E> IncludeExclude<B, I, E> {
 		}
 	}
 
-	pub fn filter<'a, F>(self, filter: F) -> IncludeExcludeFilter<B, I, E, F>
+	pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<B, I, E, F>
 	where
 		F: QueryFilter,
 	{

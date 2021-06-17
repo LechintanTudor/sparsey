@@ -47,10 +47,10 @@ where
 
 				let iter_data = [query_data, include_data]
 					.iter()
-					.flat_map(|d| d)
+					.flatten()
 					.min_by_key(|d| d.entities().len())
 					.copied()
-					.unwrap_or(IterData::empty());
+					.unwrap_or(IterData::EMPTY);
 
 				Iter::Sparse(SparseIter::new(iter_data, query, include, exclude, filter))
 			}

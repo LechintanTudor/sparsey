@@ -146,6 +146,7 @@ unsafe impl<'a> QueryBase<'a> for () {
 unsafe impl<'a> SliceableQueryBase<'a> for () {
 	type Slices = ();
 
+	#[allow(clippy::unused_unit)]
 	unsafe fn slice_data(self, _: Range<usize>) -> Self::Slices {
 		()
 	}

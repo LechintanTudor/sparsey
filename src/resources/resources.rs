@@ -11,7 +11,7 @@ pub struct Resources {
 
 impl Resources {
 	/// Get a view of resources which can be safely shared across threads.
-	pub fn sync<'a>(&'a self) -> SyncResources<'a> {
+	pub fn sync(&self) -> SyncResources {
 		SyncResources::new(&self.internal)
 	}
 
@@ -74,6 +74,10 @@ impl Resources {
 	/// Get the number of resources in the set.
 	pub fn len(&self) -> usize {
 		self.internal.len()
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.internal.is_empty()
 	}
 
 	/// Get a shared borrow of a resource if it exists.

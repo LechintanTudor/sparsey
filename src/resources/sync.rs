@@ -23,6 +23,10 @@ impl<'a> SyncResources<'a> {
 		self.internal.len()
 	}
 
+	pub fn is_empty(&self) -> bool {
+		self.internal.is_empty()
+	}
+
 	/// Get a shared borrow of a resource if it exists.
 	/// Safe because `T` is guaranteed to be `Sync`.
 	pub fn borrow<T>(&self) -> Option<Res<T>>
