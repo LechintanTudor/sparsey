@@ -194,7 +194,7 @@ impl ComponentStorage {
 		}
 	}
 
-	pub fn get_index(&self, entity: Entity) -> Option<u32> {
+	pub fn get_index(&self, entity: Entity) -> Option<usize> {
 		self.sparse.get_index(entity)
 	}
 

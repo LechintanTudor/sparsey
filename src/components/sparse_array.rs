@@ -35,13 +35,13 @@ impl SparseArray {
 	}
 
 	/// Get the `IndexEntity` at the given `Entity`.
-	pub fn get_index(&self, entity: Entity) -> Option<u32> {
+	pub fn get_index(&self, entity: Entity) -> Option<usize> {
 		self.pages
 			.get(page_index(entity))
 			.and_then(|p| p.as_ref())
 			.and_then(|p| p[local_index(entity)])
 			.filter(|e| e.version() == entity.version())
-			.map(|e| e.short_index())
+			.map(|e| e.index())
 	}
 
 	/// Get an exclusive reference to the `IndexEntity` slot at the given
@@ -116,13 +116,13 @@ impl SparseArrayView<'_> {
 	}
 
 	/// Get the `IndexEntity` at the given `Entity`.
-	pub fn get_index(&self, entity: Entity) -> Option<u32> {
+	pub fn get_index(&self, entity: Entity) -> Option<usize> {
 		self.pages
 			.get(page_index(entity))
 			.and_then(|p| p.as_ref())
 			.and_then(|p| p[local_index(entity)])
 			.filter(|e| e.version() == entity.version())
-			.map(|e| e.short_index())
+			.map(|e| e.index())
 	}
 }
 

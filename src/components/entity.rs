@@ -20,10 +20,6 @@ impl Entity {
 		}
 	}
 
-	pub const fn short_index(&self) -> u32 {
-		self.index
-	}
-
 	pub const fn index(&self) -> usize {
 		self.index as _
 	}
@@ -64,10 +60,6 @@ impl IndexEntity {
 				version: Version::new_unchecked(1),
 			}
 		}
-	}
-
-	pub const fn short_index(&self) -> u32 {
-		self.index
 	}
 
 	pub const fn index(&self) -> usize {
