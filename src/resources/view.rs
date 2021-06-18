@@ -15,7 +15,7 @@ where
 	}
 
 	/// Clone the resource view.
-	#[allow(clippy::clippy::should_implement_trait)]
+	#[allow(clippy::should_implement_trait)]
 	pub fn clone(orig: &Self) -> Self {
 		Self(AtomicRef::clone(&orig.0))
 	}
