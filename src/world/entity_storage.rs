@@ -85,7 +85,7 @@ impl EntitySparseSet {
 
 	fn remove(&mut self, entity: Entity) -> bool {
 		let dense_index = match self.sparse.remove(entity) {
-			Some(index_entity) => index_entity.index(),
+			Some(dense_index) => dense_index,
 			None => return false,
 		};
 

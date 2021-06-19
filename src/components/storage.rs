@@ -79,12 +79,11 @@ impl ComponentStorage {
 	}
 
 	pub fn remove_and_forget(&mut self, entity: Entity) -> *mut u8 {
-		let index_entity = match self.sparse.remove(entity) {
-			Some(index_entity) => index_entity,
+		let dense_index = match self.sparse.remove(entity) {
+			Some(dense_index) => dense_index,
 			None => return ptr::null_mut(),
 		};
 
-		let dense_index = index_entity.index();
 		self.entities.swap_remove(dense_index);
 		self.ticks.swap_remove(dense_index);
 
@@ -101,12 +100,11 @@ impl ComponentStorage {
 	}
 
 	pub fn remove_and_drop(&mut self, entity: Entity) -> bool {
-		let index_entity = match self.sparse.remove(entity) {
-			Some(index_entity) => index_entity,
+		let dense_index = match self.sparse.remove(entity) {
+			Some(dense_index) => dense_index,
 			None => return false,
 		};
 
-		let dense_index = index_entity.index();
 		self.entities.swap_remove(dense_index);
 		self.ticks.swap_remove(dense_index);
 

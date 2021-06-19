@@ -5,36 +5,19 @@ use std::{iter, ptr};
 const PAGE_SIZE: usize = 32;
 type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
-/// Data structure which maps `Entities` to indexes.
+/// Used by `ComponentStorages` to map `Entities` to dense indexes.
 #[derive(Clone, Debug, Default)]
 pub struct SparseArray {
 	pages: Vec<EntityPage>,
 }
 
 impl SparseArray {
-	/// Remove the `IndexEntity` at the given `Entity`.
-	pub fn remove(&mut self, entity: Entity) -> Option<IndexEntity> {
-		self.get_mut(entity).map(|e| e.take()).flatten()
-	}
-
-	/// Delete the `IndexEntity` at the given `Entity`.
-	pub fn delete(&mut self, entity: Entity) {
-		if let Some(entity) = self.get_mut(entity) {
-			*entity = None;
-		}
-	}
-
-	/// Remove all `Entities` in the `SparseArray`.
-	pub fn clear(&mut self) {
-		self.pages.iter_mut().for_each(|p| *p = None);
-	}
-
-	/// Check if the `SparseArray` contains the given `Entity`.
+	/// Returns whether or not the array contains `entity`.
 	pub fn contains(&self, entity: Entity) -> bool {
 		self.get_index(entity).is_some()
 	}
 
-	/// Get the `IndexEntity` at the given `Entity`.
+	/// Returns the index mapped to `entity`.
 	pub fn get_index(&self, entity: Entity) -> Option<usize> {
 		self.pages
 			.get(page_index(entity))
@@ -44,18 +27,8 @@ impl SparseArray {
 			.map(|e| e.index())
 	}
 
-	/// Get an exclusive reference to the `IndexEntity` slot at the given
-	/// `Entity`.
-	pub fn get_mut(&mut self, entity: Entity) -> Option<&mut Option<IndexEntity>> {
-		self.pages
-			.get_mut(page_index(entity))
-			.and_then(|page| page.as_mut())
-			.map(|page| &mut page[local_index(entity)])
-			.filter(|e| e.map(|e| e.version()) == Some(entity.version()))
-	}
-
-	/// Get an excusive reference to the `IndexEntity` slot at the given `index`
-	/// without checking the validity of the `index`.
+	/// Returns the `IndexEntity` slot at `index` without checking if the
+	/// `index` it is valid.
 	pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<IndexEntity> {
 		match self.pages.get_unchecked_mut(index / PAGE_SIZE) {
 			Some(page) => page.get_unchecked_mut(index % PAGE_SIZE),
@@ -63,9 +36,8 @@ impl SparseArray {
 		}
 	}
 
-	/// Get an exclusive reference to the `IndexEntity` slot at the given
-	/// `index`. If the `index` is larger than the maximum capacity of the
-	/// `SparseArray`, extra memory is allocated to accomodate the new slot.
+	/// Returns the `IndexEntity` slot at `index`. May allocate memory if the
+	/// index cannot be stored in the allocated pages.
 	pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<IndexEntity> {
 		let page_index = index / PAGE_SIZE;
 
@@ -91,16 +63,43 @@ impl SparseArray {
 		}
 	}
 
-	/// Swap the `IndexEntities` at the given indexes without checking if
-	/// the indexes are valid and in bounds.
+	/// Swaps the `IndexEntities` at `a` and `b` without checking if `a` and `b`
+	/// are valid.
 	pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
 		let pa = self.get_unchecked_mut(a) as *mut _;
 		let pb = self.get_unchecked_mut(b) as *mut _;
 		ptr::swap(pa, pb);
 	}
 
+	/// Removes `entity` from the array and returns the `index` mapped to it.
+	pub fn remove(&mut self, entity: Entity) -> Option<usize> {
+		Some(self.get_mut(entity)?.take()?.index())
+	}
+
+	/// Deletes `entity` from the array. May be faster than
+	/// `SparseArray::remove`.
+	pub fn delete(&mut self, entity: Entity) {
+		if let Some(entity) = self.get_mut(entity) {
+			*entity = None;
+		}
+	}
+
+	/// Removes all entities from the array.
+	pub fn clear(&mut self) {
+		self.pages.iter_mut().for_each(|p| *p = None);
+	}
+
+	/// Returns a read-only view of the array.
 	pub fn as_view(&self) -> SparseArrayView {
 		SparseArrayView { pages: &self.pages }
+	}
+
+	fn get_mut(&mut self, entity: Entity) -> Option<&mut Option<IndexEntity>> {
+		self.pages
+			.get_mut(page_index(entity))
+			.and_then(|page| page.as_mut())
+			.map(|page| &mut page[local_index(entity)])
+			.filter(|e| e.map(|e| e.version()) == Some(entity.version()))
 	}
 }
 
@@ -110,12 +109,17 @@ pub struct SparseArrayView<'a> {
 }
 
 impl SparseArrayView<'_> {
-	/// Check if the `SparseArray` contains the given `Entity`.
+	/// Checks if the array contains `entity`.
 	pub fn contains(&self, entity: Entity) -> bool {
-		self.get_index(entity).is_some()
+		self.pages
+			.get(page_index(entity))
+			.and_then(|p| p.as_ref())
+			.and_then(|p| p[local_index(entity)])
+			.filter(|e| e.version() == entity.version())
+			.is_some()
 	}
 
-	/// Get the `IndexEntity` at the given `Entity`.
+	/// Get the index mapped to `entity`.
 	pub fn get_index(&self, entity: Entity) -> Option<usize> {
 		self.pages
 			.get(page_index(entity))
