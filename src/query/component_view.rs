@@ -21,7 +21,7 @@ where
 
 	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks>;
 
-	fn contains(&self, entity: Entity) -> bool;
+	fn matches(&self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> GroupInfo<'a>;
 
@@ -76,7 +76,7 @@ where
 		self.storage.get_ticks(entity)
 	}
 
-	fn contains(&self, entity: Entity) -> bool {
+	fn matches(&self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -153,7 +153,7 @@ where
 		self.storage.get_ticks(entity)
 	}
 
-	fn contains(&self, entity: Entity) -> bool {
+	fn matches(&self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -231,7 +231,7 @@ where
 		self.storage.get_ticks(entity)
 	}
 
-	fn contains(&self, entity: Entity) -> bool {
+	fn matches(&self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 

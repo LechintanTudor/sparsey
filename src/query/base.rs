@@ -19,7 +19,7 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn contains(&self, entity: Entity) -> bool;
+	fn matches(&self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> CombinedGroupInfo<'a>;
 
@@ -108,7 +108,7 @@ unsafe impl<'a> QueryBase<'a> for () {
 		Some(())
 	}
 
-	fn contains(&self, _: Entity) -> bool {
+	fn matches(&self, _: Entity) -> bool {
 		true
 	}
 
@@ -178,8 +178,8 @@ macro_rules! impl_base_query {
                 ))
             }
 
-            fn contains(&self, entity: Entity) -> bool {
-                $(self.$idx.contains(entity))&&+
+            fn matches(&self, entity: Entity) -> bool {
+                $(self.$idx.matches(entity))&&+
             }
 
             fn group_info(&self) -> CombinedGroupInfo<'a> {

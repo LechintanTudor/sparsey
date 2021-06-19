@@ -29,11 +29,11 @@ where
 	type Split = SparseArrayView<'a>;
 
 	fn includes(&self, entity: Entity) -> bool {
-		<C as ComponentView<'a>>::contains(self, entity)
+		<C as ComponentView<'a>>::matches(self, entity)
 	}
 
 	fn excludes(&self, entity: Entity) -> bool {
-		!<C as ComponentView<'a>>::contains(self, entity)
+		!<C as ComponentView<'a>>::matches(self, entity)
 	}
 
 	fn group_info(&self) -> CombinedGroupInfo<'a> {
