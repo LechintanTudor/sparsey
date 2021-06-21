@@ -9,33 +9,35 @@ use std::any::TypeId;
 #[derive(Default)]
 pub struct World {
 	entities: EntityStorage,
-	components: ComponentStorages,
+	storages: ComponentStorages,
 	tick: Ticks,
 }
 
 impl World {
+	/// Creates an empty world with the storages arranged as described by
+	/// `layout`.
 	pub fn with_layout(layout: &Layout) -> Self {
 		let mut world = Self::default();
 		world.set_layout(layout);
 		world
 	}
 
+	/// Arranges the storages as described by `layout`. This function iterates
+	/// through all the entities to ararange their components, so it is best
+	/// called right after creating the `World`.
 	pub fn set_layout(&mut self, layout: &Layout) {
-		self.components.set_layout(layout, self.entities.as_ref());
+		self.storages.set_layout(layout, self.entities.as_ref());
 	}
 
+	/// Creates a component storage for `T` if one doesn't already exist.
 	pub fn register<T>(&mut self)
 	where
 		T: Component,
 	{
-		self.components.register::<T>()
+		self.storages.register::<T>()
 	}
 
-	pub unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
-		self.components.register_storage(component, storage);
-	}
-
-	/// Create an `Entity` with the given components and return it.
+	/// Creates an `Entity` with the given `components` and returns it.
 	pub fn create<C>(&mut self, components: C) -> Entity
 	where
 		C: ComponentSet,
@@ -45,8 +47,8 @@ impl World {
 		entity
 	}
 
-	/// Extend the `World` with a component iterator.
-	/// Return the newly created entities as a slice.
+	/// Creates new `Entities` with the component sets yielded by
+	/// `components_iter`. Returns the newly created entities as a `slice`.
 	pub fn extend<C, I>(&mut self, components_iter: I) -> &[Entity]
 	where
 		C: ComponentSet,
@@ -55,7 +57,7 @@ impl World {
 		let initial_entity_count = self.entities.as_ref().len();
 
 		let families = {
-			let (mut storages, families) = C::Storages::borrow_with_families(&self.components);
+			let (mut storages, families) = C::Storages::borrow_with_families(&self.storages);
 			let entities = &mut self.entities;
 			let tick = self.tick;
 
@@ -75,7 +77,7 @@ impl World {
 		for i in families.indexes() {
 			for &entity in new_entities {
 				unsafe {
-					self.components.grouped.group_components(i, entity);
+					self.storages.grouped.group_components(i, entity);
 				}
 			}
 		}
@@ -83,27 +85,27 @@ impl World {
 		new_entities
 	}
 
-	/// Destroy an `Entity` and all of its components.
-	/// Return whether or not there was an `Entity` to destroy.
+	/// Removes `entity` and all of its `components` from the world.
+	/// Returns `true` if `entity` was contained in the world before the call.
 	pub fn destroy(&mut self, entity: Entity) -> bool {
 		if !self.entities.destroy(entity) {
 			return false;
 		}
 
-		for i in 0..self.components.grouped.group_family_count() {
+		for i in 0..self.storages.grouped.group_family_count() {
 			unsafe {
-				self.components.grouped.ungroup_components(i, entity);
+				self.storages.grouped.ungroup_components(i, entity);
 			}
 		}
 
-		for storage in self.components.iter_storages_mut() {
+		for storage in self.storages.iter_storages_mut() {
 			storage.remove_and_drop(entity);
 		}
 
 		true
 	}
 
-	/// Insert a set of `Components` to the given `Entity`, if it exists.
+	/// Inserts `components` to `entity` if `entity` is contained in the world.
 	pub fn insert<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
 	where
 		C: ComponentSet,
@@ -113,22 +115,22 @@ impl World {
 		}
 
 		let families = unsafe {
-			let (mut storages, families) = C::Storages::borrow_with_families(&self.components);
+			let (mut storages, families) = C::Storages::borrow_with_families(&self.storages);
 			C::insert(&mut storages, entity, components, self.tick);
 			families
 		};
 
 		for i in families.indexes() {
 			unsafe {
-				self.components.grouped.group_components(i, entity);
+				self.storages.grouped.group_components(i, entity);
 			}
 		}
 
 		Ok(())
 	}
 
-	/// Remove a set of `Components` from an `Entity` and return them if they
-	/// were all present before calling this function.
+	/// Removes a component set from `entity` and returns them if they were all
+	/// contained in the world before the call.
 	pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
 	where
 		C: ComponentSet,
@@ -137,21 +139,22 @@ impl World {
 			return None;
 		}
 
-		let families = C::Storages::families(&self.components);
+		let families = C::Storages::families(&self.storages);
 
 		for i in families.indexes() {
 			unsafe {
-				self.components.grouped.ungroup_components(i, entity);
+				self.storages.grouped.ungroup_components(i, entity);
 			}
 		}
 
 		unsafe {
-			let mut storages = C::Storages::borrow(&self.components);
+			let mut storages = C::Storages::borrow(&self.storages);
 			C::remove(&mut storages, entity)
 		}
 	}
 
-	/// Delete a set of components from an `Entity`.
+	/// Deletes a component set from `entity`. This is faster than `removing`
+	/// the components.
 	pub fn delete<C>(&mut self, entity: Entity)
 	where
 		C: ComponentSet,
@@ -160,29 +163,38 @@ impl World {
 			return;
 		}
 
-		let families = C::Storages::families(&self.components);
+		let families = C::Storages::families(&self.storages);
 
 		for i in families.indexes() {
 			unsafe {
-				self.components.grouped.ungroup_components(i, entity);
+				self.storages.grouped.ungroup_components(i, entity);
 			}
 		}
 
 		unsafe {
-			let mut storages = C::Storages::borrow(&self.components);
+			let mut storages = C::Storages::borrow(&self.storages);
 			C::delete(&mut storages, entity);
 		}
 	}
 
+	/// Returns `true` if `entity` is contained in the world.
 	pub fn contains(&self, entity: Entity) -> bool {
 		self.entities.contains(entity)
 	}
 
+	/// Removes all `entities` and `components` in the world.
 	pub fn clear(&mut self) {
 		self.entities.clear();
-		self.components.clear();
+		self.storages.clear();
 	}
 
+	/// Sets the `current world tick` used for `change detection`.
+	pub fn set_tick(&mut self, tick: Ticks) {
+		self.tick = tick;
+	}
+
+	/// Advances the `current world tick`. Should be called after each game
+	/// update.
 	pub fn advance_ticks(&mut self) -> Result<(), TickOverflow> {
 		if self.tick != Ticks::MAX {
 			self.tick += 1;
@@ -193,8 +205,18 @@ impl World {
 		}
 	}
 
+	/// Returns all the `entities` in the world as a `slice`.
 	pub fn entities(&self) -> &[Entity] {
 		self.entities.as_ref()
+	}
+
+	/// Returns the `current world tick` used for `change detection`.
+	pub fn tick(&self) -> Ticks {
+		self.tick
+	}
+
+	pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
+		self.storages.register_storage(component, storage);
 	}
 
 	pub(crate) fn entity_storage(&self) -> &EntityStorage {
@@ -202,11 +224,7 @@ impl World {
 	}
 
 	pub(crate) fn component_storages(&self) -> &ComponentStorages {
-		&self.components
-	}
-
-	pub(crate) fn tick(&self) -> Ticks {
-		self.tick
+		&self.storages
 	}
 
 	pub(crate) fn maintain(&mut self) {
