@@ -1,3 +1,3 @@
-pub use self::panic::*;
+pub(crate) use self::panic::*;
 
 mod panic;

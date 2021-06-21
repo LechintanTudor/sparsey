@@ -74,7 +74,9 @@ impl World {
 
 		for i in families.indexes() {
 			for &entity in new_entities {
-				self.components.grouped.group_components(i, entity);
+				unsafe {
+					self.components.grouped.group_components(i, entity);
+				}
 			}
 		}
 
@@ -89,7 +91,9 @@ impl World {
 		}
 
 		for i in 0..self.components.grouped.group_family_count() {
-			self.components.grouped.ungroup_components(i, entity);
+			unsafe {
+				self.components.grouped.ungroup_components(i, entity);
+			}
 		}
 
 		for storage in self.components.iter_storages_mut() {
@@ -115,7 +119,9 @@ impl World {
 		};
 
 		for i in families.indexes() {
-			self.components.grouped.group_components(i, entity);
+			unsafe {
+				self.components.grouped.group_components(i, entity);
+			}
 		}
 
 		Ok(())
@@ -134,7 +140,9 @@ impl World {
 		let families = C::Storages::families(&self.components);
 
 		for i in families.indexes() {
-			self.components.grouped.ungroup_components(i, entity);
+			unsafe {
+				self.components.grouped.ungroup_components(i, entity);
+			}
 		}
 
 		unsafe {
@@ -155,7 +163,9 @@ impl World {
 		let families = C::Storages::families(&self.components);
 
 		for i in families.indexes() {
-			self.components.grouped.ungroup_components(i, entity);
+			unsafe {
+				self.components.grouped.ungroup_components(i, entity);
+			}
 		}
 
 		unsafe {

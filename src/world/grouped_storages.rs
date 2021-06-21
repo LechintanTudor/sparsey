@@ -21,7 +21,7 @@ impl GroupedComponentStorages {
 		layout: &Layout,
 		storage_map: &mut HashMap<TypeId, ComponentStorage>,
 	) -> Self {
-		let mut group_sets = Vec::<GroupFamily>::new();
+		let mut families = Vec::<GroupFamily>::new();
 		let mut info = HashMap::<TypeId, ComponentInfo>::new();
 
 		for group_layout in layout.group_families() {
@@ -38,7 +38,7 @@ impl GroupedComponentStorages {
 					info.insert(
 						type_id,
 						ComponentInfo {
-							group_family_index: group_sets.len(),
+							group_family_index: families.len(),
 							storage_index: storages.len(),
 							group_index,
 						},
@@ -56,25 +56,10 @@ impl GroupedComponentStorages {
 				prev_arity = arity;
 			}
 
-			group_sets.push(GroupFamily { storages, groups });
+			families.push(GroupFamily { storages, groups });
 		}
 
-		Self {
-			families: group_sets,
-			info,
-		}
-	}
-
-	pub fn clear(&mut self) {
-		for group in self.families.iter_mut() {
-			for storage in group.storages.iter_mut() {
-				storage.get_mut().clear();
-			}
-
-			for group in group.groups.iter_mut() {
-				group.len = 0;
-			}
-		}
+		Self { families, info }
 	}
 
 	pub fn drain_into(&mut self, storages: &mut HashMap<TypeId, ComponentStorage>) {
@@ -88,27 +73,30 @@ impl GroupedComponentStorages {
 		self.families.clear();
 	}
 
-	pub fn contains(&self, type_id: &TypeId) -> bool {
-		self.info.contains_key(type_id)
-	}
-
-	pub fn group_components(&mut self, group_index: usize, entity: Entity) {
+	pub unsafe fn group_components(&mut self, group_index: usize, entity: Entity) {
 		let (storages, groups) = {
-			let group = &mut self.families[group_index];
+			let group = self.families.get_unchecked_mut(group_index);
 			(group.storages.as_mut_slice(), group.groups.as_mut_slice())
 		};
 
 		let mut prev_arity = 0_usize;
 
 		for group in groups.iter_mut() {
-			let status =
-				get_group_status(&mut storages[prev_arity..group.arity], group.len, entity);
+			let status = get_group_status(
+				storages.get_unchecked_mut(prev_arity..group.arity),
+				group.len,
+				entity,
+			);
 
 			match status {
 				GroupStatus::Grouped => (),
-				GroupStatus::Ungrouped => unsafe {
-					group_components(&mut storages[..group.arity], &mut group.len, entity);
-				},
+				GroupStatus::Ungrouped => {
+					group_components(
+						storages.get_unchecked_mut(..group.arity),
+						&mut group.len,
+						entity,
+					);
+				}
 				GroupStatus::MissingComponents => break,
 			}
 
@@ -116,9 +104,9 @@ impl GroupedComponentStorages {
 		}
 	}
 
-	pub fn ungroup_components(&mut self, group_index: usize, entity: Entity) {
+	pub unsafe fn ungroup_components(&mut self, group_index: usize, entity: Entity) {
 		let (storages, groups) = {
-			let group = &mut self.families[group_index];
+			let group = self.families.get_unchecked_mut(group_index);
 			(group.storages.as_mut_slice(), group.groups.as_mut_slice())
 		};
 
@@ -127,8 +115,11 @@ impl GroupedComponentStorages {
 		let mut ungroup_len = 0_usize;
 
 		for (i, group) in groups.iter_mut().enumerate() {
-			let status =
-				get_group_status(&mut storages[prev_arity..group.arity], group.len, entity);
+			let status = get_group_status(
+				storages.get_unchecked_mut(prev_arity..group.arity),
+				group.len,
+				entity,
+			);
 
 			match status {
 				GroupStatus::Grouped => {
@@ -147,11 +138,17 @@ impl GroupedComponentStorages {
 
 		let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
-		for group in (&mut groups[ungroup_range]).iter_mut().rev() {
-			unsafe {
-				ungroup_components(&mut storages[..group.arity], &mut group.len, entity);
-			}
+		for group in groups.get_unchecked_mut(ungroup_range).iter_mut().rev() {
+			ungroup_components(
+				storages.get_unchecked_mut(..group.arity),
+				&mut group.len,
+				entity,
+			);
 		}
+	}
+
+	pub fn contains(&self, type_id: &TypeId) -> bool {
+		self.info.contains_key(type_id)
 	}
 
 	pub fn group_family_count(&self) -> usize {
@@ -242,10 +239,53 @@ impl GroupedComponentStorages {
 		})
 	}
 
+	pub fn clear(&mut self) {
+		for group in self.families.iter_mut() {
+			for storage in group.storages.iter_mut() {
+				storage.get_mut().clear();
+			}
+
+			for group in group.groups.iter_mut() {
+				group.len = 0;
+			}
+		}
+	}
+
 	pub fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> {
 		self.families
 			.iter_mut()
 			.flat_map(|group| group.storages.iter_mut().map(|storage| storage.get_mut()))
+	}
+}
+
+#[derive(Copy, Clone, Debug)]
+pub(crate) struct Group {
+	arity: usize,
+	include_mask: GroupMask,
+	exclude_mask: GroupMask,
+	len: usize,
+}
+
+impl Group {
+	fn new(arity: usize, prev_arity: usize) -> Self {
+		Self {
+			arity,
+			include_mask: GroupMask::new_include_group(arity),
+			exclude_mask: GroupMask::new_exclude_group(arity, prev_arity),
+			len: 0,
+		}
+	}
+
+	pub fn include_mask(&self) -> GroupMask {
+		self.include_mask
+	}
+
+	pub fn exclude_mask(&self) -> GroupMask {
+		self.exclude_mask
+	}
+
+	pub fn len(&self) -> usize {
+		self.len
 	}
 }
 
@@ -335,36 +375,5 @@ unsafe fn ungroup_components(
 		}
 
 		*group_len -= 1;
-	}
-}
-
-#[derive(Copy, Clone, Debug)]
-pub(crate) struct Group {
-	arity: usize,
-	include_mask: GroupMask,
-	exclude_mask: GroupMask,
-	len: usize,
-}
-
-impl Group {
-	fn new(arity: usize, prev_arity: usize) -> Self {
-		Self {
-			arity,
-			include_mask: GroupMask::new_include_group(arity),
-			exclude_mask: GroupMask::new_exclude_group(arity, prev_arity),
-			len: 0,
-		}
-	}
-
-	pub fn include_mask(&self) -> GroupMask {
-		self.include_mask
-	}
-
-	pub fn exclude_mask(&self) -> GroupMask {
-		self.exclude_mask
-	}
-
-	pub fn len(&self) -> usize {
-		self.len
 	}
 }

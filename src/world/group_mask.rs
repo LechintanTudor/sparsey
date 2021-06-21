@@ -1,7 +1,7 @@
 use std::ops::{BitOr, BitOrAssign};
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Debug)]
-pub struct GroupMask {
+pub(crate) struct GroupMask {
 	include: u16,
 	exclude: u16,
 }
@@ -49,13 +49,6 @@ impl GroupMask {
 		Self {
 			include: self.include,
 			exclude: self.exclude | mask,
-		}
-	}
-
-	pub const fn swapped(&self) -> Self {
-		Self {
-			include: self.exclude,
-			exclude: self.include,
 		}
 	}
 }

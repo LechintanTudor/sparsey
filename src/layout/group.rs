@@ -83,7 +83,7 @@ macro_rules! impl_layout_group_descriptor {
             $($comp: Component,)+
         {
             fn group() -> LayoutGroup {
-                LayoutGroup::new(HashSet::from_iter(vec![
+                LayoutGroup::new(HashSet::from_iter([
                     $(LayoutComponent::new::<$comp>()),+
                 ]))
             }

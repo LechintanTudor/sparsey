@@ -3,7 +3,7 @@ use std::ptr;
 use std::ptr::NonNull;
 
 /// Container for blobs of data with a given [`Layout`] and destructor.
-pub struct BlobVec {
+pub(crate) struct BlobVec {
 	item_layout: Layout,
 	drop_item: unsafe fn(*mut u8),
 	swap_space: NonNull<u8>,
@@ -159,16 +159,19 @@ impl BlobVec {
 	}
 
 	/// Returns the number of items in the vector.
+	#[allow(dead_code)]
 	pub fn len(&self) -> usize {
 		self.len
 	}
 
 	/// Returns `true` if the vector contains no items.
+	#[allow(dead_code)]
 	pub fn is_empty(&self) -> bool {
 		self.len == 0
 	}
 
 	/// Returns the number of items the vector can hold without reallocating.
+	#[allow(dead_code)]
 	pub fn capacity(&self) -> usize {
 		self.cap
 	}

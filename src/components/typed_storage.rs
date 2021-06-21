@@ -3,13 +3,13 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr, slice};
 
-pub(crate) struct TypedComponentStorage<S, T>
+pub struct TypedComponentStorage<S, T>
 where
 	S: Deref<Target = ComponentStorage>,
 	T: 'static,
 {
 	storage: S,
-	_marker: PhantomData<T>,
+	component: PhantomData<T>,
 }
 
 unsafe impl<S, T> Send for TypedComponentStorage<S, T>
@@ -17,6 +17,7 @@ where
 	S: Deref<Target = ComponentStorage>,
 	T: Send + 'static,
 {
+	// Empty
 }
 
 unsafe impl<S, T> Sync for TypedComponentStorage<S, T>
@@ -24,6 +25,7 @@ where
 	S: Deref<Target = ComponentStorage>,
 	T: Sync + 'static,
 {
+	// Empty
 }
 
 impl<S, T> TypedComponentStorage<S, T>
@@ -34,7 +36,7 @@ where
 	pub unsafe fn new(storage: S) -> Self {
 		Self {
 			storage,
-			_marker: PhantomData,
+			component: PhantomData,
 		}
 	}
 
@@ -56,11 +58,18 @@ where
 		self.storage.get_ticks(entity)
 	}
 
-	#[allow(dead_code)]
 	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
 		self.storage
 			.get_with_ticks(entity)
 			.map(|(value, ticks)| unsafe { (&*value.cast::<T>(), ticks) })
+	}
+
+	pub fn len(&self) -> usize {
+		self.storage.len()
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.storage.is_empty()
 	}
 
 	pub fn entities(&self) -> &[Entity] {
@@ -113,7 +122,6 @@ where
 			.map(|(value, ticks)| unsafe { (&mut *value.cast::<T>(), ticks) })
 	}
 
-	#[allow(dead_code)]
 	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], &mut [T], &mut [ComponentTicks]) {
 		let (sparse, entities, data, ticks) = self.storage.split_mut();
 		let data = unsafe { slice::from_raw_parts_mut(data as *mut T, entities.len()) };

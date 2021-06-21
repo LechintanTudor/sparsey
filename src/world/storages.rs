@@ -43,19 +43,22 @@ impl ComponentStorages {
 
 		for i in 0..self.grouped.group_family_count() {
 			for &entity in entities {
-				self.grouped.group_components(i, entity);
+				unsafe {
+					self.grouped.group_components(i, entity);
+				}
 			}
 		}
 	}
 
-	pub fn borrow(&self, component: &TypeId) -> Option<AtomicRef<ComponentStorage>> {
+	#[allow(dead_code)]
+	pub(crate) fn borrow(&self, component: &TypeId) -> Option<AtomicRef<ComponentStorage>> {
 		match self.grouped.borrow(component) {
 			storage @ Some(_) => storage,
 			None => self.ungrouped.borrow(component),
 		}
 	}
 
-	pub fn borrow_mut(&self, component: &TypeId) -> Option<AtomicRefMut<ComponentStorage>> {
+	pub(crate) fn borrow_mut(&self, component: &TypeId) -> Option<AtomicRefMut<ComponentStorage>> {
 		match self.grouped.borrow_mut(component) {
 			storage @ Some(_) => storage,
 			None => self.ungrouped.borrow_mut(component),
