@@ -1,5 +1,5 @@
 use crate::components::{Component, Ticks};
-use crate::layout::LayoutComponent;
+use crate::layout::ComponentInfo;
 use crate::misc::{panic_missing_comp, panic_missing_res};
 use crate::resources::{Res, ResMut, Resource, UnsafeResources};
 use crate::systems::{CommandBuffers, Commands};
@@ -12,9 +12,9 @@ pub enum SystemAccess {
 	/// Get a command buffer for queueing commands.
 	Commands,
 	/// Get a shared view over a set of components from the `World`.
-	Comp(LayoutComponent),
+	Comp(ComponentInfo),
 	/// Get an exclusive view over a set of components from the `World`.
-	CompMut(LayoutComponent),
+	CompMut(ComponentInfo),
 	/// Get a shared view over a resource from `Resources`.
 	Res(TypeId),
 	/// Get an exclusive view over a resource from `Resources`.
@@ -103,7 +103,7 @@ where
 	type Item = Comp<'a, T>;
 
 	fn access() -> SystemAccess {
-		SystemAccess::Comp(LayoutComponent::new::<T>())
+		SystemAccess::Comp(ComponentInfo::new::<T>())
 	}
 
 	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
@@ -133,7 +133,7 @@ where
 	type Item = CompMut<'a, T>;
 
 	fn access() -> SystemAccess {
-		SystemAccess::CompMut(LayoutComponent::new::<T>())
+		SystemAccess::CompMut(ComponentInfo::new::<T>())
 	}
 
 	unsafe fn borrow(environment: &'a Environment) -> Self::Item {

@@ -1,14 +1,13 @@
 use crate::layout::{LayoutGroup, LayoutGroupFamily};
 use std::mem;
 
-/// Describes the layout of grouped component storages in the `World`.
+/// Describes the layout of component storages in the `World`.
 pub struct Layout {
 	group_families: Vec<LayoutGroupFamily>,
 }
 
 impl Layout {
-	/// Create a `LayoutBuilder` to enable creating a `Layout`
-	/// using the builder pattern.
+	/// Returns an empty `LayoutBuilder`.
 	pub fn builder() -> LayoutBuilder {
 		LayoutBuilder::default()
 	}
@@ -18,14 +17,14 @@ impl Layout {
 	}
 }
 
-/// Implements the builder pattern to create `Layout`.
 #[derive(Default)]
 pub struct LayoutBuilder {
 	group_families: Vec<Vec<LayoutGroup>>,
 }
 
 impl LayoutBuilder {
-	/// Add a group to the `Layout`.
+	/// Adds a `group` to the `Layout`. Panics if the group partially overlaps
+	/// with previous groups.
 	pub fn add_group(&mut self, group: LayoutGroup) -> &mut Self {
 		let mut group_family_index = Option::<usize>::None;
 
@@ -75,7 +74,7 @@ impl LayoutBuilder {
 		self
 	}
 
-	/// Build the `Layout` using the previously given `LayoutGroups`.
+	/// Returns the `Layout` with the previously added groups.
 	pub fn build(&mut self) -> Layout {
 		let group_families = mem::take(&mut self.group_families)
 			.iter()

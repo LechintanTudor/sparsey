@@ -6,14 +6,14 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
 /// Holds information about a component type.
-pub struct LayoutComponent {
+pub struct ComponentInfo {
 	component: Box<dyn AbstractType>,
 }
 
-unsafe impl Send for LayoutComponent {}
-unsafe impl Sync for LayoutComponent {}
+unsafe impl Send for ComponentInfo {}
+unsafe impl Sync for ComponentInfo {}
 
-impl Clone for LayoutComponent {
+impl Clone for ComponentInfo {
 	fn clone(&self) -> Self {
 		Self {
 			component: self.component.clone(),
@@ -21,8 +21,8 @@ impl Clone for LayoutComponent {
 	}
 }
 
-impl LayoutComponent {
-	/// Create a new `LayoutComponent` for the given type.
+impl ComponentInfo {
+	/// Creates a new `LayoutComponent` for the given component type.
 	pub fn new<C>() -> Self
 	where
 		C: Component,
@@ -32,45 +32,44 @@ impl LayoutComponent {
 		}
 	}
 
-	/// Get the `TypeId` of the component type described by the
-	/// `LayoutComponent`.
+	/// Returns the `TypeId` of the component.
 	pub fn type_id(&self) -> TypeId {
 		self.component.type_id()
 	}
 
-	/// Get the name of the component type described by the `LayoutComponent`.
+	/// Returns the type name of the component..
 	pub fn type_name(&self) -> &'static str {
 		self.component.type_name()
 	}
 
-	/// Create a `ComponentStorage` for the component type described by the
-	/// `LayoutComponent`.
+	/// Returns the `TypeId` of the component and an empty `ComponentStorage`
+	/// for that component.
 	pub fn new_storage(&self) -> (TypeId, ComponentStorage) {
 		self.component.new_storage()
 	}
 }
 
-impl PartialEq for LayoutComponent {
+impl PartialEq for ComponentInfo {
 	fn eq(&self, other: &Self) -> bool {
 		self.type_id().eq(&other.type_id())
 	}
 }
 
-impl Eq for LayoutComponent {}
+impl Eq for ComponentInfo {}
 
-impl PartialOrd for LayoutComponent {
+impl PartialOrd for ComponentInfo {
 	fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
 		self.type_id().partial_cmp(&other.type_id())
 	}
 }
 
-impl Ord for LayoutComponent {
+impl Ord for ComponentInfo {
 	fn cmp(&self, other: &Self) -> Ordering {
 		self.type_id().cmp(&other.type_id())
 	}
 }
 
-impl Hash for LayoutComponent {
+impl Hash for ComponentInfo {
 	fn hash<H>(&self, state: &mut H)
 	where
 		H: Hasher,

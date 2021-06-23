@@ -1,5 +1,5 @@
 use crate::components::Component;
-use crate::layout::LayoutComponent;
+use crate::layout::ComponentInfo;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
@@ -7,12 +7,13 @@ pub const MIN_GROUP_ARITY: usize = 2;
 pub const MAX_GROUP_ARITY: usize = 16;
 
 /// Describes a set of component storages to be grouped together.
+/// Can be constructed using a `LayoutGroupDescriptor`.
 pub struct LayoutGroup {
-	components: HashSet<LayoutComponent>,
+	components: HashSet<ComponentInfo>,
 }
 
 impl LayoutGroup {
-	pub(crate) fn new(components: HashSet<LayoutComponent>) -> Self {
+	pub(crate) fn new(components: HashSet<ComponentInfo>) -> Self {
 		assert!(
 			components.len() >= MIN_GROUP_ARITY,
 			"Groups must have at least {} component types",
@@ -28,19 +29,19 @@ impl LayoutGroup {
 		Self { components }
 	}
 
-	pub(crate) fn components(&self) -> &HashSet<LayoutComponent> {
+	pub(crate) fn components(&self) -> &HashSet<ComponentInfo> {
 		&self.components
 	}
 }
 
 pub(crate) struct LayoutGroupFamily {
-	components: Vec<LayoutComponent>,
+	components: Vec<ComponentInfo>,
 	group_arities: Vec<usize>,
 }
 
 impl LayoutGroupFamily {
 	pub unsafe fn new_unchecked(groups: &[LayoutGroup]) -> Self {
-		let mut components = Vec::<LayoutComponent>::new();
+		let mut components = Vec::<ComponentInfo>::new();
 		let mut group_arities = Vec::<usize>::new();
 
 		components.extend(groups[0].components().iter().cloned());
@@ -61,7 +62,7 @@ impl LayoutGroupFamily {
 		}
 	}
 
-	pub fn components(&self) -> &[LayoutComponent] {
+	pub fn components(&self) -> &[ComponentInfo] {
 		&self.components
 	}
 
@@ -70,9 +71,10 @@ impl LayoutGroupFamily {
 	}
 }
 
-/// Trait used for creating a `LayoutGroup`.
-/// Implemented for tuples up to arity 16.
+/// Trait used for creating a `LayoutGroup`. Implemented for tuples up to arity
+/// 16.
 pub trait LayoutGroupDescriptor {
+	/// Creates a `LayoutGroup` with the given components.
 	fn group() -> LayoutGroup;
 }
 
@@ -84,7 +86,7 @@ macro_rules! impl_layout_group_descriptor {
         {
             fn group() -> LayoutGroup {
                 LayoutGroup::new(HashSet::from_iter([
-                    $(LayoutComponent::new::<$comp>()),+
+                    $(ComponentInfo::new::<$comp>()),+
                 ]))
             }
         }
