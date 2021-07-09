@@ -17,9 +17,9 @@ pub trait QueryModifier<'a> {
 
 	fn split(self) -> (Option<IterData<'a>>, Self::Split);
 
-	fn includes_split(split: &Self::Split, entity: Entity) -> bool;
+	fn split_includes(split: &Self::Split, entity: Entity) -> bool;
 
-	fn excludes_split(split: &Self::Split, entity: Entity) -> bool;
+	fn split_excludes(split: &Self::Split, entity: Entity) -> bool;
 }
 
 impl<'a, C> QueryModifier<'a> for C
@@ -62,11 +62,11 @@ where
 		(Some(iter_data), sparse)
 	}
 
-	fn includes_split(split: &Self::Split, entity: Entity) -> bool {
+	fn split_includes(split: &Self::Split, entity: Entity) -> bool {
 		split.contains(entity)
 	}
 
-	fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
+	fn split_excludes(split: &Self::Split, entity: Entity) -> bool {
 		!split.contains(entity)
 	}
 }
@@ -98,11 +98,11 @@ impl<'a> QueryModifier<'a> for () {
 		(None, ())
 	}
 
-	fn includes_split(_: &Self::Split, _: Entity) -> bool {
+	fn split_includes(_: &Self::Split, _: Entity) -> bool {
 		true
 	}
 
-	fn excludes_split(_: &Self::Split, _: Entity) -> bool {
+	fn split_excludes(_: &Self::Split, _: Entity) -> bool {
 		true
 	}
 }
@@ -144,12 +144,12 @@ macro_rules! impl_query_modifier {
 				split_modifier!($(($view, self.$idx)),+)
 			}
 
-			fn includes_split(split: &Self::Split, entity: Entity) -> bool {
-				$($view::includes_split(&split.$idx, entity))&&+
+			fn split_includes(split: &Self::Split, entity: Entity) -> bool {
+				$($view::split_includes(&split.$idx, entity))&&+
 			}
 
-			fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
-				$(!$view::includes_split(&split.$idx, entity))&&+
+			fn split_excludes(split: &Self::Split, entity: Entity) -> bool {
+				$(!$view::split_includes(&split.$idx, entity))&&+
 			}
 		}
 	};
