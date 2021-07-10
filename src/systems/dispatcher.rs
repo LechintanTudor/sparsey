@@ -9,9 +9,10 @@ use std::collections::HashMap;
 use std::mem;
 
 #[cfg(feature = "parallel")]
-use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
-#[cfg(feature = "parallel")]
-use rayon::ThreadPool;
+use {
+	rayon::iter::{IntoParallelRefMutIterator, ParallelIterator},
+	rayon::ThreadPool,
+};
 
 /// Implements the builder pattern to create a `Dispatcher`.
 #[derive(Default)]
@@ -60,7 +61,7 @@ impl DispatcherBuilder {
 		Dispatcher {
 			command_buffers,
 			steps,
-			last_system_tick: 0,
+			last_system_ticks: Default::default(),
 		}
 	}
 }
@@ -69,7 +70,7 @@ impl DispatcherBuilder {
 pub struct Dispatcher {
 	steps: Vec<Step>,
 	command_buffers: CommandBuffers,
-	last_system_tick: Ticks,
+	last_system_ticks: HashMap<WorldId, Ticks>,
 }
 
 impl Dispatcher {
@@ -122,6 +123,8 @@ impl Dispatcher {
 	/// Run all systems on the current thread.
 	pub fn run_seq(&mut self, world: &mut World, resources: &mut Resources) -> RunResult {
 		let world_tick = world.tick();
+		let last_system_tick = self.last_system_ticks.entry(world.id()).or_default();
+
 		let mut errors = Vec::<SystemError>::new();
 
 		for step in self.steps.iter_mut() {
@@ -132,7 +135,7 @@ impl Dispatcher {
 						world,
 						resources,
 						&self.command_buffers,
-						self.last_system_tick,
+						*last_system_tick,
 						&mut errors,
 					);
 				},
@@ -142,7 +145,7 @@ impl Dispatcher {
 						world,
 						resources,
 						&self.command_buffers,
-						self.last_system_tick,
+						*last_system_tick,
 						&mut errors,
 					);
 				},
@@ -159,7 +162,7 @@ impl Dispatcher {
 			}
 		}
 
-		self.last_system_tick = world_tick;
+		*last_system_tick = world_tick;
 
 		if !errors.is_empty() {
 			Err(RunError::from(errors))
@@ -177,6 +180,8 @@ impl Dispatcher {
 		thread_pool: &ThreadPool,
 	) -> RunResult {
 		let world_tick = world.tick();
+		let last_system_tick = self.last_system_ticks.entry(world.id()).or_default();
+
 		let mut errors = Vec::<SystemError>::new();
 
 		for step in self.steps.iter_mut() {
@@ -189,7 +194,7 @@ impl Dispatcher {
 								world,
 								resources,
 								&self.command_buffers,
-								self.last_system_tick,
+								*last_system_tick,
 								thread_pool,
 								&mut errors,
 							);
@@ -201,7 +206,7 @@ impl Dispatcher {
 								world,
 								resources,
 								&self.command_buffers,
-								self.last_system_tick,
+								*last_system_tick,
 								&mut errors,
 							);
 						}
@@ -213,7 +218,7 @@ impl Dispatcher {
 						world,
 						resources,
 						&self.command_buffers,
-						self.last_system_tick,
+						*last_system_tick,
 						&mut errors,
 					);
 				},
@@ -228,7 +233,7 @@ impl Dispatcher {
 			}
 		}
 
-		self.last_system_tick = world_tick;
+		*last_system_tick = world_tick;
 
 		if !errors.is_empty() {
 			Err(RunError::from(errors))
