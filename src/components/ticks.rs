@@ -1,4 +1,7 @@
+use std::num::NonZeroU32;
+
 pub type Ticks = u32;
+pub type NonZeroTicks = NonZeroU32;
 
 /// Contains the ticks in which a component was added and last mutated.
 #[derive(Copy, Clone, Eq, PartialEq, Default, Debug)]

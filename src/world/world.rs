@@ -1,16 +1,41 @@
-use crate::components::{Component, ComponentStorage, Entity, Ticks};
+use crate::components::{Component, ComponentStorage, Entity, NonZeroTicks, Ticks};
 use crate::layout::Layout;
 use crate::world::{
 	BorrowStorages, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity, TickOverflow,
 };
 use std::any::TypeId;
+use std::num::NonZeroU64;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+pub struct WorldId(NonZeroU64);
+
+impl WorldId {
+	fn new() -> Self {
+		static COUNTER: AtomicU64 = AtomicU64::new(1);
+
+		let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+		NonZeroU64::new(id).map(Self).expect("Ran out of WorldIds")
+	}
+}
 
 /// Container for component storages and entities.
-#[derive(Default)]
 pub struct World {
+	id: WorldId,
+	tick: NonZeroTicks,
 	entities: EntityStorage,
 	storages: ComponentStorages,
-	tick: Ticks,
+}
+
+impl Default for World {
+	fn default() -> Self {
+		Self {
+			id: WorldId::new(),
+			tick: NonZeroTicks::new(1).unwrap(),
+			entities: Default::default(),
+			storages: Default::default(),
+		}
+	}
 }
 
 impl World {
@@ -59,7 +84,7 @@ impl World {
 		let families = {
 			let (mut storages, families) = C::Storages::borrow_with_families(&self.storages);
 			let entities = &mut self.entities;
-			let tick = self.tick;
+			let tick = self.tick.get();
 
 			components_iter.into_iter().for_each(|components| {
 				let entity = entities.create();
@@ -116,7 +141,7 @@ impl World {
 
 		let families = unsafe {
 			let (mut storages, families) = C::Storages::borrow_with_families(&self.storages);
-			C::insert(&mut storages, entity, components, self.tick);
+			C::insert(&mut storages, entity, components, self.tick.get());
 			families
 		};
 
@@ -188,19 +213,14 @@ impl World {
 		self.storages.clear();
 	}
 
-	/// Sets the `current world tick` used for `change detection`.
-	pub fn set_tick(&mut self, tick: Ticks) {
-		self.tick = tick;
-	}
-
 	/// Advances the `current world tick`. Should be called after each game
 	/// update.
 	pub fn advance_ticks(&mut self) -> Result<(), TickOverflow> {
-		if self.tick != Ticks::MAX {
-			self.tick += 1;
+		if self.tick.get() != Ticks::MAX {
+			self.tick = NonZeroTicks::new(self.tick.get() + 1).unwrap();
 			Ok(())
 		} else {
-			self.tick = 0;
+			self.tick = NonZeroTicks::new(1).unwrap();
 			Err(TickOverflow)
 		}
 	}
@@ -210,9 +230,14 @@ impl World {
 		self.entities.as_ref()
 	}
 
+	/// Returns the `id` which uniquely identifies this `World`.
+	pub fn id(&self) -> WorldId {
+		self.id
+	}
+
 	/// Returns the `current world tick` used for `change detection`.
 	pub fn tick(&self) -> Ticks {
-		self.tick
+		self.tick.get()
 	}
 
 	pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {

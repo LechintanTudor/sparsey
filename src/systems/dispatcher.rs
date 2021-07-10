@@ -4,7 +4,8 @@ use crate::systems::{
 	CommandBuffers, Environment, LocalFn, LocalSystem, LocallyRunnable, RunError, RunResult,
 	System, SystemAccess, SystemError,
 };
-use crate::world::World;
+use crate::world::{World, WorldId};
+use std::collections::HashMap;
 use std::mem;
 
 #[cfg(feature = "parallel")]

@@ -17,6 +17,7 @@ pub unsafe trait SystemParam
 where
 	Self: LocalSystemParam,
 {
+	// Empty
 }
 
 impl<'a, T> LocalSystemParam for Comp<'a, T>
@@ -26,7 +27,12 @@ where
 	type Borrow = BorrowComp<T>;
 }
 
-unsafe impl<'a, T> SystemParam for Comp<'a, T> where T: Component {}
+unsafe impl<'a, T> SystemParam for Comp<'a, T>
+where
+	T: Component,
+{
+	// Empty
+}
 
 impl<'a, T> LocalSystemParam for CompMut<'a, T>
 where
@@ -35,7 +41,12 @@ where
 	type Borrow = BorrowCompMut<T>;
 }
 
-unsafe impl<'a, T> SystemParam for CompMut<'a, T> where T: Component {}
+unsafe impl<'a, T> SystemParam for CompMut<'a, T>
+where
+	T: Component,
+{
+	// Empty
+}
 
 impl<'a, T> LocalSystemParam for Res<'a, T>
 where
@@ -44,7 +55,12 @@ where
 	type Borrow = BorrowRes<T>;
 }
 
-unsafe impl<'a, T> SystemParam for Res<'a, T> where T: Resource + Sync {}
+unsafe impl<'a, T> SystemParam for Res<'a, T>
+where
+	T: Resource + Sync,
+{
+	// Empty
+}
 
 impl<'a, T> LocalSystemParam for ResMut<'a, T>
 where
@@ -53,10 +69,17 @@ where
 	type Borrow = BorrowResMut<T>;
 }
 
-unsafe impl<'a, T> SystemParam for ResMut<'a, T> where T: Resource + Send {}
+unsafe impl<'a, T> SystemParam for ResMut<'a, T>
+where
+	T: Resource + Send,
+{
+	// Empty
+}
 
 impl<'a> LocalSystemParam for Commands<'a> {
 	type Borrow = BorrowCommands;
 }
 
-unsafe impl<'a> SystemParam for Commands<'a> {}
+unsafe impl<'a> SystemParam for Commands<'a> {
+	// Empty
+}
