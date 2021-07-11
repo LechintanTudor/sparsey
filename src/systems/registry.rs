@@ -8,8 +8,8 @@ use std::any::TypeId;
 use std::marker::PhantomData;
 
 /// Represents the type of data which can be accessed by a `System`.
-pub enum SystemAccess {
-	/// Get a command buffer for queueing commands.
+/// Get a command buffer for queueing commands.
+pub enum RegistryAccess {
 	Commands,
 	/// Get a shared view over a set of components from the `World`.
 	Comp(ComponentInfo),
@@ -21,10 +21,10 @@ pub enum SystemAccess {
 	ResMut(TypeId),
 }
 
-impl SystemAccess {
-	/// Check if two `SystemAccesses` conflict, that is,
+impl RegistryAccess {
+	/// Check if two `RegistryAccesses` conflict, that is,
 	/// preventing two systems from running in parallel.
-	pub fn conflicts(&self, other: &SystemAccess) -> bool {
+	pub fn conflicts(&self, other: &RegistryAccess) -> bool {
 		match (self, other) {
 			(Self::Comp(comp1), Self::CompMut(comp2)) => comp1 == comp2,
 			(Self::CompMut(comp1), Self::Comp(comp2)) => comp1 == comp2,
@@ -37,15 +37,15 @@ impl SystemAccess {
 	}
 }
 
-/// Execution environment for `Systems`.
-pub struct Environment<'a> {
+/// Execution registry for `Systems`.
+pub struct Registry<'a> {
 	world: &'a World,
 	resources: &'a UnsafeResources,
 	command_buffers: &'a CommandBuffers,
 	last_system_tick: Ticks,
 }
 
-impl<'a> Environment<'a> {
+impl<'a> Registry<'a> {
 	pub(crate) fn new(
 		world: &'a World,
 		resources: &'a UnsafeResources,
@@ -61,34 +61,34 @@ impl<'a> Environment<'a> {
 	}
 }
 
-/// Used by systems to borrow data from `Environments`.
-pub unsafe trait BorrowEnvironment<'a> {
+/// Used by systems to borrow data from `Registrys`.
+pub unsafe trait BorrowRegistry<'a> {
 	/// The data resulting from the borrow.
 	type Item;
 
 	/// The type of data acessed.
-	fn access() -> SystemAccess;
+	fn access() -> RegistryAccess;
 
-	/// Borrow the data from the environment.
+	/// Borrow the data from the registry.
 	/// Unsafe because it doesn't ensure !Sync or !Send
 	/// resources are borrowed correctly.
-	unsafe fn borrow(environment: &'a Environment) -> Self::Item;
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item;
 }
 
 /// Type used to get a command buffer for queueing commands.
 pub struct BorrowCommands;
 
-unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
+unsafe impl<'a> BorrowRegistry<'a> for BorrowCommands {
 	type Item = Commands<'a>;
 
-	fn access() -> SystemAccess {
-		SystemAccess::Commands
+	fn access() -> RegistryAccess {
+		RegistryAccess::Commands
 	}
 
-	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
 		Commands::new(
-			environment.command_buffers.next().unwrap(),
-			environment.world.entity_storage(),
+			registry.command_buffers.next().unwrap(),
+			registry.world.entity_storage(),
 		)
 	}
 }
@@ -96,18 +96,18 @@ unsafe impl<'a> BorrowEnvironment<'a> for BorrowCommands {
 /// Type used to get a shared view over a set of components from the `World`.
 pub struct BorrowComp<T>(PhantomData<*const T>);
 
-unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowComp<T>
+unsafe impl<'a, T> BorrowRegistry<'a> for BorrowComp<T>
 where
 	T: Component,
 {
 	type Item = Comp<'a, T>;
 
-	fn access() -> SystemAccess {
-		SystemAccess::Comp(ComponentInfo::new::<T>())
+	fn access() -> RegistryAccess {
+		RegistryAccess::Comp(ComponentInfo::new::<T>())
 	}
 
-	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		let (storage, info) = environment
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+		let (storage, info) = registry
 			.world
 			.component_storages()
 			.borrow_with_info(&TypeId::of::<T>())
@@ -116,8 +116,8 @@ where
 		Comp::<T>::new(
 			storage,
 			info,
-			environment.world.tick(),
-			environment.last_system_tick,
+			registry.world.tick(),
+			registry.last_system_tick,
 		)
 	}
 }
@@ -126,18 +126,18 @@ where
 /// `World`.
 pub struct BorrowCompMut<T>(PhantomData<*const T>);
 
-unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowCompMut<T>
+unsafe impl<'a, T> BorrowRegistry<'a> for BorrowCompMut<T>
 where
 	T: Component,
 {
 	type Item = CompMut<'a, T>;
 
-	fn access() -> SystemAccess {
-		SystemAccess::CompMut(ComponentInfo::new::<T>())
+	fn access() -> RegistryAccess {
+		RegistryAccess::CompMut(ComponentInfo::new::<T>())
 	}
 
-	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		let (storage, info) = environment
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+		let (storage, info) = registry
 			.world
 			.component_storages()
 			.borrow_with_info_mut(&TypeId::of::<T>())
@@ -146,8 +146,8 @@ where
 		CompMut::<T>::new(
 			storage,
 			info,
-			environment.world.tick(),
-			environment.last_system_tick,
+			registry.world.tick(),
+			registry.last_system_tick,
 		)
 	}
 }
@@ -155,18 +155,18 @@ where
 /// Type used to get a shared view over a resource from `Resources`.
 pub struct BorrowRes<T>(PhantomData<*const T>);
 
-unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowRes<T>
+unsafe impl<'a, T> BorrowRegistry<'a> for BorrowRes<T>
 where
 	T: Resource,
 {
 	type Item = Res<'a, T>;
 
-	fn access() -> SystemAccess {
-		SystemAccess::Res(TypeId::of::<T>())
+	fn access() -> RegistryAccess {
+		RegistryAccess::Res(TypeId::of::<T>())
 	}
 
-	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		environment
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+		registry
 			.resources
 			.borrow::<T>()
 			.unwrap_or_else(|| panic_missing_res::<T>())
@@ -176,18 +176,18 @@ where
 /// Type used to get an exclusive view over a resource from `Resources`.
 pub struct BorrowResMut<T>(PhantomData<*const T>);
 
-unsafe impl<'a, T> BorrowEnvironment<'a> for BorrowResMut<T>
+unsafe impl<'a, T> BorrowRegistry<'a> for BorrowResMut<T>
 where
 	T: Resource,
 {
 	type Item = ResMut<'a, T>;
 
-	fn access() -> SystemAccess {
-		SystemAccess::ResMut(TypeId::of::<T>())
+	fn access() -> RegistryAccess {
+		RegistryAccess::ResMut(TypeId::of::<T>())
 	}
 
-	unsafe fn borrow(environment: &'a Environment) -> Self::Item {
-		environment
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+		registry
 			.resources
 			.borrow_mut::<T>()
 			.unwrap_or_else(|| panic_missing_res::<T>())

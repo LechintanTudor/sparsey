@@ -1,14 +1,14 @@
 use crate::components::Component;
 use crate::resources::{Res, ResMut, Resource};
 use crate::systems::{
-	BorrowCommands, BorrowComp, BorrowCompMut, BorrowEnvironment, BorrowRes, BorrowResMut, Commands,
+	BorrowCommands, BorrowComp, BorrowCompMut, BorrowRegistry, BorrowRes, BorrowResMut, Commands,
 };
 use crate::world::{Comp, CompMut};
 
 /// Trait used for marking system parameters and borrowing data from the
-/// `Environment`.
+/// `Registry`.
 pub trait LocalSystemParam {
-	type Borrow: for<'a> BorrowEnvironment<'a>;
+	type Borrow: for<'a> BorrowRegistry<'a>;
 }
 
 /// Marker trait for parameters of systems which are safe to run

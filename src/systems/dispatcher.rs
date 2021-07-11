@@ -1,8 +1,8 @@
 use crate::components::Ticks;
 use crate::resources::Resources;
 use crate::systems::{
-	CommandBuffers, Environment, LocalFn, LocalSystem, LocallyRunnable, RunError, RunResult,
-	System, SystemAccess, SystemError,
+	CommandBuffers, LocalFn, LocalSystem, LocallyRunnable, Registry, RegistryAccess, RunError,
+	RunResult, System, SystemError,
 };
 use crate::world::{World, WorldId};
 use std::collections::HashMap;
@@ -88,11 +88,11 @@ impl Dispatcher {
 				Step::RunSystems(systems) => {
 					for access in systems.iter().flat_map(|sys| sys.accesses()) {
 						match access {
-							SystemAccess::Comp(comp) => unsafe {
+							RegistryAccess::Comp(comp) => unsafe {
 								let (type_id, storage) = comp.new_storage();
 								world.register_storage(type_id, storage);
 							},
-							SystemAccess::CompMut(comp) => unsafe {
+							RegistryAccess::CompMut(comp) => unsafe {
 								let (type_id, storage) = comp.new_storage();
 								world.register_storage(type_id, storage);
 							},
@@ -103,11 +103,11 @@ impl Dispatcher {
 				Step::RunLocalSystems(systems) => {
 					for access in systems.iter().flat_map(|sys| sys.accesses()) {
 						match access {
-							SystemAccess::Comp(comp) => unsafe {
+							RegistryAccess::Comp(comp) => unsafe {
 								let (type_id, storage) = comp.new_storage();
 								world.register_storage(type_id, storage);
 							},
-							SystemAccess::CompMut(comp) => unsafe {
+							RegistryAccess::CompMut(comp) => unsafe {
 								let (type_id, storage) = comp.new_storage();
 								world.register_storage(type_id, storage);
 							},
@@ -281,7 +281,7 @@ fn required_command_buffers(steps: &[Step]) -> usize {
 				let step_buffer_count: usize = systems
 					.iter()
 					.flat_map(|system| system.accesses())
-					.map(|access| matches!(access, SystemAccess::Commands) as usize)
+					.map(|access| matches!(access, RegistryAccess::Commands) as usize)
 					.sum();
 
 				buffer_count += step_buffer_count;
@@ -290,7 +290,7 @@ fn required_command_buffers(steps: &[Step]) -> usize {
 				let step_buffer_count: usize = systems
 					.iter()
 					.flat_map(|system| system.accesses())
-					.map(|access| matches!(access, SystemAccess::Commands) as usize)
+					.map(|access| matches!(access, RegistryAccess::Commands) as usize)
 					.sum();
 
 				buffer_count += step_buffer_count;
@@ -371,7 +371,7 @@ unsafe fn run_systems_seq<S>(
 	let resources = resources.internal();
 
 	let new_errors = systems.iter_mut().flat_map(|sys| {
-		sys.run(Environment::new(
+		sys.run(Registry::new(
 			world,
 			resources,
 			command_buffers,
@@ -399,7 +399,7 @@ unsafe fn run_systems_par(
 		let new_errors = systems
 			.par_iter_mut()
 			.flat_map_iter(|sys| {
-				sys.run(Environment::new(
+				sys.run(Registry::new(
 					world,
 					resources,
 					command_buffers,
