@@ -20,30 +20,6 @@ rayon = { version = "1", optional = true }
 [dev-dependencies]
 rayon = "1"
 
-# [[example]]
-# name = "system"
-# path = "examples/e01_system.rs"
-
-# [[example]]
-# name = "components"
-# path = "examples/e02_components.rs"
-
-# [[example]]
-# name = "query"
-# path = "examples/e03_query.rs"
-
-# [[example]]
-# name = "filters"
-# path = "examples/e04_filters.rs"
-
-# [[example]]
-# name = "layout"
-# path = "examples/e05_layout.rs"
-
-# [[example]]
-# name = "resources"
-# path = "examples/e06_resources.rs"
-
-# [[example]]
-# name = "parallelism"
-# path = "examples/e07_parallelism.rs"
+[[example]]
+name = "components"
+path = "examples/components.rs"
