@@ -199,6 +199,7 @@ impl ComponentStorage {
 	pub fn clear(&mut self) {
 		self.sparse.clear();
 		self.entities.clear();
+		self.ticks.clear();
 		self.data.clear();
 	}
 

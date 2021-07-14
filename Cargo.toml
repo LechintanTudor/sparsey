@@ -19,7 +19,3 @@ rayon = { version = "1", optional = true }
 
 [dev-dependencies]
 rayon = "1"
-
-[[example]]
-name = "components"
-path = "examples/components.rs"
