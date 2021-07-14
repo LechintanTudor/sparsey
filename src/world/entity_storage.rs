@@ -89,16 +89,16 @@ impl EntitySparseSet {
 			None => return false,
 		};
 
-		if let Some(entity) = self.entities.last() {
-			let new_index = (self.entities.len() - 1) as u32;
-			let new_index_entity = IndexEntity::new(new_index, entity.version());
+		self.entities.swap_remove(dense_index);
+
+		if let Some(entity) = self.entities.get(dense_index) {
+			let new_index_entity = IndexEntity::new(dense_index as u32, entity.version());
 
 			unsafe {
 				*self.sparse.get_unchecked_mut(entity.index()) = Some(new_index_entity);
 			}
 		}
 
-		self.entities.swap_remove(dense_index);
 		true
 	}
 
