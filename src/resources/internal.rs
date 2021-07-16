@@ -1,7 +1,7 @@
 use crate::resources::{Res, ResMut, Resource};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
+use rustc_hash::FxHashMap;
 use std::any::TypeId;
-use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
 
 /// Maps `TypeIds` to type-erased `Resources`. Unsafe because the struct itself
@@ -9,7 +9,7 @@ use std::hint::unreachable_unchecked;
 /// themselves.
 #[derive(Default)]
 pub struct UnsafeResources {
-	values: HashMap<TypeId, AtomicRefCell<Box<dyn Resource>>>,
+	values: FxHashMap<TypeId, AtomicRefCell<Box<dyn Resource>>>,
 }
 
 unsafe impl Send for UnsafeResources {}

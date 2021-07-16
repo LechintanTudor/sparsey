@@ -1,19 +1,19 @@
 use crate::components::{Component, ComponentStorage};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
+use rustc_hash::FxHashMap;
 use std::any::TypeId;
-use std::collections::HashMap;
 
 #[derive(Default)]
 pub(crate) struct UngroupedComponentStorages {
-	storages: HashMap<TypeId, AtomicRefCell<ComponentStorage>>,
+	storages: FxHashMap<TypeId, AtomicRefCell<ComponentStorage>>,
 }
 
 unsafe impl Send for UngroupedComponentStorages {}
 unsafe impl Sync for UngroupedComponentStorages {}
 
 impl UngroupedComponentStorages {
-	pub fn from_storages(storage_map: &mut HashMap<TypeId, ComponentStorage>) -> Self {
-		let mut storages = HashMap::<TypeId, AtomicRefCell<ComponentStorage>>::new();
+	pub fn from_storages(storage_map: &mut FxHashMap<TypeId, ComponentStorage>) -> Self {
+		let mut storages = FxHashMap::<TypeId, AtomicRefCell<ComponentStorage>>::default();
 
 		for (type_id, storage) in storage_map.drain() {
 			storages.insert(type_id, AtomicRefCell::new(storage));
@@ -22,7 +22,7 @@ impl UngroupedComponentStorages {
 		Self { storages }
 	}
 
-	pub fn drain_into(&mut self, storages: &mut HashMap<TypeId, ComponentStorage>) {
+	pub fn drain_into(&mut self, storages: &mut FxHashMap<TypeId, ComponentStorage>) {
 		for (type_id, storage) in self
 			.storages
 			.drain()

@@ -5,7 +5,7 @@ use crate::systems::{
 	RunResult, System, SystemError,
 };
 use crate::world::{World, WorldId};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::mem;
 
 #[cfg(feature = "parallel")]
@@ -70,7 +70,7 @@ impl DispatcherBuilder {
 pub struct Dispatcher {
 	steps: Vec<Step>,
 	command_buffers: CommandBuffers,
-	last_system_ticks: HashMap<WorldId, Ticks>,
+	last_system_ticks: FxHashMap<WorldId, Ticks>,
 }
 
 impl Dispatcher {

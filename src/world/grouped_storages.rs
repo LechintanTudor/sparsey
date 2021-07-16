@@ -2,15 +2,15 @@ use crate::components::{ComponentStorage, Entity};
 use crate::layout::Layout;
 use crate::world::{GroupInfoData, GroupMask};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
+use rustc_hash::FxHashMap;
 use std::any::TypeId;
-use std::collections::HashMap;
 use std::hint::unreachable_unchecked;
 use std::mem;
 
 #[derive(Default)]
 pub(crate) struct GroupedComponentStorages {
 	families: Vec<GroupFamily>,
-	info: HashMap<TypeId, ComponentInfo>,
+	info: FxHashMap<TypeId, ComponentInfo>,
 }
 
 unsafe impl Send for GroupedComponentStorages {}
@@ -19,10 +19,10 @@ unsafe impl Sync for GroupedComponentStorages {}
 impl GroupedComponentStorages {
 	pub fn with_layout(
 		layout: &Layout,
-		storage_map: &mut HashMap<TypeId, ComponentStorage>,
+		storage_map: &mut FxHashMap<TypeId, ComponentStorage>,
 	) -> Self {
 		let mut families = Vec::<GroupFamily>::new();
-		let mut info = HashMap::<TypeId, ComponentInfo>::new();
+		let mut info = FxHashMap::<TypeId, ComponentInfo>::default();
 
 		for group_layout in layout.group_families() {
 			let mut storages = Vec::<AtomicRefCell<ComponentStorage>>::new();
@@ -62,7 +62,7 @@ impl GroupedComponentStorages {
 		Self { families, info }
 	}
 
-	pub fn drain_into(&mut self, storages: &mut HashMap<TypeId, ComponentStorage>) {
+	pub fn drain_into(&mut self, storages: &mut FxHashMap<TypeId, ComponentStorage>) {
 		for (&type_id, info) in self.info.iter() {
 			let storage = self.families[info.group_index].storages[info.storage_index].get_mut();
 			let storage = mem::replace(storage, ComponentStorage::for_type::<()>());

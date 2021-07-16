@@ -2,8 +2,8 @@ use crate::components::{Component, ComponentStorage, Entity};
 use crate::layout::Layout;
 use crate::world::{GroupInfo, GroupedComponentStorages, UngroupedComponentStorages};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
+use rustc_hash::FxHashMap;
 use std::any::TypeId;
-use std::collections::HashMap;
 
 /// Container for grouped and ungrouped component storages.
 #[derive(Default)]
@@ -34,7 +34,7 @@ impl ComponentStorages {
 	}
 
 	pub(crate) fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
-		let mut storages = HashMap::<TypeId, ComponentStorage>::new();
+		let mut storages = FxHashMap::<TypeId, ComponentStorage>::default();
 		self.grouped.drain_into(&mut storages);
 		self.ungrouped.drain_into(&mut storages);
 
