@@ -92,10 +92,12 @@ where
 	S: Deref<Target = ComponentStorage> + DerefMut,
 	T: 'static,
 {
-	pub fn insert(&mut self, entity: Entity, value: T, tick: u32) -> Option<T> {
+	pub fn insert(&mut self, entity: Entity, value: T, ticks: ComponentTicks) -> Option<T> {
 		unsafe {
 			let raw_value = &value as *const _ as *const _;
-			let prev = self.storage.insert_and_forget_prev(entity, raw_value, tick);
+			let prev = self
+				.storage
+				.insert_and_forget_prev(entity, raw_value, ticks);
 			mem::forget(value);
 
 			if !prev.is_null() {

@@ -1,5 +1,5 @@
 use crate::components::{
-	BlobVec, ComponentTicks, Entity, IndexEntity, SparseArray, SparseArrayView, Ticks,
+	BlobVec, ComponentTicks, Entity, IndexEntity, SparseArray, SparseArrayView,
 };
 use std::alloc::Layout;
 use std::ptr;
@@ -39,7 +39,7 @@ impl ComponentStorage {
 		&mut self,
 		entity: Entity,
 		component: *const u8,
-		tick: Ticks,
+		ticks: ComponentTicks,
 	) -> *mut u8 {
 		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
@@ -47,7 +47,7 @@ impl ComponentStorage {
 			Some(index_entity) => {
 				let index = index_entity.index();
 				*self.entities.get_unchecked_mut(index) = entity;
-				self.ticks.get_unchecked_mut(index).set_tick_mutated(tick);
+				*self.ticks.get_unchecked_mut(index) = ticks;
 				self.data.set_and_forget_prev_unchecked(index, component)
 			}
 			None => {
@@ -56,7 +56,7 @@ impl ComponentStorage {
 					entity.version(),
 				));
 				self.entities.push(entity);
-				self.ticks.push(ComponentTicks::added(tick));
+				self.ticks.push(ticks);
 				self.data.push(component);
 				ptr::null_mut()
 			}
@@ -69,7 +69,7 @@ impl ComponentStorage {
 		&mut self,
 		entity: Entity,
 		component: *const u8,
-		tick: Ticks,
+		ticks: ComponentTicks,
 	) {
 		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
@@ -77,7 +77,7 @@ impl ComponentStorage {
 			Some(index_entity) => {
 				let index = index_entity.index();
 				*self.entities.get_unchecked_mut(index) = entity;
-				self.ticks.get_unchecked_mut(index).set_tick_mutated(tick);
+				*self.ticks.get_unchecked_mut(index) = ticks;
 				self.data.set_and_drop_prev_unchecked(index, component);
 			}
 			None => {
@@ -86,7 +86,7 @@ impl ComponentStorage {
 					entity.version(),
 				));
 				self.entities.push(entity);
-				self.ticks.push(ComponentTicks::added(tick));
+				self.ticks.push(ticks);
 				self.data.push(component);
 			}
 		}

@@ -1,4 +1,4 @@
-use crate::components::{Component, ComponentStorage, Entity, NonZeroTicks, Ticks};
+use crate::components::{Component, ComponentStorage, ComponentTicks, Entity, NonZeroTicks, Ticks};
 use crate::layout::Layout;
 use crate::world::{
 	BorrowStorages, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity, TickOverflow,
@@ -84,7 +84,7 @@ impl World {
 		let families = {
 			let (mut storages, families) = C::Storages::borrow_with_families(&self.storages);
 			let entities = &mut self.entities;
-			let tick = self.tick.get();
+			let tick = ComponentTicks::just_added(self.tick.get());
 
 			components_iter.into_iter().for_each(|components| {
 				let entity = entities.create();
@@ -141,7 +141,12 @@ impl World {
 
 		let families = unsafe {
 			let (mut storages, families) = C::Storages::borrow_with_families(&self.storages);
-			C::insert(&mut storages, entity, components, self.tick.get());
+			C::insert(
+				&mut storages,
+				entity,
+				components,
+				ComponentTicks::just_added(self.tick.get()),
+			);
 			families
 		};
 
