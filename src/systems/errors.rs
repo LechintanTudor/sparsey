@@ -12,12 +12,18 @@ pub type RunResult = Result<(), RunError>;
 /// Result returned by systems.
 pub type SystemResult = anyhow::Result<()>;
 
-/// Error returned by `Dispatcher::run`.
+/// Error returned by `Dispatcher::run_<seq/par>`.
 pub struct RunError {
 	errors: Vec<SystemError>,
 }
 
 impl RunError {
+	/// Returns the number of errors which occured after calling
+	/// `Dispatcher::run_<seq/par>`.
+	pub fn error_count(&self) -> usize {
+		self.errors.len()
+	}
+
 	/// Get an iterator over all errors.
 	pub fn errors(&self) -> impl Iterator<Item = &(dyn Error + Send + Sync + 'static)> {
 		self.errors.iter().map(|e| e.deref())
