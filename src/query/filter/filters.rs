@@ -80,6 +80,6 @@ where
 	C: ImmutableUnfilteredComponentView<'a>,
 {
 	fn matches(&self, entity: Entity) -> bool {
-		self.view().matches(entity)
+		self.view().contains(entity)
 	}
 }

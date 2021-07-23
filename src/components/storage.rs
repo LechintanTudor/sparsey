@@ -8,8 +8,8 @@ use std::ptr;
 pub struct ComponentStorage {
 	sparse: SparseArray,
 	entities: Vec<Entity>,
+	components: BlobVec,
 	ticks: Vec<ComponentTicks>,
-	data: BlobVec,
 }
 
 impl ComponentStorage {
@@ -27,8 +27,8 @@ impl ComponentStorage {
 		Self {
 			sparse: SparseArray::default(),
 			entities: Vec::new(),
+			components: BlobVec::new(item_layout, drop_item),
 			ticks: Vec::new(),
-			data: BlobVec::new(item_layout, drop_item),
 		}
 	}
 
@@ -48,7 +48,8 @@ impl ComponentStorage {
 				let index = index_entity.index();
 				*self.entities.get_unchecked_mut(index) = entity;
 				*self.ticks.get_unchecked_mut(index) = ticks;
-				self.data.set_and_forget_prev_unchecked(index, component)
+				self.components
+					.set_and_forget_prev_unchecked(index, component)
 			}
 			None => {
 				*index_entity = Some(IndexEntity::new(
@@ -57,7 +58,7 @@ impl ComponentStorage {
 				));
 				self.entities.push(entity);
 				self.ticks.push(ticks);
-				self.data.push(component);
+				self.components.push(component);
 				ptr::null_mut()
 			}
 		}
@@ -78,7 +79,8 @@ impl ComponentStorage {
 				let index = index_entity.index();
 				*self.entities.get_unchecked_mut(index) = entity;
 				*self.ticks.get_unchecked_mut(index) = ticks;
-				self.data.set_and_drop_prev_unchecked(index, component);
+				self.components
+					.set_and_drop_prev_unchecked(index, component);
 			}
 			None => {
 				*index_entity = Some(IndexEntity::new(
@@ -87,7 +89,7 @@ impl ComponentStorage {
 				));
 				self.entities.push(entity);
 				self.ticks.push(ticks);
-				self.data.push(component);
+				self.components.push(component);
 			}
 		}
 	}
@@ -111,7 +113,10 @@ impl ComponentStorage {
 			}
 		}
 
-		unsafe { self.data.swap_remove_and_forget_unchecked(dense_index) }
+		unsafe {
+			self.components
+				.swap_remove_and_forget_unchecked(dense_index)
+		}
 	}
 
 	/// Removes the component at `entity` and calls its destructor.
@@ -133,7 +138,7 @@ impl ComponentStorage {
 		}
 
 		unsafe {
-			self.data.swap_remove_and_drop_unchecked(dense_index);
+			self.components.swap_remove_and_drop_unchecked(dense_index);
 		}
 
 		true
@@ -142,7 +147,7 @@ impl ComponentStorage {
 	/// Returns the address of the component mapped to `entity`.
 	pub fn get(&self, entity: Entity) -> *const u8 {
 		match self.sparse.get_index(entity) {
-			Some(index) => unsafe { self.data.get_unchecked(index as usize) },
+			Some(index) => unsafe { self.components.get_unchecked(index as usize) },
 			None => ptr::null(),
 		}
 	}
@@ -150,7 +155,7 @@ impl ComponentStorage {
 	/// Returns the address of the component mapped to `entity`.
 	pub fn get_mut(&mut self, entity: Entity) -> *mut u8 {
 		match self.sparse.get_index(entity) {
-			Some(index) => unsafe { self.data.get_unchecked(index as usize) },
+			Some(index) => unsafe { self.components.get_unchecked(index as usize) },
 			None => ptr::null_mut(),
 		}
 	}
@@ -167,7 +172,7 @@ impl ComponentStorage {
 
 		unsafe {
 			Some((
-				self.data.get_unchecked(index),
+				self.components.get_unchecked(index),
 				self.ticks.get_unchecked(index),
 			))
 		}
@@ -179,7 +184,7 @@ impl ComponentStorage {
 
 		unsafe {
 			Some((
-				self.data.get_unchecked(index),
+				self.components.get_unchecked(index),
 				self.ticks.get_unchecked_mut(index),
 			))
 		}
@@ -200,7 +205,7 @@ impl ComponentStorage {
 		self.sparse.clear();
 		self.entities.clear();
 		self.ticks.clear();
-		self.data.clear();
+		self.components.clear();
 	}
 
 	/// Swaps the entities at the given dense indexes.
@@ -210,7 +215,7 @@ impl ComponentStorage {
 
 		unsafe {
 			self.sparse.swap_unchecked(sparse_a, sparse_b);
-			self.data.swap_unchecked(a, b);
+			self.components.swap_unchecked(a, b);
 		}
 
 		self.entities.swap(a, b);
@@ -233,8 +238,13 @@ impl ComponentStorage {
 	}
 
 	/// Returns a pointer to the type-erased components.
-	pub fn data(&self) -> *const u8 {
-		self.data.as_ptr()
+	pub fn components(&self) -> *const u8 {
+		self.components.as_ptr()
+	}
+
+	/// Returns a slice containing the ticks for all components in the storage.
+	pub fn ticks(&self) -> &[ComponentTicks] {
+		&self.ticks
 	}
 
 	/// Returns a tuple containing the `SparseArray`, `entities`, `components`
@@ -243,7 +253,7 @@ impl ComponentStorage {
 		(
 			self.sparse.as_view(),
 			self.entities.as_slice(),
-			self.data.as_ptr(),
+			self.components.as_ptr(),
 			self.ticks.as_slice(),
 		)
 	}
@@ -254,7 +264,7 @@ impl ComponentStorage {
 		(
 			self.sparse.as_view(),
 			self.entities.as_slice(),
-			self.data.as_ptr(),
+			self.components.as_ptr(),
 			self.ticks.as_mut_slice(),
 		)
 	}

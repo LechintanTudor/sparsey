@@ -64,26 +64,34 @@ where
 			.map(|(value, ticks)| unsafe { (&*value.cast::<T>(), ticks) })
 	}
 
-	pub fn len(&self) -> usize {
-		self.storage.len()
-	}
-
-	pub fn is_empty(&self) -> bool {
-		self.storage.is_empty()
-	}
-
 	pub fn entities(&self) -> &[Entity] {
 		self.storage.entities()
 	}
 
-	pub fn data(&self) -> &[T] {
-		unsafe { slice::from_raw_parts(self.storage.data().cast::<T>(), self.storage.len()) }
+	pub fn components(&self) -> &[T] {
+		unsafe { slice::from_raw_parts(self.storage.components().cast::<T>(), self.storage.len()) }
+	}
+
+	pub fn ticks(&self) -> &[ComponentTicks] {
+		self.storage.ticks()
 	}
 
 	pub fn split(&self) -> (SparseArrayView, &[Entity], &[T], &[ComponentTicks]) {
-		let (sparse, entities, data, ticks) = self.storage.split();
-		let data = unsafe { slice::from_raw_parts(data.cast::<T>(), entities.len()) };
-		(sparse, entities, data, ticks)
+		let (sparse, entities, components, ticks) = self.storage.split();
+		let components = unsafe { slice::from_raw_parts(components.cast::<T>(), entities.len()) };
+		(sparse, entities, components, ticks)
+	}
+}
+
+impl<S, T> Deref for TypedComponentStorage<S, T>
+where
+	S: Deref<Target = ComponentStorage>,
+	T: 'static,
+{
+	type Target = [T];
+
+	fn deref(&self) -> &Self::Target {
+		unsafe { slice::from_raw_parts(self.storage.components().cast::<T>(), self.storage.len()) }
 	}
 }
 
@@ -125,8 +133,8 @@ where
 	}
 
 	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], &mut [T], &mut [ComponentTicks]) {
-		let (sparse, entities, data, ticks) = self.storage.split_mut();
-		let data = unsafe { slice::from_raw_parts_mut(data as *mut T, entities.len()) };
-		(sparse, entities, data, ticks)
+		let (sparse, entities, components, ticks) = self.storage.split_mut();
+		let components = unsafe { slice::from_raw_parts_mut(components as *mut T, entities.len()) };
+		(sparse, entities, components, ticks)
 	}
 }

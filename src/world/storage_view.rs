@@ -1,12 +1,12 @@
-use crate::components::{Component, ComponentStorage, Ticks, TypedComponentStorage};
+use crate::components::{
+	Component, ComponentStorage, ComponentTicks, Entity, Ticks, TypedComponentStorage,
+};
 use crate::world::GroupInfo;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
+use std::ops::Deref;
 
-pub(crate) type ComponentStorageRef<'a, T> =
-	TypedComponentStorage<AtomicRef<'a, ComponentStorage>, T>;
-
-pub(crate) type ComponentStorageRefMut<'a, T> =
-	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
+type ComponentStorageRef<'a, T> = TypedComponentStorage<AtomicRef<'a, ComponentStorage>, T>;
+type ComponentStorageRefMut<'a, T> = TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
 
 pub struct Comp<'a, T>
 where
@@ -34,6 +34,29 @@ where
 			world_tick,
 			last_system_tick,
 		}
+	}
+
+	pub fn entities(&self) -> &[Entity] {
+		self.storage.entities()
+	}
+
+	pub fn components(&self) -> &[T] {
+		self.storage.components()
+	}
+
+	pub fn ticks(&self) -> &[ComponentTicks] {
+		self.storage.ticks()
+	}
+}
+
+impl<T> Deref for Comp<'_, T>
+where
+	T: Component,
+{
+	type Target = [T];
+
+	fn deref(&self) -> &Self::Target {
+		self.storage.components()
 	}
 }
 
@@ -63,5 +86,28 @@ where
 			world_tick,
 			last_system_tick,
 		}
+	}
+
+	pub fn entities(&self) -> &[Entity] {
+		self.storage.entities()
+	}
+
+	pub fn components(&self) -> &[T] {
+		self.storage.components()
+	}
+
+	pub fn ticks(&self) -> &[ComponentTicks] {
+		self.storage.ticks()
+	}
+}
+
+impl<T> Deref for CompMut<'_, T>
+where
+	T: Component,
+{
+	type Target = [T];
+
+	fn deref(&self) -> &Self::Target {
+		self.storage.components()
 	}
 }

@@ -21,7 +21,7 @@ where
 
 	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks>;
 
-	fn matches(&self, entity: Entity) -> bool;
+	fn contains(&self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> GroupInfo<'a>;
 
@@ -32,7 +32,7 @@ where
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component>;
 
 	unsafe fn get_from_parts(
-		data: *mut Self::Component,
+		components: *mut Self::Component,
 		info: *mut ComponentTicks,
 		index: usize,
 		world_tick: Ticks,
@@ -51,11 +51,11 @@ pub unsafe trait ImmutableUnfilteredComponentView<'a>
 where
 	Self: UnfilteredComponentView<'a>,
 {
-	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component];
+	unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component];
 
 	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
 
-	unsafe fn slice_entities_and_data(
+	unsafe fn slice_entities_and_components(
 		self,
 		range: Range<usize>,
 	) -> (&'a [Entity], &'a [Self::Component]);
@@ -76,7 +76,7 @@ where
 		self.storage.get_ticks(entity)
 	}
 
-	fn matches(&self, entity: Entity) -> bool {
+	fn contains(&self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -93,18 +93,23 @@ where
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.split();
-		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
+		let (sparse, entities, components, ticks) = self.storage.split();
+		(
+			sparse,
+			entities,
+			components.as_ptr() as _,
+			ticks.as_ptr() as _,
+		)
 	}
 
 	unsafe fn get_from_parts(
-		data: *mut Self::Component,
+		components: *mut Self::Component,
 		_info: *mut ComponentTicks,
 		index: usize,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
-		Some(&*data.add(index))
+		Some(&*components.add(index))
 	}
 }
 
@@ -119,21 +124,21 @@ unsafe impl<'a, T> ImmutableUnfilteredComponentView<'a> for &'a Comp<'a, T>
 where
 	T: Component,
 {
-	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component] {
-		self.storage.data().get_unchecked(range)
+	unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component] {
+		self.storage.components().get_unchecked(range)
 	}
 
 	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
 		self.storage.entities().get_unchecked(range)
 	}
 
-	unsafe fn slice_entities_and_data(
+	unsafe fn slice_entities_and_components(
 		self,
 		range: Range<usize>,
 	) -> (&'a [Entity], &'a [Self::Component]) {
 		(
 			self.storage.entities().get_unchecked(range.clone()),
-			self.storage.data().get_unchecked(range),
+			self.storage.components().get_unchecked(range),
 		)
 	}
 }
@@ -153,7 +158,7 @@ where
 		self.storage.get_ticks(entity)
 	}
 
-	fn matches(&self, entity: Entity) -> bool {
+	fn contains(&self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -170,18 +175,23 @@ where
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.split();
-		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
+		let (sparse, entities, components, ticks) = self.storage.split();
+		(
+			sparse,
+			entities,
+			components.as_ptr() as _,
+			ticks.as_ptr() as _,
+		)
 	}
 
 	unsafe fn get_from_parts(
-		data: *mut Self::Component,
+		components: *mut Self::Component,
 		_info: *mut ComponentTicks,
 		index: usize,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
-		Some(&*data.add(index))
+		Some(&*components.add(index))
 	}
 }
 
@@ -196,21 +206,21 @@ unsafe impl<'a, T> ImmutableUnfilteredComponentView<'a> for &'a CompMut<'a, T>
 where
 	T: Component,
 {
-	unsafe fn slice_data(self, range: Range<usize>) -> &'a [Self::Component] {
-		self.storage.data().get_unchecked(range)
+	unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component] {
+		self.storage.components().get_unchecked(range)
 	}
 
 	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
 		self.storage.entities().get_unchecked(range)
 	}
 
-	unsafe fn slice_entities_and_data(
+	unsafe fn slice_entities_and_components(
 		self,
 		range: Range<usize>,
 	) -> (&'a [Entity], &'a [Self::Component]) {
 		(
 			self.storage.entities().get_unchecked(range.clone()),
-			self.storage.data().get_unchecked(range),
+			self.storage.components().get_unchecked(range),
 		)
 	}
 }
@@ -223,15 +233,15 @@ where
 	type Component = T;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
-		let (data, ticks) = self.storage.get_with_ticks_mut(entity)?;
-		Some(ComponentRefMut::new(data, ticks, self.world_tick))
+		let (components, ticks) = self.storage.get_with_ticks_mut(entity)?;
+		Some(ComponentRefMut::new(components, ticks, self.world_tick))
 	}
 
 	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
 		self.storage.get_ticks(entity)
 	}
 
-	fn matches(&self, entity: Entity) -> bool {
+	fn contains(&self, entity: Entity) -> bool {
 		self.storage.contains(entity)
 	}
 
@@ -248,19 +258,24 @@ where
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
-		let (sparse, entities, data, ticks) = self.storage.split();
-		(sparse, entities, data.as_ptr() as _, ticks.as_ptr() as _)
+		let (sparse, entities, components, ticks) = self.storage.split();
+		(
+			sparse,
+			entities,
+			components.as_ptr() as _,
+			ticks.as_ptr() as _,
+		)
 	}
 
 	unsafe fn get_from_parts(
-		data: *mut Self::Component,
+		components: *mut Self::Component,
 		info: *mut ComponentTicks,
 		index: usize,
 		world_tick: Ticks,
 		_last_system_tick: Ticks,
 	) -> Option<Self::Item> {
 		Some(ComponentRefMut::new(
-			&mut *data.add(index),
+			&mut *components.add(index),
 			&mut *info.add(index),
 			world_tick,
 		))

@@ -72,7 +72,7 @@ where
 		self.view.get_ticks(entity)
 	}
 
-	fn matches(&self, entity: Entity) -> bool {
+	fn contains(&self, entity: Entity) -> bool {
 		F::matches(
 			self.view.get_ticks(entity),
 			self.view.world_tick(),

@@ -10,24 +10,26 @@ pub trait SliceQuery<'a>
 where
 	Self: Sized,
 {
-	type Slices;
-
-	fn try_slices(self) -> Result<Self::Slices, StoragesNotGrouped>;
+	type ComponentSlices;
 
 	fn try_entities(self) -> Result<&'a [Entity], StoragesNotGrouped>;
 
-	fn try_entities_slices(self) -> Result<(&'a [Entity], Self::Slices), StoragesNotGrouped>;
+	fn try_components(self) -> Result<Self::ComponentSlices, StoragesNotGrouped>;
 
-	fn slices(self) -> Self::Slices {
-		self.try_slices().unwrap()
-	}
+	fn try_entities_components(
+		self,
+	) -> Result<(&'a [Entity], Self::ComponentSlices), StoragesNotGrouped>;
 
 	fn entities(self) -> &'a [Entity] {
 		self.try_entities().unwrap()
 	}
 
-	fn entities_slices(self) -> (&'a [Entity], Self::Slices) {
-		self.try_entities_slices().unwrap()
+	fn components(self) -> Self::ComponentSlices {
+		self.try_components().unwrap()
+	}
+
+	fn entities_components(self) -> (&'a [Entity], Self::ComponentSlices) {
+		self.try_entities_components().unwrap()
 	}
 }
 
@@ -36,13 +38,7 @@ where
 	Q: IntoQueryParts<'a, Filter = Passthrough>,
 	Q::Base: SliceableQueryBase<'a>,
 {
-	type Slices = <Q::Base as SliceableQueryBase<'a>>::Slices;
-
-	fn try_slices(self) -> Result<Self::Slices, StoragesNotGrouped> {
-		let (base, include, exclude, _) = self.into_parts();
-		let range = group_range(&base, &include, &exclude)?;
-		Ok(unsafe { base.slice_data(range) })
-	}
+	type ComponentSlices = <Q::Base as SliceableQueryBase<'a>>::Slices;
 
 	fn try_entities(self) -> Result<&'a [Entity], StoragesNotGrouped> {
 		let (base, include, exclude, _) = self.into_parts();
@@ -61,18 +57,26 @@ where
 		}
 	}
 
-	fn try_entities_slices(self) -> Result<(&'a [Entity], Self::Slices), StoragesNotGrouped> {
+	fn try_components(self) -> Result<Self::ComponentSlices, StoragesNotGrouped> {
+		let (base, include, exclude, _) = self.into_parts();
+		let range = group_range(&base, &include, &exclude)?;
+		Ok(unsafe { base.slice_components(range) })
+	}
+
+	fn try_entities_components(
+		self,
+	) -> Result<(&'a [Entity], Self::ComponentSlices), StoragesNotGrouped> {
 		let (base, include, exclude, _) = self.into_parts();
 		let range = group_range(&base, &include, &exclude)?;
 
 		unsafe {
 			if !Q::Base::IS_VOID {
-				Ok(base.slice_entities_and_data(range))
+				Ok(base.slice_entities_and_components(range))
 			} else {
 				match include.into_entities() {
 					Some(entities) => Ok((
 						entities.get_unchecked(range.clone()),
-						base.slice_data(range),
+						base.slice_components(range),
 					)),
 					// Returned earlier because storages aren't grouped
 					None => unreachable_unchecked(),

@@ -19,7 +19,7 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn matches(&self, entity: Entity) -> bool;
+	fn contains(&self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> CombinedGroupInfo<'a>;
 
@@ -62,11 +62,14 @@ where
 {
 	type Slices;
 
-	unsafe fn slice_data(self, range: Range<usize>) -> Self::Slices;
+	unsafe fn slice_components(self, range: Range<usize>) -> Self::Slices;
 
 	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
 
-	unsafe fn slice_entities_and_data(self, range: Range<usize>) -> (&'a [Entity], Self::Slices);
+	unsafe fn slice_entities_and_components(
+		self,
+		range: Range<usize>,
+	) -> (&'a [Entity], Self::Slices);
 }
 
 pub trait QueryBaseModifiers<'a>
@@ -108,7 +111,7 @@ unsafe impl<'a> QueryBase<'a> for () {
 		Some(())
 	}
 
-	fn matches(&self, _: Entity) -> bool {
+	fn contains(&self, _: Entity) -> bool {
 		true
 	}
 
@@ -147,7 +150,7 @@ unsafe impl<'a> SliceableQueryBase<'a> for () {
 	type Slices = ();
 
 	#[allow(clippy::unused_unit)]
-	unsafe fn slice_data(self, _: Range<usize>) -> Self::Slices {
+	unsafe fn slice_components(self, _: Range<usize>) -> Self::Slices {
 		()
 	}
 
@@ -155,7 +158,7 @@ unsafe impl<'a> SliceableQueryBase<'a> for () {
 		&[]
 	}
 
-	unsafe fn slice_entities_and_data(self, _: Range<usize>) -> (&'a [Entity], Self::Slices) {
+	unsafe fn slice_entities_and_components(self, _: Range<usize>) -> (&'a [Entity], Self::Slices) {
 		(&[], ())
 	}
 }
@@ -178,8 +181,8 @@ macro_rules! impl_query_base {
                 ))
             }
 
-            fn matches(&self, entity: Entity) -> bool {
-                $(self.$idx.matches(entity))&&+
+            fn contains(&self, entity: Entity) -> bool {
+                $(self.$idx.contains(entity))&&+
             }
 
             fn group_info(&self) -> CombinedGroupInfo<'a> {
@@ -223,25 +226,25 @@ macro_rules! impl_query_base {
         {
             type Slices = ($(&'a [$view::Component],)+);
 
-            unsafe fn slice_data(self, range: Range<usize>) -> Self::Slices {
-                ($(self.$idx.slice_data(range.clone()),)+)
+            unsafe fn slice_components(self, range: Range<usize>) -> Self::Slices {
+                ($(self.$idx.slice_components(range.clone()),)+)
             }
 
             unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
                 self.0.slice_entities(range)
             }
 
-            unsafe fn slice_entities_and_data(self, range: Range<usize>) -> (&'a [Entity], Self::Slices) {
-                slice_entities_and_data!(self, range, $($idx),+)
+            unsafe fn slice_entities_and_components(self, range: Range<usize>) -> (&'a [Entity], Self::Slices) {
+                slice_entities_and_components!(self, range, $($idx),+)
             }
         }
     };
 }
 
-macro_rules! slice_entities_and_data {
+macro_rules! slice_entities_and_components {
     ($self:ident, $range:ident, $first:tt $(, $other:tt)*) => {{
-        let (entities, first_data) = $self.0.slice_entities_and_data($range.clone());
-        (entities, (first_data, $($self.$other.slice_data($range.clone())),*))
+        let (entities, first_components) = $self.0.slice_entities_and_components($range.clone());
+        (entities, (first_components, $($self.$other.slice_components($range.clone())),*))
     }};
 }
 

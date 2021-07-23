@@ -12,17 +12,17 @@ pub struct Sprite {
 pub struct Transparent;
 
 fn print_sprites(pos: Comp<Position>, sprites: Comp<Sprite>, transparencies: Comp<Transparent>) {
-	let (pos_slice, sprite_slice) = (&pos, &sprites).slices();
+	let (pos_slice, sprite_slice) = (&pos, &sprites).components();
 	println!("[All sprites]");
 	println!("Positions: {:?}", pos_slice);
 	println!("Sprites: {:?}", sprite_slice);
 
-	let (pos_slice, sprite_slice) = (&pos, &sprites).include(&transparencies).slices();
+	let (pos_slice, sprite_slice) = (&pos, &sprites).include(&transparencies).components();
 	println!("\n[Transparent sprites]");
 	println!("Positions: {:?}", pos_slice);
 	println!("Sprites: {:?}", sprite_slice);
 
-	let (pos_slice, sprite_slice) = (&pos, &sprites).exclude(&transparencies).slices();
+	let (pos_slice, sprite_slice) = (&pos, &sprites).exclude(&transparencies).components();
 	println!("\n[Opaque sprites]");
 	println!("Positions: {:?}", pos_slice);
 	println!("Sprites: {:?}", sprite_slice);
