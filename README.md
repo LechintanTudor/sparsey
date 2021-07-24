@@ -1,115 +1,177 @@
-Sparsey is a sparse set based Entity Component System that aims to provide the benefits of its core data structure with an intuitive and easy to use interface.
+Sparsey is a sparse set based Entity Component System with lots of features and nice syntax! ~( ˘▾˘~)
 
-## Overview
-### World and Components
+# Basic Example 
 ```rust
-// Components are simple structs.
-struct Position {
-    x: f32,
-    y: f32,
+/// Most commonly used items are accessible from the prelude.
+/// Otherwise, all items are accessible from the crate root.
+use sparsey::prelude::*;
+
+/// Components are Send + Sync + 'static types.
+struct Position(f32);
+struct Velocity(f32);
+struct Immovable;
+
+// Sets the Velocity of Immovable entities to zero.
+fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
+    for (mut vel,) in (&mut vel,).include(&imv).iter() {
+        vel.0 = 0.0;
+    }
 }
 
-struct Velocity {
-    x: f32,
-    y: f32,
-}
-
-// World is a container for entities and components.
-let mut world = World::default();
-world.register::<Position>();
-world.register::<Velocity>();
-```
-
-```rust
-// Create a single Entity with a Component tuple.
-let _: Entity = world.create(
-    (Position { x: 0.0, y: 0.0 }, Velocity { x: 1.0, y: 1.0 }),
-);
-
-// Create entities in bulk with a Component tuple iterator.
-let _: &[Entity] = world.extend(std::iter::repeat(10).map(|i| {
-    (Position { x: i as f32, y: i as f32 }, Velocity { x: 1.0, y: 1.0 })
-}))
-```
-
-### Systems and Failable Systems
-```rust
-// Systems are functions which take Component views as parameters.
-fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
-    // Queries are created from a tuple of Component views.
-    // You can use `iter` to iterate all matching Component sets.
+// Adds the Velocity of an entity to its Position. 
+fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
     for (mut pos, vel) in (&mut pos, &vel).iter() {
         pos.0 += vel.0;
-        pos.1 += vel.1;
+    }
+} 
+
+fn main() {
+    // Create the World and register the components we want to use.
+    let mut world = World::default();
+    world.register::<Position>();
+    world.register::<Velocity>();
+
+    /// Create some entities.
+    world.create((Position(0.0), Velocity(1.0)));
+    world.create((Position(0.0), Velocity(2.0)));
+    world.create((Position(0.0), Velocity(3.0), Immovable));
+
+    /// Resources can be used to store data which doesn't belong to
+    /// any single entity. In our case, there are none.
+    let mut resources = Resources::default();
+
+    /// Create a Dispatcher for running our systems.
+    let mut dispatcher = Dispatcher::builder()
+        .add_system(update_velocity.system())
+        .add_system(update_position.system())
+        .build();
+
+    /// Run the systems 3 times.
+    for _ in 0..3 {
+        dispatcher.run_seq(&mut world, &mut resources).unwrap();
+        world.advance_ticks().unwrap();
     }
 }
 ```
 
+# Features
+### Systems
+Systems are functions that have `Component` views and `Resource` views as parameters.
 ```rust
-// Failable systems can return a SystemResult to signal failure.
-fn failable() -> SystemResult {
-    failable_function()?;
+fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>, delta: Res<Delta>) {
+    for (mut pos, vel) in (&mut pos, &vel).iter() {
+        pos.x += vel.x * delta.0;
+        pos.y += vel.y * delta.1;
+    }
+}
+```
+
+Fallible systems may return a `SystemResult` to signal success or failure.
+```rust
+fn save_components(a: Comp<A>, b: Comp<B>, c: Comp<C>) -> SystemResult {
+    for (a, b, c) in (&a, &b, &c).iter() {
+        try_save_components(a, b, c)?;
+    }
+
     Ok(())
 }
 ```
 
+Systems are executed using a `Dispatcher`. 
+Errors can be retrieved after the systems finish executing.
 ```rust
-// Dispatchers can be used to run the systems. To create a System 
-// from a function use the `system` method directly on the function.
 let mut dispatcher = Dispatcher::builder()
     .add_system(movement.system())
     .add_system(failable.system())
     .build();
 
-// Run the systems and unwrap any errors.
-dispatcher.run_seq(&mut world, &mut resources).unwrap();
-```
-
-### Granular Change Detection
-```rust
-fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
-    use sparsey::filters::{added, changed, updated};
-
-    // Iterate Component sets where the Position was added this frame.
-    for (_, _) in (added(&mut pos), &vel).iter() {}
-
-    // Iterate Component sets where the Position was changed this frame.
-    for (_, _) in (changed(&mut pos), &vel).iter() {}
-
-    // Iterate Component sets where the Position was updated this frame.
-    // In our case, updated means the Component was added or changed.
-    for (_, _) in (updated(&mut pos), &vel).iter() {}
-
-    // To get the opposite effect, use the not operator.
-    // Iterate Component sets where the Position was not added this frame.
-    for (_, _) in (!added(&mut pos), &vel).iter() {}
+if let Err(run_error) = dispatcher.run_seq(&mut world, &mut resources) {
+    for error in run_error.errors() {
+        println!("{}", error);
+    }
 }
 ```
 
-### Layouts and Groups
+### Expressive Queries
+Queries can be used to iterate entities and components.
 ```rust
-// Grouped component storages ensure the components
-// are stored in ordered arrays to provide the fastest
-// iteration possible and keep cache misses to minimum.
+fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
+    // Fetch A, B and C from all entities which have A, B and C.
+    for (a, b, c) in (&a, &b, &c).iter() {}
+
+    // To get the entity to which the components belong use entities().
+    for (entity, (a, b, c)) in (&a, &b, &c).iter().entities() {}
+
+    // Fetch A from all entities which have A, B and C.
+    for (a,) in (&a,).include((&b, &c)).iter() {}
+
+    // Fetch A from all entities which have A and B, but not C.
+    for (a,) in (&a,).include(&b).exclude(&c).iter() {}
+}
+```
+
+### Granular Change Detection
+Sparsey supports change detection at a component level.
+```rust
+fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
+    use sparsey::filters::{added, mutated, updated};
+
+    // Restrict query to match only entities to which A was just added.
+    for (a, b, c) in (added(&a), &b, &c).iter() {}
+
+    // Restrict query to match only entities to which A was mutated.
+    for (a, b, c) in (mutated(&a), &b, &c).iter() {}
+
+    // Restrict query to match only entities to which A was just added or mutated.
+    for (a, b, c) in (updated(&a), &b, &c).iter() {}
+
+    // The opposite effect can be achieved by using the Not operator.
+    // Restrict query to match only entities to which A was not just added.
+    for (a, b, c) in (!added(&a), &b, &c).iter() {}
+}
+```
+
+### Groups and Layouts.
+`Layouts` can be used to group component storages withing a `World`.
+Grouped storages are much faster to iterate over, the downside being
+a small performance penalty when inserting or removing components.
+```rust
 let layout = Layout::builder()
     .add_group(<(A, B)>::group())
     .add_group(<(A, B, C)>::group())
     .build();
 
-let world = World::with_layout(&layout);
+let mut world = World::with_layout(&layout);
 ```
 
+All iterations bellow get a significant performance boost without having to change
+the code at all.
 ```rust
-fn group_test(a: Comp<A>, b: Comp<B>, c: Comp<C>) -> SystemResult {
-    // Get all entities with A and B.
-    let _: &[Entity] = (&a, &b).entities()?;
+fn iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
+    for (a, b) in (&a, &b).iter() {}
 
-    // Get all A and B Component sets as ordered slices.
-    let _: (&[A], &[B]) = (&a, &b).slice()?;
+    for (a,) in (&a,).include(&b).iter() {}
 
-    // Get all A and B component sets and their entities.
-    let _: (&[Entity], (&[A], &[B])) = (&a, &b).slice_entities()?;
+    for (a, b, c) in (&a, &b, &c).iter() {}
 
-    Ok(())
+    for (a,) in (&a,).include((&b, &c)).iter() {}
+
+    for (a, b) in (&a, &b).exclude(&c).iter() {}
+
+    for (a,) in (&a,).include(&b).exclude(&c).iter() {}
+}
+```
+
+Groups allow accessing their components as ordered slices.
+```rust
+fn slices(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
+    // Get all entities with A and B as a slice.
+    let _: &[Entity] = (&a, &b).entities();
+
+    // Get A, B and C from all entities with A, B and C as slices.
+    let _: (&[A], &[B], &[C]) = (&a, &b, &c).components();
+
+    // Get all entities with A and B, but not C, and their components, as slices.
+    let _: (&[Entity], (&[A], &[B])) = (&a, &b).exclude(&c).entities_components();
 }
 ```
