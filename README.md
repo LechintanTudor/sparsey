@@ -1,6 +1,6 @@
 # Sparsey
 Sparsey is a sparse set based Entity Component System with lots of features and nice syntax! \~( ˘▾˘\~)
-\
+<br/>
 
 # Example 
 ```rust
@@ -55,7 +55,7 @@ fn main() {
     }
 }
 ```
-\
+<br/>
 
 # Features
 ## Systems
@@ -68,7 +68,7 @@ fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>, delta: Res<Delta>) 
     }
 }
 ```
-\
+<br/>
 
 Fallible systems may return a SystemResult to signal success or failure.
 ```rust
@@ -79,7 +79,7 @@ fn save_components(a: Comp<A>, b: Comp<B>, c: Comp<C>) -> SystemResult {
     Ok(())
 }
 ```
-\
+<br/>
 
 Systems are executed using a Dispatcher. 
 Errors can be retrieved after the systems finish executing.
@@ -95,7 +95,7 @@ if let Err(run_error) = dispatcher.run_seq(&mut world, &mut resources) {
     }
 }
 ```
-\
+<br/>
 
 ## Expressive Queries
 Queries can be used to iterate entities and components.
@@ -114,7 +114,7 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a,) in (&a,).include(&b).exclude(&c).iter() {}
 }
 ```
-\
+<br/>
 
 ## Granular Change Detection
 Sparsey supports change detection at a component level.
@@ -136,7 +136,7 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a, b, c) in (!added(&a), &b, &c).iter() {}
 }
 ```
-\
+<br/>
 
 ## Groups and Layouts.
 Layouts can be used to group component storages withing a World.
@@ -150,7 +150,7 @@ let layout = Layout::builder()
 
 let mut world = World::with_layout(&layout);
 ```
-\
+<br/>
 
 All iterations bellow get a significant performance boost without having to change
 the code at all.
@@ -169,7 +169,7 @@ fn iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a,) in (&a,).include(&b).exclude(&c).iter() {}
 }
 ```
-\
+<br/>
 
 Groups allow accessing their components as ordered slices.
 ```rust
