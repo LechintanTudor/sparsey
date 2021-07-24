@@ -1,34 +1,45 @@
 use crate::components::{ComponentTicks, Entity, Ticks};
 use crate::query::{
-	ComponentView, ImmutableUnfilteredComponentView, SplitComponentView, UnfilteredComponentView,
+	ComponentTicksFilter, ComponentView, ImmutableUnfilteredComponentView, SplitComponentView,
+	UnfilteredComponentView,
 };
 use crate::world::GroupInfo;
 use std::marker::PhantomData;
+
+pub type PassthroughFilter = Filter<(), Passthrough>;
 
 pub trait QueryFilter {
 	fn matches(&self, entity: Entity) -> bool;
 }
 
-pub trait ComponentTicksFilter {
-	fn matches(info: Option<&ComponentTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool;
-}
-
 #[derive(Default)]
 pub struct Filter<C, F> {
-	view: C,
-	filter: PhantomData<F>,
+	pub(crate) component_view: C,
+	pub(crate) filter: PhantomData<F>,
 }
 
 impl<C, F> Filter<C, F> {
-	pub(crate) fn new(view: C) -> Self {
+	pub(crate) fn new(component_view: C) -> Self {
 		Self {
-			view,
+			component_view,
 			filter: PhantomData,
 		}
 	}
+}
 
-	pub(crate) fn view(&self) -> &C {
-		&self.view
+#[derive(Clone, Copy, Default, Debug)]
+pub struct Passthrough;
+
+pub const fn passthrough() -> Filter<(), Passthrough> {
+	Filter {
+		component_view: (),
+		filter: PhantomData,
+	}
+}
+
+impl QueryFilter for Filter<(), Passthrough> {
+	fn matches(&self, _: Entity) -> bool {
+		true
 	}
 }
 
@@ -39,9 +50,9 @@ where
 {
 	fn matches(&self, entity: Entity) -> bool {
 		F::matches(
-			self.view.get_ticks(entity),
-			self.view.world_tick(),
-			self.view.last_system_tick(),
+			self.component_view.get_ticks(entity),
+			self.component_view.world_tick(),
+			self.component_view.last_system_tick(),
 		)
 	}
 }
@@ -56,55 +67,55 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		let matches = F::matches(
-			self.view.get_ticks(entity),
-			self.view.world_tick(),
-			self.view.last_system_tick(),
+			self.component_view.get_ticks(entity),
+			self.component_view.world_tick(),
+			self.component_view.last_system_tick(),
 		);
 
 		if matches {
-			self.view.get(entity)
+			self.component_view.get(entity)
 		} else {
 			None
 		}
 	}
 
 	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
-		self.view.get_ticks(entity)
+		self.component_view.get_ticks(entity)
 	}
 
 	fn contains(&self, entity: Entity) -> bool {
 		F::matches(
-			self.view.get_ticks(entity),
-			self.view.world_tick(),
-			self.view.last_system_tick(),
+			self.component_view.get_ticks(entity),
+			self.component_view.world_tick(),
+			self.component_view.last_system_tick(),
 		)
 	}
 
 	fn group_info(&self) -> GroupInfo<'a> {
-		self.view.group_info()
+		self.component_view.group_info()
 	}
 
 	fn world_tick(&self) -> Ticks {
-		self.view.world_tick()
+		self.component_view.world_tick()
 	}
 
 	fn last_system_tick(&self) -> Ticks {
-		self.view.last_system_tick()
+		self.component_view.last_system_tick()
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
-		self.view.into_parts()
+		self.component_view.into_parts()
 	}
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
-		info: *mut ComponentTicks,
+		ticks: *mut ComponentTicks,
 		index: usize,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
 	) -> Option<Self::Item> {
-		if F::matches(Some(&*info.add(index)), world_tick, last_system_tick) {
-			C::get_from_parts(data, info, index, world_tick, last_system_tick)
+		if F::matches(Some(&*ticks.add(index)), world_tick, last_system_tick) {
+			C::get_from_parts(data, ticks, index, world_tick, last_system_tick)
 		} else {
 			None
 		}

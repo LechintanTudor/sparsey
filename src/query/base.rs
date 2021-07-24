@@ -1,7 +1,7 @@
 use crate::components::{Entity, Ticks};
 use crate::query::{
-	ComponentView, DenseSplitComponentView, ImmutableUnfilteredComponentView, Include,
-	IncludeExclude, IncludeExcludeFilter, IntoQueryParts, IterData, Passthrough, QueryFilter,
+	passthrough, ComponentView, DenseSplitComponentView, ImmutableUnfilteredComponentView, Include,
+	IncludeExclude, IncludeExcludeFilter, IntoQueryParts, IterData, PassthroughFilter, QueryFilter,
 	QueryModifier, SparseSplitComponentView,
 };
 use crate::world::CombinedGroupInfo;
@@ -49,10 +49,10 @@ where
 	type Base = Self;
 	type Include = ();
 	type Exclude = ();
-	type Filter = Passthrough;
+	type Filter = PassthroughFilter;
 
 	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
-		(self, (), (), Passthrough::default())
+		(self, (), (), passthrough())
 	}
 }
 

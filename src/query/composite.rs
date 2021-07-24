@@ -1,4 +1,6 @@
-use crate::query::{IntoQueryParts, Passthrough, QueryBase, QueryFilter, QueryModifier};
+use crate::query::{
+	passthrough, IntoQueryParts, PassthroughFilter, QueryBase, QueryFilter, QueryModifier,
+};
 
 pub struct Include<B, I> {
 	base: B,
@@ -33,10 +35,10 @@ where
 	type Base = B;
 	type Include = I;
 	type Exclude = ();
-	type Filter = Passthrough;
+	type Filter = PassthroughFilter;
 
 	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
-		(self.base, self.include, (), Passthrough::default())
+		(self.base, self.include, (), passthrough())
 	}
 }
 
@@ -72,15 +74,10 @@ where
 	type Base = B;
 	type Include = I;
 	type Exclude = E;
-	type Filter = Passthrough;
+	type Filter = PassthroughFilter;
 
 	fn into_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
-		(
-			self.base,
-			self.include,
-			self.exclude,
-			Passthrough::default(),
-		)
+		(self.base, self.include, self.exclude, passthrough())
 	}
 }
 

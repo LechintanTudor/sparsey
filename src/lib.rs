@@ -2,7 +2,7 @@
 #![allow(clippy::module_inception)]
 
 pub mod filters {
-	pub use crate::query::{added, contains, mutated, updated};
+	pub use crate::query::{added, contains, maybe, mutated, updated};
 }
 
 pub mod prelude {
