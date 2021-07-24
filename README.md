@@ -1,6 +1,8 @@
-Sparsey is a sparse set based Entity Component System with lots of features and nice syntax! ~( ˘▾˘~)
+# Sparsey
+Sparsey is a sparse set based Entity Component System with lots of features and nice syntax! \~( ˘▾˘\~)
+\
 
-# Basic Example 
+# Example 
 ```rust
 /// Most commonly used items are accessible from the prelude.
 /// Otherwise, all items are accessible from the crate root.
@@ -53,10 +55,11 @@ fn main() {
     }
 }
 ```
+\
 
 # Features
-### Systems
-Systems are functions that have `Component` views and `Resource` views as parameters.
+## Systems
+Systems are functions that have Component views and Resource views as parameters.
 ```rust
 fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>, delta: Res<Delta>) {
     for (mut pos, vel) in (&mut pos, &vel).iter() {
@@ -65,19 +68,20 @@ fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>, delta: Res<Delta>) 
     }
 }
 ```
+\
 
-Fallible systems may return a `SystemResult` to signal success or failure.
+Fallible systems may return a SystemResult to signal success or failure.
 ```rust
 fn save_components(a: Comp<A>, b: Comp<B>, c: Comp<C>) -> SystemResult {
     for (a, b, c) in (&a, &b, &c).iter() {
         try_save_components(a, b, c)?;
     }
-
     Ok(())
 }
 ```
+\
 
-Systems are executed using a `Dispatcher`. 
+Systems are executed using a Dispatcher. 
 Errors can be retrieved after the systems finish executing.
 ```rust
 let mut dispatcher = Dispatcher::builder()
@@ -91,8 +95,9 @@ if let Err(run_error) = dispatcher.run_seq(&mut world, &mut resources) {
     }
 }
 ```
+\
 
-### Expressive Queries
+## Expressive Queries
 Queries can be used to iterate entities and components.
 ```rust
 fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
@@ -109,8 +114,9 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a,) in (&a,).include(&b).exclude(&c).iter() {}
 }
 ```
+\
 
-### Granular Change Detection
+## Granular Change Detection
 Sparsey supports change detection at a component level.
 ```rust
 fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
@@ -130,9 +136,10 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a, b, c) in (!added(&a), &b, &c).iter() {}
 }
 ```
+\
 
-### Groups and Layouts.
-`Layouts` can be used to group component storages withing a `World`.
+## Groups and Layouts.
+Layouts can be used to group component storages withing a World.
 Grouped storages are much faster to iterate over, the downside being
 a small performance penalty when inserting or removing components.
 ```rust
@@ -143,6 +150,7 @@ let layout = Layout::builder()
 
 let mut world = World::with_layout(&layout);
 ```
+\
 
 All iterations bellow get a significant performance boost without having to change
 the code at all.
@@ -161,6 +169,7 @@ fn iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a,) in (&a,).include(&b).exclude(&c).iter() {}
 }
 ```
+\
 
 Groups allow accessing their components as ordered slices.
 ```rust
