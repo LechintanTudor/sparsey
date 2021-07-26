@@ -2,16 +2,16 @@ use rayon::ThreadPoolBuilder;
 use sparsey::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Hp(i32);
+struct Hp(i32);
 
 #[derive(Clone, Copy, Debug)]
-pub struct HpRegen(i32);
+struct HpRegen(i32);
 
 #[derive(Clone, Copy, Debug)]
-pub struct Position(i32, i32);
+struct Position(i32, i32);
 
 #[derive(Clone, Copy, Debug)]
-pub struct Velocity(i32, i32);
+struct Velocity(i32, i32);
 
 fn update_health(mut hps: CompMut<Hp>, regens: Comp<HpRegen>) {
 	println!("Update HPs...");

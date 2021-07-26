@@ -1,13 +1,13 @@
 use sparsey::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Position(i32, i32);
+struct Position(i32, i32);
 
 #[derive(Clone, Copy, Debug)]
-pub struct Velocity(i32, i32);
+struct Velocity(i32, i32);
 
 #[derive(Clone, Copy, Debug)]
-pub struct Immovable;
+struct Immovable;
 
 fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
 	println!("[Update velocities]");

@@ -1,10 +1,10 @@
 use sparsey::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Position(i32, i32);
+struct Position(i32, i32);
 
 #[derive(Clone, Copy, Debug)]
-pub struct Sprite {
+struct Sprite {
 	id: u32,
 }
 

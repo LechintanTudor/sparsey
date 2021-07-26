@@ -1,12 +1,12 @@
 use sparsey::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Lava {
+struct Lava {
 	height: i32,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Position(i32, i32);
+struct Position(i32, i32);
 
 fn raise_lava(mut lava: ResMut<Lava>) {
 	lava.height += 2;

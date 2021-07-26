@@ -1,10 +1,10 @@
 use sparsey::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Hp(u32);
+struct Hp(u32);
 
 #[derive(Clone, Copy, Debug)]
-pub enum Difficulty {
+enum Difficulty {
 	Easy,
 	Medium,
 	Hard,
