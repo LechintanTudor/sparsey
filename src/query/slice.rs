@@ -7,28 +7,39 @@ use crate::world;
 use std::hint::unreachable_unchecked;
 use std::ops::Range;
 
+/// Trait implemented by sliceable queries.
 pub trait SliceQuery<'a>
 where
 	Self: Sized,
 {
 	type ComponentSlices;
 
+	/// Returns a slice with all entities that match the query if the component
+	/// storages are grouped.
 	fn try_entities(self) -> Result<&'a [Entity], StoragesNotGrouped>;
 
+	/// Returns a slice with all components that match the query if the
+	/// component storages are grouped.
 	fn try_components(self) -> Result<Self::ComponentSlices, StoragesNotGrouped>;
 
+	/// Returns a tuple containing a slice with all entities and a slice with
+	/// all components that match the query if the component storages are
+	/// grouped.
 	fn try_entities_components(
 		self,
 	) -> Result<(&'a [Entity], Self::ComponentSlices), StoragesNotGrouped>;
 
+	/// Same as `try_entities` but unwraps errors.
 	fn entities(self) -> &'a [Entity] {
 		self.try_entities().unwrap()
 	}
 
+	/// Same as `try_components` but unwraps errors.
 	fn components(self) -> Self::ComponentSlices {
 		self.try_components().unwrap()
 	}
 
+	/// Same as `try_entities_components` but unwraps errors.
 	fn entities_components(self) -> (&'a [Entity], Self::ComponentSlices) {
 		self.try_entities_components().unwrap()
 	}
@@ -79,7 +90,7 @@ where
 						entities.get_unchecked(range.clone()),
 						base.slice_components(range),
 					)),
-					// Returned earlier because storages aren't grouped
+					// Unreacable because we checked earlier if the storages are grouped
 					None => unreachable_unchecked(),
 				}
 			}

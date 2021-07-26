@@ -5,9 +5,8 @@ use std::{iter, ptr};
 const PAGE_SIZE: usize = 32;
 type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
-/// Used by `ComponentStorages` to map `Entities` to dense indexes.
 #[derive(Clone, Debug, Default)]
-pub struct SparseArray {
+pub(crate) struct SparseArray {
 	pages: Vec<EntityPage>,
 }
 
@@ -74,14 +73,6 @@ impl SparseArray {
 	/// Removes `entity` from the array and returns the `index` mapped to it.
 	pub fn remove(&mut self, entity: Entity) -> Option<usize> {
 		Some(self.get_mut(entity)?.take()?.index())
-	}
-
-	/// Deletes `entity` from the array. May be faster than
-	/// `SparseArray::remove`.
-	pub fn delete(&mut self, entity: Entity) {
-		if let Some(entity) = self.get_mut(entity) {
-			*entity = None;
-		}
 	}
 
 	/// Removes all entities from the array.

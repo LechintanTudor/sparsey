@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr, slice};
 
-pub struct TypedComponentStorage<S, T>
+pub(crate) struct TypedComponentStorage<S, T>
 where
 	S: Deref<Target = ComponentStorage>,
 	T: 'static,
@@ -58,6 +58,7 @@ where
 		self.storage.get_ticks(entity)
 	}
 
+	#[allow(dead_code)]
 	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
 		self.storage
 			.get_with_ticks(entity)
@@ -132,6 +133,7 @@ where
 			.map(|(value, ticks)| unsafe { (&mut *value.cast::<T>(), ticks) })
 	}
 
+	#[allow(dead_code)]
 	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], &mut [T], &mut [ComponentTicks]) {
 		let (sparse, entities, components, ticks) = self.storage.split_mut();
 		let components = unsafe { slice::from_raw_parts_mut(components as *mut T, entities.len()) };

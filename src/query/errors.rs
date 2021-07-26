@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
+/// Error returned when trying to slice a query for with ungrouped storages.
 #[derive(Debug)]
 pub struct StoragesNotGrouped;
 

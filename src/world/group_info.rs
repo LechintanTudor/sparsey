@@ -2,12 +2,14 @@ use crate::world::{Group, GroupMask};
 use std::ops::Range;
 use std::ptr;
 
+#[doc(hidden)]
 #[derive(Copy, Clone, Debug)]
 pub enum GroupInfo<'a> {
 	Ungrouped,
 	Grouped(GroupInfoData<'a>),
 }
 
+#[doc(hidden)]
 #[derive(Copy, Clone, Debug)]
 pub struct GroupInfoData<'a> {
 	family: &'a [Group],
@@ -25,6 +27,7 @@ impl<'a> GroupInfoData<'a> {
 	}
 }
 
+#[doc(hidden)]
 #[derive(Copy, Clone, Debug)]
 pub enum CombinedGroupInfo<'a> {
 	Empty,
@@ -32,6 +35,7 @@ pub enum CombinedGroupInfo<'a> {
 	Related(CombinedGroupInfoData<'a>),
 }
 
+#[doc(hidden)]
 #[derive(Copy, Clone, Debug)]
 pub struct CombinedGroupInfoData<'a> {
 	family: &'a [Group],

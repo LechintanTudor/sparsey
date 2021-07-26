@@ -6,12 +6,15 @@ use crate::query::{
 use crate::world::GroupInfo;
 use std::marker::PhantomData;
 
+/// Query filter that matches all inputs.
 pub type PassthroughFilter = Filter<(), Passthrough>;
 
+/// Trait implemented by types which can be used as query filters.
 pub trait QueryFilter {
 	fn matches(&self, entity: Entity) -> bool;
 }
 
+/// Encapsulates a filtered component view.
 #[derive(Default)]
 pub struct Filter<C, F> {
 	pub(crate) component_view: C,
@@ -27,9 +30,11 @@ impl<C, F> Filter<C, F> {
 	}
 }
 
+/// Marker type used to create a passthrough query filter.
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Passthrough;
 
+/// Creates a passthrough query filter.
 pub const fn passthrough() -> Filter<(), Passthrough> {
 	Filter {
 		component_view: (),

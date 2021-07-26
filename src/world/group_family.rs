@@ -1,5 +1,6 @@
 pub(crate) const MAX_GROUP_FAMILIES: usize = 16;
 
+#[doc(hidden)]
 #[derive(Clone, Copy, Default, Debug)]
 pub struct UsedGroupFamilies {
 	used: [bool; MAX_GROUP_FAMILIES],

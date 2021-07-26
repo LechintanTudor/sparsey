@@ -7,6 +7,7 @@ use std::any::TypeId;
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+/// Uniquely identifies a `World` during the execution of the program.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct WorldId(NonZeroU64);
 

@@ -4,6 +4,7 @@ use crate::query::{
 };
 use crate::world::group_range;
 
+/// Type used for iterating over grouped or ungrouped component storages.
 pub enum Iter<'a, Q, I, E, F>
 where
 	Q: QueryBase<'a>,
@@ -57,6 +58,7 @@ where
 		}
 	}
 
+	/// Returns `true` if the iterator is dense.
 	pub fn is_dense(&self) -> bool {
 		match self {
 			Self::Sparse(_) => false,

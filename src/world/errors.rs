@@ -15,6 +15,7 @@ impl Display for NoSuchEntity {
 	}
 }
 
+/// Error returned when the `World` tick overflows.
 #[derive(Debug)]
 pub struct TickOverflow;
 

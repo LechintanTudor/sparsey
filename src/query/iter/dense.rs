@@ -1,6 +1,7 @@
 use crate::components::Entity;
 use crate::query::{EntityIterator, IterData, QueryBase, QueryFilter};
 
+/// Type used for iterating over grouped storages. Extremely fast!
 pub struct DenseIter<'a, Q, F>
 where
 	Q: QueryBase<'a>,
@@ -17,7 +18,11 @@ where
 	Q: QueryBase<'a>,
 	F: QueryFilter,
 {
-	pub unsafe fn new_unchecked(data: IterData<'a>, query: Q::DenseSplit, filter: F) -> Self {
+	pub(crate) unsafe fn new_unchecked(
+		data: IterData<'a>,
+		query: Q::DenseSplit,
+		filter: F,
+	) -> Self {
 		Self {
 			data,
 			index: 0,

@@ -1,10 +1,12 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::module_inception)]
 
+/// Exports functions used for filtering component views.
 pub mod filters {
 	pub use crate::query::{added, contains, maybe, mutated, updated};
 }
 
+/// Exports most commonly used items.
 pub mod prelude {
 	pub use crate::components::Entity;
 	pub use crate::layout::{Layout, LayoutGroupDescriptor};

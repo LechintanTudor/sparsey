@@ -8,6 +8,7 @@ use std::ops::Deref;
 type ComponentStorageRef<'a, T> = TypedComponentStorage<AtomicRef<'a, ComponentStorage>, T>;
 type ComponentStorageRefMut<'a, T> = TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
 
+/// Shared view over a component storage.
 pub struct Comp<'a, T>
 where
 	T: Component,
@@ -36,14 +37,17 @@ where
 		}
 	}
 
+	/// Returns all entities in the storage.
 	pub fn entities(&self) -> &[Entity] {
 		self.storage.entities()
 	}
 
+	/// Returns all components in the storage.
 	pub fn components(&self) -> &[T] {
 		self.storage.components()
 	}
 
+	/// Returns all component ticks in the storage.
 	pub fn ticks(&self) -> &[ComponentTicks] {
 		self.storage.ticks()
 	}
@@ -60,6 +64,7 @@ where
 	}
 }
 
+/// Exclusive view over a component storage.
 pub struct CompMut<'a, T>
 where
 	T: Component,
@@ -88,14 +93,17 @@ where
 		}
 	}
 
+	/// Returns all entities in the storage.
 	pub fn entities(&self) -> &[Entity] {
 		self.storage.entities()
 	}
 
+	/// Returns all components in the storage.
 	pub fn components(&self) -> &[T] {
 		self.storage.components()
 	}
 
+	/// Returns all component ticks in the storage.
 	pub fn ticks(&self) -> &[ComponentTicks] {
 		self.storage.ticks()
 	}

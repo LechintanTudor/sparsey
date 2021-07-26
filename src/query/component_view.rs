@@ -3,6 +3,7 @@ use crate::query::ComponentRefMut;
 use crate::world::{Comp, CompMut, GroupInfo};
 use std::ops::Range;
 
+/// Component view split into its parts.
 pub type SplitComponentView<'a, T> = (
 	SparseArrayView<'a>,
 	&'a [Entity],
@@ -10,6 +11,7 @@ pub type SplitComponentView<'a, T> = (
 	*mut ComponentTicks,
 );
 
+/// Trait implemented by views over component storages.
 pub unsafe trait ComponentView<'a>
 where
 	Self: Sized,
@@ -40,6 +42,7 @@ where
 	) -> Option<Self::Item>;
 }
 
+/// Trait implemented by unfiltered component views.
 pub unsafe trait UnfilteredComponentView<'a>
 where
 	Self: ComponentView<'a>,
@@ -47,6 +50,7 @@ where
 	// Empty
 }
 
+/// Trait implemented by immutable unfiltered component views.
 pub unsafe trait ImmutableUnfilteredComponentView<'a>
 where
 	Self: UnfilteredComponentView<'a>,

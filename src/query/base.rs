@@ -7,6 +7,7 @@ use crate::query::{
 use crate::world::CombinedGroupInfo;
 use std::ops::Range;
 
+/// Trait implemented by the base part of queries.
 pub unsafe trait QueryBase<'a>
 where
 	Self: Sized,
@@ -76,6 +77,7 @@ pub trait QueryBaseModifiers<'a>
 where
 	Self: Sized,
 {
+	/// Applies an include modifier to the query.
 	fn include<I>(self, include: I) -> Include<Self, I>
 	where
 		I: QueryModifier<'a>,
@@ -83,6 +85,7 @@ where
 		Include::new(self, include)
 	}
 
+	/// Applies an exclude modifier to the query.
 	fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
 	where
 		E: QueryModifier<'a>,
@@ -90,6 +93,7 @@ where
 		IncludeExclude::new(self, (), exclude)
 	}
 
+	/// Applies a filter to the query.
 	fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, (), (), F>
 	where
 		F: QueryFilter,
@@ -98,7 +102,12 @@ where
 	}
 }
 
-impl<'a, Q> QueryBaseModifiers<'a> for Q where Q: QueryBase<'a> {}
+impl<'a, Q> QueryBaseModifiers<'a> for Q
+where
+	Q: QueryBase<'a>,
+{
+	// Empty
+}
 
 unsafe impl<'a> QueryBase<'a> for () {
 	const IS_VOID: bool = true;

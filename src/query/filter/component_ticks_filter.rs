@@ -1,13 +1,16 @@
 use crate::components::{ComponentTicks, Ticks};
 use crate::query::{Filter, UnfilteredComponentView};
 
+/// Trait used for easily implementing filtered component views.
 pub trait ComponentTicksFilter {
 	fn matches(ticks: Option<&ComponentTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool;
 }
 
+#[doc(hidden)]
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Added;
 
+/// Filters the component view to only contain components which were just added.
 pub fn added<'a, C>(component_view: C) -> Filter<C, Added>
 where
 	C: UnfilteredComponentView<'a>,
@@ -27,9 +30,11 @@ impl ComponentTicksFilter for Added {
 	}
 }
 
+#[doc(hidden)]
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Mutated;
 
+/// Filters the component view to only contain components which were mutated.
 pub fn mutated<'a, C>(component_view: C) -> Filter<C, Mutated>
 where
 	C: UnfilteredComponentView<'a>,
@@ -49,9 +54,12 @@ impl ComponentTicksFilter for Mutated {
 	}
 }
 
+#[doc(hidden)]
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Updated;
 
+/// Filters the component view to only contain components which were just added
+/// or mutated.
 pub fn updated<'a, C>(component_view: C) -> Filter<C, Updated>
 where
 	C: UnfilteredComponentView<'a>,

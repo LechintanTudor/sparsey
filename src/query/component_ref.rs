@@ -1,12 +1,13 @@
 use crate::components::{Component, ComponentTicks, Ticks};
 use std::ops::{Deref, DerefMut};
 
+/// Type returned by mutable queries. Used for granular change detection.
 pub struct ComponentRefMut<'a, T>
 where
 	T: Component,
 {
-	data: &'a mut T,
-	info: &'a mut ComponentTicks,
+	component: &'a mut T,
+	ticks: &'a mut ComponentTicks,
 	world_tick: Ticks,
 }
 
@@ -14,10 +15,12 @@ impl<'a, T> ComponentRefMut<'a, T>
 where
 	T: Component,
 {
-	pub fn new(data: &'a mut T, info: &'a mut ComponentTicks, world_tick: Ticks) -> Self {
+	/// Creates a new `ComponentRefMut` which sets `ticks` to `world_tick` when
+	/// `component` is written to.
+	pub fn new(component: &'a mut T, ticks: &'a mut ComponentTicks, world_tick: Ticks) -> Self {
 		Self {
-			data,
-			info,
+			component,
+			ticks,
 			world_tick,
 		}
 	}
@@ -30,7 +33,7 @@ where
 	type Target = T;
 
 	fn deref(&self) -> &Self::Target {
-		self.data
+		self.component
 	}
 }
 
@@ -39,7 +42,7 @@ where
 	T: Component,
 {
 	fn deref_mut(&mut self) -> &mut Self::Target {
-		self.info.set_tick_mutated(self.world_tick);
-		self.data
+		self.ticks.set_tick_mutated(self.world_tick);
+		self.component
 	}
 }

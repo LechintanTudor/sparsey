@@ -1,6 +1,8 @@
 use crate::components::Entity;
 use crate::query::{Filter, QueryFilter};
 
+/// Query filter which matches inputs that are not matched by the contained
+/// filter.
 pub struct Not<F>(F);
 
 impl<F> Not<F> {
@@ -18,6 +20,7 @@ where
 	}
 }
 
+/// Query filter which matches inputs matched by both of the contained filters.
 pub struct And<F1, F2>(F1, F2);
 
 impl<F1, F2> And<F1, F2> {
@@ -36,6 +39,8 @@ where
 	}
 }
 
+/// Query filter which matches inputs matched by either of the contained
+/// filters.
 pub struct Or<F1, F2>(F1, F2);
 
 impl<F1, F2> Or<F1, F2> {

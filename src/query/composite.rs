@@ -2,6 +2,7 @@ use crate::query::{
 	passthrough, IntoQueryParts, PassthroughFilter, QueryBase, QueryFilter, QueryModifier,
 };
 
+/// Query with an include modifier.
 pub struct Include<B, I> {
 	base: B,
 	include: I,
@@ -12,6 +13,7 @@ impl<'b, B, I> Include<B, I> {
 		Self { base, include }
 	}
 
+	/// Applies an exclude modifier to the query.
 	pub fn exclude<'a, E>(self, exclude: E) -> IncludeExclude<B, I, E>
 	where
 		E: QueryModifier<'a>,
@@ -19,6 +21,7 @@ impl<'b, B, I> Include<B, I> {
 		IncludeExclude::new(self.base, self.include, exclude)
 	}
 
+	/// Applies a filter to the query.
 	pub fn filter<'a, F>(self, filter: F) -> IncludeExcludeFilter<B, I, (), F>
 	where
 		F: QueryModifier<'a>,
@@ -42,6 +45,7 @@ where
 	}
 }
 
+/// Query with an include modifier and an exclude modifier.
 pub struct IncludeExclude<B, I, E> {
 	base: B,
 	include: I,
@@ -57,6 +61,7 @@ impl<B, I, E> IncludeExclude<B, I, E> {
 		}
 	}
 
+	/// Applies a filter to the query.
 	pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<B, I, E, F>
 	where
 		F: QueryFilter,
@@ -81,6 +86,7 @@ where
 	}
 }
 
+/// Query with an include modifier, an exclude modifier and a filter.
 pub struct IncludeExcludeFilter<B, I, E, F> {
 	base: B,
 	include: I,

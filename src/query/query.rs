@@ -1,6 +1,7 @@
 use crate::components::Entity;
 use crate::query::{Iter, QueryBase, QueryFilter, QueryModifier};
 
+/// Trait implemented by queries.
 pub unsafe trait Query<'a> {
 	type Item;
 	type Iterator: Iterator<Item = Self::Item>;
@@ -12,6 +13,7 @@ pub unsafe trait Query<'a> {
 	fn iter(self) -> Self::Iterator;
 }
 
+/// Helper trait for easily implementing the `Query` trait.
 pub trait IntoQueryParts<'a> {
 	type Base: QueryBase<'a>;
 	type Include: QueryModifier<'a>;

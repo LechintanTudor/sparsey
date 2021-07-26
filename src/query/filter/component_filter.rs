@@ -4,9 +4,12 @@ use crate::query::{
 };
 use crate::world::GroupInfo;
 
+#[doc(hidden)]
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Contains;
 
+/// Creates a query filter thats checks if the component view contains a
+/// component.
 pub fn contains<'a, C>(component_view: C) -> Filter<C, Contains>
 where
 	C: ImmutableUnfilteredComponentView<'a>,
@@ -23,9 +26,11 @@ where
 	}
 }
 
+#[doc(hidden)]
 #[derive(Clone, Copy, Default, Debug)]
 pub struct Maybe;
 
+/// Creates a filtered component view which returns `Options`.
 pub fn maybe<'a, C>(component_view: C) -> Filter<C, Maybe>
 where
 	C: ComponentView<'a>,
