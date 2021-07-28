@@ -8,7 +8,7 @@ pub mod filters {
 
 /// Exports most commonly used items.
 pub mod prelude {
-	pub use crate::components::Entity;
+	pub use crate::components::{ComponentTicks, Entity};
 	pub use crate::layout::{Layout, LayoutGroupDescriptor};
 	pub use crate::query::{EntityIterator, Query, QueryBaseModifiers, SliceQuery};
 	pub use crate::resources::{Res, ResMut, Resources};

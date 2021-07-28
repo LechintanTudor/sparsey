@@ -68,14 +68,37 @@ impl World {
 	where
 		C: ComponentSet,
 	{
+		let ticks = ComponentTicks::just_added(self.tick.get());
+		self.create_with_ticks(components, ticks)
+	}
+
+	/// Same as `create`, but the `ComponentTicks` are provided by the caller.
+	pub fn create_with_ticks<C>(&mut self, components: C, ticks: ComponentTicks) -> Entity
+	where
+		C: ComponentSet,
+	{
 		let entity = self.entities.create();
-		let _ = self.insert(entity, components);
+		let _ = self.append_with_ticks(entity, components, ticks);
 		entity
 	}
 
-	/// Creates new `Entities` with the component sets yielded by
-	/// `components_iter`. Returns the newly created entities as a `slice`.
+	/// Creates new `Entities` with the components produced by
+	/// `components_iter`. Returns the newly created entities as a slice.
 	pub fn extend<C, I>(&mut self, components_iter: I) -> &[Entity]
+	where
+		C: ComponentSet,
+		I: IntoIterator<Item = C>,
+	{
+		let ticks = ComponentTicks::just_added(self.tick.get());
+		self.extend_with_ticks(components_iter, ticks)
+	}
+
+	/// Same as `extend`, but the `ComponentTicks` are provided by the caller.
+	pub fn extend_with_ticks<C, I>(
+		&mut self,
+		components_iter: I,
+		ticks: ComponentTicks,
+	) -> &[Entity]
 	where
 		C: ComponentSet,
 		I: IntoIterator<Item = C>,
@@ -85,13 +108,12 @@ impl World {
 		let families = {
 			let (mut storages, families) = C::Storages::borrow_with_families(&self.storages);
 			let entities = &mut self.entities;
-			let tick = ComponentTicks::just_added(self.tick.get());
 
 			components_iter.into_iter().for_each(|components| {
 				let entity = entities.create();
 
 				unsafe {
-					C::insert(&mut storages, entity, components, tick);
+					C::insert(&mut storages, entity, components, ticks);
 				}
 			});
 
@@ -112,7 +134,7 @@ impl World {
 	}
 
 	/// Removes `entity` and all of its `components` from the world.
-	/// Returns `true` if `entity` was contained in the world before the call.
+	/// Returns `true` if `entity` existed in the world before the call.
 	pub fn destroy(&mut self, entity: Entity) -> bool {
 		if !self.entities.destroy(entity) {
 			return false;
@@ -131,8 +153,23 @@ impl World {
 		true
 	}
 
-	/// Inserts `components` to `entity` if `entity` is contained in the world.
-	pub fn insert<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
+	/// Appends the given `components` to `entity` if `entity` exists in the
+	/// `World`.
+	pub fn append<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
+	where
+		C: ComponentSet,
+	{
+		let ticks = ComponentTicks::just_added(self.tick.get());
+		self.append_with_ticks(entity, components, ticks)
+	}
+
+	/// Same as `append`, but the `ComponentTicks` are provided by the caller.
+	pub fn append_with_ticks<C>(
+		&mut self,
+		entity: Entity,
+		components: C,
+		ticks: ComponentTicks,
+	) -> Result<(), NoSuchEntity>
 	where
 		C: ComponentSet,
 	{
@@ -142,12 +179,7 @@ impl World {
 
 		let families = unsafe {
 			let (mut storages, families) = C::Storages::borrow_with_families(&self.storages);
-			C::insert(
-				&mut storages,
-				entity,
-				components,
-				ComponentTicks::just_added(self.tick.get()),
-			);
+			C::insert(&mut storages, entity, components, ticks);
 			families
 		};
 
@@ -160,8 +192,8 @@ impl World {
 		Ok(())
 	}
 
-	/// Removes a component set from `entity` and returns them if they were all
-	/// contained in the world before the call.
+	/// Removes a component set from `entity` and returns them if they all
+	/// existed in the `World` before the call.
 	pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
 	where
 		C: ComponentSet,
@@ -184,7 +216,7 @@ impl World {
 		}
 	}
 
-	/// Deletes a component set from `entity`. This is faster than `removing`
+	/// Deletes a component set from `entity`. This is faster than removing
 	/// the components.
 	pub fn delete<C>(&mut self, entity: Entity)
 	where
@@ -208,19 +240,19 @@ impl World {
 		}
 	}
 
-	/// Returns `true` if `entity` is contained in the world.
+	/// Returns `true` if `entity` exists in the `World`.
 	pub fn contains(&self, entity: Entity) -> bool {
 		self.entities.contains(entity)
 	}
 
-	/// Removes all `entities` and `components` in the world.
+	/// Removes all entities and components in the world.
 	pub fn clear(&mut self) {
 		self.entities.clear();
 		self.storages.clear();
 	}
 
-	/// Advances the `current world tick`. Should be called after each game
-	/// update.
+	/// Advances the current world tick. Should be called after each game
+	/// update for proper change detection.
 	pub fn advance_ticks(&mut self) -> Result<(), TickOverflow> {
 		if self.tick.get() != Ticks::MAX {
 			self.tick = NonZeroTicks::new(self.tick.get() + 1).unwrap();
@@ -231,17 +263,17 @@ impl World {
 		}
 	}
 
-	/// Returns all the `entities` in the world as a `slice`.
+	/// Returns all the `entities` in the world as a slice.
 	pub fn entities(&self) -> &[Entity] {
 		self.entities.as_ref()
 	}
 
-	/// Returns the `id` which uniquely identifies this `World`.
+	/// Returns the `WorldId` which uniquely identifies this `World`.
 	pub fn id(&self) -> WorldId {
 		self.id
 	}
 
-	/// Returns the `current world tick` used for `change detection`.
+	/// Returns the current world tick used for change detection.
 	pub fn tick(&self) -> Ticks {
 		self.tick.get()
 	}

@@ -1,4 +1,4 @@
-use crate::components::Entity;
+use crate::components::{ComponentTicks, Entity};
 use crate::resources::Resources;
 use crate::world::{ComponentSet, EntityStorage, World};
 use std::cell::UnsafeCell;
@@ -25,7 +25,7 @@ impl<'a> Commands<'a> {
 		self.buffer.push(Box::new(command));
 	}
 
-	/// Queue the creation of an entity with given components and
+	/// Queue the creation of an entity with given `components` and
 	/// return the `Entity` to be created.
 	pub fn create<C>(&mut self, components: C) -> Entity
 	where
@@ -34,14 +34,28 @@ impl<'a> Commands<'a> {
 		let entity = self.entities.create_atomic();
 
 		self.run(move |world, _| {
-			let _ = world.insert(entity, components);
+			let _ = world.append(entity, components);
 		});
 
 		entity
 	}
 
-	/// Queue the creation of a set of entities with
-	/// components produced by the given iterator.
+	/// Same as `create`, but the `ComponentTicks` are provided byt the caller.
+	pub fn create_with_ticks<C>(&mut self, components: C, ticks: ComponentTicks) -> Entity
+	where
+		C: ComponentSet,
+	{
+		let entity = self.entities.create_atomic();
+
+		self.run(move |world, _| {
+			let _ = world.append_with_ticks(entity, components, ticks);
+		});
+
+		entity
+	}
+
+	/// Queue the creation of entities with components produced by the given
+	/// iterator.
 	pub fn extend<C, I>(&mut self, components_iter: I)
 	where
 		C: ComponentSet,
@@ -52,20 +66,41 @@ impl<'a> Commands<'a> {
 		});
 	}
 
-	/// Queue the destruction of the given `Entity`.
+	/// Same as `extend`, but the `ComponentTicks` are provided by the caller.
+	pub fn extend_with_ticks<C, I>(&mut self, components_iter: I, ticks: ComponentTicks)
+	where
+		C: ComponentSet,
+		I: IntoIterator<Item = C> + Send + 'static,
+	{
+		self.run(move |world, _| {
+			world.extend_with_ticks(components_iter, ticks);
+		});
+	}
+
+	/// Queue the destruction of `entity`.
 	pub fn destroy(&mut self, entity: Entity) {
 		self.run(move |world, _| {
 			world.destroy(entity);
 		});
 	}
 
-	/// Queue the inserting of a set of components to the given `Entity`.
-	pub fn insert<C>(&mut self, entity: Entity, components: C)
+	/// Queue the appending of `components` to `entity`.
+	pub fn append<C>(&mut self, entity: Entity, components: C)
 	where
 		C: ComponentSet,
 	{
 		self.run(move |world, _| {
-			let _ = world.insert(entity, components);
+			let _ = world.append(entity, components);
+		});
+	}
+
+	/// Same as `append`, but the `ComponentTIcks` are provided by the caller.
+	pub fn append_with_ticks<C>(&mut self, entity: Entity, components: C, ticks: ComponentTicks)
+	where
+		C: ComponentSet,
+	{
+		self.run(move |world, _| {
+			let _ = world.append_with_ticks(entity, components, ticks);
 		});
 	}
 
