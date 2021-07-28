@@ -58,7 +58,6 @@ where
 		self.storage.get_ticks(entity)
 	}
 
-	#[allow(dead_code)]
 	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
 		self.storage
 			.get_with_ticks(entity)

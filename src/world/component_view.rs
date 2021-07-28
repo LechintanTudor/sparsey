@@ -37,6 +37,36 @@ where
 		}
 	}
 
+	/// Returns `entity`'s component, if `entity` exists.
+	pub fn get(&self, entity: Entity) -> Option<&T> {
+		self.storage.get(entity)
+	}
+
+	/// Returns `entity`'s component ticks, if `entity` exists.
+	pub fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+		self.storage.get_ticks(entity)
+	}
+
+	/// Returns `entity`'s component and its ticks, if `entity` exists.
+	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
+		self.storage.get_with_ticks(entity)
+	}
+
+	/// Returns `true` if the view contains `entity`.
+	pub fn contains(&self, entity: Entity) -> bool {
+		self.storage.contains(entity)
+	}
+
+	/// Returns the number of components in the view.
+	pub fn len(&self) -> usize {
+		self.storage.len()
+	}
+
+	/// Returns `true` if the view is empty.
+	pub fn is_empty(&self) -> bool {
+		self.storage.is_empty()
+	}
+
 	/// Returns all entities in the storage.
 	pub fn entities(&self) -> &[Entity] {
 		self.storage.entities()
@@ -91,6 +121,36 @@ where
 			world_tick,
 			last_system_tick,
 		}
+	}
+
+	/// Returns `entity`'s component, if `entity` exists.
+	pub fn get(&self, entity: Entity) -> Option<&T> {
+		self.storage.get(entity)
+	}
+
+	/// Returns `entity`'s component ticks, if `entity` exists.
+	pub fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+		self.storage.get_ticks(entity)
+	}
+
+	/// Returns `entity`'s component and its ticks, if `entity` exists.
+	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
+		self.storage.get_with_ticks(entity)
+	}
+
+	/// Returns `true` if the view contains `entity`.
+	pub fn contains(&self, entity: Entity) -> bool {
+		self.storage.contains(entity)
+	}
+
+	/// Returns the number of components in the view.
+	pub fn len(&self) -> usize {
+		self.storage.len()
+	}
+
+	/// Returns `true` if the view is empty.
+	pub fn is_empty(&self) -> bool {
+		self.storage.is_empty()
 	}
 
 	/// Returns all entities in the storage.
