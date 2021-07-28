@@ -1,7 +1,6 @@
 use crate::components::Entity;
-use crate::query::{
-	DenseIter, EntityIterator, IterData, QueryBase, QueryFilter, QueryModifier, SparseIter,
-};
+use crate::query::{DenseIter, IterData, QueryBase, QueryFilter, QueryModifier, SparseIter};
+use crate::utils::EntityIterator;
 use crate::world::group_range;
 
 /// Type used for iterating over grouped or ungrouped component storages.

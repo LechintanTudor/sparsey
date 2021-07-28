@@ -1,7 +1,7 @@
 use crate::components::{
 	Component, ComponentStorage, ComponentTicks, Entity, TypedComponentStorage,
 };
-use crate::misc::panic_missing_comp;
+use crate::utils::panic_missing_comp;
 use crate::world::{ComponentStorages, UsedGroupFamilies};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;

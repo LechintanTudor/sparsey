@@ -1,9 +1,8 @@
 use crate::components::{
 	Component, ComponentStorage, ComponentTicks, Entity, Ticks, TypedComponentStorage,
 };
-use crate::world::GroupInfo;
+use crate::world::{ComponentAndTicksIter, ComponentIter, GroupInfo};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
-use std::ops::Deref;
 
 type ComponentStorageRef<'a, T> = TypedComponentStorage<AtomicRef<'a, ComponentStorage>, T>;
 type ComponentStorageRefMut<'a, T> = TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
@@ -81,16 +80,21 @@ where
 	pub fn ticks(&self) -> &[ComponentTicks] {
 		self.storage.ticks()
 	}
-}
 
-impl<T> Deref for Comp<'_, T>
-where
-	T: Component,
-{
-	type Target = [T];
+	/// Returns an iterator over all components in the view.
+	pub fn iter(&self) -> ComponentIter<T> {
+		unsafe { ComponentIter::new(self.storage.entities(), self.storage.components()) }
+	}
 
-	fn deref(&self) -> &Self::Target {
-		self.storage.components()
+	/// Returns an iterator over all components and component ticks in the view.
+	pub fn iter_with_ticks(&self) -> ComponentAndTicksIter<T> {
+		unsafe {
+			ComponentAndTicksIter::new(
+				self.storage.entities(),
+				self.storage.components(),
+				self.storage.ticks(),
+			)
+		}
 	}
 }
 
@@ -167,15 +171,20 @@ where
 	pub fn ticks(&self) -> &[ComponentTicks] {
 		self.storage.ticks()
 	}
-}
 
-impl<T> Deref for CompMut<'_, T>
-where
-	T: Component,
-{
-	type Target = [T];
+	/// Returns an iterator over all components in the view.
+	pub fn iter(&self) -> ComponentIter<T> {
+		unsafe { ComponentIter::new(self.storage.entities(), self.storage.components()) }
+	}
 
-	fn deref(&self) -> &Self::Target {
-		self.storage.components()
+	/// Returns an iterator over all components and component ticks in the view.
+	pub fn iter_with_ticks(&self) -> ComponentAndTicksIter<T> {
+		unsafe {
+			ComponentAndTicksIter::new(
+				self.storage.entities(),
+				self.storage.components(),
+				self.storage.ticks(),
+			)
+		}
 	}
 }

@@ -1,5 +1,6 @@
 use crate::components::Entity;
-use crate::query::{EntityIterator, IterData, QueryBase, QueryFilter};
+use crate::query::{IterData, QueryBase, QueryFilter};
+use crate::utils::EntityIterator;
 
 /// Type used for iterating over grouped storages. Extremely fast!
 pub struct DenseIter<'a, Q, F>

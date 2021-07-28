@@ -10,11 +10,12 @@ pub mod filters {
 pub mod prelude {
 	pub use crate::components::{ComponentTicks, Entity};
 	pub use crate::layout::{Layout, LayoutGroupDescriptor};
-	pub use crate::query::{EntityIterator, Query, QueryBaseModifiers, SliceQuery};
+	pub use crate::query::{Query, QueryBaseModifiers, SliceQuery};
 	pub use crate::resources::{Res, ResMut, Resources};
 	pub use crate::systems::{
 		Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,
 	};
+	pub use crate::utils::EntityIterator;
 	pub use crate::world::{Comp, CompMut, World};
 }
 
@@ -23,12 +24,13 @@ pub use self::layout::*;
 pub use self::query::*;
 pub use self::resources::*;
 pub use self::systems::*;
+pub use self::utils::*;
 pub use self::world::*;
 
 mod components;
 mod layout;
-mod misc;
 mod query;
 mod resources;
 mod systems;
+mod utils;
 mod world;

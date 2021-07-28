@@ -1,3 +1,4 @@
+pub use self::component_iter::*;
 pub use self::component_set::*;
 pub use self::component_storages::*;
 pub use self::component_view::*;
@@ -11,6 +12,7 @@ pub(crate) use self::group_mask::*;
 pub(crate) use self::grouped_component_storages::*;
 pub(crate) use self::ungrouped_component_storages::*;
 
+mod component_iter;
 mod component_set;
 mod component_storages;
 mod component_view;

@@ -1,5 +1,6 @@
 use crate::components::Entity;
-use crate::query::{EntityIterator, IterData, QueryBase, QueryFilter, QueryModifier};
+use crate::query::{IterData, QueryBase, QueryFilter, QueryModifier};
+use crate::utils::EntityIterator;
 
 /// Type used for iterating over ungrouped component storages.
 pub struct SparseIter<'a, Q, I, E, F>
