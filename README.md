@@ -1,6 +1,5 @@
 # Sparsey
 Sparsey is a sparse set based Entity Component System with lots of features and nice syntax! \~( ˘▾˘\~)
-<br/>
 
 # Example 
 ```rust
@@ -55,7 +54,6 @@ fn main() {
     }
 }
 ```
-<br/>
 
 # Features
 ## Systems
@@ -68,18 +66,16 @@ fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>, delta: Res<Delta>) 
     }
 }
 ```
-<br/>
 
-Fallible systems may return a SystemResult to signal success or failure.
+Fallible systems may return a SystemResult to signal failure.
 ```rust
-fn save_components(a: Comp<A>, b: Comp<B>, c: Comp<C>) -> SystemResult {
-    for (a, b, c) in (&a, &b, &c).iter() {
-        try_save_components(a, b, c)?;
+fn save_entities(a: Comp<A>, b: Comp<B>, c: Comp<C>) -> SystemResult {
+    for (entity, (a, b, c)) in (&a, &b, &c).iter().entities() {
+        try_save_entity(entity, a, b, c)?;
     }
     Ok(())
 }
 ```
-<br/>
 
 Systems are executed using a Dispatcher. 
 Errors can be retrieved after the systems finish executing.
@@ -95,7 +91,6 @@ if let Err(run_error) = dispatcher.run_seq(&mut world, &mut resources) {
     }
 }
 ```
-<br/>
 
 ## Expressive Queries
 Queries can be used to iterate entities and components.
@@ -104,7 +99,7 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     // Fetch A, B and C from all entities which have A, B and C.
     for (a, b, c) in (&a, &b, &c).iter() {}
 
-    // To get the entity to which the components belong use entities().
+    // To get the entity to which the components belong use `entities`.
     for (entity, (a, b, c)) in (&a, &b, &c).iter().entities() {}
 
     // Fetch A from all entities which have A, B and C.
@@ -114,7 +109,6 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a,) in (&a,).include(&b).exclude(&c).iter() {}
 }
 ```
-<br/>
 
 ## Granular Change Detection
 Sparsey supports change detection at a component level.
@@ -131,16 +125,16 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     // Restrict query to match only entities to which A was just added or mutated.
     for (a, b, c) in (updated(&a), &b, &c).iter() {}
 
-    // The opposite effect can be achieved by using the Not operator.
+    // The opposite effect can be achieved by using the `Not` operator.
     // Restrict query to match only entities to which A was not just added.
     for (a, b, c) in (!added(&a), &b, &c).iter() {}
 }
 ```
-<br/>
 
-## Groups and Layouts.
-Layouts can be used to group component storages withing a World.
-Grouped storages are much faster to iterate over, the downside being
+## Groups and Layouts
+Layouts can be used to group component storages within a World.
+Grouped storages are much faster to iterate over and allow accessing
+their components and entities as ordered slices, the downside being
 a small performance penalty when inserting or removing components.
 ```rust
 let layout = Layout::builder()
@@ -148,9 +142,9 @@ let layout = Layout::builder()
     .add_group(<(A, B, C)>::group())
     .build();
 
-let mut world = World::with_layout(&layout);
+let mut world = World::default();
+world.set_layout(&layout);
 ```
-<br/>
 
 All iterations bellow get a significant performance boost without having to change
 the code at all.
@@ -169,9 +163,8 @@ fn iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a,) in (&a,).include(&b).exclude(&c).iter() {}
 }
 ```
-<br/>
 
-Groups allow accessing their components as ordered slices.
+Groups allow accessing their components and entities as ordered slices.
 ```rust
 fn slices(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     // Get all entities with A and B as a slice.
