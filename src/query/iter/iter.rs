@@ -1,7 +1,7 @@
 use crate::components::Entity;
+use crate::group::group_range;
 use crate::query::{DenseIter, IterData, QueryBase, QueryFilter, QueryModifier, SparseIter};
 use crate::utils::EntityIterator;
-use crate::world::group_range;
 
 /// Type used for iterating over grouped or ungrouped component storages.
 pub enum Iter<'a, Q, I, E, F>

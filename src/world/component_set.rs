@@ -1,8 +1,9 @@
 use crate::components::{
 	Component, ComponentStorage, ComponentTicks, Entity, TypedComponentStorage,
 };
+use crate::group::GroupFamilyIndexes;
 use crate::utils::panic_missing_comp;
-use crate::world::{ComponentStorages, UsedGroupFamilies};
+use crate::world::ComponentStorages;
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -50,11 +51,11 @@ pub trait BorrowStorages<'a> {
 
 	fn borrow(components: &'a ComponentStorages) -> Self::StorageSet;
 
-	fn families(components: &'a ComponentStorages) -> UsedGroupFamilies;
+	fn families(components: &'a ComponentStorages) -> GroupFamilyIndexes;
 
 	fn borrow_with_families(
 		components: &'a ComponentStorages,
-	) -> (Self::StorageSet, UsedGroupFamilies);
+	) -> (Self::StorageSet, GroupFamilyIndexes);
 }
 
 /// Struct used to borrow component storages. Implements `BorrowStorages` for
@@ -119,8 +120,8 @@ macro_rules! impl_component_set {
 
             #[allow(unused_mut)]
             #[allow(unused_variables)]
-            fn borrow_with_families(components: &'a ComponentStorages) -> (Self::StorageSet, UsedGroupFamilies) {
-                let mut families = UsedGroupFamilies::default();
+            fn borrow_with_families(components: &'a ComponentStorages) -> (Self::StorageSet, GroupFamilyIndexes) {
+                let mut families = GroupFamilyIndexes::default();
                 (($(borrow_with_family::<$comp>(components, &mut families),)*), families)
             }
 
@@ -131,8 +132,8 @@ macro_rules! impl_component_set {
 
             #[allow(unused_mut)]
             #[allow(unused_variables)]
-            fn families(components: &'a ComponentStorages) -> UsedGroupFamilies {
-                let mut families = UsedGroupFamilies::default();
+            fn families(components: &'a ComponentStorages) -> GroupFamilyIndexes {
+                let mut families = GroupFamilyIndexes::default();
                 $(update_used_group_families::<$comp>(&mut families, components);)*
                 families
             }
@@ -142,7 +143,7 @@ macro_rules! impl_component_set {
 
 fn borrow_with_family<'a, T>(
 	components: &'a ComponentStorages,
-	families: &mut UsedGroupFamilies,
+	families: &mut GroupFamilyIndexes,
 ) -> BorrowedComponentStorage<'a, T>
 where
 	T: Component,
@@ -168,7 +169,7 @@ where
 		.unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
-fn update_used_group_families<T>(families: &mut UsedGroupFamilies, components: &ComponentStorages)
+fn update_used_group_families<T>(families: &mut GroupFamilyIndexes, components: &ComponentStorages)
 where
 	T: Component,
 {

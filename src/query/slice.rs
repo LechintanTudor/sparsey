@@ -1,9 +1,9 @@
 use crate::components::Entity;
+use crate::group;
 use crate::query::{
 	IntoQueryParts, PassthroughFilter, QueryBase, QueryModifier, SliceableQueryBase,
 	StoragesNotGrouped,
 };
-use crate::world;
 use std::hint::unreachable_unchecked;
 use std::ops::Range;
 
@@ -108,7 +108,7 @@ where
 	I: QueryModifier<'a>,
 	E: QueryModifier<'a>,
 {
-	world::group_range(
+	group::group_range(
 		base.group_info(),
 		include.group_info(),
 		exclude.group_info(),

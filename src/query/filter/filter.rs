@@ -1,9 +1,9 @@
 use crate::components::{ComponentTicks, Entity, Ticks};
+use crate::group::GroupInfo;
 use crate::query::{
 	ComponentTicksFilter, ComponentView, ImmutableUnfilteredComponentView, SplitComponentView,
 	UnfilteredComponentView,
 };
-use crate::world::GroupInfo;
 use std::marker::PhantomData;
 
 /// Query filter that matches all inputs.

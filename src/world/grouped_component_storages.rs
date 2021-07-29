@@ -1,6 +1,6 @@
 use crate::components::{ComponentStorage, Entity};
+use crate::group::{Group, GroupInfoData};
 use crate::layout::Layout;
-use crate::world::{GroupInfoData, GroupMask};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
@@ -52,7 +52,7 @@ impl GroupedComponentStorages {
 					storages.push(AtomicRefCell::new(storage));
 				}
 
-				groups.push(Group::new(arity, prev_arity));
+				groups.push(Group::new(prev_arity, arity));
 				prev_arity = arity;
 			}
 
@@ -83,7 +83,7 @@ impl GroupedComponentStorages {
 
 		for group in groups.iter_mut() {
 			let status = get_group_status(
-				storages.get_unchecked_mut(prev_arity..group.arity),
+				storages.get_unchecked_mut(prev_arity..group.arity()),
 				group.len,
 				entity,
 			);
@@ -92,7 +92,7 @@ impl GroupedComponentStorages {
 				GroupStatus::Grouped => (),
 				GroupStatus::Ungrouped => {
 					group_components(
-						storages.get_unchecked_mut(..group.arity),
+						storages.get_unchecked_mut(..group.arity()),
 						&mut group.len,
 						entity,
 					);
@@ -100,7 +100,7 @@ impl GroupedComponentStorages {
 				GroupStatus::MissingComponents => break,
 			}
 
-			prev_arity = group.arity;
+			prev_arity = group.arity();
 		}
 	}
 
@@ -116,7 +116,7 @@ impl GroupedComponentStorages {
 
 		for (i, group) in groups.iter_mut().enumerate() {
 			let status = get_group_status(
-				storages.get_unchecked_mut(prev_arity..group.arity),
+				storages.get_unchecked_mut(prev_arity..group.arity()),
 				group.len,
 				entity,
 			);
@@ -133,14 +133,14 @@ impl GroupedComponentStorages {
 				GroupStatus::MissingComponents => break,
 			}
 
-			prev_arity = group.arity;
+			prev_arity = group.arity();
 		}
 
 		let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
 		for group in groups.get_unchecked_mut(ungroup_range).iter_mut().rev() {
 			ungroup_components(
-				storages.get_unchecked_mut(..group.arity),
+				storages.get_unchecked_mut(..group.arity()),
 				&mut group.len,
 				entity,
 			);
@@ -255,37 +255,6 @@ impl GroupedComponentStorages {
 		self.families
 			.iter_mut()
 			.flat_map(|group| group.storages.iter_mut().map(|storage| storage.get_mut()))
-	}
-}
-
-#[derive(Copy, Clone, Debug)]
-pub(crate) struct Group {
-	arity: usize,
-	include_mask: GroupMask,
-	exclude_mask: GroupMask,
-	len: usize,
-}
-
-impl Group {
-	fn new(arity: usize, prev_arity: usize) -> Self {
-		Self {
-			arity,
-			include_mask: GroupMask::new_include_group(arity),
-			exclude_mask: GroupMask::new_exclude_group(arity, prev_arity),
-			len: 0,
-		}
-	}
-
-	pub fn include_mask(&self) -> GroupMask {
-		self.include_mask
-	}
-
-	pub fn exclude_mask(&self) -> GroupMask {
-		self.exclude_mask
-	}
-
-	pub fn len(&self) -> usize {
-		self.len
 	}
 }
 

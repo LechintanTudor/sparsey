@@ -1,6 +1,7 @@
 use crate::components::{Component, ComponentStorage, Entity};
+use crate::group::GroupInfo;
 use crate::layout::Layout;
-use crate::world::{GroupInfo, GroupedComponentStorages, UngroupedComponentStorages};
+use crate::world::{GroupedComponentStorages, UngroupedComponentStorages};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;

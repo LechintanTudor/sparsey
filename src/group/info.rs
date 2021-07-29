@@ -1,4 +1,4 @@
-use crate::world::{Group, GroupMask};
+use crate::group::{Group, GroupMask};
 use std::ops::Range;
 use std::ptr;
 

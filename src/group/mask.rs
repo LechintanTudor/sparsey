@@ -25,7 +25,7 @@ impl GroupMask {
 		}
 	}
 
-	pub const fn new_exclude_group(arity: usize, prev_arity: usize) -> Self {
+	pub const fn new_exclude_group(prev_arity: usize, arity: usize) -> Self {
 		if prev_arity != 0 {
 			let exclude_count = arity - prev_arity;
 
