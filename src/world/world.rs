@@ -1,7 +1,9 @@
 use crate::components::{Component, ComponentStorage, ComponentTicks, Entity, NonZeroTicks, Ticks};
 use crate::layout::Layout;
+use crate::utils::{panic_missing_comp, FetchFrom};
 use crate::world::{
-	BorrowStorages, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity, TickOverflow,
+	BorrowStorages, Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity,
+	TickOverflow,
 };
 use std::any::TypeId;
 use std::num::NonZeroU64;
@@ -278,6 +280,13 @@ impl World {
 		self.tick.get()
 	}
 
+	pub fn fetch<'a, T>(&'a self) -> T::Item
+	where
+		T: FetchFrom<'a, Self>,
+	{
+		T::fetch(self, self.tick.get(), self.tick.get() - 1)
+	}
+
 	pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
 		self.storages.register_storage(component, storage);
 	}
@@ -292,5 +301,37 @@ impl World {
 
 	pub(crate) fn maintain(&mut self) {
 		self.entities.maintain();
+	}
+}
+
+impl<'a, 'b, T> FetchFrom<'a, World> for Comp<'b, T>
+where
+	T: Component,
+{
+	type Item = Comp<'a, T>;
+
+	fn fetch(world: &'a World, world_tick: Ticks, change_tick: Ticks) -> Self::Item {
+		let (storage, info) = world
+			.storages
+			.borrow_with_info(&TypeId::of::<T>())
+			.unwrap_or_else(|| panic_missing_comp::<T>());
+
+		unsafe { Comp::new(storage, info, world_tick, change_tick) }
+	}
+}
+
+impl<'a, 'b, T> FetchFrom<'a, World> for CompMut<'b, T>
+where
+	T: Component,
+{
+	type Item = CompMut<'a, T>;
+
+	fn fetch(world: &'a World, world_tick: Ticks, change_tick: Ticks) -> Self::Item {
+		let (storage, info) = world
+			.storages
+			.borrow_with_info_mut(&TypeId::of::<T>())
+			.unwrap_or_else(|| panic_missing_comp::<T>());
+
+		unsafe { CompMut::new(storage, info, world_tick, change_tick) }
 	}
 }

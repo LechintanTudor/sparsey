@@ -1,6 +1,7 @@
-use crate::components::{Comp, CompMut, Component, ComponentTicks, Entity, SparseArrayView, Ticks};
+use crate::components::{Component, ComponentTicks, Entity, SparseArrayView, Ticks};
 use crate::group::GroupInfo;
 use crate::query::ComponentRefMut;
+use crate::world::{Comp, CompMut};
 use std::ops::Range;
 
 /// Component view split into its parts.
