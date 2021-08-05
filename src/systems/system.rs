@@ -163,7 +163,7 @@ macro_rules! impl_into_system {
         where
             Func:
                 FnMut($($param),*) +
-                FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) +
+                FnMut($(<$param as BorrowRegistry>::Item),*) +
                 'static,
             $($param: LocalSystemParam,)*
         {
@@ -172,11 +172,11 @@ macro_rules! impl_into_system {
             fn local_system(mut self) -> LocalSystem {
                 LocalSystem {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param::Borrow as BorrowRegistry>::borrow(&registry)),*);
+                        self($(<$param as BorrowRegistry>::borrow(&registry)),*);
                         Ok(())
                     }),
                     accesses: vec![
-                        $(<$param::Borrow as BorrowRegistry>::access()),*
+                        $(<$param as BorrowRegistry>::access()),*
                     ],
                 }
             }
@@ -186,7 +186,7 @@ macro_rules! impl_into_system {
         where
             Func:
                 FnMut($($param),*) -> SystemResult +
-                FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) -> SystemResult +
+                FnMut($(<$param as BorrowRegistry>::Item),*) -> SystemResult +
                 'static,
             $($param: LocalSystemParam,)*
         {
@@ -195,10 +195,10 @@ macro_rules! impl_into_system {
             fn local_system(mut self) -> LocalSystem {
                 LocalSystem {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param::Borrow as BorrowRegistry>::borrow(&registry)),*)
+                        self($(<$param as BorrowRegistry>::borrow(&registry)),*)
                     }),
                     accesses: vec![
-                        $(<$param::Borrow as BorrowRegistry>::access()),*
+                        $(<$param as BorrowRegistry>::access()),*
                     ],
                 }
             }
@@ -208,7 +208,7 @@ macro_rules! impl_into_system {
         where
             Func:
                 FnMut($($param),*) +
-                FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) +
+                FnMut($(<$param as BorrowRegistry>::Item),*) +
                 Send + 'static,
             $($param: SystemParam,)*
         {
@@ -217,11 +217,11 @@ macro_rules! impl_into_system {
             fn system(mut self) -> System {
                 System {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param::Borrow as BorrowRegistry>::borrow(&registry)),*);
+                        self($(<$param as BorrowRegistry>::borrow(&registry)),*);
                         Ok(())
                     }),
                     accesses: vec![
-                        $(<$param::Borrow as BorrowRegistry>::access()),*
+                        $(<$param as BorrowRegistry>::access()),*
                     ],
                 }
             }
@@ -231,7 +231,7 @@ macro_rules! impl_into_system {
         where
             Func:
                 FnMut($($param),*) -> SystemResult +
-                FnMut($(<$param::Borrow as BorrowRegistry>::Item),*) -> SystemResult +
+                FnMut($(<$param as BorrowRegistry>::Item),*) -> SystemResult +
                 Send + 'static,
             $($param: SystemParam,)*
         {
@@ -240,10 +240,10 @@ macro_rules! impl_into_system {
             fn system(mut self) -> System {
                 System {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param::Borrow as BorrowRegistry>::borrow(&registry)),*)
+                        self($(<$param as BorrowRegistry>::borrow(&registry)),*)
                     }),
                     accesses: vec![
-                        $(<$param::Borrow as BorrowRegistry>::access()),*
+                        $(<$param as BorrowRegistry>::access()),*
                     ],
                 }
             }

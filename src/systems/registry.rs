@@ -5,7 +5,6 @@ use crate::systems::{CommandBuffers, Commands};
 use crate::utils::{panic_missing_comp, panic_missing_res, Ticks};
 use crate::world::{Comp, CompMut, World};
 use std::any::TypeId;
-use std::marker::PhantomData;
 
 /// Represents the type of data which can be accessed by a `System`.
 /// Get a command buffer for queueing commands.
@@ -75,10 +74,7 @@ pub unsafe trait BorrowRegistry<'a> {
 	unsafe fn borrow(registry: &'a Registry) -> Self::Item;
 }
 
-/// Type used to get a command buffer for queueing commands.
-pub struct BorrowCommands;
-
-unsafe impl<'a> BorrowRegistry<'a> for BorrowCommands {
+unsafe impl<'a, 'b> BorrowRegistry<'a> for Commands<'b> {
 	type Item = Commands<'a>;
 
 	fn access() -> RegistryAccess {
@@ -93,10 +89,7 @@ unsafe impl<'a> BorrowRegistry<'a> for BorrowCommands {
 	}
 }
 
-/// Type used to get a shared view over a set of components from the `World`.
-pub struct BorrowComp<T>(PhantomData<*const T>);
-
-unsafe impl<'a, T> BorrowRegistry<'a> for BorrowComp<T>
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Comp<'b, T>
 where
 	T: Component,
 {
@@ -122,11 +115,7 @@ where
 	}
 }
 
-/// Type used to get an exclusive view over a set of components from the
-/// `World`.
-pub struct BorrowCompMut<T>(PhantomData<*const T>);
-
-unsafe impl<'a, T> BorrowRegistry<'a> for BorrowCompMut<T>
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for CompMut<'b, T>
 where
 	T: Component,
 {
@@ -152,10 +141,7 @@ where
 	}
 }
 
-/// Type used to get a shared view over a resource from `Resources`.
-pub struct BorrowRes<T>(PhantomData<*const T>);
-
-unsafe impl<'a, T> BorrowRegistry<'a> for BorrowRes<T>
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Res<'b, T>
 where
 	T: Resource,
 {
@@ -173,10 +159,7 @@ where
 	}
 }
 
-/// Type used to get an exclusive view over a resource from `Resources`.
-pub struct BorrowResMut<T>(PhantomData<*const T>);
-
-unsafe impl<'a, T> BorrowRegistry<'a> for BorrowResMut<T>
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for ResMut<'b, T>
 where
 	T: Resource,
 {
