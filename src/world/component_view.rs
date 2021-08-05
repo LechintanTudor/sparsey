@@ -1,7 +1,6 @@
-use crate::components::{
-	Component, ComponentStorage, ComponentTicks, Entity, Ticks, TypedComponentStorage,
-};
+use crate::components::{Component, ComponentStorage, Entity, TypedComponentStorage};
 use crate::group::GroupInfo;
+use crate::utils::{ChangeTicks, Ticks};
 use crate::world::{ComponentAndTicksIter, ComponentIter};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 
@@ -43,12 +42,12 @@ where
 	}
 
 	/// Returns `entity`'s component ticks, if `entity` exists.
-	pub fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+	pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		self.storage.get_ticks(entity)
 	}
 
 	/// Returns `entity`'s component and its ticks, if `entity` exists.
-	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
+	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
 		self.storage.get_with_ticks(entity)
 	}
 
@@ -78,7 +77,7 @@ where
 	}
 
 	/// Returns all component ticks in the storage.
-	pub fn ticks(&self) -> &[ComponentTicks] {
+	pub fn ticks(&self) -> &[ChangeTicks] {
 		self.storage.ticks()
 	}
 
@@ -134,12 +133,12 @@ where
 	}
 
 	/// Returns `entity`'s component ticks, if `entity` exists.
-	pub fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+	pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		self.storage.get_ticks(entity)
 	}
 
 	/// Returns `entity`'s component and its ticks, if `entity` exists.
-	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ComponentTicks)> {
+	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
 		self.storage.get_with_ticks(entity)
 	}
 
@@ -169,7 +168,7 @@ where
 	}
 
 	/// Returns all component ticks in the storage.
-	pub fn ticks(&self) -> &[ComponentTicks] {
+	pub fn ticks(&self) -> &[ChangeTicks] {
 		self.storage.ticks()
 	}
 

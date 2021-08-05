@@ -1,9 +1,10 @@
-use crate::components::{ComponentTicks, Entity, Ticks};
+use crate::components::Entity;
 use crate::group::GroupInfo;
 use crate::query::{
 	ComponentTicksFilter, ComponentView, ImmutableUnfilteredComponentView, SplitComponentView,
 	UnfilteredComponentView,
 };
+use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
 
 /// Query filter that matches all inputs.
@@ -84,7 +85,7 @@ where
 		}
 	}
 
-	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+	fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		self.component_view.get_ticks(entity)
 	}
 
@@ -114,7 +115,7 @@ where
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
-		ticks: *mut ComponentTicks,
+		ticks: *mut ChangeTicks,
 		index: usize,
 		world_tick: Ticks,
 		last_system_tick: Ticks,

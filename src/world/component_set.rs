@@ -1,8 +1,6 @@
-use crate::components::{
-	Component, ComponentStorage, ComponentTicks, Entity, TypedComponentStorage,
-};
+use crate::components::{Component, ComponentStorage, Entity, TypedComponentStorage};
 use crate::group::GroupFamilyIndexes;
-use crate::utils::panic_missing_comp;
+use crate::utils::{panic_missing_comp, ChangeTicks};
 use crate::world::ComponentStorages;
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
@@ -29,7 +27,7 @@ where
 		storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
 		entity: Entity,
 		components: Self,
-		tickss: ComponentTicks,
+		tickss: ChangeTicks,
 	);
 
 	/// Remove components from the borrowed storages and return them if they
@@ -80,7 +78,7 @@ macro_rules! impl_component_set {
                 storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
                 entity: Entity,
                 components: Self,
-                ticks: ComponentTicks,
+                ticks: ChangeTicks,
             ) {
                 $(
                     storages.$idx.0.insert(entity, components.$idx, ticks);

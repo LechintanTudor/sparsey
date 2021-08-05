@@ -5,13 +5,13 @@ pub type NonZeroTicks = NonZeroU32;
 
 /// Holds the ticks in which a component was added and last mutated.
 #[derive(Copy, Clone, Eq, PartialEq, Default, Debug)]
-pub struct ComponentTicks {
+pub struct ChangeTicks {
 	tick_added: Ticks,
 	tick_mutated: Ticks,
 }
 
-impl ComponentTicks {
-	/// Creates a new `ComponentTicks` object with the given ticks.
+impl ChangeTicks {
+	/// Creates a new `ChangeTicks` object with the given ticks.
 	pub const fn new(tick_added: Ticks, tick_mutated: Ticks) -> Self {
 		Self {
 			tick_added,
@@ -19,7 +19,7 @@ impl ComponentTicks {
 		}
 	}
 
-	/// Creates a new `ComponentTicks` object for components which were just
+	/// Creates a new `ChangeTicks` object for components which were just
 	/// added.
 	pub const fn just_added(tick_added: Ticks) -> Self {
 		Self {

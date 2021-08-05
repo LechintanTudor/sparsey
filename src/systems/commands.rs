@@ -1,5 +1,6 @@
-use crate::components::{ComponentTicks, Entity};
+use crate::components::Entity;
 use crate::resources::Resources;
+use crate::utils::ChangeTicks;
 use crate::world::{ComponentSet, EntityStorage, World};
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -40,8 +41,8 @@ impl<'a> Commands<'a> {
 		entity
 	}
 
-	/// Same as `create`, but the `ComponentTicks` are provided byt the caller.
-	pub fn create_with_ticks<C>(&mut self, components: C, ticks: ComponentTicks) -> Entity
+	/// Same as `create`, but the `ChangeTicks` are provided byt the caller.
+	pub fn create_with_ticks<C>(&mut self, components: C, ticks: ChangeTicks) -> Entity
 	where
 		C: ComponentSet,
 	{
@@ -66,8 +67,8 @@ impl<'a> Commands<'a> {
 		});
 	}
 
-	/// Same as `extend`, but the `ComponentTicks` are provided by the caller.
-	pub fn extend_with_ticks<C, I>(&mut self, components_iter: I, ticks: ComponentTicks)
+	/// Same as `extend`, but the `ChangeTicks` are provided by the caller.
+	pub fn extend_with_ticks<C, I>(&mut self, components_iter: I, ticks: ChangeTicks)
 	where
 		C: ComponentSet,
 		I: IntoIterator<Item = C> + Send + 'static,
@@ -94,8 +95,8 @@ impl<'a> Commands<'a> {
 		});
 	}
 
-	/// Same as `append`, but the `ComponentTIcks` are provided by the caller.
-	pub fn append_with_ticks<C>(&mut self, entity: Entity, components: C, ticks: ComponentTicks)
+	/// Same as `append`, but the `ChangeTicks` are provided by the caller.
+	pub fn append_with_ticks<C>(&mut self, entity: Entity, components: C, ticks: ChangeTicks)
 	where
 		C: ComponentSet,
 	{

@@ -8,14 +8,14 @@ pub mod filters {
 
 /// Exports most commonly used items.
 pub mod prelude {
-	pub use crate::components::{ComponentTicks, Entity};
+	pub use crate::components::Entity;
 	pub use crate::layout::{Layout, LayoutGroupDescriptor};
 	pub use crate::query::{Query, QueryBaseModifiers, SliceQuery};
 	pub use crate::resources::{Res, ResMut, Resources};
 	pub use crate::systems::{
 		Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,
 	};
-	pub use crate::utils::EntityIterator;
+	pub use crate::utils::{ChangeTicks, EntityIterator};
 	pub use crate::world::{Comp, CompMut, World};
 }
 
@@ -36,3 +36,24 @@ mod resources;
 mod systems;
 mod utils;
 mod world;
+
+/*
+Commands
+Res/ResMut
+Comp/CompMut
+
+ComponentStorages
+	GroupedComponentStorages
+	UngroupedComponentStorages
+
+Resources
+
+World
+	EntityStorage
+	ComponentStorages
+	Resources
+
+	world.create_entity_with_ticks((Position, Velocity), ChangeTicks::just_added(0));
+	world.append_components(entity, (Immovable,))
+	world.destroy_entity(entity)
+*/

@@ -1,8 +1,9 @@
-use crate::components::{ComponentTicks, Entity, Ticks};
+use crate::components::Entity;
 use crate::group::GroupInfo;
 use crate::query::{
 	ComponentView, Filter, ImmutableUnfilteredComponentView, QueryFilter, SplitComponentView,
 };
+use crate::utils::{ChangeTicks, Ticks};
 
 #[doc(hidden)]
 #[derive(Clone, Copy, Default, Debug)]
@@ -49,7 +50,7 @@ where
 		Some(self.component_view.get(entity))
 	}
 
-	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+	fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		self.component_view.get_ticks(entity)
 	}
 
@@ -75,7 +76,7 @@ where
 
 	unsafe fn get_from_parts(
 		data: *mut Self::Component,
-		ticks: *mut ComponentTicks,
+		ticks: *mut ChangeTicks,
 		index: usize,
 		world_tick: Ticks,
 		last_system_tick: Ticks,

@@ -1,6 +1,6 @@
-use crate::components::{Component, ComponentStorage, ComponentTicks, Entity, NonZeroTicks, Ticks};
+use crate::components::{Component, ComponentStorage, Entity};
 use crate::layout::Layout;
-use crate::utils::{panic_missing_comp, FetchFrom};
+use crate::utils::{panic_missing_comp, ChangeTicks, FetchFrom, NonZeroTicks, Ticks};
 use crate::world::{
 	BorrowStorages, Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity,
 	TickOverflow,
@@ -70,12 +70,12 @@ impl World {
 	where
 		C: ComponentSet,
 	{
-		let ticks = ComponentTicks::just_added(self.tick.get());
+		let ticks = ChangeTicks::just_added(self.tick.get());
 		self.create_with_ticks(components, ticks)
 	}
 
-	/// Same as `create`, but the `ComponentTicks` are provided by the caller.
-	pub fn create_with_ticks<C>(&mut self, components: C, ticks: ComponentTicks) -> Entity
+	/// Same as `create`, but the `ChangeTicks` are provided by the caller.
+	pub fn create_with_ticks<C>(&mut self, components: C, ticks: ChangeTicks) -> Entity
 	where
 		C: ComponentSet,
 	{
@@ -91,16 +91,12 @@ impl World {
 		C: ComponentSet,
 		I: IntoIterator<Item = C>,
 	{
-		let ticks = ComponentTicks::just_added(self.tick.get());
+		let ticks = ChangeTicks::just_added(self.tick.get());
 		self.extend_with_ticks(components_iter, ticks)
 	}
 
-	/// Same as `extend`, but the `ComponentTicks` are provided by the caller.
-	pub fn extend_with_ticks<C, I>(
-		&mut self,
-		components_iter: I,
-		ticks: ComponentTicks,
-	) -> &[Entity]
+	/// Same as `extend`, but the `ChangeTicks` are provided by the caller.
+	pub fn extend_with_ticks<C, I>(&mut self, components_iter: I, ticks: ChangeTicks) -> &[Entity]
 	where
 		C: ComponentSet,
 		I: IntoIterator<Item = C>,
@@ -161,16 +157,16 @@ impl World {
 	where
 		C: ComponentSet,
 	{
-		let ticks = ComponentTicks::just_added(self.tick.get());
+		let ticks = ChangeTicks::just_added(self.tick.get());
 		self.append_with_ticks(entity, components, ticks)
 	}
 
-	/// Same as `append`, but the `ComponentTicks` are provided by the caller.
+	/// Same as `append`, but the `ChangeTicks` are provided by the caller.
 	pub fn append_with_ticks<C>(
 		&mut self,
 		entity: Entity,
 		components: C,
-		ticks: ComponentTicks,
+		ticks: ChangeTicks,
 	) -> Result<(), NoSuchEntity>
 	where
 		C: ComponentSet,

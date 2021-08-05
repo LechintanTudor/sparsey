@@ -1,9 +1,9 @@
-use crate::components::Ticks;
 use crate::resources::Resources;
 use crate::systems::{
 	CommandBuffers, LocalFn, LocalSystem, LocallyRunnable, Registry, RegistryAccess, RunError,
 	RunResult, System, SystemError,
 };
+use crate::utils::Ticks;
 use crate::world::{World, WorldId};
 use rustc_hash::FxHashMap;
 use std::mem;

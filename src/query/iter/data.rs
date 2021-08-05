@@ -1,4 +1,5 @@
-use crate::components::{Entity, Ticks};
+use crate::components::Entity;
+use crate::utils::Ticks;
 use std::ops::Range;
 
 #[derive(Clone, Copy, Debug)]

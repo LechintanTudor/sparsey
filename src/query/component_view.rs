@@ -1,16 +1,12 @@
-use crate::components::{Component, ComponentTicks, Entity, SparseArrayView, Ticks};
+use crate::components::{Component, Entity, SparseArrayView};
 use crate::group::GroupInfo;
 use crate::query::ComponentRefMut;
+use crate::utils::{ChangeTicks, Ticks};
 use crate::world::{Comp, CompMut};
 use std::ops::Range;
 
 /// Component view split into its parts.
-pub type SplitComponentView<'a, T> = (
-	SparseArrayView<'a>,
-	&'a [Entity],
-	*mut T,
-	*mut ComponentTicks,
-);
+pub type SplitComponentView<'a, T> = (SparseArrayView<'a>, &'a [Entity], *mut T, *mut ChangeTicks);
 
 /// Trait implemented by views over component storages.
 pub unsafe trait ComponentView<'a>
@@ -22,7 +18,7 @@ where
 
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks>;
+	fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks>;
 
 	fn contains(&self, entity: Entity) -> bool;
 
@@ -36,7 +32,7 @@ where
 
 	unsafe fn get_from_parts(
 		components: *mut Self::Component,
-		info: *mut ComponentTicks,
+		info: *mut ChangeTicks,
 		index: usize,
 		world_tick: Ticks,
 		last_system_tick: Ticks,
@@ -77,7 +73,7 @@ where
 		self.storage.get(entity)
 	}
 
-	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+	fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		self.storage.get_ticks(entity)
 	}
 
@@ -109,7 +105,7 @@ where
 
 	unsafe fn get_from_parts(
 		components: *mut Self::Component,
-		_info: *mut ComponentTicks,
+		_info: *mut ChangeTicks,
 		index: usize,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
@@ -159,7 +155,7 @@ where
 		self.storage.get(entity)
 	}
 
-	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+	fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		self.storage.get_ticks(entity)
 	}
 
@@ -191,7 +187,7 @@ where
 
 	unsafe fn get_from_parts(
 		components: *mut Self::Component,
-		_info: *mut ComponentTicks,
+		_info: *mut ChangeTicks,
 		index: usize,
 		_world_tick: Ticks,
 		_last_system_tick: Ticks,
@@ -242,7 +238,7 @@ where
 		Some(ComponentRefMut::new(components, ticks, self.world_tick))
 	}
 
-	fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+	fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		self.storage.get_ticks(entity)
 	}
 
@@ -274,7 +270,7 @@ where
 
 	unsafe fn get_from_parts(
 		components: *mut Self::Component,
-		info: *mut ComponentTicks,
+		info: *mut ChangeTicks,
 		index: usize,
 		world_tick: Ticks,
 		_last_system_tick: Ticks,

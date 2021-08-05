@@ -1,4 +1,4 @@
-use crate::components::Ticks;
+use crate::utils::Ticks;
 
 pub trait FetchFrom<'a, S> {
 	type Item;

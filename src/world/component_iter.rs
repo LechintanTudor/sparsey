@@ -1,5 +1,5 @@
-use crate::components::{Component, ComponentTicks, Entity};
-use crate::utils::EntityIterator;
+use crate::components::{Component, Entity};
+use crate::utils::{ChangeTicks, EntityIterator};
 
 #[derive(Clone, Copy)]
 pub struct ComponentIter<'a, T> {
@@ -50,14 +50,14 @@ pub struct ComponentAndTicksIter<'a, T> {
 	index: usize,
 	entities: &'a [Entity],
 	components: *const T,
-	ticks: *const ComponentTicks,
+	ticks: *const ChangeTicks,
 }
 
 impl<'a, T> ComponentAndTicksIter<'a, T> {
 	pub(crate) unsafe fn new(
 		entities: &'a [Entity],
 		components: &'a [T],
-		ticks: &'a [ComponentTicks],
+		ticks: &'a [ChangeTicks],
 	) -> Self {
 		Self {
 			index: 0,
@@ -72,7 +72,7 @@ impl<'a, T> Iterator for ComponentAndTicksIter<'a, T>
 where
 	T: Component,
 {
-	type Item = (&'a T, &'a ComponentTicks);
+	type Item = (&'a T, &'a ChangeTicks);
 
 	fn next(&mut self) -> Option<Self::Item> {
 		if self.index >= self.entities.len() {

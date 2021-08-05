@@ -1,10 +1,11 @@
-use crate::components::{Entity, Ticks};
+use crate::components::Entity;
 use crate::group::CombinedGroupInfo;
 use crate::query::{
 	passthrough, ComponentView, DenseSplitComponentView, ImmutableUnfilteredComponentView, Include,
 	IncludeExclude, IncludeExcludeFilter, IntoQueryParts, IterData, PassthroughFilter, QueryFilter,
 	QueryModifier, SparseSplitComponentView,
 };
+use crate::utils::Ticks;
 use std::ops::Range;
 
 /// Trait implemented by the base part of queries.

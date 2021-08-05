@@ -1,4 +1,5 @@
-use crate::components::{Component, ComponentTicks, Ticks};
+use crate::components::Component;
+use crate::utils::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut};
 
 /// Type returned by mutable queries. Used for granular change detection.
@@ -7,7 +8,7 @@ where
 	T: Component,
 {
 	component: &'a mut T,
-	ticks: &'a mut ComponentTicks,
+	ticks: &'a mut ChangeTicks,
 	world_tick: Ticks,
 }
 
@@ -17,7 +18,7 @@ where
 {
 	/// Creates a new `ComponentRefMut` which sets `ticks` to `world_tick` when
 	/// `component` is written to.
-	pub fn new(component: &'a mut T, ticks: &'a mut ComponentTicks, world_tick: Ticks) -> Self {
+	pub fn new(component: &'a mut T, ticks: &'a mut ChangeTicks, world_tick: Ticks) -> Self {
 		Self {
 			component,
 			ticks,

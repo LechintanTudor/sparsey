@@ -1,5 +1,6 @@
-use crate::components::{ComponentTicks, Entity, SparseArrayView, Ticks};
+use crate::components::{Entity, SparseArrayView};
 use crate::query::ComponentView;
+use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
 
 #[doc(hidden)]
@@ -7,7 +8,7 @@ use std::marker::PhantomData;
 pub struct SparseSplitComponentView<'a, T> {
 	sparse: SparseArrayView<'a>,
 	data: *mut T,
-	ticks: *mut ComponentTicks,
+	ticks: *mut ChangeTicks,
 }
 
 impl<'a, T> SparseSplitComponentView<'a, T> {
@@ -30,7 +31,7 @@ impl<'a, T> SparseSplitComponentView<'a, T> {
 pub struct DenseSplitComponentView<'a, T> {
 	lifetime: PhantomData<&'a ()>,
 	data: *mut T,
-	ticks: *mut ComponentTicks,
+	ticks: *mut ChangeTicks,
 }
 
 impl<'a, T> DenseSplitComponentView<'a, T> {

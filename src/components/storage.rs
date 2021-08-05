@@ -1,6 +1,5 @@
-use crate::components::{
-	BlobVec, ComponentTicks, Entity, IndexEntity, SparseArray, SparseArrayView,
-};
+use crate::components::{BlobVec, Entity, IndexEntity, SparseArray, SparseArrayView};
+use crate::utils::ChangeTicks;
 use std::alloc::Layout;
 use std::ptr;
 
@@ -9,7 +8,7 @@ pub struct ComponentStorage {
 	sparse: SparseArray,
 	entities: Vec<Entity>,
 	components: BlobVec,
-	ticks: Vec<ComponentTicks>,
+	ticks: Vec<ChangeTicks>,
 }
 
 impl ComponentStorage {
@@ -39,7 +38,7 @@ impl ComponentStorage {
 		&mut self,
 		entity: Entity,
 		component: *const u8,
-		ticks: ComponentTicks,
+		ticks: ChangeTicks,
 	) -> *mut u8 {
 		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
@@ -70,7 +69,7 @@ impl ComponentStorage {
 		&mut self,
 		entity: Entity,
 		component: *const u8,
-		ticks: ComponentTicks,
+		ticks: ChangeTicks,
 	) {
 		let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
@@ -160,14 +159,14 @@ impl ComponentStorage {
 		}
 	}
 
-	/// Returns the `ComponentTicks` of the component mapped to `entity`.
-	pub fn get_ticks(&self, entity: Entity) -> Option<&ComponentTicks> {
+	/// Returns the `ChangeTicks` of the component mapped to `entity`.
+	pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		let index = self.sparse.get_index(entity)? as usize;
 		unsafe { Some(self.ticks.get_unchecked(index)) }
 	}
 
-	/// Returns the compnent and `ComponentTicks` mapped to `entity`.
-	pub fn get_with_ticks(&self, entity: Entity) -> Option<(*const u8, &ComponentTicks)> {
+	/// Returns the compnent and `ChangeTicks` mapped to `entity`.
+	pub fn get_with_ticks(&self, entity: Entity) -> Option<(*const u8, &ChangeTicks)> {
 		let index = self.sparse.get_index(entity)? as usize;
 
 		unsafe {
@@ -178,8 +177,8 @@ impl ComponentStorage {
 		}
 	}
 
-	/// Returns the compnent and `ComponentTicks` mapped to `entity`.
-	pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ComponentTicks)> {
+	/// Returns the compnent and `ChangeTicks` mapped to `entity`.
+	pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ChangeTicks)> {
 		let index = self.sparse.get_index(entity)? as usize;
 
 		unsafe {
@@ -243,13 +242,13 @@ impl ComponentStorage {
 	}
 
 	/// Returns a slice containing the ticks for all components in the storage.
-	pub fn ticks(&self) -> &[ComponentTicks] {
+	pub fn ticks(&self) -> &[ChangeTicks] {
 		&self.ticks
 	}
 
 	/// Returns a tuple containing the `SparseArray`, `entities`, `components`
 	/// and `component ticks` of the storage.
-	pub fn split(&self) -> (SparseArrayView, &[Entity], *const u8, &[ComponentTicks]) {
+	pub fn split(&self) -> (SparseArrayView, &[Entity], *const u8, &[ChangeTicks]) {
 		(
 			self.sparse.as_view(),
 			self.entities.as_slice(),
@@ -260,7 +259,7 @@ impl ComponentStorage {
 
 	/// Returns a tuple containing the `SparseArray`, `entities`, `components`
 	/// and `component ticks` of the storage.
-	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], *mut u8, &mut [ComponentTicks]) {
+	pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], *mut u8, &mut [ChangeTicks]) {
 		(
 			self.sparse.as_view(),
 			self.entities.as_slice(),
