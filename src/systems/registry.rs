@@ -37,7 +37,6 @@ impl RegistryAccess {
 }
 
 /// Execution registry for `Systems`.
-#[derive(Clone, Copy)]
 pub struct Registry<'a> {
 	world: &'a World,
 	command_buffers: &'a CommandBuffers,

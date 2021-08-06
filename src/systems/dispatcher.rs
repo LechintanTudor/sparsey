@@ -1,4 +1,3 @@
-use crate::resources::Resources;
 use crate::systems::{
 	CommandBuffers, LocalFn, LocalSystem, LocallyRunnable, Registry, RegistryAccess, RunError,
 	RunResult, System, SystemError,
@@ -354,9 +353,10 @@ fn run_systems_seq<S>(
 	S: LocallyRunnable,
 {
 	let registry = unsafe { Registry::new(world, command_buffers, change_tick) };
+
 	let new_errors = systems
 		.iter_mut()
-		.flat_map(|sys| unsafe { sys.run(registry).err() });
+		.flat_map(|sys| unsafe { sys.run(&registry).err() });
 
 	errors.extend(new_errors);
 }
@@ -375,7 +375,7 @@ fn run_systems_par(
 	thread_pool.install(|| unsafe {
 		let new_errors = systems
 			.par_iter_mut()
-			.flat_map_iter(|sys| sys.run(registry).err())
+			.flat_map_iter(|sys| sys.run(&registry).err())
 			.collect::<Vec<_>>();
 
 		errors.extend(new_errors);

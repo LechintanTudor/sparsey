@@ -11,7 +11,7 @@ pub unsafe trait LocallyRunnable {
 
 	/// Run the system in the given `Registry`.
 	/// Always safe to call in the thread in which the system was created.
-	unsafe fn run(&mut self, registry: Registry) -> SystemResult;
+	unsafe fn run(&mut self, registry: &Registry) -> SystemResult;
 }
 
 /// Marker trait for `Systems` which can be run in threads
@@ -25,7 +25,7 @@ where
 /// Encapsulates a locally runnable function. Implements the `LocallyRunnable`
 /// trait.
 pub struct LocalSystem {
-	function: Box<dyn FnMut(Registry) -> SystemResult + 'static>,
+	function: Box<dyn FnMut(&Registry) -> SystemResult + 'static>,
 	accesses: Vec<RegistryAccess>,
 }
 
@@ -45,7 +45,7 @@ unsafe impl LocallyRunnable for LocalSystem {
 		&self.accesses
 	}
 
-	unsafe fn run(&mut self, registry: Registry) -> SystemResult {
+	unsafe fn run(&mut self, registry: &Registry) -> SystemResult {
 		(self.function)(registry)
 	}
 }
@@ -58,7 +58,7 @@ pub trait IntoLocalSystem<Params, Return> {
 
 /// Encapsulates a runnable function. Implements the `Runnable` trait.
 pub struct System {
-	function: Box<dyn FnMut(Registry) -> SystemResult + Send + 'static>,
+	function: Box<dyn FnMut(&Registry) -> SystemResult + Send + 'static>,
 	accesses: Vec<RegistryAccess>,
 }
 
@@ -78,7 +78,7 @@ unsafe impl LocallyRunnable for System {
 		&self.accesses
 	}
 
-	unsafe fn run(&mut self, registry: Registry) -> SystemResult {
+	unsafe fn run(&mut self, registry: &Registry) -> SystemResult {
 		(self.function)(registry)
 	}
 }
@@ -171,7 +171,7 @@ macro_rules! impl_into_system {
             fn local_system(mut self) -> LocalSystem {
                 LocalSystem {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param as BorrowRegistry>::borrow(&registry)),*);
+                        self($(<$param as BorrowRegistry>::borrow(registry)),*);
                         Ok(())
                     }),
                     accesses: vec![
@@ -194,7 +194,7 @@ macro_rules! impl_into_system {
             fn local_system(mut self) -> LocalSystem {
                 LocalSystem {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param as BorrowRegistry>::borrow(&registry)),*)
+                        self($(<$param as BorrowRegistry>::borrow(registry)),*)
                     }),
                     accesses: vec![
                         $(<$param as BorrowRegistry>::access()),*
@@ -216,7 +216,7 @@ macro_rules! impl_into_system {
             fn system(mut self) -> System {
                 System {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param as BorrowRegistry>::borrow(&registry)),*);
+                        self($(<$param as BorrowRegistry>::borrow(registry)),*);
                         Ok(())
                     }),
                     accesses: vec![
@@ -239,7 +239,7 @@ macro_rules! impl_into_system {
             fn system(mut self) -> System {
                 System {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param as BorrowRegistry>::borrow(&registry)),*)
+                        self($(<$param as BorrowRegistry>::borrow(registry)),*)
                     }),
                     accesses: vec![
                         $(<$param as BorrowRegistry>::access()),*
