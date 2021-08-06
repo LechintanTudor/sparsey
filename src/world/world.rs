@@ -1,9 +1,12 @@
 use crate::components::{Component, ComponentStorage, Entity};
 use crate::layout::Layout;
-use crate::utils::{panic_missing_comp, ChangeTicks, FetchFrom, NonZeroTicks, Ticks};
+use crate::resources::{Resource, Resources};
+use crate::utils::{
+	panic_missing_comp, panic_missing_res, ChangeTicks, FetchFrom, NonZeroTicks, Ticks,
+};
 use crate::world::{
 	BorrowStorages, Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity,
-	TickOverflow,
+	Res, ResMut, TickOverflow,
 };
 use std::any::TypeId;
 use std::num::NonZeroU64;
@@ -28,6 +31,7 @@ pub struct World {
 	tick: NonZeroTicks,
 	entities: EntityStorage,
 	storages: ComponentStorages,
+	resources: Resources,
 }
 
 impl Default for World {
@@ -37,6 +41,7 @@ impl Default for World {
 			tick: NonZeroTicks::new(1).unwrap(),
 			entities: Default::default(),
 			storages: Default::default(),
+			resources: Default::default(),
 		}
 	}
 }
@@ -280,7 +285,7 @@ impl World {
 	where
 		T: FetchFrom<'a, Self>,
 	{
-		T::fetch(self, self.tick.get(), self.tick.get() - 1)
+		T::fetch(self, self.tick.get() - 1)
 	}
 
 	pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
@@ -306,13 +311,13 @@ where
 {
 	type Item = Comp<'a, T>;
 
-	fn fetch(world: &'a World, world_tick: Ticks, change_tick: Ticks) -> Self::Item {
+	fn fetch(world: &'a World, change_tick: Ticks) -> Self::Item {
 		let (storage, info) = world
 			.storages
 			.borrow_with_info(&TypeId::of::<T>())
 			.unwrap_or_else(|| panic_missing_comp::<T>());
 
-		unsafe { Comp::new(storage, info, world_tick, change_tick) }
+		unsafe { Comp::new(storage, info, world.tick.get(), change_tick) }
 	}
 }
 
@@ -322,12 +327,44 @@ where
 {
 	type Item = CompMut<'a, T>;
 
-	fn fetch(world: &'a World, world_tick: Ticks, change_tick: Ticks) -> Self::Item {
+	fn fetch(world: &'a World, change_tick: Ticks) -> Self::Item {
 		let (storage, info) = world
 			.storages
 			.borrow_with_info_mut(&TypeId::of::<T>())
 			.unwrap_or_else(|| panic_missing_comp::<T>());
 
-		unsafe { CompMut::new(storage, info, world_tick, change_tick) }
+		unsafe { CompMut::new(storage, info, world.tick.get(), change_tick) }
+	}
+}
+
+impl<'a, 'b, T> FetchFrom<'a, World> for Res<'b, T>
+where
+	T: Resource,
+{
+	type Item = Res<'a, T>;
+
+	fn fetch(world: &'a World, change_tick: Ticks) -> Self::Item {
+		let cell = world
+			.resources
+			.borrow::<T>()
+			.unwrap_or_else(|| panic_missing_res::<T>());
+
+		unsafe { Res::new(cell, world.tick.get(), change_tick) }
+	}
+}
+
+impl<'a, 'b, T> FetchFrom<'a, World> for ResMut<'b, T>
+where
+	T: Resource,
+{
+	type Item = ResMut<'a, T>;
+
+	fn fetch(world: &'a World, change_tick: Ticks) -> Self::Item {
+		let cell = world
+			.resources
+			.borrow_mut::<T>()
+			.unwrap_or_else(|| panic_missing_res::<T>());
+
+		unsafe { ResMut::new(cell, world.tick.get(), change_tick) }
 	}
 }

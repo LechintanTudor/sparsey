@@ -46,10 +46,8 @@ fn main() {
 	world.create((Position(0, 0), Velocity(2, 2)));
 	world.create((Position(0, 0), Velocity(3, 3), Immovable));
 
-	let mut resources = Resources::default();
-
 	for _ in 0..3 {
-		dispatcher.run_seq(&mut world, &mut resources).unwrap();
+		dispatcher.run_seq(&mut world).unwrap();
 		world.advance_ticks().unwrap();
 	}
 }

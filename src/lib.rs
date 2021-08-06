@@ -11,12 +11,11 @@ pub mod prelude {
 	pub use crate::components::Entity;
 	pub use crate::layout::{Layout, LayoutGroupDescriptor};
 	pub use crate::query::{Query, QueryBaseModifiers, SliceQuery};
-	pub use crate::resources::{Res, ResMut, Resources};
 	pub use crate::systems::{
 		Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,
 	};
 	pub use crate::utils::{ChangeTicks, EntityIterator};
-	pub use crate::world::{Comp, CompMut, World};
+	pub use crate::world::{Comp, CompMut, Res, ResMut, World};
 }
 
 pub use self::components::*;

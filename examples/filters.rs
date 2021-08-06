@@ -51,8 +51,6 @@ fn main() {
 	let mut world = World::default();
 	dispatcher.set_up(&mut world);
 
-	let mut resources = Resources::default();
-
 	for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
 		resources.insert(difficulty);
 
@@ -60,7 +58,7 @@ fn main() {
 		world.create((Hp(10),));
 		world.create((Hp(100),));
 
-		dispatcher.run_seq(&mut world, &mut resources).unwrap();
+		dispatcher.run_seq(&mut world).unwrap();
 		world.advance_ticks().unwrap();
 	}
 }

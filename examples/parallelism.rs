@@ -39,8 +39,6 @@ fn main() {
 
 	world.extend((0..100).map(|i| (Position(0, 0), Velocity(i, i), Hp(100), HpRegen(i))));
 
-	let mut resources = Resources::default();
-
 	let num_threads = dispatcher.max_concurrecy();
 	println!("Create thread pool with {} threads", num_threads);
 
@@ -49,8 +47,6 @@ fn main() {
 		.build()
 		.unwrap();
 
-	dispatcher
-		.run_par(&mut world, &mut resources, &thread_pool)
-		.unwrap();
+	dispatcher.run_par(&mut world, &thread_pool).unwrap();
 	world.advance_ticks().unwrap();
 }

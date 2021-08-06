@@ -40,11 +40,10 @@ fn main() {
 	world.create((Position(0, 5),));
 	world.create((Position(0, 6),));
 
-	let mut resources = Resources::default();
 	resources.insert(Lava { height: 1 });
 
 	for _ in 0..3 {
-		dispatcher.run_seq(&mut world, &mut resources).unwrap();
+		dispatcher.run_seq(&mut world).unwrap();
 		world.advance_ticks().unwrap();
 	}
 }

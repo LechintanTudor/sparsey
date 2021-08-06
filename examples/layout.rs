@@ -46,8 +46,6 @@ fn main() {
 	world.create((Position(2, 2), Sprite { id: 2 }, Transparent));
 	world.create((Position(3, 3), Sprite { id: 3 }, Transparent));
 
-	let mut resources = Resources::default();
-
-	dispatcher.run_seq(&mut world, &mut resources).unwrap();
+	dispatcher.run_seq(&mut world).unwrap();
 	world.advance_ticks().unwrap();
 }

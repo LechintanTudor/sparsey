@@ -1,9 +1,9 @@
 use crate::components::Component;
 use crate::layout::ComponentInfo;
-use crate::resources::{Res, ResMut, Resource, UnsafeResources};
+use crate::resources::Resource;
 use crate::systems::{CommandBuffers, Commands};
-use crate::utils::{panic_missing_comp, panic_missing_res, Ticks};
-use crate::world::{Comp, CompMut, World};
+use crate::utils::{FetchFrom, Ticks};
+use crate::world::{Comp, CompMut, Res, ResMut, World};
 use std::any::TypeId;
 
 /// Represents the type of data which can be accessed by a `System`.
@@ -37,25 +37,26 @@ impl RegistryAccess {
 }
 
 /// Execution registry for `Systems`.
+#[derive(Clone, Copy)]
 pub struct Registry<'a> {
 	world: &'a World,
-	resources: &'a UnsafeResources,
 	command_buffers: &'a CommandBuffers,
-	last_system_tick: Ticks,
+	change_tick: Ticks,
 }
 
+unsafe impl Send for Registry<'_> {}
+unsafe impl Sync for Registry<'_> {}
+
 impl<'a> Registry<'a> {
-	pub(crate) fn new(
+	pub(crate) unsafe fn new(
 		world: &'a World,
-		resources: &'a UnsafeResources,
 		command_buffers: &'a CommandBuffers,
-		last_system_tick: Ticks,
+		change_tick: Ticks,
 	) -> Self {
 		Self {
 			world,
-			resources,
 			command_buffers,
-			last_system_tick,
+			change_tick,
 		}
 	}
 }
@@ -100,18 +101,7 @@ where
 	}
 
 	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-		let (storage, info) = registry
-			.world
-			.component_storages()
-			.borrow_with_info(&TypeId::of::<T>())
-			.unwrap_or_else(|| panic_missing_comp::<T>());
-
-		Comp::<T>::new(
-			storage,
-			info,
-			registry.world.tick(),
-			registry.last_system_tick,
-		)
+		Comp::<T>::fetch(registry.world, registry.change_tick)
 	}
 }
 
@@ -126,18 +116,7 @@ where
 	}
 
 	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-		let (storage, info) = registry
-			.world
-			.component_storages()
-			.borrow_with_info_mut(&TypeId::of::<T>())
-			.unwrap_or_else(|| panic_missing_comp::<T>());
-
-		CompMut::<T>::new(
-			storage,
-			info,
-			registry.world.tick(),
-			registry.last_system_tick,
-		)
+		CompMut::<T>::fetch(registry.world, registry.change_tick)
 	}
 }
 
@@ -152,10 +131,7 @@ where
 	}
 
 	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-		registry
-			.resources
-			.borrow::<T>()
-			.unwrap_or_else(|| panic_missing_res::<T>())
+		Res::<T>::fetch(registry.world, registry.change_tick)
 	}
 }
 
@@ -170,9 +146,6 @@ where
 	}
 
 	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-		registry
-			.resources
-			.borrow_mut::<T>()
-			.unwrap_or_else(|| panic_missing_res::<T>())
+		ResMut::<T>::fetch(registry.world, registry.change_tick)
 	}
 }

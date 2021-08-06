@@ -1,5 +1,4 @@
 use crate::components::Entity;
-use crate::resources::Resources;
 use crate::utils::ChangeTicks;
 use crate::world::{ComponentSet, EntityStorage, World};
 use std::cell::UnsafeCell;
@@ -21,7 +20,7 @@ impl<'a> Commands<'a> {
 	/// `Resources`.
 	pub fn run<F>(&mut self, command: F)
 	where
-		F: FnOnce(&mut World, &mut Resources) + Send + 'static,
+		F: FnOnce(&mut World) + Send + 'static,
 	{
 		self.buffer.push(Box::new(command));
 	}
@@ -34,7 +33,7 @@ impl<'a> Commands<'a> {
 	{
 		let entity = self.entities.create_atomic();
 
-		self.run(move |world, _| {
+		self.run(move |world| {
 			let _ = world.append(entity, components);
 		});
 
@@ -48,7 +47,7 @@ impl<'a> Commands<'a> {
 	{
 		let entity = self.entities.create_atomic();
 
-		self.run(move |world, _| {
+		self.run(move |world| {
 			let _ = world.append_with_ticks(entity, components, ticks);
 		});
 
@@ -62,7 +61,7 @@ impl<'a> Commands<'a> {
 		C: ComponentSet,
 		I: IntoIterator<Item = C> + Send + 'static,
 	{
-		self.run(move |world, _| {
+		self.run(move |world| {
 			world.extend(components_iter);
 		});
 	}
@@ -73,14 +72,14 @@ impl<'a> Commands<'a> {
 		C: ComponentSet,
 		I: IntoIterator<Item = C> + Send + 'static,
 	{
-		self.run(move |world, _| {
+		self.run(move |world| {
 			world.extend_with_ticks(components_iter, ticks);
 		});
 	}
 
 	/// Queue the destruction of `entity`.
 	pub fn destroy(&mut self, entity: Entity) {
-		self.run(move |world, _| {
+		self.run(move |world| {
 			world.destroy(entity);
 		});
 	}
@@ -90,7 +89,7 @@ impl<'a> Commands<'a> {
 	where
 		C: ComponentSet,
 	{
-		self.run(move |world, _| {
+		self.run(move |world| {
 			let _ = world.append(entity, components);
 		});
 	}
@@ -100,7 +99,7 @@ impl<'a> Commands<'a> {
 	where
 		C: ComponentSet,
 	{
-		self.run(move |world, _| {
+		self.run(move |world| {
 			let _ = world.append_with_ticks(entity, components, ticks);
 		});
 	}
@@ -110,7 +109,7 @@ impl<'a> Commands<'a> {
 	where
 		C: ComponentSet,
 	{
-		self.run(move |world, _| {
+		self.run(move |world| {
 			world.delete::<C>(entity);
 		});
 	}
@@ -121,7 +120,7 @@ impl<'a> Commands<'a> {
 	}
 }
 
-pub(crate) type Command = Box<dyn FnOnce(&mut World, &mut Resources) + Send + 'static>;
+pub(crate) type Command = Box<dyn FnOnce(&mut World) + Send + 'static>;
 
 pub(crate) struct CommandBuffers {
 	buffers: Vec<UnsafeCell<Vec<Command>>>,

@@ -1,7 +1,7 @@
 use crate::components::Component;
-use crate::resources::{Res, ResMut, Resource};
+use crate::resources::Resource;
 use crate::systems::{BorrowRegistry, Commands};
-use crate::world::{Comp, CompMut};
+use crate::world::{Comp, CompMut, Res, ResMut};
 
 /// Trait used for marking system parameters and borrowing data from the
 /// `Registry`.

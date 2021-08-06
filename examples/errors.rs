@@ -23,9 +23,8 @@ fn main() {
 		.build();
 
 	let mut world = World::default();
-	let mut resources = Resources::default();
 
-	if let Err(run_error) = dispatcher.run_seq(&mut world, &mut resources) {
+	if let Err(run_error) = dispatcher.run_seq(&mut world) {
 		println!("[{} errors occurred]", run_error.error_count());
 		for error in run_error.errors() {
 			println!("{}", error);

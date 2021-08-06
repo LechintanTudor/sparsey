@@ -61,7 +61,7 @@ impl DispatcherBuilder {
 		Dispatcher {
 			command_buffers,
 			steps,
-			last_system_ticks: Default::default(),
+			change_ticks: Default::default(),
 		}
 	}
 }
@@ -70,7 +70,7 @@ impl DispatcherBuilder {
 pub struct Dispatcher {
 	steps: Vec<Step>,
 	command_buffers: CommandBuffers,
-	last_system_ticks: FxHashMap<WorldId, Ticks>,
+	change_ticks: FxHashMap<WorldId, Ticks>,
 }
 
 impl Dispatcher {
@@ -121,48 +121,46 @@ impl Dispatcher {
 	}
 
 	/// Run all systems on the current thread.
-	pub fn run_seq(&mut self, world: &mut World, resources: &mut Resources) -> RunResult {
+	pub fn run_seq(&mut self, world: &mut World) -> RunResult {
 		let world_tick = world.tick();
-		let last_system_tick = self.last_system_ticks.entry(world.id()).or_default();
+		let change_tick = self.change_ticks.entry(world.id()).or_default();
 
 		let mut errors = Vec::<SystemError>::new();
 
 		for step in self.steps.iter_mut() {
 			match step {
-				Step::RunSystems(systems) => unsafe {
+				Step::RunSystems(systems) => {
 					run_systems_seq(
 						systems,
 						world,
-						resources,
 						&self.command_buffers,
-						*last_system_tick,
+						*change_tick,
 						&mut errors,
 					);
-				},
-				Step::RunLocalSystems(systems) => unsafe {
+				}
+				Step::RunLocalSystems(systems) => {
 					run_systems_seq(
 						systems,
 						world,
-						resources,
 						&self.command_buffers,
-						*last_system_tick,
+						*change_tick,
 						&mut errors,
 					);
-				},
+				}
 				Step::RunLocalFns(systems) => {
-					run_local_fns(systems, world, resources, &mut errors);
+					run_local_fns(systems, world, &mut errors);
 				}
 				Step::FlushCommands => {
 					world.maintain();
 
 					for command in self.command_buffers.drain() {
-						command(world, resources);
+						command(world);
 					}
 				}
 			}
 		}
 
-		*last_system_tick = world_tick;
+		*change_tick = world_tick;
 
 		if !errors.is_empty() {
 			Err(RunError::from(errors))
@@ -173,14 +171,9 @@ impl Dispatcher {
 
 	/// Run all systems, potentially in parallel, on the given `ThreadPool`.
 	#[cfg(feature = "parallel")]
-	pub fn run_par(
-		&mut self,
-		world: &mut World,
-		resources: &mut Resources,
-		thread_pool: &ThreadPool,
-	) -> RunResult {
+	pub fn run_par(&mut self, world: &mut World, thread_pool: &ThreadPool) -> RunResult {
 		let world_tick = world.tick();
-		let last_system_tick = self.last_system_ticks.entry(world.id()).or_default();
+		let change_tick = self.change_ticks.entry(world.id()).or_default();
 
 		let mut errors = Vec::<SystemError>::new();
 
@@ -188,52 +181,45 @@ impl Dispatcher {
 			match step {
 				Step::RunSystems(systems) => {
 					if systems.len() > 1 {
-						unsafe {
-							run_systems_par(
-								systems,
-								world,
-								resources,
-								&self.command_buffers,
-								*last_system_tick,
-								thread_pool,
-								&mut errors,
-							);
-						}
+						run_systems_par(
+							systems,
+							world,
+							&self.command_buffers,
+							*change_tick,
+							thread_pool,
+							&mut errors,
+						);
 					} else {
-						unsafe {
-							run_systems_seq(
-								systems,
-								world,
-								resources,
-								&self.command_buffers,
-								*last_system_tick,
-								&mut errors,
-							);
-						}
+						run_systems_seq(
+							systems,
+							world,
+							&self.command_buffers,
+							*change_tick,
+							&mut errors,
+						);
 					}
 				}
-				Step::RunLocalSystems(systems) => unsafe {
+				Step::RunLocalSystems(systems) => {
 					run_systems_seq(
 						systems,
 						world,
-						resources,
 						&self.command_buffers,
-						*last_system_tick,
+						*change_tick,
 						&mut errors,
 					);
-				},
+				}
 				Step::RunLocalFns(systems) => {
-					run_local_fns(systems, world, resources, &mut errors);
+					run_local_fns(systems, world, &mut errors);
 				}
 				Step::FlushCommands => {
 					for command in self.command_buffers.drain() {
-						command(world, resources);
+						command(world);
 					}
 				}
 			}
 		}
 
-		*last_system_tick = world_tick;
+		*change_tick = world_tick;
 
 		if !errors.is_empty() {
 			Err(RunError::from(errors))
@@ -358,70 +344,46 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
 	steps
 }
 
-unsafe fn run_systems_seq<S>(
+fn run_systems_seq<S>(
 	systems: &mut [S],
 	world: &World,
-	resources: &Resources,
 	command_buffers: &CommandBuffers,
-	last_system_tick: Ticks,
+	change_tick: Ticks,
 	errors: &mut Vec<SystemError>,
 ) where
 	S: LocallyRunnable,
 {
-	let resources = resources.internal();
-
-	let new_errors = systems.iter_mut().flat_map(|sys| {
-		sys.run(Registry::new(
-			world,
-			resources,
-			command_buffers,
-			last_system_tick,
-		))
-		.err()
-	});
+	let registry = unsafe { Registry::new(world, command_buffers, change_tick) };
+	let new_errors = systems
+		.iter_mut()
+		.flat_map(|sys| unsafe { sys.run(registry).err() });
 
 	errors.extend(new_errors);
 }
 
 #[cfg(feature = "parallel")]
-unsafe fn run_systems_par(
+fn run_systems_par(
 	systems: &mut [System],
 	world: &World,
-	resources: &Resources,
 	command_buffers: &CommandBuffers,
-	last_system_tick: Ticks,
+	change_tick: Ticks,
 	thread_pool: &ThreadPool,
 	errors: &mut Vec<SystemError>,
 ) {
-	let resources = resources.internal();
+	let registry = unsafe { Registry::new(world, command_buffers, change_tick) };
 
-	thread_pool.install(|| {
+	thread_pool.install(|| unsafe {
 		let new_errors = systems
 			.par_iter_mut()
-			.flat_map_iter(|sys| {
-				sys.run(Registry::new(
-					world,
-					resources,
-					command_buffers,
-					last_system_tick,
-				))
-				.err()
-			})
+			.flat_map_iter(|sys| sys.run(registry).err())
 			.collect::<Vec<_>>();
 
 		errors.extend(new_errors);
 	});
 }
 
-fn run_local_fns(
-	systems: &mut [LocalFn],
-	world: &mut World,
-	resources: &mut Resources,
-	errors: &mut Vec<SystemError>,
-) {
-	let new_errors = systems
-		.iter_mut()
-		.flat_map(|sys| sys.run(world, resources).err());
+fn run_local_fns(systems: &mut [LocalFn], world: &mut World, errors: &mut Vec<SystemError>) {
+	let new_errors = systems.iter_mut().flat_map(|sys| sys.run(world).err());
 
 	errors.extend(new_errors);
 }

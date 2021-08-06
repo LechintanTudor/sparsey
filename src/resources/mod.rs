@@ -1,11 +1,6 @@
-pub use self::internal::*;
 pub use self::resource::*;
-pub use self::resources::*;
-pub use self::sync::*;
-pub use self::view::*;
 
-mod internal;
+pub(crate) use self::resources::*;
+
 mod resource;
 mod resources;
-mod sync;
-mod view;

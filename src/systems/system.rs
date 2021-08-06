@@ -1,4 +1,3 @@
-use crate::resources::Resources;
 use crate::systems::{
 	BorrowRegistry, LocalSystemParam, Registry, RegistryAccess, SystemParam, SystemResult,
 };
@@ -107,7 +106,7 @@ where
 /// Encapsulates a system function with exclusive access to `World` and
 /// `Resources`.
 pub struct LocalFn {
-	function: Box<dyn FnMut(&mut World, &mut Resources) -> SystemResult + 'static>,
+	function: Box<dyn FnMut(&mut World) -> SystemResult + 'static>,
 }
 
 impl LocalFn {
@@ -121,8 +120,8 @@ impl LocalFn {
 	}
 
 	/// Run the system on the given `World` and `Resources`.
-	pub fn run(&mut self, world: &mut World, resources: &mut Resources) -> SystemResult {
-		(self.function)(world, resources)
+	pub fn run(&mut self, world: &mut World) -> SystemResult {
+		(self.function)(world)
 	}
 }
 
@@ -134,12 +133,12 @@ pub trait IntoLocalFn<Return> {
 
 impl<F> IntoLocalFn<()> for F
 where
-	F: FnMut(&mut World, &mut Resources) + 'static,
+	F: FnMut(&mut World) + 'static,
 {
 	fn local_fn(mut self) -> LocalFn {
 		LocalFn {
-			function: Box::new(move |world, resources| {
-				self(world, resources);
+			function: Box::new(move |world| {
+				self(world);
 				Ok(())
 			}),
 		}
@@ -148,7 +147,7 @@ where
 
 impl<F> IntoLocalFn<SystemResult> for F
 where
-	F: FnMut(&mut World, &mut Resources) -> SystemResult + 'static,
+	F: FnMut(&mut World) -> SystemResult + 'static,
 {
 	fn local_fn(self) -> LocalFn {
 		LocalFn {
