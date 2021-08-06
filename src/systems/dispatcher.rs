@@ -150,7 +150,7 @@ impl Dispatcher {
 					run_local_fns(systems, world, &mut errors);
 				}
 				Step::FlushCommands => {
-					world.maintain();
+					world.entities.maintain();
 
 					for command in self.command_buffers.drain() {
 						command(world);

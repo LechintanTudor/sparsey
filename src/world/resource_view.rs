@@ -1,5 +1,5 @@
 use crate::resources::ResourceCell;
-use crate::utils::{ChangeTicks, Ticks};
+use crate::utils::Ticks;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};

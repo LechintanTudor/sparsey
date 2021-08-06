@@ -1,3 +1,4 @@
+pub use self::borrow::*;
 pub use self::component_iter::*;
 pub use self::component_set::*;
 pub use self::component_storages::*;
@@ -10,6 +11,7 @@ pub(crate) use self::entity_storage::*;
 pub(crate) use self::grouped_component_storages::*;
 pub(crate) use self::ungrouped_component_storages::*;
 
+mod borrow;
 mod component_iter;
 mod component_set;
 mod component_storages;

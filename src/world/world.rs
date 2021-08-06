@@ -1,12 +1,10 @@
 use crate::components::{Component, ComponentStorage, Entity};
 use crate::layout::Layout;
-use crate::resources::{Resource, Resources};
-use crate::utils::{
-	panic_missing_comp, panic_missing_res, ChangeTicks, FetchFrom, NonZeroTicks, Ticks,
-};
+use crate::resources::Resources;
+use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
 use crate::world::{
-	BorrowStorages, Comp, CompMut, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity,
-	Res, ResMut, TickOverflow,
+	BorrowStorages, BorrowWorld, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity,
+	TickOverflow,
 };
 use std::any::TypeId;
 use std::num::NonZeroU64;
@@ -27,11 +25,11 @@ impl WorldId {
 
 /// Container for component storages and entities.
 pub struct World {
-	id: WorldId,
-	tick: NonZeroTicks,
-	entities: EntityStorage,
-	storages: ComponentStorages,
-	resources: Resources,
+	pub(crate) id: WorldId,
+	pub(crate) tick: NonZeroTicks,
+	pub(crate) entities: EntityStorage,
+	pub(crate) storages: ComponentStorages,
+	pub(crate) resources: Resources,
 }
 
 impl Default for World {
@@ -248,6 +246,13 @@ impl World {
 		self.entities.contains(entity)
 	}
 
+	pub fn borrow<'a, T>(&'a self) -> T::Item
+	where
+		T: BorrowWorld<'a>,
+	{
+		T::borrow(self, self.tick.get() - 1)
+	}
+
 	/// Removes all entities and components in the world.
 	pub fn clear(&mut self) {
 		self.entities.clear();
@@ -281,90 +286,7 @@ impl World {
 		self.tick.get()
 	}
 
-	pub fn fetch<'a, T>(&'a self) -> T::Item
-	where
-		T: FetchFrom<'a, Self>,
-	{
-		T::fetch(self, self.tick.get() - 1)
-	}
-
 	pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
 		self.storages.register_storage(component, storage);
-	}
-
-	pub(crate) fn entity_storage(&self) -> &EntityStorage {
-		&self.entities
-	}
-
-	pub(crate) fn component_storages(&self) -> &ComponentStorages {
-		&self.storages
-	}
-
-	pub(crate) fn maintain(&mut self) {
-		self.entities.maintain();
-	}
-}
-
-impl<'a, 'b, T> FetchFrom<'a, World> for Comp<'b, T>
-where
-	T: Component,
-{
-	type Item = Comp<'a, T>;
-
-	fn fetch(world: &'a World, change_tick: Ticks) -> Self::Item {
-		let (storage, info) = world
-			.storages
-			.borrow_with_info(&TypeId::of::<T>())
-			.unwrap_or_else(|| panic_missing_comp::<T>());
-
-		unsafe { Comp::new(storage, info, world.tick.get(), change_tick) }
-	}
-}
-
-impl<'a, 'b, T> FetchFrom<'a, World> for CompMut<'b, T>
-where
-	T: Component,
-{
-	type Item = CompMut<'a, T>;
-
-	fn fetch(world: &'a World, change_tick: Ticks) -> Self::Item {
-		let (storage, info) = world
-			.storages
-			.borrow_with_info_mut(&TypeId::of::<T>())
-			.unwrap_or_else(|| panic_missing_comp::<T>());
-
-		unsafe { CompMut::new(storage, info, world.tick.get(), change_tick) }
-	}
-}
-
-impl<'a, 'b, T> FetchFrom<'a, World> for Res<'b, T>
-where
-	T: Resource,
-{
-	type Item = Res<'a, T>;
-
-	fn fetch(world: &'a World, change_tick: Ticks) -> Self::Item {
-		let cell = world
-			.resources
-			.borrow::<T>()
-			.unwrap_or_else(|| panic_missing_res::<T>());
-
-		unsafe { Res::new(cell, world.tick.get(), change_tick) }
-	}
-}
-
-impl<'a, 'b, T> FetchFrom<'a, World> for ResMut<'b, T>
-where
-	T: Resource,
-{
-	type Item = ResMut<'a, T>;
-
-	fn fetch(world: &'a World, change_tick: Ticks) -> Self::Item {
-		let cell = world
-			.resources
-			.borrow_mut::<T>()
-			.unwrap_or_else(|| panic_missing_res::<T>());
-
-		unsafe { ResMut::new(cell, world.tick.get(), change_tick) }
 	}
 }
