@@ -1,8 +1,37 @@
 use crate::resources::ResourceCell;
-use crate::utils::Ticks;
+use crate::utils::{ChangeTicks, Ticks};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
+
+pub trait ResourceView {
+	fn ticks(&self) -> ChangeTicks;
+
+	fn world_tick(&self) -> Ticks;
+
+	fn change_tick(&self) -> Ticks;
+}
+
+pub fn res_added<R>(resource_view: &R) -> bool
+where
+	R: ResourceView,
+{
+	resource_view.ticks().tick_added() == resource_view.world_tick()
+}
+
+pub fn res_mutated<R>(resource_view: &R) -> bool
+where
+	R: ResourceView,
+{
+	resource_view.ticks().tick_mutated() > resource_view.change_tick()
+}
+
+pub fn res_changed<R>(resource_view: &R) -> bool
+where
+	R: ResourceView,
+{
+	res_added(resource_view) || res_mutated(resource_view)
+}
 
 pub struct Res<'a, T> {
 	cell: AtomicRef<'a, ResourceCell>,
@@ -23,6 +52,20 @@ impl<'a, T> Res<'a, T> {
 			change_tick,
 			phantom: PhantomData,
 		}
+	}
+}
+
+impl<T> ResourceView for Res<'_, T> {
+	fn ticks(&self) -> ChangeTicks {
+		self.cell.ticks()
+	}
+
+	fn world_tick(&self) -> Ticks {
+		self.world_tick
+	}
+
+	fn change_tick(&self) -> Ticks {
+		self.change_tick
 	}
 }
 
@@ -53,6 +96,20 @@ impl<'a, T> ResMut<'a, T> {
 			change_tick,
 			phantom: PhantomData,
 		}
+	}
+}
+
+impl<T> ResourceView for ResMut<'_, T> {
+	fn ticks(&self) -> ChangeTicks {
+		self.cell.ticks()
+	}
+
+	fn world_tick(&self) -> Ticks {
+		self.world_tick
+	}
+
+	fn change_tick(&self) -> Ticks {
+		self.change_tick
 	}
 }
 

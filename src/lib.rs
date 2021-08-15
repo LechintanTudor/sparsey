@@ -1,9 +1,10 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::module_inception)]
 
-/// Exports functions used for filtering component views.
+/// Exports functions for filtering component and resource views.
 pub mod filters {
 	pub use crate::query::{added, contains, maybe, mutated, updated};
+	pub use crate::world::{res_added, res_changed, res_mutated};
 }
 
 /// Exports most commonly used items.

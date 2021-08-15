@@ -1,6 +1,6 @@
 pub use self::resource::*;
 
-pub(crate) use self::resources::*;
+pub(crate) use self::storage::*;
 
 mod resource;
-mod resources;
+mod storage;

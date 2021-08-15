@@ -18,15 +18,19 @@ impl ResourceCell {
 	pub fn value_mut(&mut self) -> &mut dyn Resource {
 		&mut self.value
 	}
+
+	pub fn ticks(&self) -> ChangeTicks {
+		self.ticks
+	}
 }
 
 /// Maps `TypeIds` to type-erased `Resources`.
 #[derive(Default)]
-pub(crate) struct Resources {
+pub(crate) struct ResourceStorage {
 	resources: FxHashMap<TypeId, AtomicRefCell<ResourceCell>>,
 }
 
-impl Resources {
+impl ResourceStorage {
 	pub fn insert<T>(&mut self, value: T, ticks: ChangeTicks) -> Option<T>
 	where
 		T: Resource,
