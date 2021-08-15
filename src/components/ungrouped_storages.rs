@@ -1,4 +1,5 @@
-use crate::components::{Component, ComponentStorage};
+use crate::components::Component;
+use crate::storage::ComponentStorage;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;

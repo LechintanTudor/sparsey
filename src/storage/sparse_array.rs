@@ -1,4 +1,4 @@
-use crate::components::{Entity, IndexEntity};
+use crate::storage::{Entity, IndexEntity};
 use std::hint::unreachable_unchecked;
 use std::{iter, ptr};
 

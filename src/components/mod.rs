@@ -1,14 +1,12 @@
 pub use self::component::*;
-pub use self::entity::*;
-pub use self::sparse_array::*;
-pub use self::storage::*;
+pub use self::component_set::*;
+pub use self::storages::*;
 
-pub(crate) use self::blob_vec::*;
-pub(crate) use self::typed_storage::*;
+pub(crate) use self::grouped_storages::*;
+pub(crate) use self::ungrouped_storages::*;
 
-mod blob_vec;
 mod component;
-mod entity;
-mod sparse_array;
-mod storage;
-mod typed_storage;
+mod component_set;
+mod grouped_storages;
+mod storages;
+mod ungrouped_storages;

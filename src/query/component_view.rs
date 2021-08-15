@@ -1,6 +1,7 @@
-use crate::components::{Component, Entity, SparseArrayView};
+use crate::components::Component;
 use crate::group::GroupInfo;
 use crate::query::ComponentRefMut;
+use crate::storage::{Entity, SparseArrayView};
 use crate::utils::{ChangeTicks, Ticks};
 use crate::world::{Comp, CompMut};
 use std::ops::Range;

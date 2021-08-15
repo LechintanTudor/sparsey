@@ -1,5 +1,5 @@
-use crate::components::Entity;
 use crate::query::{Filter, QueryFilter};
+use crate::storage::Entity;
 
 /// Query filter which matches inputs that are not matched by the contained
 /// filter.

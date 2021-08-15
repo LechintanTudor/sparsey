@@ -1,8 +1,8 @@
-use crate::components::Entity;
 use crate::group::GroupInfo;
 use crate::query::{
 	ComponentView, Filter, ImmutableUnfilteredComponentView, QueryFilter, SplitComponentView,
 };
+use crate::storage::Entity;
 use crate::utils::{ChangeTicks, Ticks};
 
 #[doc(hidden)]

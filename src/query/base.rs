@@ -1,10 +1,10 @@
-use crate::components::Entity;
 use crate::group::CombinedGroupInfo;
 use crate::query::{
 	passthrough, ComponentView, DenseSplitComponentView, ImmutableUnfilteredComponentView, Include,
 	IncludeExclude, IncludeExcludeFilter, IntoQueryParts, IterData, PassthroughFilter, QueryFilter,
 	QueryModifier, SparseSplitComponentView,
 };
+use crate::storage::Entity;
 use crate::utils::Ticks;
 use std::ops::Range;
 

@@ -1,5 +1,5 @@
-use crate::components::{Entity, SparseArrayView};
 use crate::query::ComponentView;
+use crate::storage::{Entity, SparseArrayView};
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
 

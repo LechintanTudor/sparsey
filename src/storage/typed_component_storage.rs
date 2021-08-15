@@ -1,4 +1,4 @@
-use crate::components::{ComponentStorage, Entity, SparseArrayView};
+use crate::storage::{ComponentStorage, Entity, SparseArrayView};
 use crate::utils::ChangeTicks;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -10,7 +10,7 @@ where
 	T: 'static,
 {
 	storage: S,
-	component: PhantomData<T>,
+	component: PhantomData<*const T>,
 }
 
 unsafe impl<S, T> Send for TypedComponentStorage<S, T>

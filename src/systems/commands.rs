@@ -1,6 +1,7 @@
-use crate::components::Entity;
+use crate::components::ComponentSet;
+use crate::storage::{Entity, EntityStorage};
 use crate::utils::ChangeTicks;
-use crate::world::{ComponentSet, EntityStorage, World};
+use crate::world::World;
 use std::cell::UnsafeCell;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

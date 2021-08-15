@@ -1,4 +1,4 @@
-use crate::components::Entity;
+use crate::storage::Entity;
 use crate::utils::Ticks;
 use std::ops::Range;
 

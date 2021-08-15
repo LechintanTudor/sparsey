@@ -1,11 +1,9 @@
-use crate::components::{Component, ComponentStorage, Entity};
+use crate::components::{BorrowStorages, Component, ComponentSet, ComponentStorages};
 use crate::layout::Layout;
 use crate::resources::{Resource, ResourceStorage};
+use crate::storage::{ComponentStorage, Entity, EntityStorage};
 use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
-use crate::world::{
-	BorrowStorages, BorrowWorld, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity,
-	TickOverflow,
-};
+use crate::world::{BorrowWorld, NoSuchEntity, TickOverflow};
 use std::any::TypeId;
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicU64, Ordering};

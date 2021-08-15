@@ -1,9 +1,9 @@
-use crate::components::Entity;
 use crate::group::GroupInfo;
 use crate::query::{
 	ComponentTicksFilter, ComponentView, ImmutableUnfilteredComponentView, SplitComponentView,
 	UnfilteredComponentView,
 };
+use crate::storage::Entity;
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
 

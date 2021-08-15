@@ -1,6 +1,6 @@
-use crate::components::{Entity, SparseArrayView};
 use crate::group::CombinedGroupInfo;
 use crate::query::{ComponentView, ImmutableUnfilteredComponentView, IterData};
+use crate::storage::{Entity, SparseArrayView};
 
 /// Trait implemented by include and exclude query modifiers.
 pub trait QueryModifier<'a> {

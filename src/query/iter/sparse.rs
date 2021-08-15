@@ -1,5 +1,5 @@
-use crate::components::Entity;
 use crate::query::{IterData, QueryBase, QueryFilter, QueryModifier};
+use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
 /// Type used for iterating over ungrouped component storages.

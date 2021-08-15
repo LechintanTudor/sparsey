@@ -1,4 +1,4 @@
-use crate::components::{BlobVec, Entity, IndexEntity, SparseArray, SparseArrayView};
+use crate::storage::{BlobVec, Entity, IndexEntity, SparseArray, SparseArrayView};
 use crate::utils::ChangeTicks;
 use std::alloc::Layout;
 use std::ptr;

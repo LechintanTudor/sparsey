@@ -1,9 +1,9 @@
-use crate::components::Entity;
 use crate::group;
 use crate::query::{
 	IntoQueryParts, PassthroughFilter, QueryBase, QueryModifier, SliceableQueryBase,
 	StoragesNotGrouped,
 };
+use crate::storage::Entity;
 use std::hint::unreachable_unchecked;
 use std::ops::Range;
 

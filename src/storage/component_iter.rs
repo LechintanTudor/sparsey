@@ -1,4 +1,4 @@
-use crate::components::{Component, Entity};
+use crate::storage::Entity;
 use crate::utils::{ChangeTicks, EntityIterator};
 
 #[derive(Clone, Copy)]
@@ -20,7 +20,7 @@ impl<'a, T> ComponentIter<'a, T> {
 
 impl<'a, T> Iterator for ComponentIter<'a, T>
 where
-	T: Component,
+	T: 'a,
 {
 	type Item = &'a T;
 
@@ -38,7 +38,7 @@ where
 
 impl<'a, T> EntityIterator for ComponentIter<'a, T>
 where
-	T: Component,
+	T: 'a,
 {
 	fn current_entity(&self) -> Option<Entity> {
 		self.entities.get(self.index).copied()
@@ -70,7 +70,7 @@ impl<'a, T> ComponentAndTicksIter<'a, T> {
 
 impl<'a, T> Iterator for ComponentAndTicksIter<'a, T>
 where
-	T: Component,
+	T: 'a,
 {
 	type Item = (&'a T, &'a ChangeTicks);
 
@@ -93,7 +93,7 @@ where
 
 impl<'a, T> EntityIterator for ComponentAndTicksIter<'a, T>
 where
-	T: Component,
+	T: 'a,
 {
 	fn current_entity(&self) -> Option<Entity> {
 		self.entities.get(self.index).copied()

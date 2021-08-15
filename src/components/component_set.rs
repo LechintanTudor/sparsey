@@ -1,7 +1,7 @@
-use crate::components::{Component, ComponentStorage, Entity, TypedComponentStorage};
+use crate::components::{Component, ComponentStorages};
 use crate::group::GroupFamilyIndexes;
+use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::{panic_missing_comp, ChangeTicks};
-use crate::world::ComponentStorages;
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::marker::PhantomData;
@@ -27,7 +27,7 @@ where
 		storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
 		entity: Entity,
 		components: Self,
-		tickss: ChangeTicks,
+		ticks: ChangeTicks,
 	);
 
 	/// Remove components from the borrowed storages and return them if they

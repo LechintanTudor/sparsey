@@ -1,4 +1,4 @@
-use crate::components::{Entity, IndexEntity, SparseArray};
+use crate::storage::{Entity, IndexEntity, SparseArray};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]

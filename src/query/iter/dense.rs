@@ -1,5 +1,5 @@
-use crate::components::Entity;
 use crate::query::{IterData, QueryBase, QueryFilter};
+use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
 /// Type used for iterating over grouped storages. Extremely fast!

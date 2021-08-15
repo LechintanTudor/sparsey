@@ -1,7 +1,9 @@
-use crate::components::{Component, ComponentStorage, Entity, TypedComponentStorage};
+use crate::components::Component;
 use crate::group::GroupInfo;
+use crate::storage::{
+	ComponentAndTicksIter, ComponentIter, ComponentStorage, Entity, TypedComponentStorage,
+};
 use crate::utils::{ChangeTicks, Ticks};
-use crate::world::{ComponentAndTicksIter, ComponentIter};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 
 type ComponentStorageRef<'a, T> = TypedComponentStorage<AtomicRef<'a, ComponentStorage>, T>;

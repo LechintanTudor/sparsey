@@ -1,5 +1,5 @@
-use crate::components::Entity;
 use crate::query::{Iter, QueryBase, QueryFilter, QueryModifier};
+use crate::storage::Entity;
 
 /// Trait implemented by queries.
 pub unsafe trait Query<'a> {
