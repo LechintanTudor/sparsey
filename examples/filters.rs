@@ -52,7 +52,7 @@ fn main() {
 	dispatcher.set_up(&mut world);
 
 	for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
-		resources.insert(difficulty);
+		world.insert_resource(difficulty);
 
 		world.clear_entities();
 		world.create_entity((Hp(10),));

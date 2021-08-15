@@ -40,7 +40,7 @@ fn main() {
 	world.create_entity((Position(0, 5),));
 	world.create_entity((Position(0, 6),));
 
-	resources.insert(Lava { height: 1 });
+	world.insert_resource(Lava { height: 1 });
 
 	for _ in 0..3 {
 		dispatcher.run_seq(&mut world).unwrap();

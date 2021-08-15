@@ -1,6 +1,6 @@
 use crate::components::{Component, ComponentStorage, Entity};
 use crate::layout::Layout;
-use crate::resources::Resources;
+use crate::resources::{Resource, Resources};
 use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
 use crate::world::{
 	BorrowStorages, BorrowWorld, ComponentSet, ComponentStorages, EntityStorage, NoSuchEntity,
@@ -265,6 +265,45 @@ impl World {
 	pub fn clear_entities(&mut self) {
 		self.entities.clear();
 		self.storages.clear();
+	}
+
+	/// Inserts a resource of type `T` into the `World` and returns the previous
+	/// one, if any.
+	pub fn insert_resource<T>(&mut self, resource: T) -> Option<T>
+	where
+		T: Resource,
+	{
+		self.insert_resource_with_ticks(resource, ChangeTicks::just_added(self.tick.get()))
+	}
+
+	/// Same as `insert_resource`, but the `ChangeTicks` are provided by the
+	/// caller.
+	pub fn insert_resource_with_ticks<T>(&mut self, resource: T, ticks: ChangeTicks) -> Option<T>
+	where
+		T: Resource,
+	{
+		self.resources.insert(resource, ticks)
+	}
+
+	/// Removes a resource of type `T` from the `World` and returns it if it was
+	/// successfully removed.
+	pub fn remove_resource<T>(&mut self) -> Option<T>
+	where
+		T: Resource,
+	{
+		self.resources.remove::<T>()
+	}
+
+	/// Removes all resources from the `World`.
+	pub fn clear_resources(&mut self) {
+		self.resources.clear();
+	}
+
+	/// Removes all entities, components and resources from the `World`.
+	pub fn clear(&mut self) {
+		self.entities.clear();
+		self.storages.clear();
+		self.resources.clear();
 	}
 
 	/// Advances the current world tick. Should be called after each game

@@ -27,7 +27,7 @@ pub(crate) struct Resources {
 }
 
 impl Resources {
-	pub fn insert<T>(&mut self, value: T, ticks: ChangeTicks) -> Option<Box<T>>
+	pub fn insert<T>(&mut self, value: T, ticks: ChangeTicks) -> Option<T>
 	where
 		T: Resource,
 	{
@@ -38,10 +38,26 @@ impl Resources {
 
 		self.resources
 			.insert(TypeId::of::<T>(), AtomicRefCell::new(cell))
-			.map(|c| match c.into_inner().value.downcast() {
+			.map(|c| match c.into_inner().value.downcast().map(|c| *c) {
 				Ok(value) => value,
 				Err(_) => unsafe { unreachable_unchecked() },
 			})
+	}
+
+	pub fn remove<T>(&mut self) -> Option<T>
+	where
+		T: Resource,
+	{
+		self.resources.remove(&TypeId::of::<T>()).map(|c| {
+			match c.into_inner().value.downcast().map(|c| *c) {
+				Ok(value) => value,
+				Err(_) => unsafe { unreachable_unchecked() },
+			}
+		})
+	}
+
+	pub fn clear(&mut self) {
+		self.resources.clear();
 	}
 
 	pub fn borrow<T>(&self) -> Option<AtomicRef<ResourceCell>>
