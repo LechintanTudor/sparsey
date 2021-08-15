@@ -3,7 +3,7 @@
 
 /// Exports functions for filtering component and resource views.
 pub mod filters {
-	pub use crate::query::{added, contains, maybe, mutated, updated};
+	pub use crate::query::{added, changed, contains, maybe, mutated};
 	pub use crate::world::{res_added, res_changed, res_mutated};
 }
 

@@ -48,18 +48,18 @@ impl ComponentTicksFilter for Mutated {
 
 #[doc(hidden)]
 #[derive(Clone, Copy, Default, Debug)]
-pub struct Updated;
+pub struct Changed;
 
 /// Filters the component view to only contain components which were just added
 /// or mutated.
-pub fn updated<'a, C>(component_view: C) -> Filter<C, Updated>
+pub fn changed<'a, C>(component_view: C) -> Filter<C, Changed>
 where
 	C: UnfilteredComponentView<'a>,
 {
 	Filter::new(component_view)
 }
 
-impl ComponentTicksFilter for Updated {
+impl ComponentTicksFilter for Changed {
 	fn matches(ticks: Option<&ChangeTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool {
 		ticks
 			.filter(|ticks| {
