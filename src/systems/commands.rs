@@ -34,7 +34,7 @@ impl<'a> Commands<'a> {
 		let entity = self.entities.create_atomic();
 
 		self.run(move |world| {
-			let _ = world.append(entity, components);
+			let _ = world.append_components(entity, components);
 		});
 
 		entity
@@ -48,7 +48,7 @@ impl<'a> Commands<'a> {
 		let entity = self.entities.create_atomic();
 
 		self.run(move |world| {
-			let _ = world.append_with_ticks(entity, components, ticks);
+			let _ = world.append_components_with_ticks(entity, components, ticks);
 		});
 
 		entity
@@ -62,7 +62,7 @@ impl<'a> Commands<'a> {
 		I: IntoIterator<Item = C> + Send + 'static,
 	{
 		self.run(move |world| {
-			world.extend(components_iter);
+			world.create_entities(components_iter);
 		});
 	}
 
@@ -73,14 +73,14 @@ impl<'a> Commands<'a> {
 		I: IntoIterator<Item = C> + Send + 'static,
 	{
 		self.run(move |world| {
-			world.extend_with_ticks(components_iter, ticks);
+			world.create_entities_with_ticks(components_iter, ticks);
 		});
 	}
 
 	/// Queue the destruction of `entity`.
 	pub fn destroy(&mut self, entity: Entity) {
 		self.run(move |world| {
-			world.destroy(entity);
+			world.destroy_entity(entity);
 		});
 	}
 
@@ -90,7 +90,7 @@ impl<'a> Commands<'a> {
 		C: ComponentSet,
 	{
 		self.run(move |world| {
-			let _ = world.append(entity, components);
+			let _ = world.append_components(entity, components);
 		});
 	}
 
@@ -100,7 +100,7 @@ impl<'a> Commands<'a> {
 		C: ComponentSet,
 	{
 		self.run(move |world| {
-			let _ = world.append_with_ticks(entity, components, ticks);
+			let _ = world.append_components_with_ticks(entity, components, ticks);
 		});
 	}
 
@@ -110,7 +110,7 @@ impl<'a> Commands<'a> {
 		C: ComponentSet,
 	{
 		self.run(move |world| {
-			world.delete::<C>(entity);
+			world.delete_components::<C>(entity);
 		});
 	}
 

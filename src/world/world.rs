@@ -69,37 +69,41 @@ impl World {
 	}
 
 	/// Creates an `Entity` with the given `components` and returns it.
-	pub fn create<C>(&mut self, components: C) -> Entity
+	pub fn create_entity<C>(&mut self, components: C) -> Entity
 	where
 		C: ComponentSet,
 	{
 		let ticks = ChangeTicks::just_added(self.tick.get());
-		self.create_with_ticks(components, ticks)
+		self.create_entity_with_ticks(components, ticks)
 	}
 
 	/// Same as `create`, but the `ChangeTicks` are provided by the caller.
-	pub fn create_with_ticks<C>(&mut self, components: C, ticks: ChangeTicks) -> Entity
+	pub fn create_entity_with_ticks<C>(&mut self, components: C, ticks: ChangeTicks) -> Entity
 	where
 		C: ComponentSet,
 	{
 		let entity = self.entities.create();
-		let _ = self.append_with_ticks(entity, components, ticks);
+		let _ = self.append_components_with_ticks(entity, components, ticks);
 		entity
 	}
 
 	/// Creates new `Entities` with the components produced by
 	/// `components_iter`. Returns the newly created entities as a slice.
-	pub fn extend<C, I>(&mut self, components_iter: I) -> &[Entity]
+	pub fn create_entities<C, I>(&mut self, components_iter: I) -> &[Entity]
 	where
 		C: ComponentSet,
 		I: IntoIterator<Item = C>,
 	{
 		let ticks = ChangeTicks::just_added(self.tick.get());
-		self.extend_with_ticks(components_iter, ticks)
+		self.create_entities_with_ticks(components_iter, ticks)
 	}
 
 	/// Same as `extend`, but the `ChangeTicks` are provided by the caller.
-	pub fn extend_with_ticks<C, I>(&mut self, components_iter: I, ticks: ChangeTicks) -> &[Entity]
+	pub fn create_entities_with_ticks<C, I>(
+		&mut self,
+		components_iter: I,
+		ticks: ChangeTicks,
+	) -> &[Entity]
 	where
 		C: ComponentSet,
 		I: IntoIterator<Item = C>,
@@ -136,7 +140,7 @@ impl World {
 
 	/// Removes `entity` and all of its `components` from the world.
 	/// Returns `true` if `entity` existed in the world before the call.
-	pub fn destroy(&mut self, entity: Entity) -> bool {
+	pub fn destroy_entity(&mut self, entity: Entity) -> bool {
 		if !self.entities.destroy(entity) {
 			return false;
 		}
@@ -156,16 +160,20 @@ impl World {
 
 	/// Appends the given `components` to `entity` if `entity` exists in the
 	/// `World`.
-	pub fn append<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
+	pub fn append_components<C>(
+		&mut self,
+		entity: Entity,
+		components: C,
+	) -> Result<(), NoSuchEntity>
 	where
 		C: ComponentSet,
 	{
 		let ticks = ChangeTicks::just_added(self.tick.get());
-		self.append_with_ticks(entity, components, ticks)
+		self.append_components_with_ticks(entity, components, ticks)
 	}
 
 	/// Same as `append`, but the `ChangeTicks` are provided by the caller.
-	pub fn append_with_ticks<C>(
+	pub fn append_components_with_ticks<C>(
 		&mut self,
 		entity: Entity,
 		components: C,
@@ -174,7 +182,7 @@ impl World {
 	where
 		C: ComponentSet,
 	{
-		if !self.contains(entity) {
+		if !self.contains_entity(entity) {
 			return Err(NoSuchEntity);
 		}
 
@@ -195,11 +203,11 @@ impl World {
 
 	/// Removes a component set from `entity` and returns them if they all
 	/// existed in the `World` before the call.
-	pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
+	pub fn remove_components<C>(&mut self, entity: Entity) -> Option<C>
 	where
 		C: ComponentSet,
 	{
-		if !self.contains(entity) {
+		if !self.contains_entity(entity) {
 			return None;
 		}
 
@@ -219,11 +227,11 @@ impl World {
 
 	/// Deletes a component set from `entity`. This is faster than removing
 	/// the components.
-	pub fn delete<C>(&mut self, entity: Entity)
+	pub fn delete_components<C>(&mut self, entity: Entity)
 	where
 		C: ComponentSet,
 	{
-		if !self.contains(entity) {
+		if !self.contains_entity(entity) {
 			return;
 		}
 
@@ -242,7 +250,7 @@ impl World {
 	}
 
 	/// Returns `true` if `entity` exists in the `World`.
-	pub fn contains(&self, entity: Entity) -> bool {
+	pub fn contains_entity(&self, entity: Entity) -> bool {
 		self.entities.contains(entity)
 	}
 
@@ -254,14 +262,14 @@ impl World {
 	}
 
 	/// Removes all entities and components in the world.
-	pub fn clear(&mut self) {
+	pub fn clear_entities(&mut self) {
 		self.entities.clear();
 		self.storages.clear();
 	}
 
 	/// Advances the current world tick. Should be called after each game
 	/// update for proper change detection.
-	pub fn advance_ticks(&mut self) -> Result<(), TickOverflow> {
+	pub fn increment_ticks(&mut self) -> Result<(), TickOverflow> {
 		if self.tick.get() != Ticks::MAX {
 			self.tick = NonZeroTicks::new(self.tick.get() + 1).unwrap();
 			Ok(())

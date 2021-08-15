@@ -42,12 +42,12 @@ fn main() {
 	let mut world = World::default();
 	dispatcher.set_up(&mut world);
 
-	world.create((Position(0, 0), Velocity(1, 1)));
-	world.create((Position(0, 0), Velocity(2, 2)));
-	world.create((Position(0, 0), Velocity(3, 3), Immovable));
+	world.create_entity((Position(0, 0), Velocity(1, 1)));
+	world.create_entity((Position(0, 0), Velocity(2, 2)));
+	world.create_entity((Position(0, 0), Velocity(3, 3), Immovable));
 
 	for _ in 0..3 {
 		dispatcher.run_seq(&mut world).unwrap();
-		world.advance_ticks().unwrap();
+		world.increment_ticks().unwrap();
 	}
 }

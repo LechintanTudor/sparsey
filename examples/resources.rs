@@ -33,17 +33,17 @@ fn main() {
 	let mut world = World::default();
 	dispatcher.set_up(&mut world);
 
-	world.create((Position(0, 1),));
-	world.create((Position(0, 2),));
-	world.create((Position(0, 3),));
-	world.create((Position(0, 4),));
-	world.create((Position(0, 5),));
-	world.create((Position(0, 6),));
+	world.create_entity((Position(0, 1),));
+	world.create_entity((Position(0, 2),));
+	world.create_entity((Position(0, 3),));
+	world.create_entity((Position(0, 4),));
+	world.create_entity((Position(0, 5),));
+	world.create_entity((Position(0, 6),));
 
 	resources.insert(Lava { height: 1 });
 
 	for _ in 0..3 {
 		dispatcher.run_seq(&mut world).unwrap();
-		world.advance_ticks().unwrap();
+		world.increment_ticks().unwrap();
 	}
 }

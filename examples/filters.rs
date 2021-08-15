@@ -54,11 +54,11 @@ fn main() {
 	for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
 		resources.insert(difficulty);
 
-		world.clear();
-		world.create((Hp(10),));
-		world.create((Hp(100),));
+		world.clear_entities();
+		world.create_entity((Hp(10),));
+		world.create_entity((Hp(100),));
 
 		dispatcher.run_seq(&mut world).unwrap();
-		world.advance_ticks().unwrap();
+		world.increment_ticks().unwrap();
 	}
 }
