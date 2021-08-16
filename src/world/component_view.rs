@@ -1,4 +1,3 @@
-use crate::components::Component;
 use crate::group::GroupInfo;
 use crate::storage::{
 	ComponentAndTicksIter, ComponentIter, ComponentStorage, Entity, TypedComponentStorage,
@@ -10,20 +9,14 @@ type ComponentStorageRef<'a, T> = TypedComponentStorage<AtomicRef<'a, ComponentS
 type ComponentStorageRefMut<'a, T> = TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>;
 
 /// Shared view over a component storage.
-pub struct Comp<'a, T>
-where
-	T: Component,
-{
+pub struct Comp<'a, T> {
 	pub(crate) storage: ComponentStorageRef<'a, T>,
 	pub(crate) group_info: GroupInfo<'a>,
 	pub(crate) world_tick: Ticks,
 	pub(crate) last_system_tick: Ticks,
 }
 
-impl<'a, T> Comp<'a, T>
-where
-	T: Component,
-{
+impl<'a, T> Comp<'a, T> {
 	pub(crate) unsafe fn new(
 		storage: AtomicRef<'a, ComponentStorage>,
 		group_info: GroupInfo<'a>,
@@ -101,20 +94,14 @@ where
 }
 
 /// Exclusive view over a component storage.
-pub struct CompMut<'a, T>
-where
-	T: Component,
-{
+pub struct CompMut<'a, T> {
 	pub(crate) storage: ComponentStorageRefMut<'a, T>,
 	pub(crate) group_info: GroupInfo<'a>,
 	pub(crate) world_tick: Ticks,
 	pub(crate) last_system_tick: Ticks,
 }
 
-impl<'a, T> CompMut<'a, T>
-where
-	T: Component,
-{
+impl<'a, T> CompMut<'a, T> {
 	pub(crate) unsafe fn new(
 		storage: AtomicRefMut<'a, ComponentStorage>,
 		group_info: GroupInfo<'a>,

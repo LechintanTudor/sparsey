@@ -4,35 +4,14 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr, slice};
 
-pub(crate) struct TypedComponentStorage<S, T>
-where
-	S: Deref<Target = ComponentStorage>,
-	T: 'static,
-{
+pub(crate) struct TypedComponentStorage<S, T> {
 	storage: S,
 	component: PhantomData<*const T>,
-}
-
-unsafe impl<S, T> Send for TypedComponentStorage<S, T>
-where
-	S: Deref<Target = ComponentStorage>,
-	T: Send + 'static,
-{
-	// Empty
-}
-
-unsafe impl<S, T> Sync for TypedComponentStorage<S, T>
-where
-	S: Deref<Target = ComponentStorage>,
-	T: Sync + 'static,
-{
-	// Empty
 }
 
 impl<S, T> TypedComponentStorage<S, T>
 where
 	S: Deref<Target = ComponentStorage>,
-	T: 'static,
 {
 	pub unsafe fn new(storage: S) -> Self {
 		Self {
@@ -87,7 +66,6 @@ where
 impl<S, T> Deref for TypedComponentStorage<S, T>
 where
 	S: Deref<Target = ComponentStorage>,
-	T: 'static,
 {
 	type Target = [T];
 
@@ -99,7 +77,6 @@ where
 impl<S, T> TypedComponentStorage<S, T>
 where
 	S: Deref<Target = ComponentStorage> + DerefMut,
-	T: 'static,
 {
 	pub fn insert(&mut self, entity: Entity, value: T, ticks: ChangeTicks) -> Option<T> {
 		unsafe {
