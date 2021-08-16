@@ -33,13 +33,9 @@ fn main() {
     world.register::<Velocity>();
 
     /// Create some entities.
-    world.create((Position(0.0), Velocity(1.0)));
-    world.create((Position(0.0), Velocity(2.0)));
-    world.create((Position(0.0), Velocity(3.0), Immovable));
-
-    /// Resources can be used to store data which doesn't belong to
-    /// any single entity. In our case, there are none.
-    let mut resources = Resources::default();
+    world.create_entity((Position(0.0), Velocity(1.0)));
+    world.create_entity((Position(0.0), Velocity(2.0)));
+    world.create_entity((Position(0.0), Velocity(3.0), Immovable));
 
     /// Create a Dispatcher for running our systems.
     let mut dispatcher = Dispatcher::builder()
@@ -49,8 +45,8 @@ fn main() {
 
     /// Run the systems 3 times.
     for _ in 0..3 {
-        dispatcher.run_seq(&mut world, &mut resources).unwrap();
-        world.advance_ticks().unwrap();
+        dispatcher.run_seq(&mut world).unwrap();
+        world.increment_ticks().unwrap();
     }
 }
 ```
@@ -85,7 +81,7 @@ let mut dispatcher = Dispatcher::builder()
     .add_system(failable.system())
     .build();
 
-if let Err(run_error) = dispatcher.run_seq(&mut world, &mut resources) {
+if let Err(run_error) = dispatcher.run_seq(&mut world) {
     for error in run_error.errors() {
         println!("{}", error);
     }
@@ -114,7 +110,7 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
 Sparsey supports change detection at a component level.
 ```rust
 fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
-    use sparsey::filters::{added, mutated, updated};
+    use sparsey::filters::{added, mutated, changed};
 
     // Restrict query to match only entities to which A was just added.
     for (a, b, c) in (added(&a), &b, &c).iter() {}
@@ -123,7 +119,7 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a, b, c) in (mutated(&a), &b, &c).iter() {}
 
     // Restrict query to match only entities to which A was just added or mutated.
-    for (a, b, c) in (updated(&a), &b, &c).iter() {}
+    for (a, b, c) in (changed(&a), &b, &c).iter() {}
 
     // The opposite effect can be achieved by using the `Not` operator.
     // Restrict query to match only entities to which A was not just added.
