@@ -39,7 +39,7 @@ impl ComponentStorages {
 		self.grouped.drain_into(&mut storages);
 		self.ungrouped.drain_into(&mut storages);
 
-		self.grouped = GroupedComponentStorages::with_layout(&layout, &mut storages);
+		self.grouped = GroupedComponentStorages::with_layout(layout, &mut storages);
 		self.ungrouped = UngroupedComponentStorages::from_storages(&mut storages);
 
 		for i in 0..self.grouped.group_family_count() {

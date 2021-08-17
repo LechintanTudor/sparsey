@@ -29,7 +29,7 @@ impl<'a> IterData<'a> {
 	}
 
 	pub const fn entities(&self) -> &'a [Entity] {
-		&self.entities
+		self.entities
 	}
 
 	pub const fn world_tick(&self) -> Ticks {

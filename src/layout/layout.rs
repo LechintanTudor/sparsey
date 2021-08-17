@@ -78,7 +78,7 @@ impl LayoutBuilder {
 	pub fn build(&mut self) -> Layout {
 		let group_families = mem::take(&mut self.group_families)
 			.iter()
-			.map(|groups| unsafe { LayoutGroupFamily::new_unchecked(&groups) })
+			.map(|groups| unsafe { LayoutGroupFamily::new_unchecked(groups) })
 			.collect();
 
 		Layout { group_families }
