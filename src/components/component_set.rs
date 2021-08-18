@@ -6,63 +6,59 @@ use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 use std::marker::PhantomData;
 
-pub struct BorrowedComponentStorage<'a, T>(
+/// Used internally by `ComponentSet` to manage a component storage of type `T`.
+pub struct ComponentStorageRefMut<'a, T>(
 	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>,
-)
-where
-	T: Component;
+);
 
-/// Trait implemented for component sets which can be
-/// added, appended or removed to/from the `World`.
+/// Trait used to insert and remove components from the `World`.
 pub unsafe trait ComponentSet
 where
 	Self: Sized + Send + Sync + 'static,
 {
-	/// Storages to borrow from the `World` for adding/appending/removing
-	/// components.
+	/// Used for borrowing storages.
 	type Storages: for<'a> BorrowStorages<'a>;
 
-	/// Insert the component in the borrowed storages.
+	/// Inserts the components into the borrowed storages.
 	unsafe fn insert(
-		storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+		storages: &mut <Self::Storages as BorrowStorages>::Storages,
 		entity: Entity,
 		components: Self,
 		ticks: ChangeTicks,
 	);
 
-	/// Remove components from the borrowed storages and return them if they
-	/// exist.
+	/// Removes the components from the borrowed storages and returns them if
+	/// all of them were successfully removed.
 	unsafe fn remove(
-		storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+		storages: &mut <Self::Storages as BorrowStorages>::Storages,
 		entity: Entity,
 	) -> Option<Self>;
 
-	/// Delete components from the borrowed storages. Faster than removing them.
-	unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::StorageSet, entity: Entity);
+	/// Deletes the components from the borrowed storages. This is faster than
+	/// removing them.
+	unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::Storages, entity: Entity);
 }
 
 /// Trait implemented by `StorageBorrower` to borrow component storages.
-/// Only exists because we don't have GATs in stable rust :(
 pub trait BorrowStorages<'a> {
-	/// Set of borrowed storages.
-	type StorageSet;
+	/// Borrowed storages.
+	type Storages;
 
-	fn borrow(components: &'a ComponentStorages) -> Self::StorageSet;
+	/// Borrows the storages.
+	fn borrow(components: &'a ComponentStorages) -> Self::Storages;
 
+	/// Returns the group family indexes.
 	fn families(components: &'a ComponentStorages) -> GroupFamilyIndexes;
 
+	/// Borrows the storages and returns the group family indexes.
 	fn borrow_with_families(
 		components: &'a ComponentStorages,
-	) -> (Self::StorageSet, GroupFamilyIndexes);
+	) -> (Self::Storages, GroupFamilyIndexes);
 }
 
-/// Struct used to borrow component storages. Implements `BorrowStorages` for
-/// all lifetimes. Only exists because we don't have GATs in stable rust :(
-pub struct StorageBorrower<T>
-where
-	T: Send + Sync + 'static,
-{
-	_phantom: PhantomData<*const T>,
+/// Struct used to borrow component storages.
+pub struct StorageBorrower<T> {
+	storages: PhantomData<*const T>,
 }
 
 macro_rules! impl_component_set {
@@ -75,7 +71,7 @@ macro_rules! impl_component_set {
 
             #[allow(unused_variables)]
             unsafe fn insert(
-                storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+                storages: &mut <Self::Storages as BorrowStorages>::Storages,
                 entity: Entity,
                 components: Self,
                 ticks: ChangeTicks,
@@ -87,7 +83,7 @@ macro_rules! impl_component_set {
 
             #[allow(unused_variables)]
             unsafe fn remove(
-                storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+                storages: &mut <Self::Storages as BorrowStorages>::Storages,
                 entity: Entity,
             ) -> Option<Self> {
                 let components = (
@@ -101,7 +97,7 @@ macro_rules! impl_component_set {
 
             #[allow(unused_variables)]
             unsafe fn delete(
-                storages: &mut <Self::Storages as BorrowStorages>::StorageSet,
+                storages: &mut <Self::Storages as BorrowStorages>::Storages,
                 entity: Entity,
             ) {
                 $(
@@ -114,17 +110,17 @@ macro_rules! impl_component_set {
         where
             $($comp: Component,)*
         {
-            type StorageSet = ($(BorrowedComponentStorage<'a, $comp>,)*);
+            type Storages = ($(ComponentStorageRefMut<'a, $comp>,)*);
 
             #[allow(unused_mut)]
             #[allow(unused_variables)]
-            fn borrow_with_families(components: &'a ComponentStorages) -> (Self::StorageSet, GroupFamilyIndexes) {
+            fn borrow_with_families(components: &'a ComponentStorages) -> (Self::Storages, GroupFamilyIndexes) {
                 let mut families = GroupFamilyIndexes::default();
                 (($(borrow_with_family::<$comp>(components, &mut families),)*), families)
             }
 
             #[allow(unused_variables)]
-            fn borrow(components: &'a ComponentStorages) -> Self::StorageSet {
+            fn borrow(components: &'a ComponentStorages) -> Self::Storages {
                 ($(borrow::<$comp>(components),)*)
             }
 
@@ -139,10 +135,20 @@ macro_rules! impl_component_set {
     };
 }
 
+fn borrow<T>(components: &ComponentStorages) -> ComponentStorageRefMut<T>
+where
+	T: Component,
+{
+	components
+		.borrow_mut(&TypeId::of::<T>())
+		.map(|storage| unsafe { ComponentStorageRefMut(TypedComponentStorage::new(storage)) })
+		.unwrap_or_else(|| panic_missing_comp::<T>())
+}
+
 fn borrow_with_family<'a, T>(
 	components: &'a ComponentStorages,
 	families: &mut GroupFamilyIndexes,
-) -> BorrowedComponentStorage<'a, T>
+) -> ComponentStorageRefMut<'a, T>
 where
 	T: Component,
 {
@@ -152,18 +158,8 @@ where
 			if let Some(family) = family {
 				families.insert_unchecked(family);
 			}
-			BorrowedComponentStorage(TypedComponentStorage::new(storage))
+			ComponentStorageRefMut(TypedComponentStorage::new(storage))
 		})
-		.unwrap_or_else(|| panic_missing_comp::<T>())
-}
-
-fn borrow<T>(components: &ComponentStorages) -> BorrowedComponentStorage<T>
-where
-	T: Component,
-{
-	components
-		.borrow_mut(&TypeId::of::<T>())
-		.map(|storage| unsafe { BorrowedComponentStorage(TypedComponentStorage::new(storage)) })
 		.unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
