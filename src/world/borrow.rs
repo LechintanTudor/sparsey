@@ -1,28 +1,20 @@
 use crate::components::Component;
-use crate::layout::ComponentInfo;
 use crate::resources::Resource;
-use crate::systems::RegistryAccess;
 use crate::utils::{panic_missing_comp, panic_missing_res, Ticks};
 use crate::world::{Comp, CompMut, Res, ResMut, World};
 use std::any::TypeId;
 
-pub unsafe trait BorrowWorld<'a> {
+pub trait BorrowWorld<'a> {
 	type Item;
-
-	fn access() -> RegistryAccess;
 
 	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item;
 }
 
-unsafe impl<'a, 'b, T> BorrowWorld<'a> for Comp<'b, T>
+impl<'a, 'b, T> BorrowWorld<'a> for Comp<'b, T>
 where
 	T: Component,
 {
 	type Item = Comp<'a, T>;
-
-	fn access() -> RegistryAccess {
-		RegistryAccess::Comp(ComponentInfo::new::<T>())
-	}
 
 	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
 		let (storage, info) = world
@@ -34,15 +26,11 @@ where
 	}
 }
 
-unsafe impl<'a, 'b, T> BorrowWorld<'a> for CompMut<'b, T>
+impl<'a, 'b, T> BorrowWorld<'a> for CompMut<'b, T>
 where
 	T: Component,
 {
 	type Item = CompMut<'a, T>;
-
-	fn access() -> RegistryAccess {
-		RegistryAccess::CompMut(ComponentInfo::new::<T>())
-	}
 
 	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
 		let (storage, info) = world
@@ -54,15 +42,11 @@ where
 	}
 }
 
-unsafe impl<'a, 'b, T> BorrowWorld<'a> for Res<'b, T>
+impl<'a, 'b, T> BorrowWorld<'a> for Res<'b, T>
 where
 	T: Resource,
 {
 	type Item = Res<'a, T>;
-
-	fn access() -> RegistryAccess {
-		RegistryAccess::Res(TypeId::of::<T>())
-	}
 
 	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
 		let cell = world
@@ -74,15 +58,11 @@ where
 	}
 }
 
-unsafe impl<'a, 'b, T> BorrowWorld<'a> for ResMut<'b, T>
+impl<'a, 'b, T> BorrowWorld<'a> for ResMut<'b, T>
 where
 	T: Resource,
 {
 	type Item = ResMut<'a, T>;
-
-	fn access() -> RegistryAccess {
-		RegistryAccess::ResMut(TypeId::of::<T>())
-	}
 
 	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
 		let cell = world
@@ -93,3 +73,37 @@ where
 		unsafe { ResMut::new(cell, world.tick.get(), change_tick) }
 	}
 }
+
+macro_rules! impl_borrow_world {
+	($($ty:ident),*) => {
+		impl<'a, $($ty),*> BorrowWorld<'a> for ($($ty,)*)
+		where
+			$($ty: BorrowWorld<'a>,)*
+		{
+			type Item = ($($ty::Item,)*);
+
+			#[allow(unused_variables)]
+			fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
+				($($ty::borrow(world, change_tick),)*)
+			}
+		}
+	};
+}
+
+impl_borrow_world!();
+impl_borrow_world!(A);
+impl_borrow_world!(A, B);
+impl_borrow_world!(A, B, C);
+impl_borrow_world!(A, B, C, D);
+impl_borrow_world!(A, B, C, D, E);
+impl_borrow_world!(A, B, C, D, E, F);
+impl_borrow_world!(A, B, C, D, E, F, G);
+impl_borrow_world!(A, B, C, D, E, F, G, H);
+impl_borrow_world!(A, B, C, D, E, F, G, H, I);
+impl_borrow_world!(A, B, C, D, E, F, G, H, I, J);
+impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K);
+impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L);
+impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);

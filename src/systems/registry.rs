@@ -1,7 +1,9 @@
+use crate::components::Component;
 use crate::layout::ComponentInfo;
+use crate::resources::Resource;
 use crate::systems::{CommandBuffers, Commands};
 use crate::utils::Ticks;
-use crate::world::{BorrowWorld, World};
+use crate::world::{BorrowWorld, Comp, CompMut, Res, ResMut, World};
 use std::any::TypeId;
 
 /// Represents the type of data which can be accessed by a `System`.
@@ -87,17 +89,62 @@ unsafe impl<'a, 'b> BorrowRegistry<'a> for Commands<'b> {
 	}
 }
 
-unsafe impl<'a, T> BorrowRegistry<'a> for T
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Comp<'b, T>
 where
-	T: BorrowWorld<'a>,
+	T: Component,
 {
-	type Item = <T as BorrowWorld<'a>>::Item;
+	type Item = Comp<'a, T>;
 
 	fn access() -> RegistryAccess {
-		<T as BorrowWorld<'a>>::access()
+		RegistryAccess::Comp(ComponentInfo::new::<T>())
 	}
 
 	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-		<T as BorrowWorld<'a>>::borrow(registry.world, registry.change_tick)
+		<Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+	}
+}
+
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for CompMut<'b, T>
+where
+	T: Component,
+{
+	type Item = CompMut<'a, T>;
+
+	fn access() -> RegistryAccess {
+		RegistryAccess::CompMut(ComponentInfo::new::<T>())
+	}
+
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+		<Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+	}
+}
+
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Res<'b, T>
+where
+	T: Resource,
+{
+	type Item = Res<'a, T>;
+
+	fn access() -> RegistryAccess {
+		RegistryAccess::Res(TypeId::of::<T>())
+	}
+
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+		<Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+	}
+}
+
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for ResMut<'b, T>
+where
+	T: Resource,
+{
+	type Item = ResMut<'a, T>;
+
+	fn access() -> RegistryAccess {
+		RegistryAccess::ResMut(TypeId::of::<T>())
+	}
+
+	unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+		<Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
 	}
 }
