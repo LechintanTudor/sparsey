@@ -16,14 +16,14 @@ pub fn res_added<R>(resource_view: &R) -> bool
 where
 	R: ResourceView,
 {
-	resource_view.ticks().tick_added() == resource_view.world_tick()
+	resource_view.ticks().tick_added == resource_view.world_tick()
 }
 
 pub fn res_mutated<R>(resource_view: &R) -> bool
 where
 	R: ResourceView,
 {
-	resource_view.ticks().tick_mutated() > resource_view.change_tick()
+	resource_view.ticks().tick_mutated > resource_view.change_tick()
 }
 
 pub fn res_changed<R>(resource_view: &R) -> bool
@@ -123,8 +123,7 @@ impl<T> Deref for ResMut<'_, T> {
 
 impl<T> DerefMut for ResMut<'_, T> {
 	fn deref_mut(&mut self) -> &mut Self::Target {
-		self.cell.ticks.set_tick_mutated(self.world_tick);
-
+		self.cell.ticks.tick_mutated = self.world_tick;
 		unsafe { &mut *(&mut self.cell.value_mut() as *mut _ as *mut T) }
 	}
 }
