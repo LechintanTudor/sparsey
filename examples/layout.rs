@@ -12,17 +12,28 @@ struct Sprite {
 pub struct Transparent;
 
 fn print_sprites(pos: Comp<Position>, sprites: Comp<Sprite>, transparencies: Comp<Transparent>) {
-	let (pos_slice, sprite_slice) = (&pos, &sprites).components();
+	let (pos_slice, sprite_slice) = (&pos, &sprites)
+		.components()
+		.expect("Ungrouped component storages");
+
 	println!("[All sprites]");
 	println!("Positions: {:?}", pos_slice);
 	println!("Sprites: {:?}", sprite_slice);
 
-	let (pos_slice, sprite_slice) = (&pos, &sprites).include(&transparencies).components();
+	let (pos_slice, sprite_slice) = (&pos, &sprites)
+		.include(&transparencies)
+		.components()
+		.expect("Ungrouped component storages");
+
 	println!("\n[Transparent sprites]");
 	println!("Positions: {:?}", pos_slice);
 	println!("Sprites: {:?}", sprite_slice);
 
-	let (pos_slice, sprite_slice) = (&pos, &sprites).exclude(&transparencies).components();
+	let (pos_slice, sprite_slice) = (&pos, &sprites)
+		.exclude(&transparencies)
+		.components()
+		.expect("Ungrouped component storages");
+
 	println!("\n[Opaque sprites]");
 	println!("Positions: {:?}", pos_slice);
 	println!("Sprites: {:?}", sprite_slice);

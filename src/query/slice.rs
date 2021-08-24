@@ -1,7 +1,7 @@
 use crate::group;
 use crate::query::{
 	IntoQueryParts, PassthroughFilter, QueryBase, QueryModifier, SliceableQueryBase,
-	StoragesNotGrouped,
+	UngroupedComponentStorages,
 };
 use crate::storage::Entity;
 use std::hint::unreachable_unchecked;
@@ -16,33 +16,18 @@ where
 
 	/// Returns a slice with all entities that match the query if the component
 	/// storages are grouped.
-	fn try_entities(self) -> Result<&'a [Entity], StoragesNotGrouped>;
+	fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages>;
 
 	/// Returns a slice with all components that match the query if the
 	/// component storages are grouped.
-	fn try_components(self) -> Result<Self::ComponentSlices, StoragesNotGrouped>;
+	fn components(self) -> Result<Self::ComponentSlices, UngroupedComponentStorages>;
 
 	/// Returns a tuple containing a slice with all entities and a slice with
 	/// all components that match the query if the component storages are
 	/// grouped.
-	fn try_entities_components(
+	fn entities_components(
 		self,
-	) -> Result<(&'a [Entity], Self::ComponentSlices), StoragesNotGrouped>;
-
-	/// Same as `try_entities` but unwraps errors.
-	fn entities(self) -> &'a [Entity] {
-		self.try_entities().unwrap()
-	}
-
-	/// Same as `try_components` but unwraps errors.
-	fn components(self) -> Self::ComponentSlices {
-		self.try_components().unwrap()
-	}
-
-	/// Same as `try_entities_components` but unwraps errors.
-	fn entities_components(self) -> (&'a [Entity], Self::ComponentSlices) {
-		self.try_entities_components().unwrap()
-	}
+	) -> Result<(&'a [Entity], Self::ComponentSlices), UngroupedComponentStorages>;
 }
 
 impl<'a, Q> SliceQuery<'a> for Q
@@ -52,7 +37,7 @@ where
 {
 	type ComponentSlices = <Q::Base as SliceableQueryBase<'a>>::Slices;
 
-	fn try_entities(self) -> Result<&'a [Entity], StoragesNotGrouped> {
+	fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages> {
 		let (base, include, exclude, _) = self.into_parts();
 		let range = group_range(&base, &include, &exclude)?;
 
@@ -69,15 +54,15 @@ where
 		}
 	}
 
-	fn try_components(self) -> Result<Self::ComponentSlices, StoragesNotGrouped> {
+	fn components(self) -> Result<Self::ComponentSlices, UngroupedComponentStorages> {
 		let (base, include, exclude, _) = self.into_parts();
 		let range = group_range(&base, &include, &exclude)?;
 		Ok(unsafe { base.slice_components(range) })
 	}
 
-	fn try_entities_components(
+	fn entities_components(
 		self,
-	) -> Result<(&'a [Entity], Self::ComponentSlices), StoragesNotGrouped> {
+	) -> Result<(&'a [Entity], Self::ComponentSlices), UngroupedComponentStorages> {
 		let (base, include, exclude, _) = self.into_parts();
 		let range = group_range(&base, &include, &exclude)?;
 
@@ -102,7 +87,7 @@ fn group_range<'a, B, I, E>(
 	base: &B,
 	include: &I,
 	exclude: &E,
-) -> Result<Range<usize>, StoragesNotGrouped>
+) -> Result<Range<usize>, UngroupedComponentStorages>
 where
 	B: QueryBase<'a>,
 	I: QueryModifier<'a>,
@@ -113,5 +98,5 @@ where
 		include.group_info(),
 		exclude.group_info(),
 	)
-	.ok_or(StoragesNotGrouped)
+	.ok_or(UngroupedComponentStorages)
 }

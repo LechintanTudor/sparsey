@@ -2,14 +2,15 @@ use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-/// Error returned when trying to slice a query for with ungrouped storages.
+/// Error returned when trying to slice a query with ungrouped component
+/// storages.
 #[derive(Debug)]
-pub struct StoragesNotGrouped;
+pub struct UngroupedComponentStorages;
 
-impl Error for StoragesNotGrouped {}
+impl Error for UngroupedComponentStorages {}
 
-impl Display for StoragesNotGrouped {
+impl Display for UngroupedComponentStorages {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		write!(f, "Component storages not grouped")
+		write!(f, "Tried to slice query with ungrouped component storages")
 	}
 }
