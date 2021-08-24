@@ -1,6 +1,0 @@
-[book]
-authors = ["Tudor Lechintan"]
-language = "en"
-multilingual = false
-src = "src"
-title = "Sparsey ECS Guide"
