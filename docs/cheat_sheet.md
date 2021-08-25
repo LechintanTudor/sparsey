@@ -69,7 +69,7 @@ let a = world.borrow::<Comp<A>>();
 
 Get a mutable component view.
 ```rust
-let a = world.borrow::<CompMut<A>>();
+let mut a = world.borrow::<CompMut<A>>();
 ```
 
 Borrow multiple views simultaneously.
@@ -106,4 +106,158 @@ Iterate all entities and components.
 for (entity, component) in a.iter().entities() {
     /// ...
 }
+```
+
+## Queries
+Get mutable views over `A`, `B` and `C`.
+```rust
+let (mut a, mut b, mut c) = world.borrow::<(CompMut<A>, CompMut<B>, CompMut<C>)>();
+```
+
+Iterate the components of entities with `A`, `B` and `C`.
+```rust
+for (a, b, c) in (&a, &b, &c).iter() {
+    // ...
+}
+```
+
+Also get the entities while iterating the components.
+```rust
+for (entity, (a, b, c)) in (&a, &b, &c).iter().entities() {
+    // ...
+}
+```
+
+Iterate `A` components mutably and `B` and `C` components immutably.
+```rust
+for (mut a, b, c) in (&mut a, &b, &c).iter() {
+    // ...
+}
+```
+
+Iterate `A` components of entities with `B` and `C`.
+```rust
+for (a,) in (&a,).include((&b, &c)).iter() {
+    // ...
+}
+```
+
+Iterate `A` components of entities without `B` and `C`.
+```rust
+for (a,) in (&a,).exclude((&b, &c)).iter() {
+    // ...
+}
+```
+
+Iterate `A` components of entities with `B` and without `C`.
+```rust
+for (a,) in (&a,).include(&b).exclude(&c).iter() {
+    // ...
+}
+```
+
+Check if a query matches an `Entity`.
+```rust
+if (&a, &b, &c).contains(entity) {
+    /// ...
+}
+```
+
+Get the components for an `Entity`.
+```rust
+if let Some((a, b, c)) = (&a, &b, &c).get(entity) {
+    /// ...
+}
+```
+
+## Query Filters
+Import filter functions
+```rust
+use sparsey::filters::{added, mutated, changed};
+```
+
+Iterate `A` components which were added/mutated/changed.
+```rust
+for (a,) in (added(&a),).iter() {
+    // ...
+}
+
+for (a,) in (mutated(&a),).iter() {
+    // ...
+}
+
+for (a,) in (changed(&a),).iter() {
+    // ...
+}
+```
+
+Iterate `A` components which were not added/mutated/changed.
+```rust
+for (a,) in (!added(&a),).iter() {
+    // ...
+}
+
+for (a,) in (!mutated(&a),).iter() {
+    // ...
+}
+
+for (a,) in (!changed(&a),).iter() {
+    // ...
+}
+```
+
+Filter query to only match entities to which `B` and `C` was just added.
+```rust
+for (a,) in (&a,).filter(added(&b) & added(&c)).iter() {
+    /// ...
+}
+```
+
+Filter query to only match entities to which `B` or `C` was just added.
+```rust
+for (a,) in (&a,).filter(added(&b) | added(&c)).iter() {
+    /// ...
+}
+```
+
+## Resources
+Insert a resource.
+```rust
+let previous_res: Option<A> = world.insert_resource(A);
+```
+
+Remove a resource.
+```rust
+let res: Option<A> = world.remove_resource::<A>(); 
+```
+
+Borrow a resource immutably.
+```rust
+let res = world.borrow::<Res<A>>(); 
+```
+
+Borrow a resource mutably.
+```rust
+let mut res = world.borrow::<ResMut<A>>();
+```
+
+## Resource Filters
+Import resource filters.
+```rust
+use sparsey::filters::{res_added, res_mutated, res_changed}; 
+```
+
+Check if a resource was added/mutated/changed.
+```rust
+if res_added(&a) {
+    // ...
+} 
+
+if res_muated(&a) {
+    // ...
+} 
+
+if res_changed(&a) {
+    // ...
+} 
 ```
