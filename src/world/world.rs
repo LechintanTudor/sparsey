@@ -66,6 +66,11 @@ impl World {
 		self.components.register::<T>()
 	}
 
+	/// Check if a component type is registered.
+	pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
+		self.components.is_registered(component_type_id)
+	}
+
 	/// Creates an `Entity` with the given `components` and returns it.
 	pub fn create_entity<C>(&mut self, components: C) -> Entity
 	where
@@ -290,6 +295,11 @@ impl World {
 		T: Resource,
 	{
 		self.resources.remove::<T>()
+	}
+
+	/// Check if a resource exists.
+	pub fn contains_resource(&self, resource_type_id: &TypeId) -> bool {
+		self.resources.contains(resource_type_id)
 	}
 
 	/// Removes all resources from the `World`.

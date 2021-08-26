@@ -15,7 +15,7 @@ world.register::<B>();
 
 Check if a component was registered.
 ```rust
-if world.is_registered(TypeId::of::<A>()) {
+if world.is_registered(&TypeId::of::<A>()) {
     /// ...
 }
 ```
@@ -267,7 +267,7 @@ let previous_res: Option<A> = world.insert_resource(A);
 
 Check if a resource exists.
 ```rust
-if world.contains_resource(TypeId::of::<A>()) {
+if world.contains_resource(&TypeId::of::<A>()) {
     /// ...
 }
 ```

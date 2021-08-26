@@ -34,6 +34,10 @@ impl ComponentStorages {
 		}
 	}
 
+	pub(crate) fn is_registered(&self, component: &TypeId) -> bool {
+		self.grouped.contains(component) || self.ungrouped.contains(component)
+	}
+
 	pub(crate) fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
 		let mut storages = FxHashMap::<TypeId, ComponentStorage>::default();
 		self.grouped.drain_into(&mut storages);

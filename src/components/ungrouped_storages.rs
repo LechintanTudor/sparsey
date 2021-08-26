@@ -48,6 +48,10 @@ impl UngroupedComponentStorages {
 			.or_insert_with(|| AtomicRefCell::new(storage));
 	}
 
+	pub fn contains(&self, component: &TypeId) -> bool {
+		self.storages.contains_key(component)
+	}
+
 	pub fn clear(&mut self) {
 		for storage in self.storages.values_mut() {
 			storage.get_mut().clear();

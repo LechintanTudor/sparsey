@@ -60,6 +60,10 @@ impl ResourceStorage {
 		})
 	}
 
+	pub fn contains(&self, resource_type_id: &TypeId) -> bool {
+		self.resources.contains_key(resource_type_id)
+	}
+
 	pub fn clear(&mut self) {
 		self.resources.clear();
 	}
