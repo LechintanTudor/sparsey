@@ -13,6 +13,13 @@ world.register::<A>();
 world.register::<B>();
 ```
 
+Check if a component was registered.
+```rust
+if world.is_registered(TypeId::of::<A>()) {
+    /// ...
+}
+```
+
 Create a `Layout` for storage grouping.
 ```rust
 let layout = Layout::builder()
@@ -37,7 +44,7 @@ Create an `Entity` with no components.
 let entity = world.create_entity(());
 ```
 
-Check if a `World` contains an `Entity`.
+Check if an `Entity` exists.
 ```rust
 if world.contains_entity(entity) {
     // ...
@@ -220,10 +227,49 @@ for (a,) in (&a,).filter(added(&b) | added(&c)).iter() {
 }
 ```
 
+## Query Slicing
+Create a `World` with `(A, B)` and `(A, B, C)` groups and borrow the component storages.
+```rust
+let layout = Layout::builder()
+    .add_group(<(A, B)>::group())
+    .add_group(<(A, B, C)>::group())
+    .build();
+
+let world = World::with_layout(&layout);
+let (a, b) = world.borrow::<(Comp<A>, Comp<B>, Comp<C>)>();
+```
+
+Get all entities with `A`, and `B`.
+```rust
+let entities: &[Entity] = (&a, &b).entities().unwrap();
+```
+
+Get all components of entities with `A` and `B`.
+```rust
+let (a, b, c): (&[A], &[B]) = (&a, &b).components().unwrap();
+```
+
+Get the entities with `A` and `B` and their components.
+```rust
+let (entities, (a, b)): (&[Entity], (&[A], &[B])) = (&a, &b).entities_components().unwrap();
+```
+
+Get all components of entities with `A` and `B`, without `C`.
+```rust
+let (a, b) = (&a, &b).exclude(&c).components().unwrap();
+```
+
 ## Resources
 Insert a resource.
 ```rust
 let previous_res: Option<A> = world.insert_resource(A);
+```
+
+Check if a resource exists.
+```rust
+if world.contains_resource(TypeId::of::<A>()) {
+    /// ...
+}
 ```
 
 Remove a resource.
