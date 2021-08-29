@@ -16,13 +16,13 @@ impl<'a, T> SparseSplitComponentView<'a, T> {
 		&mut self,
 		entity: Entity,
 		world_tick: Ticks,
-		last_system_tick: Ticks,
+		change_tick: Ticks,
 	) -> Option<C::Item>
 	where
 		C: ComponentView<'a, Component = T>,
 	{
 		let index = self.sparse.get_index(entity)? as usize;
-		C::get_from_parts(self.data, self.ticks, index, world_tick, last_system_tick)
+		C::get_from_parts(self.data, self.ticks, index, world_tick, change_tick)
 	}
 }
 
@@ -39,12 +39,12 @@ impl<'a, T> DenseSplitComponentView<'a, T> {
 		&mut self,
 		index: usize,
 		world_tick: Ticks,
-		last_system_tick: Ticks,
+		change_tick: Ticks,
 	) -> Option<V::Item>
 	where
 		V: ComponentView<'a, Component = T>,
 	{
-		V::get_from_parts(self.data, self.ticks, index, world_tick, last_system_tick)
+		V::get_from_parts(self.data, self.ticks, index, world_tick, change_tick)
 	}
 }
 
@@ -52,7 +52,7 @@ macro_rules! split_sparse {
 	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
 		paste::paste! {
 			let world_tick = $first.world_tick();
-			let last_system_tick = $first.last_system_tick();
+			let change_tick = $first.change_tick();
 			let [<split_ $first_type:lower>] = crate::query::split::split_sparse($first);
 			$(let [<split_ $other_type:lower>] = crate::query::split::split_sparse($other);)*
 
@@ -62,7 +62,7 @@ macro_rules! split_sparse {
 			]).unwrap();
 
 			(
-				Some(crate::query::IterData::new(entities, world_tick, last_system_tick)),
+				Some(crate::query::IterData::new(entities, world_tick, change_tick)),
 				(
 					[<split_ $first_type:lower>].1,
 					$([<split_ $other_type:lower>].1,)*
@@ -76,12 +76,12 @@ macro_rules! split_dense {
 	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
 		paste::paste! {
 			let world_tick = $first.world_tick();
-			let last_system_tick = $first.last_system_tick();
+			let change_tick = $first.change_tick();
 			let (entities, [<split_ $first_type:lower>]) = crate::query::split::split_dense($first);
 			$(let [<split_ $other_type:lower>] = crate::query::split::split_dense($other).1;)*
 
 			(
-				Some(crate::query::IterData::new(entities, world_tick, last_system_tick)),
+				Some(crate::query::IterData::new(entities, world_tick, change_tick)),
 				(
 					[<split_ $first_type:lower>],
 					$([<split_ $other_type:lower>],)*
@@ -95,7 +95,7 @@ macro_rules! split_modifier {
 	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
 		paste::paste! {
 			let world_tick = $first.world_tick();
-			let last_system_tick = $first.last_system_tick();
+			let change_tick = $first.change_tick();
 			let [<split_ $first_type:lower>] = crate::query::split::split_modifier($first);
 			$(let [<split_ $other_type:lower>] = crate::query::split::split_modifier($other);)*
 
@@ -105,7 +105,7 @@ macro_rules! split_modifier {
 			]).unwrap();
 
 			(
-				Some(crate::query::IterData::new(entities, world_tick, last_system_tick)),
+				Some(crate::query::IterData::new(entities, world_tick, change_tick)),
 				(
 					[<split_ $first_type:lower>].1,
 					$([<split_ $other_type:lower>].1,)*

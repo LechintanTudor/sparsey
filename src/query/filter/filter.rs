@@ -58,7 +58,7 @@ where
 		F::matches(
 			self.component_view.get_ticks(entity),
 			self.component_view.world_tick(),
-			self.component_view.last_system_tick(),
+			self.component_view.change_tick(),
 		)
 	}
 }
@@ -75,7 +75,7 @@ where
 		let matches = F::matches(
 			self.component_view.get_ticks(entity),
 			self.component_view.world_tick(),
-			self.component_view.last_system_tick(),
+			self.component_view.change_tick(),
 		);
 
 		if matches {
@@ -93,7 +93,7 @@ where
 		F::matches(
 			self.component_view.get_ticks(entity),
 			self.component_view.world_tick(),
-			self.component_view.last_system_tick(),
+			self.component_view.change_tick(),
 		)
 	}
 
@@ -105,8 +105,8 @@ where
 		self.component_view.world_tick()
 	}
 
-	fn last_system_tick(&self) -> Ticks {
-		self.component_view.last_system_tick()
+	fn change_tick(&self) -> Ticks {
+		self.component_view.change_tick()
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
@@ -118,10 +118,10 @@ where
 		ticks: *mut ChangeTicks,
 		index: usize,
 		world_tick: Ticks,
-		last_system_tick: Ticks,
+		change_tick: Ticks,
 	) -> Option<Self::Item> {
-		if F::matches(Some(&*ticks.add(index)), world_tick, last_system_tick) {
-			C::get_from_parts(data, ticks, index, world_tick, last_system_tick)
+		if F::matches(Some(&*ticks.add(index)), world_tick, change_tick) {
+			C::get_from_parts(data, ticks, index, world_tick, change_tick)
 		} else {
 			None
 		}

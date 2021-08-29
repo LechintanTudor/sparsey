@@ -66,8 +66,8 @@ where
 		self.component_view.world_tick()
 	}
 
-	fn last_system_tick(&self) -> Ticks {
-		self.component_view.last_system_tick()
+	fn change_tick(&self) -> Ticks {
+		self.component_view.change_tick()
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
@@ -79,14 +79,14 @@ where
 		ticks: *mut ChangeTicks,
 		index: usize,
 		world_tick: Ticks,
-		last_system_tick: Ticks,
+		change_tick: Ticks,
 	) -> Option<Self::Item> {
 		Some(C::get_from_parts(
 			data,
 			ticks,
 			index,
 			world_tick,
-			last_system_tick,
+			change_tick,
 		))
 	}
 }

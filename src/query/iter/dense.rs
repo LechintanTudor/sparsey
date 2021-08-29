@@ -52,7 +52,7 @@ where
 						&mut self.query,
 						index,
 						self.data.world_tick(),
-						self.data.last_system_tick(),
+						self.data.change_tick(),
 					)
 				};
 

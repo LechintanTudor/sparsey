@@ -3,7 +3,7 @@ use crate::utils::{ChangeTicks, Ticks};
 
 /// Trait used for easily implementing filtered component views.
 pub trait ComponentTicksFilter {
-	fn matches(ticks: Option<&ChangeTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool;
+	fn matches(ticks: Option<&ChangeTicks>, world_tick: Ticks, change_tick: Ticks) -> bool;
 }
 
 #[doc(hidden)]
@@ -39,9 +39,9 @@ where
 }
 
 impl ComponentTicksFilter for Mutated {
-	fn matches(ticks: Option<&ChangeTicks>, _world_tick: Ticks, last_system_tick: Ticks) -> bool {
+	fn matches(ticks: Option<&ChangeTicks>, _world_tick: Ticks, change_tick: Ticks) -> bool {
 		ticks
-			.filter(|ticks| ticks.tick_mutated > last_system_tick)
+			.filter(|ticks| ticks.tick_mutated > change_tick)
 			.is_some()
 	}
 }
@@ -60,9 +60,9 @@ where
 }
 
 impl ComponentTicksFilter for Changed {
-	fn matches(ticks: Option<&ChangeTicks>, world_tick: Ticks, last_system_tick: Ticks) -> bool {
+	fn matches(ticks: Option<&ChangeTicks>, world_tick: Ticks, change_tick: Ticks) -> bool {
 		ticks
-			.filter(|ticks| ticks.tick_mutated > last_system_tick || ticks.tick_added == world_tick)
+			.filter(|ticks| ticks.tick_mutated > change_tick || ticks.tick_added == world_tick)
 			.is_some()
 	}
 }

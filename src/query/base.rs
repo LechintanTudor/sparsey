@@ -33,14 +33,14 @@ where
 		sparse: &mut Self::SparseSplit,
 		entity: Entity,
 		world_tick: Ticks,
-		last_system_tick: Ticks,
+		change_tick: Ticks,
 	) -> Option<Self::Item>;
 
 	unsafe fn get_from_dense_split(
 		dense: &mut Self::DenseSplit,
 		index: usize,
 		world_tick: Ticks,
-		last_system_tick: Ticks,
+		change_tick: Ticks,
 	) -> Option<Self::Item>;
 }
 
@@ -210,10 +210,10 @@ macro_rules! impl_query_base {
                 split: &mut Self::SparseSplit,
                 entity: Entity,
                 world_tick: Ticks,
-                last_system_tick: Ticks,
+                change_tick: Ticks,
             ) -> Option<Self::Item> {
                 Some(($(
-                    split.$idx.get::<$view>(entity, world_tick, last_system_tick)?,
+                    split.$idx.get::<$view>(entity, world_tick, change_tick)?,
                 )+))
             }
 
@@ -221,10 +221,10 @@ macro_rules! impl_query_base {
                 split: &mut Self::DenseSplit,
                 index: usize,
                 world_tick: Ticks,
-                last_system_tick: Ticks,
+                change_tick: Ticks,
             ) -> Option<Self::Item> {
                 Some(($(
-                    split.$idx.get::<$view>(index, world_tick, last_system_tick)?,
+                    split.$idx.get::<$view>(index, world_tick, change_tick)?,
                 )+))
             }
         }

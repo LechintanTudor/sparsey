@@ -6,17 +6,17 @@ use std::ops::Range;
 pub struct IterData<'a> {
 	entities: &'a [Entity],
 	world_tick: Ticks,
-	last_system_tick: Ticks,
+	change_tick: Ticks,
 }
 
 impl<'a> IterData<'a> {
 	pub const EMPTY: Self = Self::new(&[], 0, 0);
 
-	pub const fn new(entities: &'a [Entity], world_tick: Ticks, last_system_tick: Ticks) -> Self {
+	pub const fn new(entities: &'a [Entity], world_tick: Ticks, change_tick: Ticks) -> Self {
 		Self {
 			entities,
 			world_tick,
-			last_system_tick,
+			change_tick,
 		}
 	}
 
@@ -24,7 +24,7 @@ impl<'a> IterData<'a> {
 		Self {
 			entities: &self.entities[range],
 			world_tick: self.world_tick,
-			last_system_tick: self.last_system_tick,
+			change_tick: self.change_tick,
 		}
 	}
 
@@ -36,7 +36,7 @@ impl<'a> IterData<'a> {
 		self.world_tick
 	}
 
-	pub const fn last_system_tick(&self) -> Ticks {
-		self.last_system_tick
+	pub const fn change_tick(&self) -> Ticks {
+		self.change_tick
 	}
 }

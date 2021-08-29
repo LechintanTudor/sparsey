@@ -27,7 +27,7 @@ where
 
 	fn world_tick(&self) -> Ticks;
 
-	fn last_system_tick(&self) -> Ticks;
+	fn change_tick(&self) -> Ticks;
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component>;
 
@@ -36,7 +36,7 @@ where
 		info: *mut ChangeTicks,
 		index: usize,
 		world_tick: Ticks,
-		last_system_tick: Ticks,
+		change_tick: Ticks,
 	) -> Option<Self::Item>;
 }
 
@@ -90,8 +90,8 @@ where
 		self.world_tick
 	}
 
-	fn last_system_tick(&self) -> Ticks {
-		self.last_system_tick
+	fn change_tick(&self) -> Ticks {
+		self.change_tick
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
@@ -172,8 +172,8 @@ where
 		self.world_tick
 	}
 
-	fn last_system_tick(&self) -> Ticks {
-		self.last_system_tick
+	fn change_tick(&self) -> Ticks {
+		self.change_tick
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
@@ -255,8 +255,8 @@ where
 		self.world_tick
 	}
 
-	fn last_system_tick(&self) -> Ticks {
-		self.last_system_tick
+	fn change_tick(&self) -> Ticks {
+		self.change_tick
 	}
 
 	fn into_parts(self) -> SplitComponentView<'a, Self::Component> {
