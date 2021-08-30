@@ -1,6 +1,8 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
-use crate::query2::{ComponentRefMut, Passthrough, QueryElement, SplitQueryElement};
+use crate::query2::{
+	ComponentRefMut, ImmutableQueryElement, Passthrough, QueryElement, SplitQueryElement,
+};
 use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut};
@@ -92,6 +94,14 @@ where
 	) -> Self::Item {
 		&*component
 	}
+}
+
+unsafe impl<'a, T, S> ImmutableQueryElement<'a> for &'a ComponentView<'a, T, S>
+where
+	T: Component,
+	S: Deref<Target = ComponentStorage>,
+{
+	// Empty
 }
 
 unsafe impl<'a, 'b, T, S> QueryElement<'a> for &'a mut ComponentView<'b, T, S>

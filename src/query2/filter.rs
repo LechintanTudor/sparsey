@@ -1,22 +1,40 @@
-use crate::query2::{Passthrough, QueryElement, QueryElementFilter, SplitQueryElement};
+use crate::query2::{
+	And, Not, Or, QueryElement, QueryElementFilter, QueryFilter, SplitQueryElement,
+	UnfilteredImmutableQueryElement, UnfilteredQueryElement,
+};
 use crate::storage::Entity;
 use crate::utils::{ChangeTicks, Ticks};
+use std::ops;
 
 pub struct Filter<F, E> {
 	filter: F,
 	element: E,
 }
 
-impl<F, E> Filter<F, E> {
+impl<'a, F, E> Filter<F, E>
+where
+	F: QueryElementFilter<E::Component>,
+	E: UnfilteredQueryElement<'a>,
+{
 	pub fn new(filter: F, element: E) -> Self {
 		Self { filter, element }
+	}
+}
+
+impl<'a, F, E> QueryFilter for Filter<F, E>
+where
+	F: QueryElementFilter<E::Component>,
+	E: UnfilteredImmutableQueryElement<'a>,
+{
+	fn matches(&self, entity: Entity) -> bool {
+		<Self as QueryElement<'a>>::contains(self, entity)
 	}
 }
 
 unsafe impl<'a, F, E> QueryElement<'a> for Filter<F, E>
 where
 	F: QueryElementFilter<E::Component>,
-	E: QueryElement<'a, Filter = Passthrough>,
+	E: UnfilteredQueryElement<'a>,
 {
 	type Item = E::Item;
 	type Component = E::Component;
@@ -102,5 +120,43 @@ where
 		change_tick: Ticks,
 	) -> Self::Item {
 		E::get_from_parts(component, ticks, world_tick, change_tick)
+	}
+}
+
+impl<'a, F, E> ops::Not for Filter<F, E>
+where
+	F: QueryElementFilter<E::Component>,
+	E: UnfilteredImmutableQueryElement<'a>,
+{
+	type Output = Not<Self>;
+
+	fn not(self) -> Self::Output {
+		Not::new(self)
+	}
+}
+
+impl<'a, F1, E, F2> ops::BitAnd<F2> for Filter<F1, E>
+where
+	F1: QueryElementFilter<E::Component>,
+	E: UnfilteredImmutableQueryElement<'a>,
+	F2: QueryFilter,
+{
+	type Output = And<Self, F2>;
+
+	fn bitand(self, filter: F2) -> Self::Output {
+		And::new(self, filter)
+	}
+}
+
+impl<'a, F1, E, F2> ops::BitOr<F2> for Filter<F1, E>
+where
+	F1: QueryElementFilter<E::Component>,
+	E: UnfilteredImmutableQueryElement<'a>,
+	F2: QueryFilter,
+{
+	type Output = Or<Self, F2>;
+
+	fn bitor(self, filter: F2) -> Self::Output {
+		Or::new(self, filter)
 	}
 }

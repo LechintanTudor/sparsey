@@ -1,4 +1,5 @@
 use crate::components::Component;
+use crate::query2::{Filter, UnfilteredQueryElement};
 use crate::utils::{ChangeTicks, Ticks};
 
 pub trait QueryElementFilter<T>
@@ -14,8 +15,15 @@ where
 	) -> bool;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Passthrough;
+
+pub fn passthrough<'a, E>(element: E) -> Filter<Passthrough, E>
+where
+	E: UnfilteredQueryElement<'a>,
+{
+	Filter::new(Passthrough, element)
+}
 
 impl<T> QueryElementFilter<T> for Passthrough
 where
@@ -33,8 +41,15 @@ where
 	}
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Added;
+
+pub fn added<'a, E>(element: E) -> Filter<Added, E>
+where
+	E: UnfilteredQueryElement<'a>,
+{
+	Filter::new(Added, element)
+}
 
 impl<T> QueryElementFilter<T> for Added
 where
@@ -52,8 +67,15 @@ where
 	}
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Mutated;
+
+pub fn mutated<'a, E>(element: E) -> Filter<Mutated, E>
+where
+	E: UnfilteredQueryElement<'a>,
+{
+	Filter::new(Mutated, element)
+}
 
 impl<T> QueryElementFilter<T> for Mutated
 where
@@ -71,8 +93,15 @@ where
 	}
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct Changed;
+
+pub fn changed<'a, E>(element: E) -> Filter<Changed, E>
+where
+	E: UnfilteredQueryElement<'a>,
+{
+	Filter::new(Changed, element)
+}
 
 impl<T> QueryElementFilter<T> for Changed
 where

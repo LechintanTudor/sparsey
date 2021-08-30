@@ -1,6 +1,6 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
-use crate::query2::QueryElementFilter;
+use crate::query2::{Passthrough, QueryElementFilter};
 use crate::storage::{Entity, SparseArrayView};
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
@@ -30,6 +30,41 @@ pub unsafe trait QueryElement<'a> {
 		world_tick: Ticks,
 		change_tick: Ticks,
 	) -> Self::Item;
+}
+
+pub unsafe trait ImmutableQueryElement<'a>
+where
+	Self: QueryElement<'a>,
+{
+	// Empty
+}
+
+pub trait UnfilteredQueryElement<'a>
+where
+	Self: QueryElement<'a, Filter = Passthrough>,
+{
+	// Empty
+}
+
+impl<'a, E> UnfilteredQueryElement<'a> for E
+where
+	E: QueryElement<'a, Filter = Passthrough>,
+{
+	// Empty
+}
+
+pub trait UnfilteredImmutableQueryElement<'a>
+where
+	Self: ImmutableQueryElement<'a> + UnfilteredQueryElement<'a>,
+{
+	// Empty
+}
+
+impl<'a, E> UnfilteredImmutableQueryElement<'a> for E
+where
+	E: ImmutableQueryElement<'a> + UnfilteredQueryElement<'a>,
+{
+	// Empty
 }
 
 #[non_exhaustive]
