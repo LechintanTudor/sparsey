@@ -4,12 +4,12 @@ use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::{mem, ptr, slice};
 
-pub(crate) struct TypedComponentStorage<S, T> {
+pub(crate) struct TypedComponentStorage<T, S> {
 	storage: S,
 	component: PhantomData<*const T>,
 }
 
-impl<S, T> TypedComponentStorage<S, T>
+impl<T, S> TypedComponentStorage<T, S>
 where
 	S: Deref<Target = ComponentStorage>,
 {
@@ -63,7 +63,7 @@ where
 	}
 }
 
-impl<S, T> Deref for TypedComponentStorage<S, T>
+impl<T, S> Deref for TypedComponentStorage<T, S>
 where
 	S: Deref<Target = ComponentStorage>,
 {
@@ -74,7 +74,7 @@ where
 	}
 }
 
-impl<S, T> TypedComponentStorage<S, T>
+impl<T, S> TypedComponentStorage<T, S>
 where
 	S: Deref<Target = ComponentStorage> + DerefMut,
 {

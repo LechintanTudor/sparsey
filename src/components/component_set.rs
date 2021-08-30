@@ -8,7 +8,7 @@ use std::marker::PhantomData;
 
 /// Used internally by `ComponentSet` to manage a component storage of type `T`.
 pub struct ComponentStorageRefMut<'a, T>(
-	TypedComponentStorage<AtomicRefMut<'a, ComponentStorage>, T>,
+	TypedComponentStorage<T, AtomicRefMut<'a, ComponentStorage>>,
 );
 
 /// Trait used to insert and remove components from the `World`.
