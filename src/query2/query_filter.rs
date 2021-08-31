@@ -4,6 +4,15 @@ pub trait QueryFilter {
 	fn matches(&self, entity: Entity) -> bool;
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct Passthrough;
+
+impl QueryFilter for Passthrough {
+	fn matches(&self, _entity: Entity) -> bool {
+		true
+	}
+}
+
 pub struct Not<F>(F);
 
 impl<F> Not<F>
@@ -69,10 +78,10 @@ where
 }
 
 macro_rules! impl_filter_ops {
-	($ty:ident, $($filter:ident),+) => {
-		impl<$($filter),+> std::ops::Not for $ty<$($filter),+>
+	($ty:ident $(, $filter:ident)*) => {
+		impl<$($filter),*> std::ops::Not for $ty<$($filter),*>
 		where
-			$($filter: QueryFilter,)+
+			$($filter: QueryFilter,)*
 		{
 			type Output = Not<Self>;
 
@@ -81,10 +90,10 @@ macro_rules! impl_filter_ops {
 			}
 		}
 
-		impl<Filter, $($filter),+> std::ops::BitAnd<Filter> for $ty<$($filter),+>
+		impl<Filter, $($filter),*> std::ops::BitAnd<Filter> for $ty<$($filter),*>
 		where
 			Filter: QueryFilter,
-			$($filter: QueryFilter,)+
+			$($filter: QueryFilter,)*
 		{
 			type Output = And<Self, Filter>;
 
@@ -93,10 +102,10 @@ macro_rules! impl_filter_ops {
 			}
 		}
 
-		impl<Filter, $($filter),+> std::ops::BitOr<Filter> for $ty<$($filter),+>
+		impl<Filter, $($filter),*> std::ops::BitOr<Filter> for $ty<$($filter),*>
 		where
 			Filter: QueryFilter,
-			$($filter: QueryFilter,)+
+			$($filter: QueryFilter,)*
 		{
 			type Output = Or<Self, Filter>;
 
@@ -107,6 +116,7 @@ macro_rules! impl_filter_ops {
 	};
 }
 
+impl_filter_ops!(Passthrough);
 impl_filter_ops!(Not, F);
 impl_filter_ops!(And, F1, F2);
 impl_filter_ops!(Or, F1, F2);
