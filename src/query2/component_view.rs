@@ -1,7 +1,7 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
 use crate::query2::{
-	ComponentRefMut, ImmutableQueryElement, Passthrough, QueryElement, SplitQueryElement,
+	ComponentRefMut, Contains, ImmutableQueryElement, QueryElement, SplitQueryElement,
 };
 use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::{ChangeTicks, Ticks};
@@ -41,7 +41,7 @@ where
 {
 	type Item = &'a T;
 	type Component = T;
-	type Filter = Passthrough;
+	type Filter = Contains;
 
 	#[inline]
 	fn get(self, entity: Entity) -> Option<Self::Item> {
@@ -81,7 +81,7 @@ where
 			entities,
 			components.as_ptr() as _,
 			ticks.as_ptr() as _,
-			Passthrough,
+			Contains,
 		)
 	}
 
@@ -111,7 +111,7 @@ where
 {
 	type Item = ComponentRefMut<'a, T>;
 	type Component = T;
-	type Filter = Passthrough;
+	type Filter = Contains;
 
 	#[inline]
 	fn get(self, entity: Entity) -> Option<Self::Item> {
@@ -152,7 +152,7 @@ where
 			entities,
 			components.as_mut_ptr(),
 			ticks.as_mut_ptr(),
-			Passthrough,
+			Contains,
 		)
 	}
 

@@ -1,6 +1,6 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
-use crate::query2::{Passthrough, QueryElementFilter};
+use crate::query2::{Contains, QueryElementFilter};
 use crate::storage::{Entity, SparseArrayView};
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
@@ -41,14 +41,14 @@ where
 
 pub trait UnfilteredQueryElement<'a>
 where
-	Self: QueryElement<'a, Filter = Passthrough>,
+	Self: QueryElement<'a, Filter = Contains>,
 {
 	// Empty
 }
 
 impl<'a, E> UnfilteredQueryElement<'a> for E
 where
-	E: QueryElement<'a, Filter = Passthrough>,
+	E: QueryElement<'a, Filter = Contains>,
 {
 	// Empty
 }

@@ -16,16 +16,16 @@ where
 }
 
 #[derive(Clone, Copy, Default)]
-pub struct Passthrough;
+pub struct Contains;
 
-pub fn passthrough<'a, E>(element: E) -> Filter<Passthrough, E>
+pub fn contains<'a, E>(element: E) -> Filter<Contains, E>
 where
 	E: UnfilteredQueryElement<'a>,
 {
-	Filter::new(Passthrough, element)
+	Filter::new(Contains, element)
 }
 
-impl<T> QueryElementFilter<T> for Passthrough
+impl<T> QueryElementFilter<T> for Contains
 where
 	T: Component,
 {
