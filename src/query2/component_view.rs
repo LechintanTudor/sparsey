@@ -9,7 +9,7 @@ use std::ops::{Deref, DerefMut};
 
 pub struct ComponentView<'a, T, S> {
 	storage: TypedComponentStorage<T, S>,
-	group_info: GroupInfo<'a>,
+	group_info: Option<GroupInfo<'a>>,
 	world_tick: Ticks,
 	change_tick: Ticks,
 }
@@ -21,7 +21,7 @@ where
 {
 	pub(crate) unsafe fn new(
 		storage: S,
-		group_info: GroupInfo<'a>,
+		group_info: Option<GroupInfo<'a>>,
 		world_tick: Ticks,
 		change_tick: Ticks,
 	) -> Self {
@@ -59,7 +59,7 @@ where
 	}
 
 	#[inline]
-	fn group_info(&self) -> GroupInfo<'a> {
+	fn group_info(&self) -> Option<GroupInfo<'a>> {
 		self.group_info
 	}
 
@@ -130,7 +130,7 @@ where
 	}
 
 	#[inline]
-	fn group_info(&self) -> GroupInfo<'a> {
+	fn group_info(&self) -> Option<GroupInfo<'a>> {
 		self.group_info
 	}
 

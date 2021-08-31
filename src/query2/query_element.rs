@@ -16,7 +16,7 @@ pub unsafe trait QueryElement<'a> {
 
 	fn contains(&self, entity: Entity) -> bool;
 
-	fn group_info(&self) -> GroupInfo<'a>;
+	fn group_info(&self) -> Option<GroupInfo<'a>>;
 
 	fn world_tick(&self) -> Ticks;
 

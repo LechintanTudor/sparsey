@@ -1,3 +1,4 @@
+use crate::group::CombinedGroupInfo;
 use crate::query2::{DenseSplitQueryElement, QueryElement, SparseSplitQueryElement};
 use crate::storage::Entity;
 
@@ -9,24 +10,32 @@ pub unsafe trait QueryBase<'a> {
 	fn get(self, entity: Entity) -> Option<Self::Item>;
 
 	fn contains(&self, entity: Entity) -> bool;
+
+	fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
 }
 
 macro_rules! impl_query_base {
-    ($(($elem:ident, $idx:tt)),+) => {
-        unsafe impl<'a, $($elem),+> QueryBase<'a> for ($($elem,)+)
+    ($(($elem:ident, $idx:tt)),*) => {
+        unsafe impl<'a, $($elem),*> QueryBase<'a> for ($($elem,)*)
         where
-            $($elem: QueryElement<'a>,)+
+            $($elem: QueryElement<'a>,)*
         {
-            type Item = ($($elem::Item,)+);
-            type SparseSplit = ($(SparseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)+);
-            type DenseSplit = ($(DenseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)+);
+            type Item = ($($elem::Item,)*);
+            type SparseSplit = ($(SparseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)*);
+            type DenseSplit = ($(DenseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)*);
 
+            #[allow(unused_variables)]
             fn get(self, entity: Entity) -> Option<Self::Item> {
-                Some(($(self.$idx.get(entity)?,)+))
+                Some(($(self.$idx.get(entity)?,)*))
             }
 
+            #[allow(unused_variables)]
             fn contains(&self, entity: Entity) -> bool {
-                $(self.$idx.contains(entity))&&+
+                true $(&& self.$idx.contains(entity))*
+            }
+
+            fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
+                Some(CombinedGroupInfo::default() $(.combine(self.$idx.group_info()?)?)*)
             }
         }
     };
@@ -36,6 +45,7 @@ macro_rules! impl_query_base {
 mod impls {
 	use super::*;
 
+    impl_query_base!();
 	impl_query_base!((A, 0));
     impl_query_base!((A, 0), (B, 1));
     impl_query_base!((A, 0), (B, 1), (C, 2));

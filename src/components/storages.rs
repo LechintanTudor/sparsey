@@ -73,26 +73,26 @@ impl ComponentStorages {
 	pub(crate) fn borrow_with_info(
 		&self,
 		component: &TypeId,
-	) -> Option<(AtomicRef<ComponentStorage>, GroupInfo)> {
+	) -> Option<(AtomicRef<ComponentStorage>, Option<GroupInfo>)> {
 		match self.grouped.borrow_with_info(component) {
-			Some((storage, info)) => Some((storage, GroupInfo::Grouped(info))),
+			Some((storage, info)) => Some((storage, Some(info))),
 			None => self
 				.ungrouped
 				.borrow(component)
-				.map(|storage| (storage, GroupInfo::Ungrouped)),
+				.map(|storage| (storage, None)),
 		}
 	}
 
 	pub(crate) fn borrow_with_info_mut(
 		&self,
 		component: &TypeId,
-	) -> Option<(AtomicRefMut<ComponentStorage>, GroupInfo)> {
+	) -> Option<(AtomicRefMut<ComponentStorage>, Option<GroupInfo>)> {
 		match self.grouped.borrow_with_info_mut(component) {
-			Some((storage, info)) => Some((storage, GroupInfo::Grouped(info))),
+			Some((storage, info)) => Some((storage, Some(info))),
 			None => self
 				.ungrouped
 				.borrow_mut(component)
-				.map(|storage| (storage, GroupInfo::Ungrouped)),
+				.map(|storage| (storage, None)),
 		}
 	}
 

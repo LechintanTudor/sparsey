@@ -1,3 +1,4 @@
+use crate::group::GroupInfo;
 use crate::query2::{
 	And, Not, Or, QueryElement, QueryElementFilter, QueryFilter, SplitQueryElement,
 	UnfilteredImmutableQueryElement, UnfilteredQueryElement,
@@ -87,7 +88,7 @@ where
 	}
 
 	#[inline]
-	fn group_info(&self) -> crate::GroupInfo<'a> {
+	fn group_info(&self) -> Option<GroupInfo<'a>> {
 		self.element.group_info()
 	}
 
