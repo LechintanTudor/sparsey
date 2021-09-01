@@ -1,6 +1,9 @@
 use crate::storage::Entity;
 
 macro_rules! split_sparse {
+	() => {
+		(None, ())
+	};
 	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
 		paste::paste! {
 			let world_tick = $first.world_tick();
@@ -25,6 +28,9 @@ macro_rules! split_sparse {
 }
 
 macro_rules! split_dense {
+	() => {
+		(None, ())
+	};
 	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
 		paste::paste! {
 			let world_tick = $first.world_tick();
@@ -44,6 +50,9 @@ macro_rules! split_dense {
 }
 
 macro_rules! split_modifier {
+	() => {
+		(None, ())
+	};
 	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
 		paste::paste! {
 			let world_tick = $first.world_tick();
