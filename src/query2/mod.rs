@@ -7,6 +7,7 @@ pub use self::query_base::*;
 pub use self::query_element::*;
 pub use self::query_element_filter::*;
 pub use self::query_filter::*;
+pub use self::query_modifier::*;
 
 pub(crate) use self::query_split::*;
 
@@ -22,3 +23,4 @@ mod query_base;
 mod query_element;
 mod query_element_filter;
 mod query_filter;
+mod query_modifier;

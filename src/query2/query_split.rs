@@ -60,7 +60,7 @@ macro_rules! split_modifier {
 			let [<split_ $first_type:lower>] = $first.split().into_modifier_split();
 			$(let [<split_ $other_type:lower>] = $other.split().into_modifier_split();)*
 
-			let entities = crate::query2::split::shortest_entity_slice(&[
+			let entities = crate::query2::shortest_entity_slice(&[
 				[<split_ $first_type:lower>].0
 				$(, [<split_ $other_type:lower>].0)*
 			]).unwrap();

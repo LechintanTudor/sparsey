@@ -1,10 +1,10 @@
-use crate::query2::{QueryBase, QueryFilter};
+use crate::query2::{QueryBase, QueryFilter, QueryModifier};
 use crate::storage::Entity;
 
 pub trait IntoQueryParts<'a> {
 	type Base: QueryBase<'a>;
-	type Include;
-	type Exclude;
+	type Include: QueryModifier<'a>;
+	type Exclude: QueryModifier<'a>;
 	type Filter: QueryFilter;
 
 	fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter);
@@ -28,12 +28,21 @@ where
 	type Item = <Q::Base as QueryBase<'a>>::Item;
 
 	fn get(self, entity: Entity) -> Option<Self::Item> {
-		let (base, _, _, _) = self.into_query_parts();
-		base.get(entity)
+		let (base, include, exclude, filter) = self.into_query_parts();
+
+		if filter.matches(entity) && exclude.excludes(entity) && include.includes(entity) {
+			base.get(entity)
+		} else {
+			None
+		}
 	}
 
 	fn contains(self, entity: Entity) -> bool {
-		let (base, _, _, _) = self.into_query_parts();
-		base.contains(entity)
+		let (base, include, exclude, filter) = self.into_query_parts();
+
+		filter.matches(entity)
+			&& exclude.excludes(entity)
+			&& include.includes(entity)
+			&& base.contains(entity)
 	}
 }
