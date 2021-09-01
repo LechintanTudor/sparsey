@@ -1,6 +1,7 @@
 use crate::group::CombinedGroupInfo;
-use crate::query2::{DenseSplitQueryElement, QueryElement, SparseSplitQueryElement};
+use crate::query2::{DenseSplitQueryElement, IterData, QueryElement, SparseSplitQueryElement};
 use crate::storage::Entity;
+use crate::utils::Ticks;
 
 pub unsafe trait QueryBase<'a> {
 	type Item;
@@ -12,30 +13,76 @@ pub unsafe trait QueryBase<'a> {
 	fn contains(&self, entity: Entity) -> bool;
 
 	fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
+
+	fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit);
+
+	fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit);
+
+	unsafe fn get_from_sparse_split(
+		split: &mut Self::SparseSplit,
+		entity: Entity,
+		world_tick: Ticks,
+		change_tick: Ticks,
+	) -> Option<Self::Item>;
+
+	unsafe fn get_from_dense_split(
+		split: &mut Self::DenseSplit,
+		index: usize,
+		world_tick: Ticks,
+		change_tick: Ticks,
+	) -> Option<Self::Item>;
 }
 
 macro_rules! impl_query_base {
-    ($(($elem:ident, $idx:tt)),*) => {
-        unsafe impl<'a, $($elem),*> QueryBase<'a> for ($($elem,)*)
+    ($(($elem:ident, $idx:tt)),+) => {
+        unsafe impl<'a, $($elem),+> QueryBase<'a> for ($($elem,)+)
         where
-            $($elem: QueryElement<'a>,)*
+            $($elem: QueryElement<'a>,)+
         {
-            type Item = ($($elem::Item,)*);
-            type SparseSplit = ($(SparseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)*);
-            type DenseSplit = ($(DenseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)*);
+            type Item = ($($elem::Item,)+);
+            type SparseSplit = ($(SparseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)+);
+            type DenseSplit = ($(DenseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)+);
 
-            #[allow(unused_variables)]
             fn get(self, entity: Entity) -> Option<Self::Item> {
-                Some(($(self.$idx.get(entity)?,)*))
+                Some(($(self.$idx.get(entity)?,)+))
             }
 
-            #[allow(unused_variables)]
             fn contains(&self, entity: Entity) -> bool {
-                true $(&& self.$idx.contains(entity))*
+                $(self.$idx.contains(entity))&&+
             }
 
             fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
-                Some(CombinedGroupInfo::default() $(.combine(self.$idx.group_info()?)?)*)
+                Some(CombinedGroupInfo::default() $(.combine(self.$idx.group_info()?)?)+)
+            }
+
+            fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit) {
+                split_sparse!($(($elem, self.$idx)),+)
+            }
+
+	        fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit) {
+                split_dense!($(($elem, self.$idx)),+)
+            }
+
+            unsafe fn get_from_sparse_split(
+                split: &mut Self::SparseSplit,
+                entity: Entity,
+                world_tick: Ticks,
+                change_tick: Ticks,
+            ) -> Option<Self::Item> {
+                Some(($(
+                    split.$idx.get::<$elem>(entity, world_tick, change_tick)?,
+                )+))
+            }
+
+            unsafe fn get_from_dense_split(
+                split: &mut Self::DenseSplit,
+                index: usize,
+                world_tick: Ticks,
+                change_tick: Ticks,
+            ) -> Option<Self::Item> {
+                Some(($(
+                    split.$idx.get::<$elem>(index, world_tick, change_tick)?,
+                )+))
             }
         }
     };
@@ -45,7 +92,6 @@ macro_rules! impl_query_base {
 mod impls {
 	use super::*;
 
-    impl_query_base!();
 	impl_query_base!((A, 0));
     impl_query_base!((A, 0), (B, 1));
     impl_query_base!((A, 0), (B, 1), (C, 2));

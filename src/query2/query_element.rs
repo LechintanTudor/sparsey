@@ -93,6 +93,10 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
 		}
 	}
 
+	pub fn into_modifier_split(self) -> (&'a [Entity], SparseArrayView<'a>) {
+		(self.entities, self.sparse)
+	}
+
 	pub fn into_sparse_split(self) -> (&'a [Entity], SparseSplitQueryElement<'a, T, F>) {
 		(
 			self.entities,

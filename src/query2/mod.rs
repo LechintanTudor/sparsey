@@ -1,17 +1,22 @@
 pub use self::component_ref_mut::*;
 pub use self::component_view::*;
 pub use self::filter::*;
-pub use self::iter::*;
+pub use self::iter_data::*;
 pub use self::query::*;
 pub use self::query_base::*;
 pub use self::query_element::*;
 pub use self::query_element_filter::*;
 pub use self::query_filter::*;
 
+pub(crate) use self::query_split::*;
+
+#[macro_use]
+mod query_split;
+
 mod component_ref_mut;
 mod component_view;
 mod filter;
-mod iter;
+mod iter_data;
 mod query;
 mod query_base;
 mod query_element;
