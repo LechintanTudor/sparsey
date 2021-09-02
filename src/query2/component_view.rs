@@ -1,11 +1,12 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
 use crate::query2::{
-	ComponentRefMut, Contains, ImmutableQueryElement, QueryElement, SplitQueryElement,
+	ComponentRefMut, Contains, ImmutableQueryElement, QueryElement, SliceQueryElement,
+	SplitQueryElement,
 };
 use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::{ChangeTicks, Ticks};
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref, DerefMut, Range};
 
 pub struct ComponentView<'a, T, S> {
 	storage: TypedComponentStorage<T, S>,
@@ -102,6 +103,30 @@ where
 	S: Deref<Target = ComponentStorage>,
 {
 	// Empty
+}
+
+unsafe impl<'a, T, S> SliceQueryElement<'a> for &'a ComponentView<'a, T, S>
+where
+	T: Component,
+	S: Deref<Target = ComponentStorage>,
+{
+	unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component] {
+		self.storage.components().get_unchecked(range)
+	}
+
+	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
+		self.storage.entities().get_unchecked(range)
+	}
+
+	unsafe fn slice_entities_components(
+		self,
+		range: Range<usize>,
+	) -> (&'a [Entity], &'a [Self::Component]) {
+		(
+			self.storage.entities().get_unchecked(range.clone()),
+			self.storage.components().get_unchecked(range),
+		)
+	}
 }
 
 unsafe impl<'a, 'b, T, S> QueryElement<'a> for &'a mut ComponentView<'b, T, S>

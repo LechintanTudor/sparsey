@@ -16,7 +16,7 @@ pub mod prelude {
 	pub use crate::systems::{
 		Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,
 	};
-	pub use crate::utils::{ChangeTicks, EntityIterator};
+	pub use crate::utils::ChangeTicks;
 	pub use crate::world::{Comp, CompMut, Res, ResMut, World};
 }
 

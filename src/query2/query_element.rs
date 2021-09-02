@@ -4,6 +4,7 @@ use crate::query2::{Contains, QueryElementFilter};
 use crate::storage::{Entity, SparseArrayView};
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
+use std::ops::Range;
 
 pub unsafe trait QueryElement<'a> {
 	type Item: 'a;
@@ -65,6 +66,20 @@ where
 	E: ImmutableQueryElement<'a> + UnfilteredQueryElement<'a>,
 {
 	// Empty
+}
+
+pub unsafe trait SliceQueryElement<'a>
+where
+	Self: UnfilteredImmutableQueryElement<'a>,
+{
+	unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component];
+
+	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
+
+	unsafe fn slice_entities_components(
+		self,
+		range: Range<usize>,
+	) -> (&'a [Entity], &'a [Self::Component]);
 }
 
 #[non_exhaustive]
