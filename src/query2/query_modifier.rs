@@ -18,6 +18,44 @@ pub unsafe trait QueryModifier<'a> {
 	fn excludes_split(split: &Self::Split, entity: Entity) -> bool;
 }
 
+unsafe impl<'a, E> QueryModifier<'a> for E
+where
+	E: UnfilteredImmutableQueryElement<'a>,
+{
+	type Split = SparseArrayView<'a>;
+
+	fn includes(&self, entity: Entity) -> bool {
+		self.contains(entity)
+	}
+
+	fn excludes(&self, entity: Entity) -> bool {
+		!self.contains(entity)
+	}
+
+	fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
+		CombinedGroupInfo::default().combine(E::group_info(self)?)
+	}
+
+	fn split(self) -> (Option<IterData<'a>>, Self::Split) {
+		let world_tick = self.world_tick();
+		let change_tick = self.change_tick();
+		let (entities, sparse) = E::split(self).into_modifier_split();
+
+		(
+			Some(IterData::new(entities, world_tick, change_tick)),
+			sparse,
+		)
+	}
+
+	fn includes_split(split: &Self::Split, entity: Entity) -> bool {
+		split.contains(entity)
+	}
+
+	fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
+		!split.contains(entity)
+	}
+}
+
 macro_rules! sparse_array_view {
     ($($elem:ident),+) => {
         SparseArrayView<'a>
