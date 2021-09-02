@@ -1,100 +1,193 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
-use crate::storage::{Entity, SparseArrayView};
+use crate::query::{
+	ComponentRefMut, Contains, ImmutableQueryElement, QueryElement, SliceQueryElement,
+	SplitQueryElement,
+};
+use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::{ChangeTicks, Ticks};
-use std::ops::Range;
-use std::marker::PhantomData;
+use std::ops::{Deref, DerefMut, Range};
 
-pub struct SplitComponentView<'a, T> {
-	pub sparse: SparseArrayView<'a>,
-	pub entities: &'a [Entity],
-	pub components: *mut T,
-	pub ticks: *mut ChangeTicks,
+pub struct ComponentView<'a, T, S> {
+	storage: TypedComponentStorage<T, S>,
+	group_info: Option<GroupInfo<'a>>,
+	world_tick: Ticks,
+	change_tick: Ticks,
 }
 
-#[derive(Clone, Copy)]
-pub struct SparseSplitComponentView<'a, T> {
-	pub sparse: SparseArrayView<'a>,
-	pub components: *mut T,
-	pub ticks: *mut ChangeTicks,
-}
-
-impl<'a, T> SparseSplitComponentView<'a, T> {
-    pub fn new(sparse: SparseArrayView<'a>, components: *mut T, ticks: *mut ChangeTicks) -> Self {
-		Self {
-			sparse,
-			components,
-			ticks,
-			lifetime: PhantomData,
-		}
-	}
-}
-
-#[derive(Clone, Copy)]
-pub struct DenseSplitComponentView<'a, T> {
-	pub components: *mut T,
-	pub ticks: *mut ChangeTicks,
-	lifetime: PhantomData<&'a ()>,
-}
-
-impl<'a, T> DenseSplitComponentView<'a, T> {
-    pub fn new(components: *mut T, ticks: *mut ChangeTicks) -> Self {
-		Self {
-			components,
-			ticks,
-			lifetime: PhantomData,
-		}
-	}
-}
-
-/// Trait implemented by views over component storages.
-pub unsafe trait ComponentView<'a>
+impl<'a, T, S> ComponentView<'a, T, S>
 where
-	Self: Sized,
+	T: Component,
+	S: Deref<Target = ComponentStorage>,
 {
-	type Item;
-	type Component: Component;
-
-	fn get(self, entity: Entity) -> Option<Self::Item>;
-
-	fn contains(&self, entity: Entity) -> bool;
-
-	fn group_info(&self) -> GroupInfo<'a>;
-
-	fn world_tick(&self) -> Ticks;
-
-	fn change_tick(&self) -> Ticks;
-
-	fn into_parts(self) -> SplitComponentView<'a, T>;
-
-	unsafe fn get_from_parts(
-		components: *mut Self::Component,
-		ticks: *mut ChangeTicks,
-		index: usize,
+	pub(crate) unsafe fn new(
+		storage: S,
+		group_info: Option<GroupInfo<'a>>,
 		world_tick: Ticks,
 		change_tick: Ticks,
-	) -> Option<Self::Item>;
+	) -> Self {
+		Self {
+			storage: TypedComponentStorage::new(storage),
+			group_info,
+			world_tick,
+			change_tick,
+		}
+	}
 }
 
-/// Trait implemented by unfiltered component views.
-pub unsafe trait UnfilteredComponentView<'a>
+unsafe impl<'a, T, S> QueryElement<'a> for &'a ComponentView<'a, T, S>
 where
-	Self: ComponentView<'a>,
+	T: Component,
+	S: Deref<Target = ComponentStorage>,
+{
+	type Item = &'a T;
+	type Component = T;
+	type Filter = Contains;
+
+	#[inline]
+	fn get(self, entity: Entity) -> Option<Self::Item> {
+		self.storage.get(entity)
+	}
+
+	#[inline]
+	fn get_with_ticks(&self, entity: Entity) -> Option<(&Self::Component, &ChangeTicks)> {
+		self.storage.get_with_ticks(entity)
+	}
+
+	#[inline]
+	fn contains(&self, entity: Entity) -> bool {
+		self.storage.contains(entity)
+	}
+
+	#[inline]
+	fn group_info(&self) -> Option<GroupInfo<'a>> {
+		self.group_info
+	}
+
+	#[inline]
+	fn world_tick(&self) -> Ticks {
+		self.world_tick
+	}
+
+	#[inline]
+	fn change_tick(&self) -> Ticks {
+		self.change_tick
+	}
+
+	fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter> {
+		let (sparse, entities, components, ticks) = self.storage.split();
+
+		SplitQueryElement::new(
+			sparse,
+			entities,
+			components.as_ptr() as _,
+			ticks.as_ptr() as _,
+			Contains,
+		)
+	}
+
+	#[inline]
+	unsafe fn get_from_parts(
+		component: *mut Self::Component,
+		_ticks: *mut ChangeTicks,
+		_world_tick: Ticks,
+		_change_tick: Ticks,
+	) -> Self::Item {
+		&*component
+	}
+}
+
+unsafe impl<'a, T, S> ImmutableQueryElement<'a> for &'a ComponentView<'a, T, S>
+where
+	T: Component,
+	S: Deref<Target = ComponentStorage>,
 {
 	// Empty
 }
 
-/// Trait implemented by immutable unfiltered component views.
-pub unsafe trait ImmutableUnfilteredComponentView<'a>
+unsafe impl<'a, T, S> SliceQueryElement<'a> for &'a ComponentView<'a, T, S>
 where
-	Self: UnfilteredComponentView<'a>,
+	T: Component,
+	S: Deref<Target = ComponentStorage>,
 {
-	unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component];
+	unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component] {
+		self.storage.components().get_unchecked(range)
+	}
 
-	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
+	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
+		self.storage.entities().get_unchecked(range)
+	}
 
-	unsafe fn slice_entities_and_components(
+	unsafe fn slice_entities_components(
 		self,
 		range: Range<usize>,
-	) -> (&'a [Entity], &'a [Self::Component]);
+	) -> (&'a [Entity], &'a [Self::Component]) {
+		(
+			self.storage.entities().get_unchecked(range.clone()),
+			self.storage.components().get_unchecked(range),
+		)
+	}
+}
+
+unsafe impl<'a, 'b, T, S> QueryElement<'a> for &'a mut ComponentView<'b, T, S>
+where
+	T: Component,
+	S: Deref<Target = ComponentStorage> + DerefMut,
+{
+	type Item = ComponentRefMut<'a, T>;
+	type Component = T;
+	type Filter = Contains;
+
+	#[inline]
+	fn get(self, entity: Entity) -> Option<Self::Item> {
+		let (component, ticks) = self.storage.get_with_ticks_mut(entity)?;
+		Some(ComponentRefMut::new(component, ticks, self.world_tick))
+	}
+
+	#[inline]
+	fn get_with_ticks(&self, entity: Entity) -> Option<(&Self::Component, &ChangeTicks)> {
+		self.storage.get_with_ticks(entity)
+	}
+
+	#[inline]
+	fn contains(&self, entity: Entity) -> bool {
+		self.storage.contains(entity)
+	}
+
+	#[inline]
+	fn group_info(&self) -> Option<GroupInfo<'a>> {
+		self.group_info
+	}
+
+	#[inline]
+	fn world_tick(&self) -> Ticks {
+		self.world_tick
+	}
+
+	#[inline]
+	fn change_tick(&self) -> Ticks {
+		self.change_tick
+	}
+
+	fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter> {
+		let (sparse, entities, components, ticks) = self.storage.split_mut();
+
+		SplitQueryElement::new(
+			sparse,
+			entities,
+			components.as_mut_ptr(),
+			ticks.as_mut_ptr(),
+			Contains,
+		)
+	}
+
+	#[inline]
+	unsafe fn get_from_parts(
+		component: *mut Self::Component,
+		ticks: *mut ChangeTicks,
+		world_tick: Ticks,
+		_change_tick: Ticks,
+	) -> Self::Item {
+		ComponentRefMut::new(&mut *component, &mut *ticks, world_tick)
+	}
 }

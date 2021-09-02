@@ -1,5 +1,5 @@
 use crate::group::CombinedGroupInfo;
-use crate::query2::{IterData, UnfilteredImmutableQueryElement};
+use crate::query::{IterData, UnfilteredImmutableQueryElement};
 use crate::storage::{Entity, SparseArrayView};
 
 pub unsafe trait QueryModifier<'a> {

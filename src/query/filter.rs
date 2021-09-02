@@ -1,5 +1,5 @@
 use crate::group::GroupInfo;
-use crate::query2::{
+use crate::query::{
 	And, Not, Or, QueryElement, QueryElementFilter, QueryFilter, SplitQueryElement,
 	UnfilteredImmutableQueryElement, UnfilteredQueryElement,
 };

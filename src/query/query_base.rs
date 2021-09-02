@@ -1,5 +1,5 @@
 use crate::group::CombinedGroupInfo;
-use crate::query2::{
+use crate::query::{
 	DenseSplitQueryElement, Include, IncludeExclude, IncludeExcludeFilter, IntoQueryParts,
 	IterData, Passthrough, QueryElement, QueryFilter, QueryModifier, SparseSplitQueryElement,
 };

@@ -1,6 +1,6 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
-use crate::query2::{Contains, QueryElementFilter};
+use crate::query::{Contains, QueryElementFilter};
 use crate::storage::{Entity, SparseArrayView};
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;

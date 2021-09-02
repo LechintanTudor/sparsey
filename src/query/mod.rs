@@ -1,25 +1,36 @@
-pub use self::base::*;
-pub use self::component_ref::*;
+pub use self::component_ref_mut::*;
 pub use self::component_view::*;
-pub use self::composite::*;
-pub use self::errors::*;
 pub use self::filter::*;
 pub use self::iter::*;
-pub use self::modifier::*;
+pub use self::iter_data::*;
+pub use self::iter_dense::*;
+pub use self::iter_sparse::*;
+pub use self::modifiers::*;
 pub use self::query::*;
-pub use self::slice::*;
-pub use self::split::*;
+pub use self::query_base::*;
+pub use self::query_element::*;
+pub use self::query_element_filter::*;
+pub use self::query_filter::*;
+pub use self::query_modifier::*;
+pub use self::query_slice::*;
+
+pub(crate) use self::query_split::*;
 
 #[macro_use]
-mod split;
+mod query_split;
 
-mod base;
-mod component_ref;
+mod component_ref_mut;
 mod component_view;
-mod composite;
-mod errors;
 mod filter;
 mod iter;
-mod modifier;
+mod iter_data;
+mod iter_dense;
+mod iter_sparse;
+mod modifiers;
 mod query;
-mod slice;
+mod query_base;
+mod query_element;
+mod query_element_filter;
+mod query_filter;
+mod query_modifier;
+mod query_slice;

@@ -1,4 +1,4 @@
-use crate::query2::ComponentView;
+use crate::query::ComponentView;
 use crate::storage::ComponentStorage;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 

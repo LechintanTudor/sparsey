@@ -1,4 +1,4 @@
-use crate::query2::{IntoQueryParts, Passthrough, QueryBase, SliceQueryElement};
+use crate::query::{IntoQueryParts, Passthrough, QueryBase, SliceQueryElement};
 use crate::storage::Entity;
 use crate::{group, QueryModifier};
 use std::error::Error;

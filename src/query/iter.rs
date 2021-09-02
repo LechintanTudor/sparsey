@@ -3,56 +3,60 @@ use crate::query::{DenseIter, IterData, QueryBase, QueryFilter, QueryModifier, S
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
-/// Type used for iterating over grouped or ungrouped component storages.
-pub enum Iter<'a, Q, I, E, F>
+pub enum Iter<'a, B, I, E, F>
 where
-	Q: QueryBase<'a>,
+	B: QueryBase<'a>,
 	I: QueryModifier<'a>,
 	E: QueryModifier<'a>,
 	F: QueryFilter,
 {
-	Sparse(SparseIter<'a, Q, I, E, F>),
-	Dense(DenseIter<'a, Q, F>),
+	Sparse(SparseIter<'a, B, I, E, F>),
+	Dense(DenseIter<'a, B, F>),
 }
 
-impl<'a, Q, I, E, F> Iter<'a, Q, I, E, F>
+impl<'a, B, I, E, F> Iter<'a, B, I, E, F>
 where
-	Q: QueryBase<'a>,
+	B: QueryBase<'a>,
 	I: QueryModifier<'a>,
 	E: QueryModifier<'a>,
 	F: QueryFilter,
 {
-	pub(crate) fn new(query: Q, include: I, exclude: E, filter: F) -> Self {
-		let group_range = group_range(
-			query.group_info(),
+	pub(crate) fn new(base: B, include: I, exclude: E, filter: F) -> Self {
+		let group_range = match (
+			base.group_info(),
 			include.group_info(),
 			exclude.group_info(),
-		);
+		) {
+			(Some(base_info), Some(include_info), Some(exclude_info)) => {
+				group_range(base_info, include_info, exclude_info)
+			}
+			_ => None,
+		};
 
 		match group_range {
 			Some(range) => {
-				let (query_data, query) = query.split_dense();
-				let include_data = include.into_iter_data();
+				let (base_data, base) = base.split_dense();
 
-				let iter_data = query_data
-					.unwrap_or_else(|| include_data.unwrap())
-					.with_range(range);
+				let iter_data = base_data
+					.or_else(|| include.split().0)
+					.map(|iter_data| iter_data.with_range(range))
+					.unwrap_or(IterData::EMPTY);
 
-				unsafe { Iter::Dense(DenseIter::new_unchecked(iter_data, query, filter)) }
+				unsafe { Iter::Dense(DenseIter::new_unchecked(iter_data, base, filter)) }
 			}
 			None => {
-				let (query_data, query) = query.split_sparse();
+				let (base_data, base) = base.split_sparse();
 				let (include_data, include) = include.split();
 				let (_, exclude) = exclude.split();
 
-				let iter_data = [query_data, include_data]
+				let iter_data = [base_data, include_data]
 					.iter()
 					.flatten()
-					.min_by_key(|d| d.entities().len())
+					.min_by_key(|d| d.entities.len())
 					.copied()
 					.unwrap_or(IterData::EMPTY);
 
-				Iter::Sparse(SparseIter::new(iter_data, query, include, exclude, filter))
+				Iter::Sparse(SparseIter::new(iter_data, base, include, exclude, filter))
 			}
 		}
 	}
@@ -66,14 +70,14 @@ where
 	}
 }
 
-impl<'a, Q, I, E, F> Iterator for Iter<'a, Q, I, E, F>
+impl<'a, B, I, E, F> Iterator for Iter<'a, B, I, E, F>
 where
-	Q: QueryBase<'a>,
+	B: QueryBase<'a>,
 	I: QueryModifier<'a>,
 	E: QueryModifier<'a>,
 	F: QueryFilter,
 {
-	type Item = Q::Item;
+	type Item = B::Item;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		match self {
@@ -94,9 +98,9 @@ where
 	}
 }
 
-impl<'a, Q, I, E, F> EntityIterator for Iter<'a, Q, I, E, F>
+impl<'a, B, I, E, F> EntityIterator for Iter<'a, B, I, E, F>
 where
-	Q: QueryBase<'a>,
+	B: QueryBase<'a>,
 	I: QueryModifier<'a>,
 	E: QueryModifier<'a>,
 	F: QueryFilter,

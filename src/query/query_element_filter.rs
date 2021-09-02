@@ -1,5 +1,5 @@
 use crate::components::Component;
-use crate::query2::{Filter, UnfilteredQueryElement};
+use crate::query::{Filter, UnfilteredQueryElement};
 use crate::utils::{ChangeTicks, Ticks};
 
 pub trait QueryElementFilter<T>

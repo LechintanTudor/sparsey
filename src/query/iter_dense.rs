@@ -1,4 +1,4 @@
-use crate::query2::{IterData, QueryBase, QueryFilter};
+use crate::query::{IterData, QueryBase, QueryFilter};
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
