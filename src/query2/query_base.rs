@@ -1,5 +1,8 @@
 use crate::group::CombinedGroupInfo;
-use crate::query2::{DenseSplitQueryElement, IterData, QueryElement, SparseSplitQueryElement};
+use crate::query2::{
+	DenseSplitQueryElement, Include, IncludeExclude, IncludeExcludeFilter, IntoQueryParts,
+	IterData, Passthrough, QueryElement, QueryFilter, QueryModifier, SparseSplitQueryElement,
+};
 use crate::storage::Entity;
 use crate::utils::Ticks;
 
@@ -31,6 +34,53 @@ pub unsafe trait QueryBase<'a> {
 		world_tick: Ticks,
 		change_tick: Ticks,
 	) -> Option<Self::Item>;
+}
+
+pub trait QueryBaseModifiers<'a>
+where
+	Self: QueryBase<'a> + Sized,
+{
+	fn include<I>(self, include: I) -> Include<Self, I>
+	where
+		I: QueryModifier<'a>,
+	{
+		Include::new(self, include)
+	}
+
+	fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
+	where
+		E: QueryModifier<'a>,
+	{
+		IncludeExclude::new(self, (), exclude)
+	}
+
+	fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, (), (), F>
+	where
+		F: QueryFilter,
+	{
+		IncludeExcludeFilter::new(self, (), (), filter)
+	}
+}
+
+impl<'a, B> QueryBaseModifiers<'a> for B
+where
+	B: QueryBase<'a> + Sized,
+{
+	// Empty
+}
+
+impl<'a, B> IntoQueryParts<'a> for B
+where
+	B: QueryBase<'a>,
+{
+	type Base = Self;
+	type Include = ();
+	type Exclude = ();
+	type Filter = Passthrough;
+
+	fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
+		(self, (), (), Passthrough)
+	}
 }
 
 macro_rules! impl_query_base {

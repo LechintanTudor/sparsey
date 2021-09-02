@@ -30,8 +30,11 @@ where
 	fn get(self, entity: Entity) -> Option<Self::Item> {
 		let (base, include, exclude, filter) = self.into_query_parts();
 
-		if filter.matches(entity) && exclude.excludes(entity) && include.includes(entity) {
-			base.get(entity)
+		if QueryFilter::matches(&filter, entity)
+			&& QueryModifier::excludes(&exclude, entity)
+			&& QueryModifier::includes(&include, entity)
+		{
+			QueryBase::get(base, entity)
 		} else {
 			None
 		}
@@ -40,9 +43,9 @@ where
 	fn contains(self, entity: Entity) -> bool {
 		let (base, include, exclude, filter) = self.into_query_parts();
 
-		filter.matches(entity)
-			&& exclude.excludes(entity)
-			&& include.includes(entity)
-			&& base.contains(entity)
+		QueryFilter::matches(&filter, entity)
+			&& QueryModifier::excludes(&exclude, entity)
+			&& QueryModifier::includes(&include, entity)
+			&& QueryBase::contains(&base, entity)
 	}
 }
