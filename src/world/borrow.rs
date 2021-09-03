@@ -1,8 +1,16 @@
 use crate::components::Component;
-use crate::resources::Resource;
+use crate::query::ComponentView;
+use crate::resources::{Resource, ResourceCell, ResourceView};
+use crate::storage::ComponentStorage;
 use crate::utils::{panic_missing_comp, panic_missing_res, Ticks};
-use crate::world::{Comp, CompMut, Res, ResMut, World};
+use crate::world::World;
+use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
+
+pub type Comp<'a, T> = ComponentView<'a, T, AtomicRef<'a, ComponentStorage>>;
+pub type CompMut<'a, T> = ComponentView<'a, T, AtomicRefMut<'a, ComponentStorage>>;
+pub type Res<'a, T> = ResourceView<T, AtomicRef<'a, ResourceCell>>;
+pub type ResMut<'a, T> = ResourceView<T, AtomicRefMut<'a, ResourceCell>>;
 
 pub trait BorrowWorld<'a> {
 	type Item;
@@ -51,7 +59,7 @@ where
 	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
 		let cell = world
 			.resources
-			.borrow::<T>()
+			.borrow(&TypeId::of::<T>())
 			.unwrap_or_else(|| panic_missing_res::<T>());
 
 		unsafe { Res::new(cell, world.tick.get(), change_tick) }
@@ -67,7 +75,7 @@ where
 	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
 		let cell = world
 			.resources
-			.borrow_mut::<T>()
+			.borrow_mut(&TypeId::of::<T>())
 			.unwrap_or_else(|| panic_missing_res::<T>());
 
 		unsafe { ResMut::new(cell, world.tick.get(), change_tick) }

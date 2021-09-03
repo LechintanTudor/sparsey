@@ -5,22 +5,22 @@ use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::hint::unreachable_unchecked;
 
-pub(crate) struct ResourceCell {
-	value: Box<dyn Resource>,
+pub struct ResourceCell {
+	resource: Box<dyn Resource>,
 	pub ticks: ChangeTicks,
 }
 
 impl ResourceCell {
-	pub fn value(&self) -> &dyn Resource {
-		&self.value
+	pub fn new(resource: Box<dyn Resource>, ticks: ChangeTicks) -> Self {
+		Self { resource, ticks }
 	}
 
-	pub fn value_mut(&mut self) -> &mut dyn Resource {
-		&mut self.value
+	pub fn resource(&self) -> &dyn Resource {
+		&self.resource
 	}
 
-	pub fn ticks(&self) -> ChangeTicks {
-		self.ticks
+	pub fn resource_mut(&mut self) -> &mut dyn Resource {
+		&mut self.resource
 	}
 }
 
@@ -31,19 +31,16 @@ pub(crate) struct ResourceStorage {
 }
 
 impl ResourceStorage {
-	pub fn insert<T>(&mut self, value: T, ticks: ChangeTicks) -> Option<T>
+	pub fn insert<T>(&mut self, resource: T, ticks: ChangeTicks) -> Option<T>
 	where
 		T: Resource,
 	{
-		let cell = ResourceCell {
-			value: Box::new(value),
-			ticks,
-		};
+		let cell = ResourceCell::new(Box::new(resource), ticks);
 
 		self.resources
 			.insert(TypeId::of::<T>(), AtomicRefCell::new(cell))
-			.map(|c| match c.into_inner().value.downcast().map(|c| *c) {
-				Ok(value) => value,
+			.map(|c| match c.into_inner().resource.downcast() {
+				Ok(resource) => *resource,
 				Err(_) => unsafe { unreachable_unchecked() },
 			})
 	}
@@ -53,8 +50,8 @@ impl ResourceStorage {
 		T: Resource,
 	{
 		self.resources.remove(&TypeId::of::<T>()).map(|c| {
-			match c.into_inner().value.downcast().map(|c| *c) {
-				Ok(value) => value,
+			match c.into_inner().resource.downcast() {
+				Ok(resource) => *resource,
 				Err(_) => unsafe { unreachable_unchecked() },
 			}
 		})
@@ -68,19 +65,15 @@ impl ResourceStorage {
 		self.resources.clear();
 	}
 
-	pub fn borrow<T>(&self) -> Option<AtomicRef<ResourceCell>>
-	where
-		T: Resource,
-	{
-		self.resources.get(&TypeId::of::<T>()).map(|c| c.borrow())
+	pub fn borrow(&self, resource_type_id: &TypeId) -> Option<AtomicRef<ResourceCell>> {
+		self.resources
+			.get(resource_type_id)
+			.map(AtomicRefCell::borrow)
 	}
 
-	pub fn borrow_mut<T>(&self) -> Option<AtomicRefMut<ResourceCell>>
-	where
-		T: Resource,
-	{
+	pub fn borrow_mut(&self, resource_type_id: &TypeId) -> Option<AtomicRefMut<ResourceCell>> {
 		self.resources
-			.get(&TypeId::of::<T>())
-			.map(|c| c.borrow_mut())
+			.get(resource_type_id)
+			.map(AtomicRefCell::borrow_mut)
 	}
 }
