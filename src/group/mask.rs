@@ -1,5 +1,3 @@
-use std::ops::{BitOr, BitOrAssign};
-
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Debug)]
 pub(crate) struct GroupMask {
 	include: u16,
@@ -36,37 +34,5 @@ impl GroupMask {
 		} else {
 			Self::empty()
 		}
-	}
-
-	pub const fn include(&self, mask: u16) -> Self {
-		Self {
-			include: self.include | mask,
-			exclude: self.exclude,
-		}
-	}
-
-	pub const fn exclude(&self, mask: u16) -> Self {
-		Self {
-			include: self.include,
-			exclude: self.exclude | mask,
-		}
-	}
-}
-
-impl BitOr for GroupMask {
-	type Output = Self;
-
-	fn bitor(self, other: Self) -> Self::Output {
-		Self {
-			include: self.include | other.include,
-			exclude: self.exclude | other.exclude,
-		}
-	}
-}
-
-impl BitOrAssign for GroupMask {
-	fn bitor_assign(&mut self, other: Self) {
-		self.include |= other.include;
-		self.exclude |= other.exclude;
 	}
 }
