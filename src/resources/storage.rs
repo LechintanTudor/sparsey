@@ -16,11 +16,11 @@ impl ResourceCell {
 	}
 
 	pub fn resource(&self) -> &dyn Resource {
-		&self.resource
+		&*self.resource
 	}
 
 	pub fn resource_mut(&mut self) -> &mut dyn Resource {
-		&mut self.resource
+		&mut *self.resource
 	}
 }
 
