@@ -4,7 +4,9 @@ use crate::query::{
 	ComponentRefMut, Contains, ImmutableQueryElement, QueryElement, SliceQueryElement,
 	SplitQueryElement,
 };
-use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
+use crate::storage::{
+	ComponentIter, ComponentStorage, ComponentWithTicksIter, Entity, TypedComponentStorage,
+};
 use crate::utils::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut, Range};
 
@@ -32,6 +34,46 @@ where
 			world_tick,
 			change_tick,
 		}
+	}
+
+	pub fn get(&self, entity: Entity) -> Option<&T> {
+		self.storage.get(entity)
+	}
+
+	pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
+		self.storage.get_ticks(entity)
+	}
+
+	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
+		self.storage.get_with_ticks(entity)
+	}
+
+	pub fn len(&self) -> usize {
+		self.storage.len()
+	}
+
+	pub fn is_empty(&self) -> bool {
+		self.storage.is_empty()
+	}
+
+	pub fn entities(&self) -> &[Entity] {
+		self.storage.entities()
+	}
+
+	pub fn components(&self) -> &[T] {
+		self.storage.components()
+	}
+
+	pub fn ticks(&self) -> &[ChangeTicks] {
+		self.storage.ticks()
+	}
+
+	pub fn iter(&self) -> ComponentIter<T> {
+		self.storage.iter()
+	}
+
+	pub fn iter_with_ticks(&self) -> ComponentWithTicksIter<T> {
+		self.storage.iter_with_ticks()
 	}
 }
 

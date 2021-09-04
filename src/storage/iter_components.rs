@@ -46,14 +46,14 @@ where
 }
 
 #[derive(Clone, Copy)]
-pub struct ComponentAndTicksIter<'a, T> {
+pub struct ComponentWithTicksIter<'a, T> {
 	index: usize,
 	entities: &'a [Entity],
 	components: *const T,
 	ticks: *const ChangeTicks,
 }
 
-impl<'a, T> ComponentAndTicksIter<'a, T> {
+impl<'a, T> ComponentWithTicksIter<'a, T> {
 	pub(crate) unsafe fn new(
 		entities: &'a [Entity],
 		components: &'a [T],
@@ -68,7 +68,7 @@ impl<'a, T> ComponentAndTicksIter<'a, T> {
 	}
 }
 
-impl<'a, T> Iterator for ComponentAndTicksIter<'a, T>
+impl<'a, T> Iterator for ComponentWithTicksIter<'a, T>
 where
 	T: 'a,
 {
@@ -91,7 +91,7 @@ where
 	}
 }
 
-impl<'a, T> EntityIterator for ComponentAndTicksIter<'a, T>
+impl<'a, T> EntityIterator for ComponentWithTicksIter<'a, T>
 where
 	T: 'a,
 {
