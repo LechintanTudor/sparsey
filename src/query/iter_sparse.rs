@@ -2,6 +2,7 @@ use crate::query::{IterData, QueryBase, QueryFilter, QueryModifier};
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
+/// Iterator over ungrouped component storages.
 pub struct SparseIter<'a, B, I, E, F>
 where
 	B: QueryBase<'a>,
@@ -24,7 +25,7 @@ where
 	E: QueryModifier<'a>,
 	F: QueryFilter,
 {
-	pub fn new(
+	pub(crate) fn new(
 		data: IterData<'a>,
 		base: B::SparseSplit,
 		include: I::Split,

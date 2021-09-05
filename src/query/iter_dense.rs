@@ -2,6 +2,7 @@ use crate::query::{IterData, QueryBase, QueryFilter};
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
+/// Iterator over grouped component storages. Extremely fast.
 pub struct DenseIter<'a, B, F>
 where
 	B: QueryBase<'a>,

@@ -1,25 +1,26 @@
 use crate::group::GroupInfo;
-use crate::query::{QueryElement, SplitQueryElement};
+use crate::query::{Contains, QueryElement, SplitQueryElement, UnfilteredQueryElement};
 use crate::storage::Entity;
 use crate::utils::{ChangeTicks, Ticks};
 
+/// Wrapper over an `QueryElement`. Used for wrapping the
 #[derive(Clone, Copy, Debug)]
 pub struct Maybe<E>(E);
 
 pub fn maybe<'a, E>(element: E) -> Maybe<E>
 where
-	E: QueryElement<'a>,
+	E: UnfilteredQueryElement<'a>,
 {
 	Maybe(element)
 }
 
 unsafe impl<'a, E> QueryElement<'a> for Maybe<E>
 where
-	E: QueryElement<'a>,
+	E: UnfilteredQueryElement<'a>,
 {
 	type Item = Option<E::Item>;
 	type Component = E::Component;
-	type Filter = E::Filter;
+	type Filter = Contains;
 
 	#[inline]
 	fn get(self, entity: Entity) -> Option<Self::Item> {

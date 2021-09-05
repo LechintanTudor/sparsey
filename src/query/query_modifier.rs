@@ -2,6 +2,7 @@ use crate::group::CombinedGroupInfo;
 use crate::query::{IterData, UnfilteredImmutableQueryElement};
 use crate::storage::{Entity, SparseArrayView};
 
+/// Trait implemented by `QueryModifier`s.
 pub unsafe trait QueryModifier<'a> {
 	type Split;
 

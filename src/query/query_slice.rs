@@ -7,24 +7,22 @@ use std::fmt::{Display, Formatter};
 use std::hint::unreachable_unchecked;
 use std::ops::Range;
 
+/// Trait used for slicing queries with grouped component storages.
 pub unsafe trait SliceQuery<'a>
 where
 	Self: IntoQueryParts<'a, Filter = Passthrough>,
 	Self::Base: SliceQueryBase<'a>,
 {
-	/// Returns a slice with all entities that match the query if the component
-	/// storages are grouped.
+	/// Returns a slice containing all the entities which match the query.
 	fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages>;
 
-	/// Returns a slice with all components that match the query if the
-	/// component storages are grouped.
+	/// Returns a tuple of slices containing all components which match the
+	/// query.
 	fn components(
 		self,
 	) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, UngroupedComponentStorages>;
 
-	/// Returns a tuple containing a slice with all entities and a slice with
-	/// all components that match the query if the component storages are
-	/// grouped.
+	/// Returns all entities and components which match the query.
 	fn entities_components(
 		self,
 	) -> Result<

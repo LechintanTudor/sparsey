@@ -3,6 +3,7 @@ use crate::query::{DenseIter, IterData, QueryBase, QueryFilter, QueryModifier, S
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
+/// Iterator over grouped or ungrouped component storages.
 pub enum Iter<'a, B, I, E, F>
 where
 	B: QueryBase<'a>,
@@ -10,7 +11,9 @@ where
 	E: QueryModifier<'a>,
 	F: QueryFilter,
 {
+	/// Iterator over ungrouped component storages.
 	Sparse(SparseIter<'a, B, I, E, F>),
+	/// Iterator over grouped component storages. Extremely fast.
 	Dense(DenseIter<'a, B, F>),
 }
 
@@ -21,7 +24,8 @@ where
 	E: QueryModifier<'a>,
 	F: QueryFilter,
 {
-	pub(crate) fn new(base: B, include: I, exclude: E, filter: F) -> Self {
+	/// Creates a new iterator from the given query parts.
+	pub fn new(base: B, include: I, exclude: E, filter: F) -> Self {
 		let group_range = match (
 			base.group_info(),
 			include.group_info(),
@@ -63,10 +67,7 @@ where
 
 	/// Returns `true` if the iterator is dense.
 	pub fn is_dense(&self) -> bool {
-		match self {
-			Self::Sparse(_) => false,
-			Self::Dense(_) => true,
-		}
+		matches!(self, Self::Dense(_))
 	}
 }
 

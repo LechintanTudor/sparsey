@@ -6,6 +6,7 @@ use crate::query::{
 use crate::storage::Entity;
 use crate::utils::Ticks;
 
+/// Trait implemented by the base part of a query. Used for fetching components.
 pub unsafe trait QueryBase<'a> {
 	type Item;
 	type SparseSplit;
@@ -36,6 +37,7 @@ pub unsafe trait QueryBase<'a> {
 	) -> Option<Self::Item>;
 }
 
+/// Trait used for applying modifiers to a `QueryBase`.
 pub trait QueryBaseModifiers<'a>
 where
 	Self: QueryBase<'a> + Sized,

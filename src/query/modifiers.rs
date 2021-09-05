@@ -1,5 +1,6 @@
 use crate::query::{IntoQueryParts, Passthrough, QueryBase, QueryFilter, QueryModifier};
 
+/// Wrapper over a `QueryBase`. Applies an include `QueryModifier`.
 pub struct Include<B, I> {
 	base: B,
 	include: I,
@@ -14,6 +15,7 @@ where
 		Self { base, include }
 	}
 
+	/// Applies an exclude modifier to the query.
 	pub fn exclude<E>(self, exclude: E) -> IncludeExclude<B, I, E>
 	where
 		E: QueryModifier<'a>,
@@ -21,6 +23,7 @@ where
 		IncludeExclude::new(self.base, self.include, exclude)
 	}
 
+	/// Applies a filter to the query.
 	pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<B, I, (), F>
 	where
 		F: QueryFilter,
@@ -44,6 +47,7 @@ where
 	}
 }
 
+/// Wrapper over a `QueryBase`. Applies include and exclude `QueryModifier`s.
 pub struct IncludeExclude<B, I, E> {
 	base: B,
 	include: I,
@@ -64,6 +68,7 @@ where
 		}
 	}
 
+	/// Applies a filter to the query.
 	pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<B, I, E, F>
 	where
 		F: QueryFilter,

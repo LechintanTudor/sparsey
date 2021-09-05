@@ -1,9 +1,11 @@
 use crate::storage::Entity;
 
+/// Trait implemented by query filters.
 pub trait QueryFilter {
 	fn matches(&self, entity: Entity) -> bool;
 }
 
+/// Filter that matches all entities.
 #[derive(Clone, Copy, Debug)]
 pub struct Passthrough;
 
@@ -13,12 +15,14 @@ impl QueryFilter for Passthrough {
 	}
 }
 
+/// Wrapper around a `QueryFilter` which negates its result.
 pub struct Not<F>(F);
 
 impl<F> Not<F>
 where
 	F: QueryFilter,
 {
+	/// Creates a new `Not` with the given filter.
 	pub fn new(filter: F) -> Self {
 		Self(filter)
 	}
@@ -33,6 +37,8 @@ where
 	}
 }
 
+/// Filter that only matches entities which match both the filters contained
+/// inside.
 pub struct And<F1, F2>(F1, F2);
 
 impl<F1, F2> And<F1, F2>
@@ -40,6 +46,7 @@ where
 	F1: QueryFilter,
 	F2: QueryFilter,
 {
+	/// Creates a new `And` with the given filters.
 	pub fn new(filter1: F1, filter2: F2) -> Self {
 		Self(filter1, filter2)
 	}
@@ -55,6 +62,8 @@ where
 	}
 }
 
+/// Filter that only matches entities which match either of the filters
+/// contained inside.
 pub struct Or<F1, F2>(F1, F2);
 
 impl<F1, F2> Or<F1, F2>
@@ -62,6 +71,7 @@ where
 	F1: QueryFilter,
 	F2: QueryFilter,
 {
+	/// Creates a new `Or` with the given filters.
 	pub fn new(filter1: F1, filter2: F2) -> Self {
 		Self(filter1, filter2)
 	}

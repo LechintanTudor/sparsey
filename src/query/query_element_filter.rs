@@ -2,6 +2,7 @@ use crate::components::Component;
 use crate::query::{Filter, UnfilteredQueryElement};
 use crate::utils::{ChangeTicks, Ticks};
 
+/// Trait used for implementing `QueryElement` filters.
 pub trait QueryElementFilter<T>
 where
 	T: Component,
@@ -15,9 +16,11 @@ where
 	) -> bool;
 }
 
+/// Filter that matches all components.
 #[derive(Clone, Copy, Default)]
 pub struct Contains;
 
+/// Creates a new `Filter` that matches all components.
 pub fn contains<'a, E>(element: E) -> Filter<Contains, E>
 where
 	E: UnfilteredQueryElement<'a>,
@@ -41,9 +44,11 @@ where
 	}
 }
 
+/// Filter that ony matches newly added components.
 #[derive(Clone, Copy, Default)]
 pub struct Added;
 
+/// Creates a new `Filter` that ony matches newly added components.
 pub fn added<'a, E>(element: E) -> Filter<Added, E>
 where
 	E: UnfilteredQueryElement<'a>,
@@ -67,9 +72,11 @@ where
 	}
 }
 
+/// Filter that only matches mutated components.
 #[derive(Clone, Copy, Default)]
 pub struct Mutated;
 
+/// Creates a new `Filter` that ony matches mutated components.
 pub fn mutated<'a, E>(element: E) -> Filter<Mutated, E>
 where
 	E: UnfilteredQueryElement<'a>,
@@ -93,9 +100,11 @@ where
 	}
 }
 
+/// Filter that only matches newly added or mutated components.
 #[derive(Clone, Copy, Default)]
 pub struct Changed;
 
+/// Creates a new `Filter` that ony matches newly added or mutated components.
 pub fn changed<'a, E>(element: E) -> Filter<Changed, E>
 where
 	E: UnfilteredQueryElement<'a>,

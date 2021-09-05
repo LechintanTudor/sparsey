@@ -10,6 +10,7 @@ use crate::storage::{
 use crate::utils::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut, Range};
 
+/// Wrapper around a borrowed `ComponentStorage`. Used as a basis for queries.
 pub struct ComponentView<'a, T, S> {
 	storage: TypedComponentStorage<T, S>,
 	group_info: Option<GroupInfo<'a>>,
@@ -36,42 +37,59 @@ where
 		}
 	}
 
+	/// Returns `entity`'s component if it exists.
 	pub fn get(&self, entity: Entity) -> Option<&T> {
 		self.storage.get(entity)
 	}
 
+	/// Returns the `ChangeTicks` associated with `entity`'s component, if it
+	/// exists.
 	pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
 		self.storage.get_ticks(entity)
 	}
 
+	/// Returns `entity`'s component and `ChangeTicks` if they exist.
 	pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
 		self.storage.get_with_ticks(entity)
 	}
 
+	/// Returns `true` if `entity` exists in this storage.
+	pub fn contains(&self, entity: Entity) -> bool {
+		self.storage.contains(entity)
+	}
+
+	/// Returns the number of components in the storage.
 	pub fn len(&self) -> usize {
 		self.storage.len()
 	}
 
+	/// Returns `true` if the storage is empty.
 	pub fn is_empty(&self) -> bool {
 		self.storage.is_empty()
 	}
 
+	/// Returns all entities in the storage.
 	pub fn entities(&self) -> &[Entity] {
 		self.storage.entities()
 	}
 
+	/// Returns all components in the storage.
 	pub fn components(&self) -> &[T] {
 		self.storage.components()
 	}
 
+	/// Returns all the `ChangeTicks` in the storage.
 	pub fn ticks(&self) -> &[ChangeTicks] {
 		self.storage.ticks()
 	}
 
+	/// Returns an iterator over all components in the storage.
 	pub fn iter(&self) -> ComponentIter<T> {
 		self.storage.iter()
 	}
 
+	/// Returns an iterator over all components and `ChangeTicks` in the
+	/// storage.
 	pub fn iter_with_ticks(&self) -> ComponentWithTicksIter<T> {
 		self.storage.iter_with_ticks()
 	}
@@ -152,14 +170,17 @@ where
 	T: Component,
 	S: Deref<Target = ComponentStorage>,
 {
+	#[inline]
 	unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component] {
 		self.storage.components().get_unchecked(range)
 	}
 
+	#[inline]
 	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
 		self.storage.entities().get_unchecked(range)
 	}
 
+	#[inline]
 	unsafe fn slice_entities_components(
 		self,
 		range: Range<usize>,

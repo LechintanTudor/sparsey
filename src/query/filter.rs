@@ -7,6 +7,7 @@ use crate::storage::Entity;
 use crate::utils::{ChangeTicks, Ticks};
 use std::ops;
 
+/// Wrapper around a `QueryElement`. Used for applying filters.
 pub struct Filter<F, E> {
 	filter: F,
 	element: E,
@@ -17,6 +18,8 @@ where
 	F: QueryElementFilter<E::Component>,
 	E: UnfilteredQueryElement<'a>,
 {
+	/// Creates a new `Filter` with the given `QueryElementFilter` and
+	/// `QueryElement`.
 	pub fn new(filter: F, element: E) -> Self {
 		Self { filter, element }
 	}

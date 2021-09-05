@@ -6,6 +6,7 @@ use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
 use std::ops::Range;
 
+/// Trait implement by types which can be part of a query.
 pub unsafe trait QueryElement<'a> {
 	type Item: 'a;
 	type Component: Component;
@@ -33,6 +34,7 @@ pub unsafe trait QueryElement<'a> {
 	) -> Self::Item;
 }
 
+/// Trait implemented by immutable `QueryElement`s.
 pub unsafe trait ImmutableQueryElement<'a>
 where
 	Self: QueryElement<'a>,
@@ -40,6 +42,7 @@ where
 	// Empty
 }
 
+/// Trait implemented by unfiltered `QueryElement`s.
 pub trait UnfilteredQueryElement<'a>
 where
 	Self: QueryElement<'a, Filter = Contains>,
@@ -54,6 +57,7 @@ where
 	// Empty
 }
 
+/// Trait implemented by unfiltered immutable `QueryElement`s.
 pub trait UnfilteredImmutableQueryElement<'a>
 where
 	Self: ImmutableQueryElement<'a> + UnfilteredQueryElement<'a>,
@@ -68,6 +72,8 @@ where
 	// Empty
 }
 
+/// Trait used for getting slices of entities and components from a
+/// `QueryElement`.
 pub unsafe trait SliceQueryElement<'a>
 where
 	Self: UnfilteredImmutableQueryElement<'a>,
@@ -82,6 +88,7 @@ where
 	) -> (&'a [Entity], &'a [Self::Component]);
 }
 
+/// Type returned by `QueryElement::split`.
 #[non_exhaustive]
 pub struct SplitQueryElement<'a, T, F> {
 	pub sparse: SparseArrayView<'a>,
@@ -92,6 +99,7 @@ pub struct SplitQueryElement<'a, T, F> {
 }
 
 impl<'a, T, F> SplitQueryElement<'a, T, F> {
+	/// Creates a new `SplitQueryElement`.
 	pub fn new(
 		sparse: SparseArrayView<'a>,
 		entities: &'a [Entity],
