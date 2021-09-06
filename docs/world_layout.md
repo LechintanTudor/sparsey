@@ -32,9 +32,19 @@ Storage B:
 
 Because the components which belong to entities which have both `A` and `B` are stored at the beginning of their storages, iterating a query which fetches the components of entities with `A` and `B` is much faster than for ungrouped storages.
 ```rust
+// Fast iteration
 for (a, b) in (&a, &b).iter() {
     // ...
 }
+```
+
+To group these component storages you have to set the `Layout` as such:
+```rust
+let layout = Layout::builder()
+     .add_group(<(A, B)>::group())
+     .build();
+
+let world = World::with_layout(&layout);
 ```
 
 ## Nested Groups
@@ -61,3 +71,27 @@ Storage C:
 2) Components of entities with C, without A or B
 ```
 
+This setup gives us 3 queries with fast iterations:
+```rust
+for (a, b) in (&a, &b).iter() {
+     // ...
+}
+
+for (a, b, c) in (&a, &b, &c).iter() {
+     // ...
+}
+
+for (a, b) in (&a, &b).exclude(&c).iter() {
+     // ...
+}
+```
+
+To group these component storages you have to set the `Layout` as such:
+```rust
+let layout = Layout::builder()
+     .add_group(<(A, B)>::group())
+     .add_group(<(A, B, C)>::group())
+     .build();
+
+let world = World::with_layout(&layout);
+```

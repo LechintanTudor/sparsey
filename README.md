@@ -1,5 +1,5 @@
 # Sparsey
-Sparsey is a sparse set based Entity Component System with lots of features and nice syntax! \~( ˘▾˘\~)
+Sparsey is a sparse set based Entity Component System with lots of features and nice syntax \~( ˘▾˘\~)
 
 # Example 
 ```rust
