@@ -10,7 +10,7 @@ use crate::storage::{
 use crate::utils::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut, Range};
 
-/// Wrapper around a borrowed `ComponentStorage`. Used as a basis for queries.
+/// View over a component storage of type `T`.
 pub struct ComponentView<'a, T, S> {
 	storage: TypedComponentStorage<T, S>,
 	group_info: Option<GroupInfo<'a>>,

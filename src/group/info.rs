@@ -2,6 +2,7 @@ use crate::group::{Group, GroupMask};
 use std::ops::Range;
 use std::ptr;
 
+/// Tracks the group to which a component storage belongs.
 #[derive(Copy, Clone)]
 pub struct GroupInfo<'a> {
 	group_family: &'a [Group],
@@ -10,7 +11,11 @@ pub struct GroupInfo<'a> {
 }
 
 impl<'a> GroupInfo<'a> {
-	pub(crate) fn new(group_family: &'a [Group], group_index: usize, storage_index: usize) -> Self {
+	pub(crate) const fn new(
+		group_family: &'a [Group],
+		group_index: usize,
+		storage_index: usize,
+	) -> Self {
 		Self {
 			group_family,
 			group_index,
@@ -19,6 +24,7 @@ impl<'a> GroupInfo<'a> {
 	}
 }
 
+/// Tracks the group to which a multiple component storages belong.
 #[derive(Copy, Clone, Default)]
 pub struct CombinedGroupInfo<'a> {
 	group_family: Option<&'a [Group]>,
@@ -64,6 +70,8 @@ fn common_group_family<'a>(group_families: &[Option<&'a [Group]>]) -> Option<&'a
 	group_family
 }
 
+/// Returns the range of elements the storages have in common if the
+/// `CombinedGroupInfo`s form a group.
 pub fn group_range(
 	base: CombinedGroupInfo,
 	include: CombinedGroupInfo,

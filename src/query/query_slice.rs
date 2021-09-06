@@ -120,6 +120,7 @@ where
 	.ok_or(UngroupedComponentStorages)
 }
 
+/// Trait used by `QuerySlice` to get component slices from `QueryBase`.
 pub unsafe trait SliceQueryBase<'a>
 where
 	Self: QueryBase<'a>,

@@ -37,8 +37,8 @@ where
 	}
 }
 
-/// Filter that only matches entities which match both the filters contained
-/// inside.
+/// `QueryFilter` that only matches entities which match both the filters
+/// contained inside.
 pub struct And<F1, F2>(F1, F2);
 
 impl<F1, F2> And<F1, F2>
@@ -62,7 +62,7 @@ where
 	}
 }
 
-/// Filter that only matches entities which match either of the filters
+/// `QueryFilter` that only matches entities which match either of the filters
 /// contained inside.
 pub struct Or<F1, F2>(F1, F2);
 

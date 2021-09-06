@@ -94,13 +94,14 @@ impl SparseArray {
 	}
 }
 
+/// Shared view over a `SparseArray`.
 #[derive(Copy, Clone)]
 pub struct SparseArrayView<'a> {
 	pages: &'a [EntityPage],
 }
 
 impl SparseArrayView<'_> {
-	/// Checks if the array contains `entity`.
+	/// Returns `true` if the view contains `entity`.
 	pub fn contains(&self, entity: Entity) -> bool {
 		self.pages
 			.get(page_index(entity))
@@ -110,7 +111,7 @@ impl SparseArrayView<'_> {
 			.is_some()
 	}
 
-	/// Get the index mapped to `entity`.
+	/// Returns the index mapped to `entity` if it exists.
 	pub fn get_index(&self, entity: Entity) -> Option<usize> {
 		self.pages
 			.get(page_index(entity))

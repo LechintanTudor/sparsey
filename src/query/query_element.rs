@@ -145,6 +145,7 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
 	}
 }
 
+/// Used to form `QueryBase::SparseSplit`.
 #[non_exhaustive]
 pub struct SparseSplitQueryElement<'a, T, F> {
 	pub sparse: SparseArrayView<'a>,
@@ -175,6 +176,7 @@ impl<'a, T, F> SparseSplitQueryElement<'a, T, F> {
 	}
 }
 
+/// Used to form `QueryBase::DenseSplit`.
 pub struct DenseSplitQueryElement<'a, T, F> {
 	pub components: *mut T,
 	pub ticks: *mut ChangeTicks,

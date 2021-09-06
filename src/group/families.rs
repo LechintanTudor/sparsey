@@ -1,6 +1,6 @@
 pub(crate) const MAX_GROUP_FAMILIES: usize = 16;
 
-#[doc(hidden)]
+/// Set of group families indexes used by a component set.
 #[derive(Clone, Copy, Default, Debug)]
 pub struct GroupFamilyIndexes {
 	used: [bool; MAX_GROUP_FAMILIES],
@@ -17,6 +17,7 @@ impl GroupFamilyIndexes {
 	}
 }
 
+/// Iterator over the group family indexes of a component set.
 #[derive(Clone, Copy)]
 pub struct GroupFamilyIndexIter<'a> {
 	index: usize,

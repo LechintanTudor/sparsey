@@ -7,11 +7,16 @@ use crate::world::World;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
 
+/// Shared view over a component storage.
 pub type Comp<'a, T> = ComponentView<'a, T, AtomicRef<'a, ComponentStorage>>;
+/// Exclusive view over a component storage.
 pub type CompMut<'a, T> = ComponentView<'a, T, AtomicRefMut<'a, ComponentStorage>>;
+/// Shared view over a resource.
 pub type Res<'a, T> = ResourceView<T, AtomicRef<'a, ResourceCell>>;
+/// Exclusive view over a resource.
 pub type ResMut<'a, T> = ResourceView<T, AtomicRefMut<'a, ResourceCell>>;
 
+/// Trait used to borrow component storages and resources from a `World`.
 pub trait BorrowWorld<'a> {
 	type Item;
 

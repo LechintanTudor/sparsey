@@ -17,6 +17,7 @@ impl Layout {
 	}
 }
 
+/// Enables creating a `Layout` using the builder pattern.
 #[derive(Default)]
 pub struct LayoutBuilder {
 	group_families: Vec<Vec<LayoutGroup>>,

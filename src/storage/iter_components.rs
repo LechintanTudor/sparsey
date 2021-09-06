@@ -1,6 +1,7 @@
 use crate::storage::Entity;
 use crate::utils::{ChangeTicks, EntityIterator};
 
+/// Iterator over the components in a `ComponentView`.
 #[derive(Clone, Copy)]
 pub struct ComponentIter<'a, T> {
 	index: usize,
@@ -45,6 +46,7 @@ where
 	}
 }
 
+/// Iterator over the components and `ChangeTicks` in a `ComponentView`.
 #[derive(Clone, Copy)]
 pub struct ComponentWithTicksIter<'a, T> {
 	index: usize,

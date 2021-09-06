@@ -1,12 +1,16 @@
 use std::num::NonZeroU32;
 
+/// Used in change detection to track the tick in which a change occurred.
 pub type Ticks = u32;
+/// Same as `Ticks`, but non zero.
 pub type NonZeroTicks = NonZeroU32;
 
 /// Holds the ticks in which a component was added and last mutated.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Debug)]
 pub struct ChangeTicks {
+	/// The tick when the component was added.
 	pub tick_added: Ticks,
+	/// The tick when the component was last mutated.
 	pub tick_mutated: Ticks,
 }
 

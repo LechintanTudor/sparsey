@@ -2,7 +2,7 @@ use crate::components::Component;
 use crate::query::{Filter, UnfilteredQueryElement};
 use crate::utils::{ChangeTicks, Ticks};
 
-/// Trait used for implementing `QueryElement` filters.
+/// Trait used for filtering `QueryElement`s.
 pub trait QueryElementFilter<T>
 where
 	T: Component,
@@ -16,7 +16,7 @@ where
 	) -> bool;
 }
 
-/// Filter that matches all components.
+/// `QueryElementFilter` that matches all components.
 #[derive(Clone, Copy, Default)]
 pub struct Contains;
 
@@ -44,7 +44,7 @@ where
 	}
 }
 
-/// Filter that ony matches newly added components.
+/// `QueryElementFilter` that ony matches newly added components.
 #[derive(Clone, Copy, Default)]
 pub struct Added;
 
@@ -72,7 +72,7 @@ where
 	}
 }
 
-/// Filter that only matches mutated components.
+/// `QueryElementFilter` that only matches mutated components.
 #[derive(Clone, Copy, Default)]
 pub struct Mutated;
 
@@ -100,7 +100,7 @@ where
 	}
 }
 
-/// Filter that only matches newly added or mutated components.
+/// `QueryElementFilter` that only matches newly added or mutated components.
 #[derive(Clone, Copy, Default)]
 pub struct Changed;
 

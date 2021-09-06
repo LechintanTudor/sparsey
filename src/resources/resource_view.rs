@@ -4,6 +4,7 @@ use std::hint::unreachable_unchecked;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
+/// View over a resource of type `T`.
 pub struct ResourceView<T, C> {
 	cell: C,
 	world_tick: Ticks,
@@ -56,6 +57,7 @@ where
 	}
 }
 
+/// Returns `true` if the resource was just added.
 pub fn res_added<T, C>(resource_view: &ResourceView<T, C>) -> bool
 where
 	T: Resource,
@@ -64,6 +66,7 @@ where
 	resource_view.cell.ticks.tick_added == resource_view.world_tick
 }
 
+/// Returns `true` if the resource was mutated.
 pub fn res_mutated<T, C>(resource_view: &ResourceView<T, C>) -> bool
 where
 	T: Resource,
@@ -72,6 +75,7 @@ where
 	resource_view.cell.ticks.tick_mutated > resource_view.change_tick
 }
 
+/// Returns `true` if the resource was just added or mutated.
 pub fn res_changed<T, C>(resource_view: &ResourceView<T, C>) -> bool
 where
 	T: Resource,

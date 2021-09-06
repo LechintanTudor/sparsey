@@ -5,12 +5,7 @@ pub(crate) struct GroupMask {
 }
 
 impl GroupMask {
-	pub const fn empty() -> Self {
-		Self {
-			include: 0,
-			exclude: 0,
-		}
-	}
+	pub const EMPTY: Self = Self::new(0, 0);
 
 	pub const fn new(include: u16, exclude: u16) -> Self {
 		Self { include, exclude }
@@ -32,7 +27,7 @@ impl GroupMask {
 				exclude: ((1 << exclude_count) - 1) << prev_arity,
 			}
 		} else {
-			Self::empty()
+			Self::EMPTY
 		}
 	}
 }

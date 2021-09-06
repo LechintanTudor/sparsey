@@ -93,6 +93,8 @@ where
 	}
 }
 
+/// Wrapper over a `QueryBase`. Applies include and exclude `QueryModifier`s as
+/// well as a `QueryFilter`.
 pub struct IncludeExcludeFilter<B, I, E, F> {
 	base: B,
 	include: I,

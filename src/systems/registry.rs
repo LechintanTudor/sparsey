@@ -6,23 +6,23 @@ use crate::utils::Ticks;
 use crate::world::{BorrowWorld, Comp, CompMut, Res, ResMut, World};
 use std::any::TypeId;
 
-/// Represents the type of data which can be accessed by a `System`.
-/// Get a command buffer for queueing commands.
+/// Types of data that can be accessed by a `System`.
 pub enum RegistryAccess {
+	/// Command buffer for queueing commands.
 	Commands,
-	/// Get a shared view over a set of components from the `World`.
+	/// Shared view over a component storage from the `World`.
 	Comp(ComponentInfo),
-	/// Get an exclusive view over a set of components from the `World`.
+	/// Exclusive view over a component storage from the `World`.
 	CompMut(ComponentInfo),
-	/// Get a shared view over a resource from `Resources`.
+	/// Shared view over a resource from `Resources`.
 	Res(TypeId),
-	/// Get an exclusive view over a resource from `Resources`.
+	/// Exclusive view over a resource from `Resources`.
 	ResMut(TypeId),
 }
 
 impl RegistryAccess {
-	/// Check if two `RegistryAccesses` conflict, that is,
-	/// preventing two systems from running in parallel.
+	/// Check if two `RegistryAccess`es conflict, preventing two systems from
+	/// running in parallel.
 	pub fn conflicts(&self, other: &RegistryAccess) -> bool {
 		match (self, other) {
 			(Self::Comp(comp1), Self::CompMut(comp2)) => comp1 == comp2,
@@ -36,7 +36,7 @@ impl RegistryAccess {
 	}
 }
 
-/// Execution registry for `Systems`.
+/// Execution environment for `System`s.
 pub struct Registry<'a> {
 	world: &'a World,
 	command_buffers: &'a CommandBuffers,
@@ -60,7 +60,7 @@ impl<'a> Registry<'a> {
 	}
 }
 
-/// Used by systems to borrow data from `Registrys`.
+/// Used by systems to borrow data from registries.
 pub unsafe trait BorrowRegistry<'a> {
 	/// The data resulting from the borrow.
 	type Item;

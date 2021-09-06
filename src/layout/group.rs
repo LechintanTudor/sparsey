@@ -3,7 +3,9 @@ use crate::layout::ComponentInfo;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
+/// The minimum number of component storages in a group.
 pub const MIN_GROUP_ARITY: usize = 2;
+/// The maximum number of component storages in a group.
 pub const MAX_GROUP_ARITY: usize = 16;
 
 /// Describes a set of component storages to be grouped together.

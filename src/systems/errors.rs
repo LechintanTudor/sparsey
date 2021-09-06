@@ -5,14 +5,12 @@ use std::ops::Deref;
 
 /// Type erased error returned by systems.
 pub type SystemError = anyhow::Error;
-
-/// Result returned by `Dispatcher::run`.
+/// Result returned by `Dispatcher::run_seq` and `Dispatcher::run_par`.
 pub type RunResult = Result<(), RunError>;
-
 /// Result returned by systems.
 pub type SystemResult = anyhow::Result<()>;
 
-/// Error returned by `Dispatcher::run_<seq/par>`.
+/// Error returned by `Dispatcher::run_seq` and `Dispatcher::run_par`.
 pub struct RunError {
 	errors: Vec<SystemError>,
 }

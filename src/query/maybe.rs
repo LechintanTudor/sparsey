@@ -3,10 +3,12 @@ use crate::query::{Contains, QueryElement, SplitQueryElement, UnfilteredQueryEle
 use crate::storage::Entity;
 use crate::utils::{ChangeTicks, Ticks};
 
-/// Wrapper over an `QueryElement`. Used for wrapping the
+/// Wrapper over an `UnfilteredQueryElement` which makes it return `Option`s
+/// instead of failing.
 #[derive(Clone, Copy, Debug)]
 pub struct Maybe<E>(E);
 
+/// Wrapps the given `QueryElement` in a `Maybe`.
 pub fn maybe<'a, E>(element: E) -> Maybe<E>
 where
 	E: UnfilteredQueryElement<'a>,
