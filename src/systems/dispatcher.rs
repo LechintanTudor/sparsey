@@ -1,6 +1,6 @@
 use crate::systems::{
-	CommandBuffers, LocalFn, LocalSystem, LocallyRunnable, Registry, RegistryAccess, RunError,
-	RunResult, System, SystemError,
+	CommandBuffers, LocalFn, LocalSystem, Registry, RegistryAccess, RunError, RunResult, Runnable,
+	System, SystemError,
 };
 use crate::utils::Ticks;
 use crate::world::{World, WorldId};
@@ -256,6 +256,17 @@ enum Step {
 	FlushCommands,
 }
 
+fn count_command_buffers<R>(runnables: &[R]) -> usize
+where
+	R: Runnable,
+{
+	runnables
+		.iter()
+		.flat_map(R::accesses)
+		.map(|access| matches!(access, RegistryAccess::Commands) as usize)
+		.sum()
+}
+
 fn required_command_buffers(steps: &[Step]) -> usize {
 	let mut max_buffer_count = 0;
 	let mut buffer_count = 0;
@@ -263,25 +274,14 @@ fn required_command_buffers(steps: &[Step]) -> usize {
 	for step in steps {
 		match step {
 			Step::RunSystems(systems) => {
-				let step_buffer_count: usize = systems
-					.iter()
-					.flat_map(|system| system.accesses())
-					.map(|access| matches!(access, RegistryAccess::Commands) as usize)
-					.sum();
-
-				buffer_count += step_buffer_count;
+				buffer_count += count_command_buffers(systems);
 			}
 			Step::RunLocalSystems(systems) => {
-				let step_buffer_count: usize = systems
-					.iter()
-					.flat_map(|system| system.accesses())
-					.map(|access| matches!(access, RegistryAccess::Commands) as usize)
-					.sum();
-
-				buffer_count += step_buffer_count;
+				buffer_count += count_command_buffers(systems);
 			}
 			Step::FlushCommands => {
 				max_buffer_count = max_buffer_count.max(buffer_count);
+				buffer_count = 0;
 			}
 			_ => (),
 		}
@@ -301,15 +301,12 @@ fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
 			SimpleStep::RunSystem(system) => match steps.last_mut() {
 				Some(Step::RunSystems(systems)) => {
 					let systems_conflict =
-						systems
-							.iter()
-							.flat_map(|system| system.accesses())
-							.any(|access1| {
-								system
-									.accesses()
-									.iter()
-									.any(|access2| access1.conflicts(access2))
-							});
+						systems.iter().flat_map(System::accesses).any(|access1| {
+							system
+								.accesses()
+								.iter()
+								.any(|access2| access1.conflicts(access2))
+						});
 
 					if systems_conflict {
 						steps.push(Step::RunSystems(vec![system]));
@@ -350,13 +347,11 @@ fn run_systems_seq<S>(
 	change_tick: Ticks,
 	errors: &mut Vec<SystemError>,
 ) where
-	S: LocallyRunnable,
+	S: Runnable,
 {
 	let registry = unsafe { Registry::new(world, command_buffers, change_tick) };
 
-	let new_errors = systems
-		.iter_mut()
-		.flat_map(|sys| unsafe { sys.run(&registry).err() });
+	let new_errors = systems.iter_mut().flat_map(|sys| sys.run(&registry).err());
 
 	errors.extend(new_errors);
 }
@@ -372,7 +367,7 @@ fn run_systems_par(
 ) {
 	let registry = unsafe { Registry::new(world, command_buffers, change_tick) };
 
-	thread_pool.install(|| unsafe {
+	thread_pool.install(|| {
 		let new_errors = systems
 			.par_iter_mut()
 			.flat_map_iter(|sys| sys.run(&registry).err())
@@ -384,6 +379,5 @@ fn run_systems_par(
 
 fn run_local_fns(systems: &mut [LocalFn], world: &mut World, errors: &mut Vec<SystemError>) {
 	let new_errors = systems.iter_mut().flat_map(|sys| sys.run(world).err());
-
 	errors.extend(new_errors);
 }

@@ -16,20 +16,14 @@ pub struct RunError {
 }
 
 impl RunError {
-	/// Returns the number of errors which occured after calling
-	/// `Dispatcher::run_<seq/par>`.
-	pub fn error_count(&self) -> usize {
-		self.errors.len()
+	/// Returns all `SystemError`s as a slice.
+	pub fn errors(&self) -> &[SystemError] {
+		&self.errors
 	}
 
-	/// Get an iterator over all errors.
-	pub fn errors(&self) -> impl Iterator<Item = &(dyn Error + Send + Sync + 'static)> {
-		self.errors.iter().map(|e| e.deref())
-	}
-
-	/// Get an owning iterator over all errors.
-	pub fn into_errors(self) -> impl Iterator<Item = SystemError> {
-		self.errors.into_iter()
+	/// Returns all `SystemError`s as a vector.
+	pub fn into_errors(self) -> Vec<SystemError> {
+		self.errors
 	}
 }
 
@@ -47,16 +41,34 @@ impl From<Vec<SystemError>> for RunError {
 	}
 }
 
-impl Error for RunError {}
+impl Deref for RunError {
+	type Target = [SystemError];
+
+	fn deref(&self) -> &Self::Target {
+		&self.errors
+	}
+}
+
+impl Error for RunError {
+	fn source(&self) -> Option<&(dyn Error + 'static)> {
+		self.errors.first().map(|error| error.as_ref())
+	}
+}
 
 impl Debug for RunError {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		Debug::fmt(self.errors.first().unwrap(), f)
+		match self.errors.first() {
+			Some(error) => Debug::fmt(error, f),
+			None => Ok(()),
+		}
 	}
 }
 
 impl Display for RunError {
 	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		Display::fmt(self.errors.first().unwrap(), f)
+		match self.errors.first() {
+			Some(error) => Display::fmt(error, f),
+			None => Ok(()),
+		}
 	}
 }

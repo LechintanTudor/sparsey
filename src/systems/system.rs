@@ -3,89 +3,58 @@ use crate::systems::{
 };
 use crate::world::World;
 
-/// Trait implemented by `Systems` which can run on the thread
-/// in which they were created.
-pub unsafe trait LocallyRunnable {
-	/// Get a list of all data acessess in the `run` function.
+/// Trait implemented by systems. `Send` systems can be run from any thread.
+pub unsafe trait Runnable {
+	/// Returns all data accessed by the system.
 	fn accesses(&self) -> &[RegistryAccess];
 
-	/// Run the system in the given `Registry`.
-	/// Always safe to call in the thread in which the system was created.
-	unsafe fn run(&mut self, registry: &Registry) -> SystemResult;
+	/// Runs the system in the given `Registry`.
+	fn run(&mut self, registry: &Registry) -> SystemResult;
 }
 
-/// Marker trait for `Systems` which can be run in threads
-/// other than the one in which they were created.
-pub unsafe trait Runnable
-where
-	Self: LocallyRunnable,
-{
-}
-
-/// Encapsulates a locally runnable function. Implements the `LocallyRunnable`
-/// trait.
+// Encapsulates a system function that can be run locally. Implements
+// `Runnable`.
 pub struct LocalSystem {
 	function: Box<dyn FnMut(&Registry) -> SystemResult + 'static>,
 	accesses: Vec<RegistryAccess>,
 }
 
-impl LocalSystem {
-	/// Create a `LocalSystem` with the given function.
-	/// Generally used for creating stateful local systems.
-	pub fn new<P, R, F>(function: F) -> Self
-	where
-		F: IntoLocalSystem<P, R>,
-	{
-		function.local_system()
-	}
-}
+unsafe impl Sync for LocalSystem {}
 
-unsafe impl LocallyRunnable for LocalSystem {
+unsafe impl Runnable for LocalSystem {
 	fn accesses(&self) -> &[RegistryAccess] {
 		&self.accesses
 	}
 
-	unsafe fn run(&mut self, registry: &Registry) -> SystemResult {
+	fn run(&mut self, registry: &Registry) -> SystemResult {
 		(self.function)(registry)
 	}
 }
 
-/// Trait implemented by functions which can be turned into `LocalSystems`.
-pub trait IntoLocalSystem<Params, Return> {
-	/// Create a `LocalSystem` from `self`.
+/// Helper trait for creating a `LocalSystem` from a system function.
+pub unsafe trait IntoLocalSystem<Params, Return> {
+	/// Creates a `LocalSystem` with the system function.
 	fn local_system(self) -> LocalSystem;
 }
 
-/// Encapsulates a runnable function. Implements the `Runnable` trait.
+/// Encapsulates a system function that can be run on any thread. Implements
+/// `Runnable`.
 pub struct System {
 	function: Box<dyn FnMut(&Registry) -> SystemResult + Send + 'static>,
 	accesses: Vec<RegistryAccess>,
 }
 
-impl System {
-	/// Create a `System` with the given function.
-	/// Generally used for creating stateful systems.
-	pub fn new<P, R, F>(function: F) -> Self
-	where
-		F: IntoSystem<P, R>,
-	{
-		function.system()
-	}
-}
-
-unsafe impl LocallyRunnable for System {
+unsafe impl Runnable for System {
 	fn accesses(&self) -> &[RegistryAccess] {
 		&self.accesses
 	}
 
-	unsafe fn run(&mut self, registry: &Registry) -> SystemResult {
+	fn run(&mut self, registry: &Registry) -> SystemResult {
 		(self.function)(registry)
 	}
 }
 
-unsafe impl Runnable for System {}
-
-impl IntoLocalSystem<(), ()> for System {
+unsafe impl IntoLocalSystem<(), ()> for System {
 	fn local_system(self) -> LocalSystem {
 		LocalSystem {
 			function: self.function,
@@ -94,40 +63,30 @@ impl IntoLocalSystem<(), ()> for System {
 	}
 }
 
-/// Trait implemented by functions which can be turned into `Systems`.
-pub trait IntoSystem<Params, Return>
+/// Helper trait for creating a `System` from a system function.
+pub unsafe trait IntoSystem<Params, Return>
 where
 	Self: IntoLocalSystem<Params, Return>,
 {
-	/// Create a `System` from `self`.
+	/// Creates a `System` with the system function.
 	fn system(self) -> System;
 }
 
-/// Encapsulates a system function with exclusive access to `World` and
-/// `Resources`.
+/// Encapsulates a system function with exclusive access to `World`.
 pub struct LocalFn {
 	function: Box<dyn FnMut(&mut World) -> SystemResult + 'static>,
 }
 
 impl LocalFn {
-	/// Create a `LocalFn` with the given function.
-	/// Generally used for creating stateful systems.
-	pub fn new<R, F>(function: F) -> Self
-	where
-		F: IntoLocalFn<R>,
-	{
-		function.local_fn()
-	}
-
-	/// Run the system on the given `World` and `Resources`.
+	/// Runs the system on the given `World`.
 	pub fn run(&mut self, world: &mut World) -> SystemResult {
 		(self.function)(world)
 	}
 }
 
-/// Trait implemented by functions which can be turned into `LocalFns`.
+/// Helper trait for creating a `LocalFn`.
 pub trait IntoLocalFn<Return> {
-	/// Create a `LocalSFn` from `self`.
+	/// Creates a `LocalFn` with the system function.
 	fn local_fn(self) -> LocalFn;
 }
 
@@ -158,12 +117,11 @@ where
 
 macro_rules! impl_into_system {
     ($($param:ident),*) => {
-        impl<Func, $($param),*> IntoLocalSystem<($($param,)*), ()> for Func
+        unsafe impl<Func, $($param),*> IntoLocalSystem<($($param,)*), ()> for Func
         where
-            Func:
-                FnMut($($param),*) +
-                FnMut($(<$param as BorrowRegistry>::Item),*) +
-                'static,
+            Func: FnMut($($param),*)
+                + FnMut($(<$param as BorrowRegistry>::Item),*)
+                +'static,
             $($param: LocalSystemParam,)*
         {
             #[allow(unused_unsafe)]
@@ -181,12 +139,11 @@ macro_rules! impl_into_system {
             }
         }
 
-        impl<Func, $($param),*> IntoLocalSystem<($($param,)*), SystemResult> for Func
+        unsafe impl<Func, $($param),*> IntoLocalSystem<($($param,)*), SystemResult> for Func
         where
-            Func:
-                FnMut($($param),*) -> SystemResult +
-                FnMut($(<$param as BorrowRegistry>::Item),*) -> SystemResult +
-                'static,
+            Func: FnMut($($param),*) -> SystemResult
+                + FnMut($(<$param as BorrowRegistry>::Item),*) -> SystemResult
+                + 'static,
             $($param: LocalSystemParam,)*
         {
             #[allow(unused_unsafe)]
@@ -203,12 +160,11 @@ macro_rules! impl_into_system {
             }
         }
 
-        impl<Func, $($param),*> IntoSystem<($($param,)*), ()> for Func
+        unsafe impl<Func, $($param),*> IntoSystem<($($param,)*), ()> for Func
         where
-            Func:
-                FnMut($($param),*) +
-                FnMut($(<$param as BorrowRegistry>::Item),*) +
-                Send + 'static,
+            Func: FnMut($($param),*)
+                + FnMut($(<$param as BorrowRegistry>::Item),*)
+                + Send + 'static,
             $($param: SystemParam,)*
         {
             #[allow(unused_unsafe)]
@@ -226,12 +182,11 @@ macro_rules! impl_into_system {
             }
         }
 
-        impl<Func, $($param),*> IntoSystem<($($param,)*), SystemResult> for Func
+        unsafe impl<Func, $($param),*> IntoSystem<($($param,)*), SystemResult> for Func
         where
-            Func:
-                FnMut($($param),*) -> SystemResult +
-                FnMut($(<$param as BorrowRegistry>::Item),*) -> SystemResult +
-                Send + 'static,
+            Func: FnMut($($param),*) -> SystemResult
+                + FnMut($(<$param as BorrowRegistry>::Item),*) -> SystemResult
+                + Send + 'static,
             $($param: SystemParam,)*
         {
             #[allow(unused_unsafe)]

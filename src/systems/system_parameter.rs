@@ -12,6 +12,13 @@ where
 	// Empty
 }
 
+impl<T> LocalSystemParam for T
+where
+	T: for<'a> BorrowRegistry<'a>,
+{
+	// Empty
+}
+
 /// Marker trait for parameters of systems which are safe to run
 /// from threads other than the one in which they were created.
 pub unsafe trait SystemParam
@@ -21,21 +28,7 @@ where
 	// Empty
 }
 
-impl<'a, T> LocalSystemParam for Comp<'a, T>
-where
-	T: Component,
-{
-	// Empty
-}
-
 unsafe impl<'a, T> SystemParam for Comp<'a, T>
-where
-	T: Component,
-{
-	// Empty
-}
-
-impl<'a, T> LocalSystemParam for CompMut<'a, T>
 where
 	T: Component,
 {
@@ -49,23 +42,9 @@ where
 	// Empty
 }
 
-impl<'a, T> LocalSystemParam for Res<'a, T>
-where
-	T: Resource,
-{
-	// Empty
-}
-
 unsafe impl<'a, T> SystemParam for Res<'a, T>
 where
 	T: Resource + Sync,
-{
-	// Empty
-}
-
-impl<'a, T> LocalSystemParam for ResMut<'a, T>
-where
-	T: Resource + Send,
 {
 	// Empty
 }
@@ -74,10 +53,6 @@ unsafe impl<'a, T> SystemParam for ResMut<'a, T>
 where
 	T: Resource + Send,
 {
-	// Empty
-}
-
-impl<'a> LocalSystemParam for Commands<'a> {
 	// Empty
 }
 
