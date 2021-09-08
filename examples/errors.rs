@@ -25,7 +25,7 @@ fn main() {
 	let mut world = World::default();
 
 	if let Err(run_error) = dispatcher.run_seq(&mut world) {
-		println!("[{} errors occurred]", run_error.error_count());
+		println!("[{} errors occurred]", run_error.errors().len());
 		for error in run_error.errors() {
 			println!("{}", error);
 		}
