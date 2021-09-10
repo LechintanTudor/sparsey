@@ -39,7 +39,7 @@ impl UngroupedComponentStorages {
 	{
 		self.storages
 			.entry(TypeId::of::<T>())
-			.or_insert_with(|| AtomicRefCell::new(ComponentStorage::for_type::<T>()));
+			.or_insert_with(|| AtomicRefCell::new(ComponentStorage::new::<T>()));
 	}
 
 	pub unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {

@@ -4,8 +4,8 @@ use std::ptr::NonNull;
 
 /// Container for blobs of data with a given [`Layout`] and destructor.
 pub(crate) struct BlobVec {
-	item_layout: Layout,
-	drop_item: unsafe fn(*mut u8),
+	layout: Layout,
+	drop: unsafe fn(*mut u8),
 	swap_space: NonNull<u8>,
 	ptr: NonNull<u8>,
 	cap: usize,
@@ -15,16 +15,16 @@ pub(crate) struct BlobVec {
 impl BlobVec {
 	/// Creates a new, empty `BlobVec` capable of holding items with the
 	/// given `Layout` and destructor.
-	pub unsafe fn new(item_layout: Layout, drop_item: unsafe fn(*mut u8)) -> Self {
-		let ptr = NonNull::new_unchecked(item_layout.align() as *mut u8);
+	pub unsafe fn new(layout: Layout, drop: unsafe fn(*mut u8)) -> Self {
+		let ptr = NonNull::new_unchecked(layout.align() as *mut u8);
 
-		if item_layout.size() == 0 {
+		if layout.size() == 0 {
 			// Times 2 so we can use ptr::copy_nonoverlapping on ZST
-			let swap_space = NonNull::new_unchecked((item_layout.align() * 2) as *mut u8);
+			let swap_space = NonNull::new_unchecked((layout.align() * 2) as *mut u8);
 
 			Self {
-				item_layout,
-				drop_item,
+				layout,
+				drop,
 				swap_space,
 				ptr,
 				cap: usize::MAX,
@@ -32,11 +32,11 @@ impl BlobVec {
 			}
 		} else {
 			let swap_space =
-				NonNull::new(alloc(item_layout)).unwrap_or_else(|| handle_alloc_error(item_layout));
+				NonNull::new(alloc(layout)).unwrap_or_else(|| handle_alloc_error(layout));
 
 			Self {
-				item_layout,
-				drop_item,
+				layout,
+				drop,
 				swap_space,
 				ptr,
 				cap: 0,
@@ -52,7 +52,7 @@ impl BlobVec {
 			self.grow();
 		}
 
-		ptr::copy(item, self.get_unchecked(self.len), self.item_layout.size());
+		ptr::copy(item, self.get_unchecked(self.len), self.layout.size());
 		self.len += 1;
 	}
 
@@ -68,17 +68,17 @@ impl BlobVec {
 		ptr::copy_nonoverlapping(
 			self.get_unchecked(index),
 			self.swap_space.as_ptr(),
-			self.item_layout.size(),
+			self.layout.size(),
 		);
-		ptr::copy(value, self.get_unchecked(index), self.item_layout.size());
+		ptr::copy(value, self.get_unchecked(index), self.layout.size());
 		self.swap_space.as_ptr()
 	}
 
 	/// Replaces the item at `index` with the item at the given address
 	/// and calls the destructor for the replaced item..
 	pub unsafe fn set_and_drop_prev_unchecked(&mut self, index: usize, value: *const u8) {
-		(self.drop_item)(self.get_unchecked(index));
-		ptr::copy(value, self.get_unchecked(index), self.item_layout.size());
+		(self.drop)(self.get_unchecked(index));
+		ptr::copy(value, self.get_unchecked(index), self.layout.size());
 	}
 
 	/// Removes the item at the given `index` by swapping it with the item at
@@ -92,14 +92,14 @@ impl BlobVec {
 		ptr::copy_nonoverlapping(
 			self.get_unchecked(index),
 			self.swap_space.as_ptr(),
-			self.item_layout.size(),
+			self.layout.size(),
 		);
 
 		// Overwrite current element with last element
 		ptr::copy(
 			self.get_unchecked(last_index),
 			self.get_unchecked(index),
-			self.item_layout.size(),
+			self.layout.size(),
 		);
 
 		self.len = last_index;
@@ -110,7 +110,7 @@ impl BlobVec {
 	/// the last position and decrementing the length. The destructor of the
 	/// removed items is called.
 	pub unsafe fn swap_remove_and_drop_unchecked(&mut self, index: usize) {
-		(self.drop_item)(self.get_unchecked(index));
+		(self.drop)(self.get_unchecked(index));
 
 		let last_index = self.len - 1;
 
@@ -118,7 +118,7 @@ impl BlobVec {
 		ptr::copy(
 			self.get_unchecked(last_index),
 			self.get_unchecked(index),
-			self.item_layout.size(),
+			self.layout.size(),
 		);
 
 		self.len = last_index;
@@ -130,27 +130,27 @@ impl BlobVec {
 		ptr::copy_nonoverlapping(
 			self.get_unchecked(a),
 			self.swap_space.as_ptr(),
-			self.item_layout.size(),
+			self.layout.size(),
 		);
 
 		// Overwrite first element with second element
 		ptr::copy(
 			self.get_unchecked(b),
 			self.get_unchecked(a),
-			self.item_layout.size(),
+			self.layout.size(),
 		);
 
 		// Overwrite second element with first element
 		ptr::copy_nonoverlapping(
 			self.swap_space.as_ptr(),
 			self.get_unchecked(b),
-			self.item_layout.size(),
+			self.layout.size(),
 		);
 	}
 
 	/// Returns the address of the item at the given `index`.
 	pub unsafe fn get_unchecked(&self, index: usize) -> *mut u8 {
-		self.ptr.as_ptr().add(index * self.item_layout.size())
+		self.ptr.as_ptr().add(index * self.layout.size())
 	}
 
 	/// Returns a pointer to the buffer where the items are stored.
@@ -184,7 +184,7 @@ impl BlobVec {
 
 		for i in 0..len {
 			unsafe {
-				(self.drop_item)(self.ptr.as_ptr().add(i * self.item_layout.size()));
+				(self.drop)(self.ptr.as_ptr().add(i * self.layout.size()));
 			}
 		}
 	}
@@ -192,15 +192,15 @@ impl BlobVec {
 	/// Copies all elements to a larger buffer, increasing the capacity of the
 	/// vector.
 	fn grow(&mut self) {
-		assert!(self.item_layout.size() != 0, "BlobVec is overfull");
+		assert!(self.layout.size() != 0, "BlobVec is overfull");
 
 		unsafe {
 			let (new_ptr, new_layout, new_cap) = if self.cap == 0 {
-				(alloc(self.item_layout), self.item_layout, 1)
+				(alloc(self.layout), self.layout, 1)
 			} else {
 				let new_cap = 2 * self.cap;
 				let new_layout =
-					repeat_layout(&self.item_layout, new_cap).expect("Layout should be valid");
+					repeat_layout(&self.layout, new_cap).expect("Layout should be valid");
 
 				(
 					realloc(self.ptr.as_ptr(), new_layout, new_layout.size()),
@@ -223,16 +223,16 @@ impl Drop for BlobVec {
 	fn drop(&mut self) {
 		self.clear();
 
-		if self.item_layout.size() != 0 {
+		if self.layout.size() != 0 {
 			unsafe {
-				dealloc(self.swap_space.as_ptr(), self.item_layout);
+				dealloc(self.swap_space.as_ptr(), self.layout);
 			}
 
 			if self.cap != 0 {
 				unsafe {
 					dealloc(
 						self.ptr.as_ptr(),
-						repeat_layout(&self.item_layout, self.cap).expect("Layout should be valid"),
+						repeat_layout(&self.layout, self.cap).expect("Layout should be valid"),
 					);
 				}
 			}

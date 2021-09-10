@@ -88,12 +88,10 @@ impl Dispatcher {
 					for access in systems.iter().flat_map(|sys| sys.accesses()) {
 						match access {
 							RegistryAccess::Comp(comp) => unsafe {
-								let (type_id, storage) = comp.new_storage();
-								world.register_storage(type_id, storage);
+								world.register_storage(comp.type_id(), comp.create_storage());
 							},
 							RegistryAccess::CompMut(comp) => unsafe {
-								let (type_id, storage) = comp.new_storage();
-								world.register_storage(type_id, storage);
+								world.register_storage(comp.type_id(), comp.create_storage());
 							},
 							_ => (),
 						}
@@ -103,12 +101,10 @@ impl Dispatcher {
 					for access in systems.iter().flat_map(|sys| sys.accesses()) {
 						match access {
 							RegistryAccess::Comp(comp) => unsafe {
-								let (type_id, storage) = comp.new_storage();
-								world.register_storage(type_id, storage);
+								world.register_storage(comp.type_id(), comp.create_storage());
 							},
 							RegistryAccess::CompMut(comp) => unsafe {
-								let (type_id, storage) = comp.new_storage();
-								world.register_storage(type_id, storage);
+								world.register_storage(comp.type_id(), comp.create_storage());
 							},
 							_ => (),
 						}

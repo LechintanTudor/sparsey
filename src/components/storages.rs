@@ -43,7 +43,7 @@ impl ComponentStorages {
 		self.grouped.drain_into(&mut storages);
 		self.ungrouped.drain_into(&mut storages);
 
-		self.grouped = GroupedComponentStorages::with_layout(layout, &mut storages);
+		self.grouped = unsafe { GroupedComponentStorages::with_layout(layout, &mut storages) };
 		self.ungrouped = UngroupedComponentStorages::from_storages(&mut storages);
 
 		for i in 0..self.grouped.group_family_count() {
@@ -53,6 +53,10 @@ impl ComponentStorages {
 				}
 			}
 		}
+	}
+
+	pub(crate) fn get_group_family(&self, component: &TypeId) -> Option<usize> {
+		self.grouped.get_group_family(component)
 	}
 
 	#[allow(dead_code)]
@@ -107,10 +111,6 @@ impl ComponentStorages {
 				.borrow_mut(component)
 				.map(|storage| (storage, None)),
 		}
-	}
-
-	pub(crate) fn group_family_of(&self, component: &TypeId) -> Option<usize> {
-		self.grouped.group_family_of(component)
 	}
 
 	pub(crate) fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> + '_ {

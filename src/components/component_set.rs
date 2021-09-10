@@ -128,7 +128,7 @@ macro_rules! impl_component_set {
             #[allow(unused_variables)]
             fn families(components: &'a ComponentStorages) -> GroupFamilyIndexes {
                 let mut families = GroupFamilyIndexes::default();
-                $(update_used_group_families::<$comp>(&mut families, components);)*
+                $(update_group_family_indexes::<$comp>(&mut families, components);)*
                 families
             }
         }
@@ -163,11 +163,11 @@ where
 		.unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
-fn update_used_group_families<T>(families: &mut GroupFamilyIndexes, components: &ComponentStorages)
+fn update_group_family_indexes<T>(families: &mut GroupFamilyIndexes, components: &ComponentStorages)
 where
 	T: Component,
 {
-	if let Some(index) = components.group_family_of(&TypeId::of::<T>()) {
+	if let Some(index) = components.get_group_family(&TypeId::of::<T>()) {
 		unsafe {
 			families.insert_unchecked(index);
 		}
@@ -179,15 +179,15 @@ mod impls {
     use super::*;
 
     impl_component_set!(0,);
-    impl_component_set!(1,  (A, 0));
-    impl_component_set!(2,  (A, 0), (B, 1));
-    impl_component_set!(3,  (A, 0), (B, 1), (C, 2));
-    impl_component_set!(4,  (A, 0), (B, 1), (C, 2), (D, 3));
-    impl_component_set!(5,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_component_set!(6,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_component_set!(7,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_component_set!(8,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
-    impl_component_set!(9,  (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_component_set!(1, (A, 0));
+    impl_component_set!(2, (A, 0), (B, 1));
+    impl_component_set!(3, (A, 0), (B, 1), (C, 2));
+    impl_component_set!(4, (A, 0), (B, 1), (C, 2), (D, 3));
+    impl_component_set!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_component_set!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_component_set!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_component_set!(8, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_component_set!(9, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
     impl_component_set!(10, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
     impl_component_set!(11, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
     impl_component_set!(12, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));

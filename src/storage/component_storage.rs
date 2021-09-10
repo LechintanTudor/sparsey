@@ -13,20 +13,22 @@ pub struct ComponentStorage {
 
 impl ComponentStorage {
 	/// Creates a storage suitable for storing components of type `T`.
-	pub fn for_type<T>() -> Self
+	pub fn new<T>() -> Self
 	where
 		T: 'static,
 	{
-		unsafe { Self::new(Layout::new::<T>(), |ptr| ptr::drop_in_place::<T>(ptr as _)) }
+		unsafe {
+			Self::from_layout_drop(Layout::new::<T>(), |ptr| ptr::drop_in_place::<T>(ptr as _))
+		}
 	}
 
 	/// Creates a storage suitable for storing components with the given layout
 	/// and destructor.
-	pub unsafe fn new(item_layout: Layout, drop_item: unsafe fn(*mut u8)) -> Self {
+	pub unsafe fn from_layout_drop(layout: Layout, drop: unsafe fn(*mut u8)) -> Self {
 		Self {
 			sparse: SparseArray::default(),
 			entities: Vec::new(),
-			components: BlobVec::new(item_layout, drop_item),
+			components: BlobVec::new(layout, drop),
 			ticks: Vec::new(),
 		}
 	}

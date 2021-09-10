@@ -11,9 +11,6 @@ pub struct ComponentInfo {
 	component: Box<dyn AbstractType>,
 }
 
-unsafe impl Send for ComponentInfo {}
-unsafe impl Sync for ComponentInfo {}
-
 impl Clone for ComponentInfo {
 	fn clone(&self) -> Self {
 		Self {
@@ -23,13 +20,13 @@ impl Clone for ComponentInfo {
 }
 
 impl ComponentInfo {
-	/// Creates a new `LayoutComponent` for the given component type.
-	pub fn new<C>() -> Self
+	/// Creates a new `ComponentInfo` for the given component type.
+	pub fn new<T>() -> Self
 	where
-		C: Component,
+		T: Component,
 	{
 		Self {
-			component: Box::new(Type::<C>(PhantomData)),
+			component: Box::new(Type::<T>(PhantomData)),
 		}
 	}
 
@@ -43,10 +40,9 @@ impl ComponentInfo {
 		self.component.type_name()
 	}
 
-	/// Returns the `TypeId` of the component and an empty `ComponentStorage`
-	/// for that component.
-	pub fn new_storage(&self) -> (TypeId, ComponentStorage) {
-		self.component.new_storage()
+	/// Returns an empty `ComponentStorage` for the component.
+	pub fn create_storage(&self) -> ComponentStorage {
+		self.component.create_storage()
 	}
 }
 
@@ -91,12 +87,15 @@ impl<T> Default for Type<T> {
 	}
 }
 
-unsafe trait AbstractType {
+unsafe trait AbstractType
+where
+	Self: Send + Sync + 'static,
+{
 	fn type_id(&self) -> TypeId;
 
 	fn type_name(&self) -> &'static str;
 
-	fn new_storage(&self) -> (TypeId, ComponentStorage);
+	fn create_storage(&self) -> ComponentStorage;
 
 	fn clone(&self) -> Box<dyn AbstractType>;
 }
@@ -113,8 +112,8 @@ where
 		any::type_name::<T>()
 	}
 
-	fn new_storage(&self) -> (TypeId, ComponentStorage) {
-		(self.type_id(), ComponentStorage::for_type::<T>())
+	fn create_storage(&self) -> ComponentStorage {
+		ComponentStorage::new::<T>()
 	}
 
 	fn clone(&self) -> Box<dyn AbstractType> {

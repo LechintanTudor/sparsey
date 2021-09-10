@@ -17,7 +17,7 @@ unsafe impl Send for GroupedComponentStorages {}
 unsafe impl Sync for GroupedComponentStorages {}
 
 impl GroupedComponentStorages {
-	pub fn with_layout(
+	pub unsafe fn with_layout(
 		layout: &Layout,
 		storage_map: &mut FxHashMap<TypeId, ComponentStorage>,
 	) -> Self {
@@ -46,7 +46,7 @@ impl GroupedComponentStorages {
 
 					let storage = match storage_map.remove(&type_id) {
 						Some(storage) => storage,
-						None => component.new_storage().1,
+						None => component.create_storage(),
 					};
 
 					storages.push(AtomicRefCell::new(storage));
@@ -65,7 +65,7 @@ impl GroupedComponentStorages {
 	pub fn drain_into(&mut self, storages: &mut FxHashMap<TypeId, ComponentStorage>) {
 		for (&type_id, info) in self.info.iter() {
 			let storage = self.families[info.group_index].storages[info.storage_index].get_mut();
-			let storage = mem::replace(storage, ComponentStorage::for_type::<()>());
+			let storage = mem::replace(storage, ComponentStorage::new::<()>());
 			storages.insert(type_id, storage);
 		}
 
@@ -151,11 +151,23 @@ impl GroupedComponentStorages {
 		self.info.contains_key(type_id)
 	}
 
+	pub fn clear(&mut self) {
+		for group in self.families.iter_mut() {
+			for storage in group.storages.iter_mut() {
+				storage.get_mut().clear();
+			}
+
+			for group in group.groups.iter_mut() {
+				group.len = 0;
+			}
+		}
+	}
+
 	pub fn group_family_count(&self) -> usize {
 		self.families.len()
 	}
 
-	pub fn group_family_of(&self, component: &TypeId) -> Option<usize> {
+	pub fn get_group_family(&self, component: &TypeId) -> Option<usize> {
 		self.info.get(component).map(|info| info.group_family_index)
 	}
 
@@ -237,18 +249,6 @@ impl GroupedComponentStorages {
 				.get_unchecked(info.storage_index)
 				.borrow_mut()
 		})
-	}
-
-	pub fn clear(&mut self) {
-		for group in self.families.iter_mut() {
-			for storage in group.storages.iter_mut() {
-				storage.get_mut().clear();
-			}
-
-			for group in group.groups.iter_mut() {
-				group.len = 0;
-			}
-		}
 	}
 
 	pub fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> {
