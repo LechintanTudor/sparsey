@@ -1,5 +1,7 @@
 # Sparsey
-Sparsey is a sparse set based Entity Component System with lots of features and nice syntax \~( ˘▾˘\~)
+Sparsey is a sparse set-based Rntity Component System with lots of features and nice syntax \~( ˘▾˘\~)
+<br />
+Check out the [cheat sheet](/guides/cheat_sheet.md) and [examples](/examples/) to get started!
 
 # Example 
 ```rust
@@ -17,7 +19,7 @@ fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
     }
 }
 
-// Adds the Velocity of an entity to its Position. 
+// Adds the Velocity of each entity to its Position. 
 fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
     for (mut pos, vel) in (&mut pos, &vel).iter() {
         pos.0 += vel.0;
@@ -25,18 +27,10 @@ fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
 } 
 
 fn main() {
-    // Create the World and register the components we want to use.
+    // Create a World and register the components we want to use.
     let mut world = World::default();
     world.register::<Position>();
     world.register::<Velocity>();
-
-    // Set a Layout to optimize iterations.
-    let layout = Layout::builder()
-        .add_group(<(Position, Velocity)>::group())
-        .add_group(<(Position, Velocity, Immovable)>::group())
-        .build();
-
-    world.set_layout(&layout);
 
     /// Create some entities.
     world.create_entity((Position(0.0), Velocity(1.0)));
@@ -84,7 +78,7 @@ Errors can be retrieved after the systems finish executing.
 ```rust
 let mut dispatcher = Dispatcher::builder()
     .add_system(movement.system())
-    .add_system(failable.system())
+    .add_system(save_entities.system())
     .build();
 
 if let Err(run_error) = dispatcher.run_seq(&mut world) {
@@ -182,3 +176,14 @@ fn slices(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
         .unwrap();
 }
 ```
+
+# License
+Sparsey is dual-licensed under either
+* MIT License (docs/LICENSE-MIT or http://opensource.org/licenses/MIT)
+* Apache License, Version 2.0 (docs/LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
+at your option.
+<br />
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for 
+inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual 
+licensed as above without any additional terms or conditions.

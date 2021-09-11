@@ -16,7 +16,7 @@ world.register::<B>();
 Check if a component was registered.
 ```rust
 if world.is_registered(&TypeId::of::<A>()) {
-    /// ...
+    // ...
 }
 ```
 
@@ -94,7 +94,7 @@ if a.contains(entity) {
 Get the component of an `Entity`.
 ```rust
 if let Some(a) = a.get(entity) {
-    /// ...
+    // ...
 }
 ```
 
@@ -111,7 +111,7 @@ let components: &[A] = a.components();
 Iterate all entities and components.
 ```rust
 for (entity, component) in a.iter().entities() {
-    /// ...
+    // ...
 }
 ```
 
@@ -166,14 +166,14 @@ for (a,) in (&a,).include(&b).exclude(&c).iter() {
 Check if a query matches an `Entity`.
 ```rust
 if (&a, &b, &c).contains(entity) {
-    /// ...
+    // ...
 }
 ```
 
 Get the components for an `Entity`.
 ```rust
 if let Some((a, b, c)) = (&a, &b, &c).get(entity) {
-    /// ...
+    // ...
 }
 ```
 
@@ -216,14 +216,14 @@ for (a,) in (!changed(&a),).iter() {
 Filter query to only match entities to which `B` and `C` was just added.
 ```rust
 for (a,) in (&a,).filter(added(&b) & added(&c)).iter() {
-    /// ...
+    // ...
 }
 ```
 
 Filter query to only match entities to which `B` or `C` was just added.
 ```rust
 for (a,) in (&a,).filter(added(&b) | added(&c)).iter() {
-    /// ...
+    // ...
 }
 ```
 
@@ -268,7 +268,7 @@ let previous_res: Option<A> = world.insert_resource(A);
 Check if a resource exists.
 ```rust
 if world.contains_resource(&TypeId::of::<A>()) {
-    /// ...
+    // ...
 }
 ```
 

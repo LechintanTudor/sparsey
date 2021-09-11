@@ -47,6 +47,8 @@ fn main() {
         .build()
         .unwrap();
 
-    dispatcher.run_par(&mut world, &thread_pool).unwrap();
-    world.increment_ticks().unwrap();
+    for _ in 0..3 {
+        dispatcher.run_par(&mut world, &thread_pool).unwrap();
+        world.increment_ticks().unwrap();
+    }
 }
