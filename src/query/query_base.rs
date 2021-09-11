@@ -1,88 +1,88 @@
 use crate::group::CombinedGroupInfo;
 use crate::query::{
-	DenseSplitQueryElement, Include, IncludeExclude, IncludeExcludeFilter, IntoQueryParts,
-	IterData, Passthrough, QueryElement, QueryFilter, QueryModifier, SparseSplitQueryElement,
+    DenseSplitQueryElement, Include, IncludeExclude, IncludeExcludeFilter, IntoQueryParts,
+    IterData, Passthrough, QueryElement, QueryFilter, QueryModifier, SparseSplitQueryElement,
 };
 use crate::storage::Entity;
 use crate::utils::Ticks;
 
 /// Trait implemented by the base part of a query. Used for fetching components.
 pub unsafe trait QueryBase<'a> {
-	type Item;
-	type SparseSplit;
-	type DenseSplit;
+    type Item;
+    type SparseSplit;
+    type DenseSplit;
 
-	fn get(self, entity: Entity) -> Option<Self::Item>;
+    fn get(self, entity: Entity) -> Option<Self::Item>;
 
-	fn contains(&self, entity: Entity) -> bool;
+    fn contains(&self, entity: Entity) -> bool;
 
-	fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
+    fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
 
-	fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit);
+    fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit);
 
-	fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit);
+    fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit);
 
-	unsafe fn get_from_sparse_split(
-		split: &mut Self::SparseSplit,
-		entity: Entity,
-		world_tick: Ticks,
-		change_tick: Ticks,
-	) -> Option<Self::Item>;
+    unsafe fn get_from_sparse_split(
+        split: &mut Self::SparseSplit,
+        entity: Entity,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item>;
 
-	unsafe fn get_from_dense_split(
-		split: &mut Self::DenseSplit,
-		index: usize,
-		world_tick: Ticks,
-		change_tick: Ticks,
-	) -> Option<Self::Item>;
+    unsafe fn get_from_dense_split(
+        split: &mut Self::DenseSplit,
+        index: usize,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item>;
 }
 
 /// Trait used for applying modifiers to a `QueryBase`.
 pub trait QueryBaseModifiers<'a>
 where
-	Self: QueryBase<'a> + Sized,
+    Self: QueryBase<'a> + Sized,
 {
-	fn include<I>(self, include: I) -> Include<Self, I>
-	where
-		I: QueryModifier<'a>,
-	{
-		Include::new(self, include)
-	}
+    fn include<I>(self, include: I) -> Include<Self, I>
+    where
+        I: QueryModifier<'a>,
+    {
+        Include::new(self, include)
+    }
 
-	fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
-	where
-		E: QueryModifier<'a>,
-	{
-		IncludeExclude::new(self, (), exclude)
-	}
+    fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
+    where
+        E: QueryModifier<'a>,
+    {
+        IncludeExclude::new(self, (), exclude)
+    }
 
-	fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, (), (), F>
-	where
-		F: QueryFilter,
-	{
-		IncludeExcludeFilter::new(self, (), (), filter)
-	}
+    fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, (), (), F>
+    where
+        F: QueryFilter,
+    {
+        IncludeExcludeFilter::new(self, (), (), filter)
+    }
 }
 
 impl<'a, B> QueryBaseModifiers<'a> for B
 where
-	B: QueryBase<'a> + Sized,
+    B: QueryBase<'a> + Sized,
 {
-	// Empty
+    // Empty
 }
 
 impl<'a, B> IntoQueryParts<'a> for B
 where
-	B: QueryBase<'a>,
+    B: QueryBase<'a>,
 {
-	type Base = Self;
-	type Include = ();
-	type Exclude = ();
-	type Filter = Passthrough;
+    type Base = Self;
+    type Include = ();
+    type Exclude = ();
+    type Filter = Passthrough;
 
-	fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
-		(self, (), (), Passthrough)
-	}
+    fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
+        (self, (), (), Passthrough)
+    }
 }
 
 macro_rules! impl_query_base {

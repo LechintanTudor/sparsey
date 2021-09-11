@@ -10,81 +10,81 @@ use std::ops::Range;
 /// Trait used for slicing queries with grouped component storages.
 pub unsafe trait SliceQuery<'a>
 where
-	Self: IntoQueryParts<'a, Filter = Passthrough>,
-	Self::Base: SliceQueryBase<'a>,
+    Self: IntoQueryParts<'a, Filter = Passthrough>,
+    Self::Base: SliceQueryBase<'a>,
 {
-	/// Returns a slice containing all the entities which match the query.
-	fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages>;
+    /// Returns a slice containing all the entities which match the query.
+    fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages>;
 
-	/// Returns a tuple of slices containing all components which match the
-	/// query.
-	fn components(
-		self,
-	) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, UngroupedComponentStorages>;
+    /// Returns a tuple of slices containing all components which match the
+    /// query.
+    fn components(
+        self,
+    ) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, UngroupedComponentStorages>;
 
-	/// Returns all entities and components which match the query.
-	fn entities_components(
-		self,
-	) -> Result<
-		(&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices),
-		UngroupedComponentStorages,
-	>;
+    /// Returns all entities and components which match the query.
+    fn entities_components(
+        self,
+    ) -> Result<
+        (&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices),
+        UngroupedComponentStorages,
+    >;
 }
 
 unsafe impl<'a, Q> SliceQuery<'a> for Q
 where
-	Q: IntoQueryParts<'a, Filter = Passthrough>,
-	Q::Base: SliceQueryBase<'a>,
+    Q: IntoQueryParts<'a, Filter = Passthrough>,
+    Q::Base: SliceQueryBase<'a>,
 {
-	fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages> {
-		let (base, include, exclude, _) = self.into_query_parts();
-		let range = group_range(&base, &include, &exclude)?;
+    fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages> {
+        let (base, include, exclude, _) = self.into_query_parts();
+        let range = group_range(&base, &include, &exclude)?;
 
-		unsafe {
-			if !Q::Base::IS_UNIT {
-				Ok(base.slice_entities(range))
-			} else {
-				match include.split().0 {
-					Some(data) => Ok(data.entities.get_unchecked(range)),
-					// Returned earlier because storages aren't grouped
-					None => unreachable_unchecked(),
-				}
-			}
-		}
-	}
+        unsafe {
+            if !Q::Base::IS_UNIT {
+                Ok(base.slice_entities(range))
+            } else {
+                match include.split().0 {
+                    Some(data) => Ok(data.entities.get_unchecked(range)),
+                    // Returned earlier because storages aren't grouped
+                    None => unreachable_unchecked(),
+                }
+            }
+        }
+    }
 
-	fn components(
-		self,
-	) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, UngroupedComponentStorages> {
-		let (base, include, exclude, _) = self.into_query_parts();
-		let range = group_range(&base, &include, &exclude)?;
-		Ok(unsafe { base.slice_components(range) })
-	}
+    fn components(
+        self,
+    ) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, UngroupedComponentStorages> {
+        let (base, include, exclude, _) = self.into_query_parts();
+        let range = group_range(&base, &include, &exclude)?;
+        Ok(unsafe { base.slice_components(range) })
+    }
 
-	fn entities_components(
-		self,
-	) -> Result<
-		(&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices),
-		UngroupedComponentStorages,
-	> {
-		let (base, include, exclude, _) = self.into_query_parts();
-		let range = group_range(&base, &include, &exclude)?;
+    fn entities_components(
+        self,
+    ) -> Result<
+        (&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices),
+        UngroupedComponentStorages,
+    > {
+        let (base, include, exclude, _) = self.into_query_parts();
+        let range = group_range(&base, &include, &exclude)?;
 
-		unsafe {
-			if !Q::Base::IS_UNIT {
-				Ok(base.slice_entities_components(range))
-			} else {
-				match include.split().0 {
-					Some(data) => Ok((
-						data.entities.get_unchecked(range.clone()),
-						base.slice_components(range),
-					)),
-					// Unreacable because we checked earlier if the storages are grouped
-					None => unreachable_unchecked(),
-				}
-			}
-		}
-	}
+        unsafe {
+            if !Q::Base::IS_UNIT {
+                Ok(base.slice_entities_components(range))
+            } else {
+                match include.split().0 {
+                    Some(data) => Ok((
+                        data.entities.get_unchecked(range.clone()),
+                        base.slice_components(range),
+                    )),
+                    // Unreacable because we checked earlier if the storages are grouped
+                    None => unreachable_unchecked(),
+                }
+            }
+        }
+    }
 }
 
 /// Error returned when trying to slice a query with ungrouped component
@@ -95,63 +95,63 @@ pub struct UngroupedComponentStorages;
 impl Error for UngroupedComponentStorages {}
 
 impl Display for UngroupedComponentStorages {
-	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		write!(f, "Tried to slice query with ungrouped component storages")
-	}
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Tried to slice query with ungrouped component storages")
+    }
 }
 
 fn group_range<'a, B, I, E>(
-	base: &B,
-	include: &I,
-	exclude: &E,
+    base: &B,
+    include: &I,
+    exclude: &E,
 ) -> Result<Range<usize>, UngroupedComponentStorages>
 where
-	B: QueryBase<'a>,
-	I: QueryModifier<'a>,
-	E: QueryModifier<'a>,
+    B: QueryBase<'a>,
+    I: QueryModifier<'a>,
+    E: QueryModifier<'a>,
 {
-	(|| -> Option<Range<usize>> {
-		group::group_range(
-			base.group_info()?,
-			include.group_info()?,
-			exclude.group_info()?,
-		)
-	})()
-	.ok_or(UngroupedComponentStorages)
+    (|| -> Option<Range<usize>> {
+        group::group_range(
+            base.group_info()?,
+            include.group_info()?,
+            exclude.group_info()?,
+        )
+    })()
+    .ok_or(UngroupedComponentStorages)
 }
 
 /// Trait used by `QuerySlice` to get component slices from `QueryBase`.
 pub unsafe trait SliceQueryBase<'a>
 where
-	Self: QueryBase<'a>,
+    Self: QueryBase<'a>,
 {
-	const IS_UNIT: bool;
+    const IS_UNIT: bool;
 
-	type Slices;
+    type Slices;
 
-	unsafe fn slice_components(self, range: Range<usize>) -> Self::Slices;
+    unsafe fn slice_components(self, range: Range<usize>) -> Self::Slices;
 
-	unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
+    unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
 
-	unsafe fn slice_entities_components(self, range: Range<usize>) -> (&'a [Entity], Self::Slices);
+    unsafe fn slice_entities_components(self, range: Range<usize>) -> (&'a [Entity], Self::Slices);
 }
 
 unsafe impl<'a> SliceQueryBase<'a> for () {
-	const IS_UNIT: bool = true;
+    const IS_UNIT: bool = true;
 
-	type Slices = ();
+    type Slices = ();
 
-	unsafe fn slice_components(self, _: Range<usize>) -> Self::Slices {
-		()
-	}
+    unsafe fn slice_components(self, _: Range<usize>) -> Self::Slices {
+        ()
+    }
 
-	unsafe fn slice_entities(self, _: Range<usize>) -> &'a [Entity] {
-		&[]
-	}
+    unsafe fn slice_entities(self, _: Range<usize>) -> &'a [Entity] {
+        &[]
+    }
 
-	unsafe fn slice_entities_components(self, _: Range<usize>) -> (&'a [Entity], Self::Slices) {
-		(&[], ())
-	}
+    unsafe fn slice_entities_components(self, _: Range<usize>) -> (&'a [Entity], Self::Slices) {
+        (&[], ())
+    }
 }
 
 macro_rules! slice_entities_components {

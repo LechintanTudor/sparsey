@@ -4,16 +4,16 @@ use downcast_rs::{impl_downcast, Downcast};
 /// `Resources`.
 pub trait Resource
 where
-	Self: Downcast,
+    Self: Downcast,
 {
-	// Empty
+    // Empty
 }
 
 impl_downcast!(Resource);
 
 impl<T> Resource for T
 where
-	T: Downcast,
+    T: Downcast,
 {
-	// Empty
+    // Empty
 }

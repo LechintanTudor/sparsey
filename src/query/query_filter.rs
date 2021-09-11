@@ -2,7 +2,7 @@ use crate::storage::Entity;
 
 /// Trait implemented by query filters.
 pub trait QueryFilter {
-	fn matches(&self, entity: Entity) -> bool;
+    fn matches(&self, entity: Entity) -> bool;
 }
 
 /// Filter that matches all entities.
@@ -10,9 +10,9 @@ pub trait QueryFilter {
 pub struct Passthrough;
 
 impl QueryFilter for Passthrough {
-	fn matches(&self, _entity: Entity) -> bool {
-		true
-	}
+    fn matches(&self, _entity: Entity) -> bool {
+        true
+    }
 }
 
 /// Wrapper around a `QueryFilter` which negates its result.
@@ -20,21 +20,21 @@ pub struct Not<F>(F);
 
 impl<F> Not<F>
 where
-	F: QueryFilter,
+    F: QueryFilter,
 {
-	/// Creates a new `Not` with the given filter.
-	pub fn new(filter: F) -> Self {
-		Self(filter)
-	}
+    /// Creates a new `Not` with the given filter.
+    pub fn new(filter: F) -> Self {
+        Self(filter)
+    }
 }
 
 impl<F> QueryFilter for Not<F>
 where
-	F: QueryFilter,
+    F: QueryFilter,
 {
-	fn matches(&self, entity: Entity) -> bool {
-		!self.0.matches(entity)
-	}
+    fn matches(&self, entity: Entity) -> bool {
+        !self.0.matches(entity)
+    }
 }
 
 /// `QueryFilter` that only matches entities which match both the filters
@@ -43,23 +43,23 @@ pub struct And<F1, F2>(F1, F2);
 
 impl<F1, F2> And<F1, F2>
 where
-	F1: QueryFilter,
-	F2: QueryFilter,
+    F1: QueryFilter,
+    F2: QueryFilter,
 {
-	/// Creates a new `And` with the given filters.
-	pub fn new(filter1: F1, filter2: F2) -> Self {
-		Self(filter1, filter2)
-	}
+    /// Creates a new `And` with the given filters.
+    pub fn new(filter1: F1, filter2: F2) -> Self {
+        Self(filter1, filter2)
+    }
 }
 
 impl<F1, F2> QueryFilter for And<F1, F2>
 where
-	F1: QueryFilter,
-	F2: QueryFilter,
+    F1: QueryFilter,
+    F2: QueryFilter,
 {
-	fn matches(&self, entity: Entity) -> bool {
-		self.0.matches(entity) && self.1.matches(entity)
-	}
+    fn matches(&self, entity: Entity) -> bool {
+        self.0.matches(entity) && self.1.matches(entity)
+    }
 }
 
 /// `QueryFilter` that only matches entities which match either of the filters
@@ -68,23 +68,23 @@ pub struct Or<F1, F2>(F1, F2);
 
 impl<F1, F2> Or<F1, F2>
 where
-	F1: QueryFilter,
-	F2: QueryFilter,
+    F1: QueryFilter,
+    F2: QueryFilter,
 {
-	/// Creates a new `Or` with the given filters.
-	pub fn new(filter1: F1, filter2: F2) -> Self {
-		Self(filter1, filter2)
-	}
+    /// Creates a new `Or` with the given filters.
+    pub fn new(filter1: F1, filter2: F2) -> Self {
+        Self(filter1, filter2)
+    }
 }
 
 impl<F1, F2> QueryFilter for Or<F1, F2>
 where
-	F1: QueryFilter,
-	F2: QueryFilter,
+    F1: QueryFilter,
+    F2: QueryFilter,
 {
-	fn matches(&self, entity: Entity) -> bool {
-		self.0.matches(entity) || self.1.matches(entity)
-	}
+    fn matches(&self, entity: Entity) -> bool {
+        self.0.matches(entity) || self.1.matches(entity)
+    }
 }
 
 macro_rules! impl_filter_ops {

@@ -7,55 +7,55 @@ use crate::world::{Comp, CompMut, Res, ResMut};
 /// `Registry`.
 pub trait LocalSystemParam
 where
-	Self: for<'a> BorrowRegistry<'a>,
+    Self: for<'a> BorrowRegistry<'a>,
 {
-	// Empty
+    // Empty
 }
 
 impl<T> LocalSystemParam for T
 where
-	T: for<'a> BorrowRegistry<'a>,
+    T: for<'a> BorrowRegistry<'a>,
 {
-	// Empty
+    // Empty
 }
 
 /// Marker trait for parameters of systems which are safe to run
 /// from threads other than the one in which they were created.
 pub unsafe trait SystemParam
 where
-	Self: LocalSystemParam,
+    Self: LocalSystemParam,
 {
-	// Empty
+    // Empty
 }
 
 unsafe impl<'a, T> SystemParam for Comp<'a, T>
 where
-	T: Component,
+    T: Component,
 {
-	// Empty
+    // Empty
 }
 
 unsafe impl<'a, T> SystemParam for CompMut<'a, T>
 where
-	T: Component,
+    T: Component,
 {
-	// Empty
+    // Empty
 }
 
 unsafe impl<'a, T> SystemParam for Res<'a, T>
 where
-	T: Resource + Sync,
+    T: Resource + Sync,
 {
-	// Empty
+    // Empty
 }
 
 unsafe impl<'a, T> SystemParam for ResMut<'a, T>
 where
-	T: Resource + Send,
+    T: Resource + Send,
 {
-	// Empty
+    // Empty
 }
 
 unsafe impl<'a> SystemParam for Commands<'a> {
-	// Empty
+    // Empty
 }

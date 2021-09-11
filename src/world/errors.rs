@@ -10,9 +10,9 @@ pub struct NoSuchEntity;
 impl Error for NoSuchEntity {}
 
 impl Display for NoSuchEntity {
-	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		write!(f, "No such entity was found in the World")
-	}
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "No such entity was found in the World")
+    }
 }
 
 /// Error returned when the `World` tick overflows.
@@ -22,10 +22,10 @@ pub struct TickOverflow;
 impl Error for TickOverflow {}
 
 impl Display for TickOverflow {
-	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-		write!(
-			f,
-			"Tick overflow occurred; component change detection may not work as expected"
-		)
-	}
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Tick overflow occurred; component change detection may not work as expected"
+        )
+    }
 }

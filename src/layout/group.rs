@@ -11,73 +11,73 @@ pub const MAX_GROUP_ARITY: usize = 16;
 /// Describes a set of component storages to be grouped together.
 /// Can be constructed using a `LayoutGroupDescriptor`.
 pub struct LayoutGroup {
-	components: HashSet<ComponentInfo>,
+    components: HashSet<ComponentInfo>,
 }
 
 impl LayoutGroup {
-	pub(crate) fn new(components: HashSet<ComponentInfo>) -> Self {
-		assert!(
-			components.len() >= MIN_GROUP_ARITY,
-			"Groups must have at least {} component types",
-			MIN_GROUP_ARITY,
-		);
+    pub(crate) fn new(components: HashSet<ComponentInfo>) -> Self {
+        assert!(
+            components.len() >= MIN_GROUP_ARITY,
+            "Groups must have at least {} component types",
+            MIN_GROUP_ARITY,
+        );
 
-		assert!(
-			components.len() <= MAX_GROUP_ARITY,
-			"Groups must have at most {} component types",
-			MAX_GROUP_ARITY,
-		);
+        assert!(
+            components.len() <= MAX_GROUP_ARITY,
+            "Groups must have at most {} component types",
+            MAX_GROUP_ARITY,
+        );
 
-		Self { components }
-	}
+        Self { components }
+    }
 
-	pub(crate) fn components(&self) -> &HashSet<ComponentInfo> {
-		&self.components
-	}
+    pub(crate) fn components(&self) -> &HashSet<ComponentInfo> {
+        &self.components
+    }
 }
 
 pub(crate) struct LayoutGroupFamily {
-	components: Vec<ComponentInfo>,
-	group_arities: Vec<usize>,
+    components: Vec<ComponentInfo>,
+    group_arities: Vec<usize>,
 }
 
 impl LayoutGroupFamily {
-	pub unsafe fn new_unchecked(groups: &[LayoutGroup]) -> Self {
-		let mut components = Vec::<ComponentInfo>::new();
-		let mut group_arities = Vec::<usize>::new();
+    pub unsafe fn new_unchecked(groups: &[LayoutGroup]) -> Self {
+        let mut components = Vec::<ComponentInfo>::new();
+        let mut group_arities = Vec::<usize>::new();
 
-		components.extend(groups[0].components().iter().cloned());
-		group_arities.push(groups[0].components().len());
+        components.extend(groups[0].components().iter().cloned());
+        group_arities.push(groups[0].components().len());
 
-		for (g1, g2) in groups.windows(2).map(|g| (&g[0], &g[1])) {
-			let component_count = components.len();
-			components.extend(g2.components().difference(g1.components()).cloned());
+        for (g1, g2) in groups.windows(2).map(|g| (&g[0], &g[1])) {
+            let component_count = components.len();
+            components.extend(g2.components().difference(g1.components()).cloned());
 
-			if components.len() > component_count {
-				group_arities.push(components.len());
-			}
-		}
+            if components.len() > component_count {
+                group_arities.push(components.len());
+            }
+        }
 
-		Self {
-			components,
-			group_arities,
-		}
-	}
+        Self {
+            components,
+            group_arities,
+        }
+    }
 
-	pub fn components(&self) -> &[ComponentInfo] {
-		&self.components
-	}
+    pub fn components(&self) -> &[ComponentInfo] {
+        &self.components
+    }
 
-	pub fn group_arities(&self) -> &[usize] {
-		&self.group_arities
-	}
+    pub fn group_arities(&self) -> &[usize] {
+        &self.group_arities
+    }
 }
 
 /// Trait used for creating a `LayoutGroup`. Implemented for tuples up to arity
 /// 16.
 pub trait LayoutGroupDescriptor {
-	/// Creates a `LayoutGroup` with the given components.
-	fn group() -> LayoutGroup;
+    /// Creates a `LayoutGroup` with the given components.
+    fn group() -> LayoutGroup;
 }
 
 macro_rules! impl_layout_group_descriptor {

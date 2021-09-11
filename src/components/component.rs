@@ -2,14 +2,14 @@
 /// 'static`.
 pub trait Component
 where
-	Self: Send + Sync + 'static,
+    Self: Send + Sync + 'static,
 {
-	// Empty
+    // Empty
 }
 
 impl<T> Component for T
 where
-	T: Send + Sync + 'static,
+    T: Send + Sync + 'static,
 {
-	// Empty
+    // Empty
 }

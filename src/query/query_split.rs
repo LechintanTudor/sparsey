@@ -77,5 +77,5 @@ macro_rules! split_modifier {
 }
 
 pub(crate) fn shortest_entity_slice<'a>(slices: &[&'a [Entity]]) -> Option<&'a [Entity]> {
-	slices.iter().min_by_key(|e| e.len()).copied()
+    slices.iter().min_by_key(|e| e.len()).copied()
 }

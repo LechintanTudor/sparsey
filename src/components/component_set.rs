@@ -8,57 +8,57 @@ use std::marker::PhantomData;
 
 /// Used internally by `ComponentSet` to manage a component storage of type `T`.
 pub struct ComponentStorageRefMut<'a, T>(
-	TypedComponentStorage<T, AtomicRefMut<'a, ComponentStorage>>,
+    TypedComponentStorage<T, AtomicRefMut<'a, ComponentStorage>>,
 );
 
 /// Trait used to insert and remove components from the `World`.
 pub unsafe trait ComponentSet
 where
-	Self: Sized + Send + Sync + 'static,
+    Self: Sized + Send + Sync + 'static,
 {
-	/// Used for borrowing storages.
-	type Storages: for<'a> BorrowStorages<'a>;
+    /// Used for borrowing storages.
+    type Storages: for<'a> BorrowStorages<'a>;
 
-	/// Inserts the components into the borrowed storages.
-	unsafe fn insert(
-		storages: &mut <Self::Storages as BorrowStorages>::Storages,
-		entity: Entity,
-		components: Self,
-		ticks: ChangeTicks,
-	);
+    /// Inserts the components into the borrowed storages.
+    unsafe fn insert(
+        storages: &mut <Self::Storages as BorrowStorages>::Storages,
+        entity: Entity,
+        components: Self,
+        ticks: ChangeTicks,
+    );
 
-	/// Removes the components from the borrowed storages and returns them if
-	/// all of them were successfully removed.
-	unsafe fn remove(
-		storages: &mut <Self::Storages as BorrowStorages>::Storages,
-		entity: Entity,
-	) -> Option<Self>;
+    /// Removes the components from the borrowed storages and returns them if
+    /// all of them were successfully removed.
+    unsafe fn remove(
+        storages: &mut <Self::Storages as BorrowStorages>::Storages,
+        entity: Entity,
+    ) -> Option<Self>;
 
-	/// Deletes the components from the borrowed storages. This is faster than
-	/// removing them.
-	unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::Storages, entity: Entity);
+    /// Deletes the components from the borrowed storages. This is faster than
+    /// removing them.
+    unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::Storages, entity: Entity);
 }
 
 /// Trait implemented by `StorageBorrower` to borrow component storages.
 pub trait BorrowStorages<'a> {
-	/// Borrowed storages.
-	type Storages;
+    /// Borrowed storages.
+    type Storages;
 
-	/// Borrows the storages.
-	fn borrow(components: &'a ComponentStorages) -> Self::Storages;
+    /// Borrows the storages.
+    fn borrow(components: &'a ComponentStorages) -> Self::Storages;
 
-	/// Returns the group family indexes.
-	fn families(components: &'a ComponentStorages) -> GroupFamilyIndexes;
+    /// Returns the group family indexes.
+    fn families(components: &'a ComponentStorages) -> GroupFamilyIndexes;
 
-	/// Borrows the storages and returns the group family indexes.
-	fn borrow_with_families(
-		components: &'a ComponentStorages,
-	) -> (Self::Storages, GroupFamilyIndexes);
+    /// Borrows the storages and returns the group family indexes.
+    fn borrow_with_families(
+        components: &'a ComponentStorages,
+    ) -> (Self::Storages, GroupFamilyIndexes);
 }
 
 /// Struct used to borrow component storages.
 pub struct StorageBorrower<T> {
-	storages: PhantomData<*const T>,
+    storages: PhantomData<*const T>,
 }
 
 macro_rules! impl_component_set {
@@ -137,41 +137,41 @@ macro_rules! impl_component_set {
 
 fn borrow<T>(components: &ComponentStorages) -> ComponentStorageRefMut<T>
 where
-	T: Component,
+    T: Component,
 {
-	components
-		.borrow_mut(&TypeId::of::<T>())
-		.map(|storage| unsafe { ComponentStorageRefMut(TypedComponentStorage::new(storage)) })
-		.unwrap_or_else(|| panic_missing_comp::<T>())
+    components
+        .borrow_mut(&TypeId::of::<T>())
+        .map(|storage| unsafe { ComponentStorageRefMut(TypedComponentStorage::new(storage)) })
+        .unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
 fn borrow_with_family<'a, T>(
-	components: &'a ComponentStorages,
-	families: &mut GroupFamilyIndexes,
+    components: &'a ComponentStorages,
+    families: &mut GroupFamilyIndexes,
 ) -> ComponentStorageRefMut<'a, T>
 where
-	T: Component,
+    T: Component,
 {
-	components
-		.borrow_with_familiy_mut(&TypeId::of::<T>())
-		.map(|(storage, family)| unsafe {
-			if let Some(family) = family {
-				families.insert_unchecked(family);
-			}
-			ComponentStorageRefMut(TypedComponentStorage::new(storage))
-		})
-		.unwrap_or_else(|| panic_missing_comp::<T>())
+    components
+        .borrow_with_familiy_mut(&TypeId::of::<T>())
+        .map(|(storage, family)| unsafe {
+            if let Some(family) = family {
+                families.insert_unchecked(family);
+            }
+            ComponentStorageRefMut(TypedComponentStorage::new(storage))
+        })
+        .unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
 fn update_group_family_indexes<T>(families: &mut GroupFamilyIndexes, components: &ComponentStorages)
 where
-	T: Component,
+    T: Component,
 {
-	if let Some(index) = components.get_group_family(&TypeId::of::<T>()) {
-		unsafe {
-			families.insert_unchecked(index);
-		}
-	}
+    if let Some(index) = components.get_group_family(&TypeId::of::<T>()) {
+        unsafe {
+            families.insert_unchecked(index);
+        }
+    }
 }
 
 #[rustfmt::skip]

@@ -18,73 +18,73 @@ pub type ResMut<'a, T> = ResourceView<T, AtomicRefMut<'a, ResourceCell>>;
 
 /// Trait used to borrow component storages and resources from a `World`.
 pub trait BorrowWorld<'a> {
-	type Item;
+    type Item;
 
-	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item;
+    fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item;
 }
 
 impl<'a, 'b, T> BorrowWorld<'a> for Comp<'b, T>
 where
-	T: Component,
+    T: Component,
 {
-	type Item = Comp<'a, T>;
+    type Item = Comp<'a, T>;
 
-	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
-		let (storage, info) = world
-			.components
-			.borrow_with_info(&TypeId::of::<T>())
-			.unwrap_or_else(|| panic_missing_comp::<T>());
+    fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
+        let (storage, info) = world
+            .components
+            .borrow_with_info(&TypeId::of::<T>())
+            .unwrap_or_else(|| panic_missing_comp::<T>());
 
-		unsafe { Comp::new(storage, info, world.tick.get(), change_tick) }
-	}
+        unsafe { Comp::new(storage, info, world.tick.get(), change_tick) }
+    }
 }
 
 impl<'a, 'b, T> BorrowWorld<'a> for CompMut<'b, T>
 where
-	T: Component,
+    T: Component,
 {
-	type Item = CompMut<'a, T>;
+    type Item = CompMut<'a, T>;
 
-	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
-		let (storage, info) = world
-			.components
-			.borrow_with_info_mut(&TypeId::of::<T>())
-			.unwrap_or_else(|| panic_missing_comp::<T>());
+    fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
+        let (storage, info) = world
+            .components
+            .borrow_with_info_mut(&TypeId::of::<T>())
+            .unwrap_or_else(|| panic_missing_comp::<T>());
 
-		unsafe { CompMut::new(storage, info, world.tick.get(), change_tick) }
-	}
+        unsafe { CompMut::new(storage, info, world.tick.get(), change_tick) }
+    }
 }
 
 impl<'a, 'b, T> BorrowWorld<'a> for Res<'b, T>
 where
-	T: Resource,
+    T: Resource,
 {
-	type Item = Res<'a, T>;
+    type Item = Res<'a, T>;
 
-	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
-		let cell = world
-			.resources
-			.borrow(&TypeId::of::<T>())
-			.unwrap_or_else(|| panic_missing_res::<T>());
+    fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
+        let cell = world
+            .resources
+            .borrow(&TypeId::of::<T>())
+            .unwrap_or_else(|| panic_missing_res::<T>());
 
-		unsafe { Res::new(cell, world.tick.get(), change_tick) }
-	}
+        unsafe { Res::new(cell, world.tick.get(), change_tick) }
+    }
 }
 
 impl<'a, 'b, T> BorrowWorld<'a> for ResMut<'b, T>
 where
-	T: Resource,
+    T: Resource,
 {
-	type Item = ResMut<'a, T>;
+    type Item = ResMut<'a, T>;
 
-	fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
-		let cell = world
-			.resources
-			.borrow_mut(&TypeId::of::<T>())
-			.unwrap_or_else(|| panic_missing_res::<T>());
+    fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
+        let cell = world
+            .resources
+            .borrow_mut(&TypeId::of::<T>())
+            .unwrap_or_else(|| panic_missing_res::<T>());
 
-		unsafe { ResMut::new(cell, world.tick.get(), change_tick) }
-	}
+        unsafe { ResMut::new(cell, world.tick.get(), change_tick) }
+    }
 }
 
 macro_rules! impl_borrow_world {

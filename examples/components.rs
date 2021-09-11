@@ -10,44 +10,44 @@ struct Velocity(i32, i32);
 struct Immovable;
 
 fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
-	println!("[Update velocities]");
+    println!("[Update velocities]");
 
-	for (e, (mut vel,)) in (&mut vel,).include(&imv).iter().entities() {
-		println!("{:?} is immovable; set its velocity to (0, 0)", e);
-		*vel = Velocity(0, 0);
-	}
+    for (e, (mut vel,)) in (&mut vel,).include(&imv).iter().entities() {
+        println!("{:?} is immovable; set its velocity to (0, 0)", e);
+        *vel = Velocity(0, 0);
+    }
 
-	println!();
+    println!();
 }
 
 fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
-	println!("[Update positions]");
+    println!("[Update positions]");
 
-	for (e, (mut pos, vel)) in (&mut pos, &vel).iter().entities() {
-		pos.0 += vel.0;
-		pos.1 += vel.1;
+    for (e, (mut pos, vel)) in (&mut pos, &vel).iter().entities() {
+        pos.0 += vel.0;
+        pos.1 += vel.1;
 
-		println!("{:?}, {:?}, {:?}", e, *pos, vel);
-	}
+        println!("{:?}, {:?}, {:?}", e, *pos, vel);
+    }
 
-	println!();
+    println!();
 }
 
 fn main() {
-	let mut dispatcher = Dispatcher::builder()
-		.add_system(update_velocity.system())
-		.add_system(update_position.system())
-		.build();
+    let mut dispatcher = Dispatcher::builder()
+        .add_system(update_velocity.system())
+        .add_system(update_position.system())
+        .build();
 
-	let mut world = World::default();
-	dispatcher.set_up(&mut world);
+    let mut world = World::default();
+    dispatcher.set_up(&mut world);
 
-	world.create_entity((Position(0, 0), Velocity(1, 1)));
-	world.create_entity((Position(0, 0), Velocity(2, 2)));
-	world.create_entity((Position(0, 0), Velocity(3, 3), Immovable));
+    world.create_entity((Position(0, 0), Velocity(1, 1)));
+    world.create_entity((Position(0, 0), Velocity(2, 2)));
+    world.create_entity((Position(0, 0), Velocity(3, 3), Immovable));
 
-	for _ in 0..3 {
-		dispatcher.run_seq(&mut world).unwrap();
-		world.increment_ticks().unwrap();
-	}
+    for _ in 0..3 {
+        dispatcher.run_seq(&mut world).unwrap();
+        world.increment_ticks().unwrap();
+    }
 }
