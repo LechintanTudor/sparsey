@@ -3,8 +3,6 @@ Sparsey is a sparse set based Entity Component System with lots of features and 
 
 # Example 
 ```rust
-/// Most commonly used items are accessible from the prelude.
-/// Otherwise, all items are accessible from the crate root.
 use sparsey::prelude::*;
 
 /// Components are Send + Sync + 'static types.
@@ -32,12 +30,20 @@ fn main() {
     world.register::<Position>();
     world.register::<Velocity>();
 
+    // Set a Layout to optimize iterations.
+    let layout = Layout::builder()
+        .add_group(<(Position, Velocity)>::group())
+        .add_group(<(Position, Velocity, Immovable)>::group())
+        .build();
+
+    world.set_layout(&layout);
+
     /// Create some entities.
     world.create_entity((Position(0.0), Velocity(1.0)));
     world.create_entity((Position(0.0), Velocity(2.0)));
     world.create_entity((Position(0.0), Velocity(3.0), Immovable));
 
-    /// Create a Dispatcher for running our systems.
+    /// Create a Dispatcher to run our systems.
     let mut dispatcher = Dispatcher::builder()
         .add_system(update_velocity.system())
         .add_system(update_position.system())
@@ -55,10 +61,10 @@ fn main() {
 ## Systems
 Systems are functions that have Component views and Resource views as parameters.
 ```rust
-fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>, delta: Res<Delta>) {
+fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>, time: Res<Time>) {
     for (mut pos, vel) in (&mut pos, &vel).iter() {
-        pos.x += vel.x * delta.0;
-        pos.y += vel.y * delta.1;
+        pos.x += vel.x * time.delta();
+        pos.y += vel.y * time.delta();
     }
 }
 ```
@@ -95,7 +101,7 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     // Fetch A, B and C from all entities which have A, B and C.
     for (a, b, c) in (&a, &b, &c).iter() {}
 
-    // To get the entity to which the components belong use `entities`.
+    // Use `entities` to get the entity to which the components belong.
     for (entity, (a, b, c)) in (&a, &b, &c).iter().entities() {}
 
     // Fetch A from all entities which have A, B and C.
@@ -164,12 +170,15 @@ Groups allow accessing their components and entities as ordered slices.
 ```rust
 fn slices(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     // Get all entities with A and B as a slice.
-    let _: &[Entity] = (&a, &b).entities();
+    let _: &[Entity] = (&a, &b).entities().unwrap();
 
     // Get A, B and C from all entities with A, B and C as slices.
-    let _: (&[A], &[B], &[C]) = (&a, &b, &c).components();
+    let _: (&[A], &[B], &[C]) = (&a, &b, &c).components().unwrap();
 
     // Get all entities with A and B, but not C, and their components, as slices.
-    let _: (&[Entity], (&[A], &[B])) = (&a, &b).exclude(&c).entities_components();
+    let _: (&[Entity], (&[A], &[B])) = (&a, &b)
+        .exclude(&c)
+        .entities_components()
+        .unwrap();
 }
 ```
