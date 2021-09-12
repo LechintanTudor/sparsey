@@ -1,7 +1,7 @@
 # Sparsey
-Sparsey is a sparse set-based Rntity Component System with lots of features and nice syntax \~( ˘▾˘\~)
+Sparsey is a sparse set-based Entity Component System with lots of features and nice syntax \~( ˘▾˘\~)
 <br />
-Check out the [cheat sheet](/guides/cheat_sheet.md) and [examples](/examples/) to get started!
+Check out the [Sparsey Cheat Sheet](/guides/cheat_sheet.md) and [examples](/examples/) to get started!
 
 # Example 
 ```rust
@@ -73,8 +73,7 @@ fn save_entities(a: Comp<A>, b: Comp<B>, c: Comp<C>) -> SystemResult {
 }
 ```
 
-Systems are executed using a Dispatcher. 
-Errors can be retrieved after the systems finish executing.
+Systems are executed using a Dispatcher. Errors can be retrieved after the systems finish executing.
 ```rust
 let mut dispatcher = Dispatcher::builder()
     .add_system(movement.system())
@@ -128,10 +127,7 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
 ```
 
 ## Groups and Layouts
-Layouts can be used to group component storages within a World.
-Grouped storages are much faster to iterate over and allow accessing
-their components and entities as ordered slices, the downside being
-a small performance penalty when inserting or removing components.
+Layouts can be used to group component storages within a World. Grouped storages are much faster to iterate over and allow accessing their components and entities as ordered slices, at the cost of .
 ```rust
 let layout = Layout::builder()
     .add_group(<(A, B)>::group())
@@ -142,8 +138,7 @@ let mut world = World::default();
 world.set_layout(&layout);
 ```
 
-All iterations bellow get a significant performance boost without having to change
-the code at all.
+All iterations bellow get a significant performance boost without having to change the code at all.
 ```rust
 fn iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a, b) in (&a, &b).iter() {}
@@ -177,13 +172,14 @@ fn slices(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
 }
 ```
 
+# Thanks
+Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely [Bevy](https://github.com/bevyengine/bevy), [EnTT](https://github.com/skypjack/entt), [Legion](https://github.com/amethyst/legion), [Shipyard](https://crates.io/crates/shipyard) and [Specs](https://github.com/amethyst/specs). Make sure you check them out!
+
 # License
 Sparsey is dual-licensed under either
 * MIT License (docs/LICENSE-MIT or http://opensource.org/licenses/MIT)
 * Apache License, Version 2.0 (docs/LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
+
 at your option.
 <br />
-
-Unless you explicitly state otherwise, any contribution intentionally submitted for 
-inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual 
-licensed as above without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above without any additional terms or conditions.
