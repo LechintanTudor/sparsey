@@ -173,7 +173,7 @@ fn slices(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
 ```
 
 # Thanks
-Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely [Bevy](https://github.com/bevyengine/bevy), [EnTT](https://github.com/skypjack/entt), [Legion](https://github.com/amethyst/legion), [Shipyard](https://crates.io/crates/shipyard) and [Specs](https://github.com/amethyst/specs). Make sure you check them out!
+Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely [Bevy](https://github.com/bevyengine/bevy), [EnTT](https://github.com/skypjack/entt), [Legion](https://github.com/amethyst/legion), [Shipyard](https://github.com/leudz/shipyard) and [Specs](https://github.com/amethyst/specs). Make sure you check them out!
 
 # License
 Sparsey is dual-licensed under either
