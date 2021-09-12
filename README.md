@@ -127,7 +127,7 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
 ```
 
 ## Groups and Layouts
-Layouts can be used to group component storages within a World. Grouped storages are much faster to iterate over and allow accessing their components and entities as ordered slices, at the cost of .
+Layouts can be used to group component storages within a World. Grouped storages are much faster to iterate over and allow accessing their components and entities as ordered slices, with a small performance penalty when adding or removing components.
 ```rust
 let layout = Layout::builder()
     .add_group(<(A, B)>::group())
