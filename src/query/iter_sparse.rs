@@ -78,14 +78,35 @@ where
     }
 }
 
-impl<'a, B, I, E, F> EntityIterator for SparseIter<'a, B, I, E, F>
+unsafe impl<'a, B, I, E, F> EntityIterator for SparseIter<'a, B, I, E, F>
 where
     B: QueryBase<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    fn current_entity(&self) -> Option<Entity> {
-        self.data.entities.get(self.index).copied()
+    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
+        loop {
+            let entity = *self.data.entities.get(self.index)?;
+            self.index += 1;
+
+            if self.filter.matches(entity)
+                && I::includes_split(&self.include, entity)
+                && E::excludes_split(&self.exclude, entity)
+            {
+                let item = unsafe {
+                    B::get_from_sparse_split(
+                        &mut self.base,
+                        entity,
+                        self.data.world_tick,
+                        self.data.change_tick,
+                    )
+                };
+
+                if item.is_some() {
+                    return item.map(|item| (entity, item));
+                }
+            }
+        }
     }
 }

@@ -99,17 +99,17 @@ where
     }
 }
 
-impl<'a, B, I, E, F> EntityIterator for Iter<'a, B, I, E, F>
+unsafe impl<'a, B, I, E, F> EntityIterator for Iter<'a, B, I, E, F>
 where
     B: QueryBase<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    fn current_entity(&self) -> Option<Entity> {
+    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         match self {
-            Self::Sparse(sparse) => sparse.current_entity(),
-            Self::Dense(dense) => dense.current_entity(),
+            Self::Sparse(sparse) => sparse.next_with_entity(),
+            Self::Dense(dense) => dense.next_with_entity(),
         }
     }
 }

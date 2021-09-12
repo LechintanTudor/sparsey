@@ -1,7 +1,7 @@
 use crate::group::GroupInfo;
 use crate::query::{
     And, Not, Or, QueryElement, QueryElementFilter, QueryFilter, SplitQueryElement,
-    UnfilteredImmutableQueryElement, UnfilteredQueryElement,
+    UnfilteredImmutableQueryElement, UnfilteredQueryElement, Xor,
 };
 use crate::storage::Entity;
 use crate::utils::{ChangeTicks, Ticks};
@@ -162,5 +162,18 @@ where
 
     fn bitor(self, filter: F2) -> Self::Output {
         Or::new(self, filter)
+    }
+}
+
+impl<'a, F1, E, F2> ops::BitXor<F2> for Filter<F1, E>
+where
+    F1: QueryElementFilter<E::Component>,
+    E: UnfilteredImmutableQueryElement<'a>,
+    F2: QueryFilter,
+{
+    type Output = Xor<Self, F2>;
+
+    fn bitxor(self, filter: F2) -> Self::Output {
+        Xor::new(self, filter)
     }
 }

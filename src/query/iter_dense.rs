@@ -39,6 +39,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let entity = *self.data.entities.get(self.index)?;
+
             let index = self.index;
             self.index += 1;
 
@@ -60,12 +61,32 @@ where
     }
 }
 
-impl<'a, B, F> EntityIterator for DenseIter<'a, B, F>
+unsafe impl<'a, B, F> EntityIterator for DenseIter<'a, B, F>
 where
     B: QueryBase<'a>,
     F: QueryFilter,
 {
-    fn current_entity(&self) -> Option<Entity> {
-        self.data.entities.get(self.index).copied()
+    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
+        loop {
+            let entity = *self.data.entities.get(self.index)?;
+
+            let index = self.index;
+            self.index += 1;
+
+            if self.filter.matches(entity) {
+                let item = unsafe {
+                    B::get_from_dense_split(
+                        &mut self.base,
+                        index,
+                        self.data.world_tick,
+                        self.data.change_tick,
+                    )
+                };
+
+                if item.is_some() {
+                    return item.map(|item| (entity, item));
+                }
+            }
+        }
     }
 }

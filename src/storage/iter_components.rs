@@ -4,17 +4,17 @@ use crate::utils::{ChangeTicks, EntityIterator};
 /// Iterator over the components in a `ComponentView`.
 #[derive(Clone, Copy)]
 pub struct ComponentIter<'a, T> {
-    index: usize,
     entities: &'a [Entity],
     components: *const T,
+    index: usize,
 }
 
 impl<'a, T> ComponentIter<'a, T> {
     pub(crate) unsafe fn new(entities: &'a [Entity], components: &'a [T]) -> Self {
         Self {
-            index: 0,
             entities,
             components: components.as_ptr(),
+            index: 0,
         }
     }
 }
@@ -30,29 +30,41 @@ where
             return None;
         }
 
-        let current_index = self.index;
+        let index = self.index;
         self.index += 1;
 
-        unsafe { Some(&*self.components.add(current_index)) }
+        unsafe { Some(&*self.components.add(index)) }
     }
 }
 
-impl<'a, T> EntityIterator for ComponentIter<'a, T>
+unsafe impl<'a, T> EntityIterator for ComponentIter<'a, T>
 where
     T: 'a,
 {
-    fn current_entity(&self) -> Option<Entity> {
-        self.entities.get(self.index).copied()
+    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
+        if self.index >= self.entities.len() {
+            return None;
+        }
+
+        let index = self.index;
+        self.index += 1;
+
+        unsafe {
+            Some((
+                *self.entities.get_unchecked(index),
+                &*self.components.add(index),
+            ))
+        }
     }
 }
 
 /// Iterator over the components and `ChangeTicks` in a `ComponentView`.
 #[derive(Clone, Copy)]
 pub struct ComponentWithTicksIter<'a, T> {
-    index: usize,
     entities: &'a [Entity],
     components: *const T,
     ticks: *const ChangeTicks,
+    index: usize,
 }
 
 impl<'a, T> ComponentWithTicksIter<'a, T> {
@@ -62,10 +74,10 @@ impl<'a, T> ComponentWithTicksIter<'a, T> {
         ticks: &'a [ChangeTicks],
     ) -> Self {
         Self {
-            index: 0,
             entities,
             components: components.as_ptr(),
             ticks: ticks.as_ptr(),
+            index: 0,
         }
     }
 }
@@ -81,23 +93,30 @@ where
             return None;
         }
 
-        let current_index = self.index;
+        let index = self.index;
+        self.index += 1;
+
+        unsafe { Some((&*self.components.add(index), &*self.ticks.add(index))) }
+    }
+}
+
+unsafe impl<'a, T> EntityIterator for ComponentWithTicksIter<'a, T>
+where
+    T: 'a,
+{
+    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
+        if self.index >= self.entities.len() {
+            return None;
+        }
+
+        let index = self.index;
         self.index += 1;
 
         unsafe {
             Some((
-                &*self.components.add(current_index),
-                &*self.ticks.add(current_index),
+                *self.entities.get_unchecked(index),
+                (&*self.components.add(index), &*self.ticks.add(index)),
             ))
         }
-    }
-}
-
-impl<'a, T> EntityIterator for ComponentWithTicksIter<'a, T>
-where
-    T: 'a,
-{
-    fn current_entity(&self) -> Option<Entity> {
-        self.entities.get(self.index).copied()
     }
 }

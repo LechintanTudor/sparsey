@@ -1,14 +1,27 @@
 use crate::storage::Entity;
 
+/// Trait implemented by iterators over entities. Used internally by
+/// `EntityIter`.
+pub unsafe trait EntityIterator
+where
+    Self: Iterator,
+{
+    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)>;
+}
+
 /// Trait used for creating an `EntityIter`.
-pub trait EntityIterator
+pub trait IntoEntityIterator
 where
     Self: Iterator + Sized,
 {
-    /// Returns the current `Entity` the iterator is pointing at, if any.
-    fn current_entity(&self) -> Option<Entity>;
-
     /// Wrapps the iterator in an `EntityIter`.
+    fn entities(self) -> EntityIter<Self>;
+}
+
+impl<I> IntoEntityIterator for I
+where
+    I: Iterator + Sized,
+{
     fn entities(self) -> EntityIter<Self> {
         EntityIter(self)
     }
@@ -25,6 +38,6 @@ where
     type Item = (Entity, I::Item);
 
     fn next(&mut self) -> Option<Self::Item> {
-        Some((self.0.current_entity()?, self.0.next()?))
+        self.0.next_with_entity()
     }
 }

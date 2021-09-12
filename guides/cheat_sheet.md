@@ -227,6 +227,13 @@ for (a,) in (&a,).filter(added(&b) | added(&c)).iter() {
 }
 ```
 
+Filter query to only match entities to which `B` xor `C` was just added.
+```rust
+for (a,) in (&a,).filter(added(&b) ^ added(&c)).iter() {
+    // ...
+}
+```
+
 ## Query Slicing
 Create a `World` with `(A, B)` and `(A, B, C)` groups and borrow the component storages.
 ```rust

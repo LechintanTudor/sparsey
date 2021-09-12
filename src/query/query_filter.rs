@@ -87,6 +87,31 @@ where
     }
 }
 
+/// `QueryFilter` that only matches entities which match only one of the filters
+/// contained inside.
+pub struct Xor<F1, F2>(F1, F2);
+
+impl<F1, F2> Xor<F1, F2>
+where
+    F1: QueryFilter,
+    F2: QueryFilter,
+{
+    /// Creates a new `Xor` with the given filters.
+    pub fn new(filter1: F1, filter2: F2) -> Self {
+        Self(filter1, filter2)
+    }
+}
+
+impl<F1, F2> QueryFilter for Xor<F1, F2>
+where
+    F1: QueryFilter,
+    F2: QueryFilter,
+{
+    fn matches(&self, entity: Entity) -> bool {
+        self.0.matches(entity) != self.1.matches(entity)
+    }
+}
+
 macro_rules! impl_filter_ops {
 	($ty:ident $(, $filter:ident)*) => {
 		impl<$($filter),*> std::ops::Not for $ty<$($filter),*>
@@ -121,6 +146,18 @@ macro_rules! impl_filter_ops {
 
 			fn bitor(self, filter: Filter) -> Self::Output {
 				Or::new(self, filter)
+			}
+		}
+
+        impl<Filter, $($filter),*> std::ops::BitXor<Filter> for $ty<$($filter),*>
+		where
+			Filter: QueryFilter,
+			$($filter: QueryFilter,)*
+		{
+			type Output = Xor<Self, Filter>;
+
+			fn bitxor(self, filter: Filter) -> Self::Output {
+				Xor::new(self, filter)
 			}
 		}
 	};
