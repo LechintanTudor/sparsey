@@ -31,7 +31,7 @@ where
 
     fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
         let (storage, info) = world
-            .components
+            .storages
             .borrow_with_info(&TypeId::of::<T>())
             .unwrap_or_else(|| panic_missing_comp::<T>());
 
@@ -47,7 +47,7 @@ where
 
     fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
         let (storage, info) = world
-            .components
+            .storages
             .borrow_with_info_mut(&TypeId::of::<T>())
             .unwrap_or_else(|| panic_missing_comp::<T>());
 

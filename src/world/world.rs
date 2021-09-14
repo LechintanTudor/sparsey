@@ -1,10 +1,11 @@
-use crate::components::{BorrowStorages, Component, ComponentSet, ComponentStorages};
+use crate::components::{Component, ComponentSet, ComponentStorages};
 use crate::layout::Layout;
 use crate::resources::{Resource, ResourceStorage};
 use crate::storage::{ComponentStorage, Entity, EntityStorage};
 use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
 use crate::world::{BorrowWorld, NoSuchEntity, TickOverflow};
 use std::any::TypeId;
+use std::mem;
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -26,7 +27,7 @@ pub struct World {
     pub(crate) id: WorldId,
     pub(crate) tick: NonZeroTicks,
     pub(crate) entities: EntityStorage,
-    pub(crate) components: ComponentStorages,
+    pub(crate) storages: ComponentStorages,
     pub(crate) resources: ResourceStorage,
 }
 
@@ -36,7 +37,7 @@ impl Default for World {
             id: WorldId::new(),
             tick: NonZeroTicks::new(1).unwrap(),
             entities: Default::default(),
-            components: Default::default(),
+            storages: Default::default(),
             resources: Default::default(),
         }
     }
@@ -55,7 +56,15 @@ impl World {
     /// through all the entities to ararange their components, so it is best
     /// called right after creating the `World`.
     pub fn set_layout(&mut self, layout: &Layout) {
-        self.components.set_layout(layout, self.entities.as_ref());
+        let mut storages = mem::take(&mut self.storages).into_storages();
+
+        unsafe {
+            self.storages = ComponentStorages::new(layout, &mut storages);
+
+            for &entity in self.entities.as_ref() {
+                self.storages.group_all_components(entity);
+            }
+        }
     }
 
     /// Creates a component storage for `T` if one doesn't already exist.
@@ -63,12 +72,12 @@ impl World {
     where
         T: Component,
     {
-        self.components.register::<T>()
+        self.storages.register::<T>()
     }
 
     /// Check if a component type is registered.
     pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
-        self.components.is_registered(component_type_id)
+        self.storages.is_registered(component_type_id)
     }
 
     /// Creates an `Entity` with the given `components` and returns it.
@@ -112,33 +121,18 @@ impl World {
         I: IntoIterator<Item = C>,
     {
         let initial_entity_count = self.entities.as_ref().len();
+        let entities = &mut self.entities;
+        let storages = &mut self.storages;
 
-        let families = {
-            let (mut storages, families) = C::Storages::borrow_with_families(&self.components);
-            let entities = &mut self.entities;
+        components_iter.into_iter().for_each(|components| {
+            let entity = entities.create();
 
-            components_iter.into_iter().for_each(|components| {
-                let entity = entities.create();
-
-                unsafe {
-                    C::insert(&mut storages, entity, components, ticks);
-                }
-            });
-
-            families
-        };
-
-        let new_entities = &self.entities.as_ref()[initial_entity_count..];
-
-        for i in families.indexes() {
-            for &entity in new_entities {
-                unsafe {
-                    self.components.grouped.group_components(i, entity);
-                }
+            unsafe {
+                C::insert(storages, entity, components, ticks);
             }
-        }
+        });
 
-        new_entities
+        &self.entities.as_ref()[initial_entity_count..]
     }
 
     /// Removes `entity` and all of its `components` from the world.
@@ -148,13 +142,9 @@ impl World {
             return false;
         }
 
-        for i in 0..self.components.grouped.group_family_count() {
-            unsafe {
-                self.components.grouped.ungroup_components(i, entity);
-            }
-        }
+        self.storages.ungroup_all_components(entity);
 
-        for storage in self.components.iter_storages_mut() {
+        for storage in self.storages.iter_mut() {
             storage.remove_and_drop(entity);
         }
 
@@ -189,16 +179,8 @@ impl World {
             return Err(NoSuchEntity);
         }
 
-        let families = unsafe {
-            let (mut storages, families) = C::Storages::borrow_with_families(&self.components);
-            C::insert(&mut storages, entity, components, ticks);
-            families
-        };
-
-        for i in families.indexes() {
-            unsafe {
-                self.components.grouped.group_components(i, entity);
-            }
+        unsafe {
+            C::insert(&mut self.storages, entity, components, ticks);
         }
 
         Ok(())
@@ -210,22 +192,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        if !self.contains_entity(entity) {
-            return None;
-        }
-
-        let families = C::Storages::families(&self.components);
-
-        for i in families.indexes() {
-            unsafe {
-                self.components.grouped.ungroup_components(i, entity);
-            }
-        }
-
-        unsafe {
-            let mut storages = C::Storages::borrow(&self.components);
-            C::remove(&mut storages, entity)
-        }
+        unsafe { C::remove(&mut self.storages, entity) }
     }
 
     /// Deletes a component set from `entity`. This is faster than removing
@@ -234,22 +201,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        if !self.contains_entity(entity) {
-            return;
-        }
-
-        let families = C::Storages::families(&self.components);
-
-        for i in families.indexes() {
-            unsafe {
-                self.components.grouped.ungroup_components(i, entity);
-            }
-        }
-
-        unsafe {
-            let mut storages = C::Storages::borrow(&self.components);
-            C::delete(&mut storages, entity);
-        }
+        unsafe { C::delete(&mut self.storages, entity) }
     }
 
     /// Returns `true` if `entity` exists in the `World`.
@@ -267,7 +219,7 @@ impl World {
     /// Removes all entities and components in the world.
     pub fn clear_entities(&mut self) {
         self.entities.clear();
-        self.components.clear();
+        self.storages.clear();
     }
 
     /// Inserts a resource of type `T` into the `World` and returns the previous
@@ -310,7 +262,7 @@ impl World {
     /// Removes all entities, components and resources from the `World`.
     pub fn clear(&mut self) {
         self.entities.clear();
-        self.components.clear();
+        self.storages.clear();
         self.resources.clear();
     }
 
@@ -342,6 +294,6 @@ impl World {
     }
 
     pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
-        self.components.register_storage(component, storage);
+        self.storages.register_storage(component, storage);
     }
 }

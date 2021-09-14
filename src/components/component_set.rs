@@ -1,64 +1,28 @@
 use crate::components::{Component, ComponentStorages};
-use crate::group::GroupFamilyIndexes;
+use crate::group::iter_group_family_indexes;
 use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::{panic_missing_comp, ChangeTicks};
-use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
-use std::marker::PhantomData;
-
-/// Used internally by `ComponentSet` to manage a component storage of type `T`.
-pub struct ComponentStorageRefMut<'a, T>(
-    TypedComponentStorage<T, AtomicRefMut<'a, ComponentStorage>>,
-);
 
 /// Trait used to insert and remove components from the `World`.
 pub unsafe trait ComponentSet
 where
     Self: Sized + Send + Sync + 'static,
 {
-    /// Used for borrowing storages.
-    type Storages: for<'a> BorrowStorages<'a>;
-
-    /// Inserts the components into the borrowed storages.
+    /// Inserts the components into the storages.
     unsafe fn insert(
-        storages: &mut <Self::Storages as BorrowStorages>::Storages,
+        storages: &mut ComponentStorages,
         entity: Entity,
         components: Self,
         ticks: ChangeTicks,
     );
 
-    /// Removes the components from the borrowed storages and returns them if
+    /// Removes the components from the storages and returns them if
     /// all of them were successfully removed.
-    unsafe fn remove(
-        storages: &mut <Self::Storages as BorrowStorages>::Storages,
-        entity: Entity,
-    ) -> Option<Self>;
+    unsafe fn remove(storages: &mut ComponentStorages, entity: Entity) -> Option<Self>;
 
-    /// Deletes the components from the borrowed storages. This is faster than
-    /// removing them.
-    unsafe fn delete(storages: &mut <Self::Storages as BorrowStorages>::Storages, entity: Entity);
-}
-
-/// Trait implemented by `StorageBorrower` to borrow component storages.
-pub trait BorrowStorages<'a> {
-    /// Borrowed storages.
-    type Storages;
-
-    /// Borrows the storages.
-    fn borrow(components: &'a ComponentStorages) -> Self::Storages;
-
-    /// Returns the group family indexes.
-    fn families(components: &'a ComponentStorages) -> GroupFamilyIndexes;
-
-    /// Borrows the storages and returns the group family indexes.
-    fn borrow_with_families(
-        components: &'a ComponentStorages,
-    ) -> (Self::Storages, GroupFamilyIndexes);
-}
-
-/// Struct used to borrow component storages.
-pub struct StorageBorrower<T> {
-    storages: PhantomData<*const T>,
+    /// Deletes the components from storages. This is faster than removing them.
+    unsafe fn delete(storages: &mut ComponentStorages, entity: Entity);
 }
 
 macro_rules! impl_component_set {
@@ -67,111 +31,79 @@ macro_rules! impl_component_set {
         where
             $($comp: Component,)*
         {
-            type Storages = StorageBorrower<($($comp,)*)>;
-
+            #[allow(unused_mut)]
             #[allow(unused_variables)]
             unsafe fn insert(
-                storages: &mut <Self::Storages as BorrowStorages>::Storages,
+                storages: &mut ComponentStorages,
                 entity: Entity,
                 components: Self,
                 ticks: ChangeTicks,
             ) {
+                let mut family_mask = 0_u16;
+
                 $(
-                    storages.$idx.0.insert(entity, components.$idx, ticks);
+                    {
+                        let (mut storage, mask) = get_with_family_mask_mut::<$comp>(storages);
+                        storage.insert(entity, components.$idx, ticks);
+                        family_mask |= mask;
+                    }
                 )*
-            }
 
-            #[allow(unused_variables)]
-            unsafe fn remove(
-                storages: &mut <Self::Storages as BorrowStorages>::Storages,
-                entity: Entity,
-            ) -> Option<Self> {
-                let components = (
-                    $(storages.$idx.0.remove(entity),)*
-                );
-
-                Some((
-                    $(components.$idx?,)*
-                ))
-            }
-
-            #[allow(unused_variables)]
-            unsafe fn delete(
-                storages: &mut <Self::Storages as BorrowStorages>::Storages,
-                entity: Entity,
-            ) {
-                $(
-                    storages.$idx.0.remove(entity);
-                )*
-            }
-        }
-
-        impl<'a, $($comp),*> BorrowStorages<'a> for StorageBorrower<($($comp,)*)>
-        where
-            $($comp: Component,)*
-        {
-            type Storages = ($(ComponentStorageRefMut<'a, $comp>,)*);
-
-            #[allow(unused_mut)]
-            #[allow(unused_variables)]
-            fn borrow_with_families(components: &'a ComponentStorages) -> (Self::Storages, GroupFamilyIndexes) {
-                let mut families = GroupFamilyIndexes::default();
-                (($(borrow_with_family::<$comp>(components, &mut families),)*), families)
-            }
-
-            #[allow(unused_variables)]
-            fn borrow(components: &'a ComponentStorages) -> Self::Storages {
-                ($(borrow::<$comp>(components),)*)
+                for i in iter_group_family_indexes(family_mask) {
+                    storages.group_components(i, entity);
+                }
             }
 
             #[allow(unused_mut)]
             #[allow(unused_variables)]
-            fn families(components: &'a ComponentStorages) -> GroupFamilyIndexes {
-                let mut families = GroupFamilyIndexes::default();
-                $(update_group_family_indexes::<$comp>(&mut families, components);)*
-                families
+            unsafe fn remove(storages: &mut ComponentStorages, entity: Entity) -> Option<Self> {
+                let mut family_mask = 0_u16;
+                $(family_mask |= storages.get_family_mask(&TypeId::of::<$comp>());)*
+
+                for i in iter_group_family_indexes(family_mask) {
+                    storages.ungroup_components(i, entity);
+                }
+
+                let components = ($(get_mut::<$comp>(storages).remove(entity),)*);
+                Some(($(components.$idx?,)*))
+            }
+
+            #[allow(unused_mut)]
+            #[allow(unused_variables)]
+            unsafe fn delete(storages: &mut ComponentStorages, entity: Entity) {
+                let mut family_mask = 0_u16;
+                $(family_mask |= storages.get_family_mask(&TypeId::of::<$comp>());)*
+
+                for i in iter_group_family_indexes(family_mask) {
+                    storages.ungroup_components(i, entity);
+                }
+
+                $(get_mut::<$comp>(storages).remove(entity);)*
             }
         }
     };
 }
 
-fn borrow<T>(components: &ComponentStorages) -> ComponentStorageRefMut<T>
+fn get_mut<T>(storages: &mut ComponentStorages) -> TypedComponentStorage<T, &mut ComponentStorage>
 where
     T: Component,
 {
-    components
-        .borrow_mut(&TypeId::of::<T>())
-        .map(|storage| unsafe { ComponentStorageRefMut(TypedComponentStorage::new(storage)) })
+    storages
+        .get_mut(&TypeId::of::<T>())
+        .map(|storage| unsafe { TypedComponentStorage::new(storage) })
         .unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
-fn borrow_with_family<'a, T>(
-    components: &'a ComponentStorages,
-    families: &mut GroupFamilyIndexes,
-) -> ComponentStorageRefMut<'a, T>
+fn get_with_family_mask_mut<T>(
+    storages: &mut ComponentStorages,
+) -> (TypedComponentStorage<T, &mut ComponentStorage>, u16)
 where
     T: Component,
 {
-    components
-        .borrow_with_familiy_mut(&TypeId::of::<T>())
-        .map(|(storage, family)| unsafe {
-            if let Some(family) = family {
-                families.insert_unchecked(family);
-            }
-            ComponentStorageRefMut(TypedComponentStorage::new(storage))
-        })
+    storages
+        .get_with_family_mask_mut(&TypeId::of::<T>())
+        .map(|(storage, mask)| unsafe { (TypedComponentStorage::new(storage), mask) })
         .unwrap_or_else(|| panic_missing_comp::<T>())
-}
-
-fn update_group_family_indexes<T>(families: &mut GroupFamilyIndexes, components: &ComponentStorages)
-where
-    T: Component,
-{
-    if let Some(index) = components.get_group_family(&TypeId::of::<T>()) {
-        unsafe {
-            families.insert_unchecked(index);
-        }
-    }
 }
 
 #[rustfmt::skip]

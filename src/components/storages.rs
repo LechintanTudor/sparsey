@@ -1,121 +1,427 @@
-use crate::components::{Component, GroupedComponentStorages, UngroupedComponentStorages};
-use crate::group::GroupInfo;
+use crate::components::Component;
+use crate::group::{GroupInfo, GroupMask};
 use crate::layout::Layout;
 use crate::storage::{ComponentStorage, Entity};
-use atomic_refcell::{AtomicRef, AtomicRefMut};
+use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
+use std::collections::hash_map::Entry;
+use std::hint::unreachable_unchecked;
+use std::mem;
+use std::ops::Range;
 
-/// Container for grouped and ungrouped component storages.
 #[derive(Default)]
 pub struct ComponentStorages {
-    pub(crate) grouped: GroupedComponentStorages,
-    pub(crate) ungrouped: UngroupedComponentStorages,
+    storages: Vec<AtomicRefCell<ComponentStorage>>,
+    component_info: FxHashMap<TypeId, ComponentInfo>,
+    group_info: Vec<ComponentGroupInfo>,
+    groups: Vec<Group>,
+    families: Vec<Range<usize>>,
 }
 
 impl ComponentStorages {
-    pub(crate) fn clear(&mut self) {
-        self.grouped.clear();
-        self.ungrouped.clear();
+    pub unsafe fn new(
+        layout: &Layout,
+        spare_storages: &mut FxHashMap<TypeId, ComponentStorage>,
+    ) -> Self {
+        let mut component_info = FxHashMap::default();
+        let mut storages = Vec::new();
+        let mut group_info = Vec::new();
+        let mut groups = Vec::new();
+        let mut families = Vec::new();
+
+        // Iterate group families.
+        for (family_index, layout) in layout.group_families().iter().enumerate() {
+            let first_group_index = groups.len();
+            let first_storage_index = storages.len();
+
+            let components = layout.components();
+            let mut prev_arity = 0_usize;
+
+            // Iterate groups in a group family.
+            for (group_offset, &arity) in layout.group_arities().iter().enumerate() {
+                let new_storage_index = storages.len();
+
+                // Iterate new components in a group.
+                for (component_offset, component) in
+                    (&components[prev_arity..arity]).iter().enumerate()
+                {
+                    let type_id = component.type_id();
+
+                    component_info.insert(
+                        type_id,
+                        ComponentInfo {
+                            storage_index: storages.len(),
+                            group_info_index: group_info.len(),
+                            family_mask: 1 << family_index,
+                        },
+                    );
+
+                    group_info.push(ComponentGroupInfo {
+                        family_index,
+                        group_offset,
+                        storage_mask: 1 << (prev_arity + component_offset),
+                    });
+
+                    let storage = spare_storages
+                        .remove(&type_id)
+                        .unwrap_or_else(|| component.create_storage());
+                    storages.push(AtomicRefCell::new(storage));
+                }
+
+                groups.push(Group {
+                    begin: first_storage_index,
+                    new_begin: new_storage_index,
+                    end: storages.len(),
+                    len: 0,
+                });
+
+                prev_arity = arity;
+            }
+
+            families.push(first_group_index..groups.len());
+        }
+
+        for (type_id, storage) in spare_storages.drain() {
+            component_info.insert(
+                type_id,
+                ComponentInfo {
+                    storage_index: storages.len(),
+                    group_info_index: usize::MAX,
+                    family_mask: 0,
+                },
+            );
+
+            storages.push(AtomicRefCell::new(storage));
+        }
+
+        Self {
+            component_info,
+            storages,
+            group_info,
+            families,
+            groups,
+        }
     }
 
-    pub(crate) fn register<T>(&mut self)
+    pub fn into_storages(mut self) -> FxHashMap<TypeId, ComponentStorage> {
+        let mut storages = FxHashMap::default();
+
+        for (type_id, info) in self.component_info {
+            let storage = mem::replace(
+                self.storages[info.storage_index].get_mut(),
+                ComponentStorage::new::<()>(),
+            );
+            storages.insert(type_id, storage);
+        }
+
+        storages
+    }
+
+    pub fn register<T>(&mut self)
     where
         T: Component,
     {
-        if !self.grouped.contains(&TypeId::of::<T>()) {
-            self.ungrouped.register::<T>();
+        unsafe {
+            self.register_storage(TypeId::of::<T>(), ComponentStorage::new::<T>());
         }
     }
 
-    pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
-        if !self.grouped.contains(&component) {
-            self.ungrouped.register_storage(component, storage);
+    pub unsafe fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
+        if let Entry::Vacant(entry) = self.component_info.entry(type_id) {
+            entry.insert(ComponentInfo {
+                storage_index: self.storages.len(),
+                group_info_index: usize::MAX,
+                family_mask: 0,
+            });
+
+            self.storages.push(AtomicRefCell::new(storage));
         }
     }
 
-    pub(crate) fn is_registered(&self, component: &TypeId) -> bool {
-        self.grouped.contains(component) || self.ungrouped.contains(component)
+    pub fn is_registered(&self, type_id: &TypeId) -> bool {
+        self.component_info.contains_key(type_id)
     }
 
-    pub(crate) fn set_layout(&mut self, layout: &Layout, entities: &[Entity]) {
-        let mut storages = FxHashMap::<TypeId, ComponentStorage>::default();
-        self.grouped.drain_into(&mut storages);
-        self.ungrouped.drain_into(&mut storages);
+    pub unsafe fn group_components(&mut self, family_index: usize, entity: Entity) {
+        let groups = self
+            .groups
+            .get_unchecked_mut(self.families.get_unchecked(family_index).clone());
 
-        self.grouped = unsafe { GroupedComponentStorages::with_layout(layout, &mut storages) };
-        self.ungrouped = UngroupedComponentStorages::from_storages(&mut storages);
+        for group in groups.iter_mut() {
+            let status = get_group_status(
+                self.storages.get_unchecked_mut(group.new_storage_range()),
+                group.len,
+                entity,
+            );
 
-        for i in 0..self.grouped.group_family_count() {
-            for &entity in entities {
-                unsafe {
-                    self.grouped.group_components(i, entity);
+            match status {
+                GroupStatus::Grouped => (),
+                GroupStatus::Ungrouped => {
+                    group_components(
+                        self.storages.get_unchecked_mut(group.storage_range()),
+                        &mut group.len,
+                        entity,
+                    );
                 }
+                GroupStatus::MissingComponents => break,
             }
         }
     }
 
-    pub(crate) fn get_group_family(&self, component: &TypeId) -> Option<usize> {
-        self.grouped.get_group_family(component)
-    }
+    pub unsafe fn ungroup_components(&mut self, family_index: usize, entity: Entity) {
+        let groups = self
+            .groups
+            .get_unchecked_mut(self.families.get_unchecked(family_index).clone());
 
-    #[allow(dead_code)]
-    pub(crate) fn borrow(&self, component: &TypeId) -> Option<AtomicRef<ComponentStorage>> {
-        match self.grouped.borrow(component) {
-            storage @ Some(_) => storage,
-            None => self.ungrouped.borrow(component),
+        let mut ungroup_start = 0_usize;
+        let mut ungroup_len = 0_usize;
+
+        for (i, group) in groups.iter_mut().enumerate() {
+            let status = get_group_status(
+                self.storages.get_unchecked_mut(group.new_storage_range()),
+                group.len,
+                entity,
+            );
+
+            match status {
+                GroupStatus::Grouped => {
+                    if ungroup_len == 0 {
+                        ungroup_start = i;
+                    }
+
+                    ungroup_len += 1;
+                }
+                GroupStatus::Ungrouped => break,
+                GroupStatus::MissingComponents => break,
+            }
+        }
+
+        let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
+
+        for group in groups.get_unchecked_mut(ungroup_range).iter_mut().rev() {
+            ungroup_components(
+                self.storages.get_unchecked_mut(group.storage_range()),
+                &mut group.len,
+                entity,
+            );
         }
     }
 
-    pub(crate) fn borrow_mut(&self, component: &TypeId) -> Option<AtomicRefMut<ComponentStorage>> {
-        match self.grouped.borrow_mut(component) {
-            storage @ Some(_) => storage,
-            None => self.ungrouped.borrow_mut(component),
+    pub fn group_all_components(&mut self, entity: Entity) {
+        for i in 0..self.families.len() {
+            unsafe { self.group_components(i, entity) }
         }
     }
 
-    pub(crate) fn borrow_with_info(
+    pub fn ungroup_all_components(&mut self, entity: Entity) {
+        for i in 0..self.families.len() {
+            unsafe {
+                self.ungroup_components(i, entity);
+            }
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.storages.clear();
+        self.component_info.clear();
+        self.group_info.clear();
+        self.groups.clear();
+        self.families.clear();
+    }
+
+    pub fn borrow_with_info(
         &self,
-        component: &TypeId,
+        type_id: &TypeId,
     ) -> Option<(AtomicRef<ComponentStorage>, Option<GroupInfo>)> {
-        match self.grouped.borrow_with_info(component) {
-            Some((storage, info)) => Some((storage, Some(info))),
-            None => self
-                .ungrouped
-                .borrow(component)
-                .map(|storage| (storage, None)),
-        }
+        let info = self.component_info.get(type_id)?;
+
+        Some((
+            self.storages[info.storage_index].borrow(),
+            self.group_info.get(info.group_info_index).map(|info| {
+                GroupInfo::new(
+                    &self.groups[self.families[info.family_index].clone()],
+                    info.group_offset,
+                    info.storage_mask,
+                )
+            }),
+        ))
     }
 
-    pub(crate) fn borrow_with_info_mut(
+    pub fn borrow_with_info_mut(
         &self,
-        component: &TypeId,
+        type_id: &TypeId,
     ) -> Option<(AtomicRefMut<ComponentStorage>, Option<GroupInfo>)> {
-        match self.grouped.borrow_with_info_mut(component) {
-            Some((storage, info)) => Some((storage, Some(info))),
-            None => self
-                .ungrouped
-                .borrow_mut(component)
-                .map(|storage| (storage, None)),
+        let info = self.component_info.get(type_id)?;
+
+        Some((
+            self.storages[info.storage_index].borrow_mut(),
+            self.group_info.get(info.group_info_index).map(|info| {
+                GroupInfo::new(
+                    &self.groups[self.families[info.family_index].clone()],
+                    info.group_offset,
+                    info.storage_mask,
+                )
+            }),
+        ))
+    }
+
+    pub fn get_mut(&mut self, type_id: &TypeId) -> Option<&mut ComponentStorage> {
+        let info = self.component_info.get(type_id)?;
+
+        unsafe {
+            Some(
+                self.storages
+                    .get_unchecked_mut(info.storage_index)
+                    .get_mut(),
+            )
         }
     }
 
-    pub(crate) fn borrow_with_familiy_mut(
-        &self,
-        component: &TypeId,
-    ) -> Option<(AtomicRefMut<ComponentStorage>, Option<usize>)> {
-        match self.grouped.borrow_with_familiy_mut(component) {
-            Some((storage, index)) => Some((storage, Some(index))),
-            None => self
-                .ungrouped
-                .borrow_mut(component)
-                .map(|storage| (storage, None)),
+    pub fn get_with_family_mask_mut(
+        &mut self,
+        type_id: &TypeId,
+    ) -> Option<(&mut ComponentStorage, u16)> {
+        let info = self.component_info.get(type_id)?;
+
+        unsafe {
+            Some((
+                self.storages
+                    .get_unchecked_mut(info.storage_index)
+                    .get_mut(),
+                info.family_mask,
+            ))
         }
     }
 
-    pub(crate) fn iter_storages_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> + '_ {
-        self.grouped
-            .iter_storages_mut()
-            .chain(self.ungrouped.iter_storages_mut())
+    pub fn get_family_mask(&self, type_id: &TypeId) -> u16 {
+        self.component_info
+            .get(type_id)
+            .map(|info| info.family_mask)
+            .unwrap_or(0)
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> {
+        self.storages.iter_mut().map(AtomicRefCell::get_mut)
+    }
+}
+
+#[derive(Clone, Copy)]
+struct ComponentInfo {
+    storage_index: usize,
+    group_info_index: usize,
+    family_mask: u16,
+}
+
+#[derive(Clone, Copy)]
+struct ComponentGroupInfo {
+    family_index: usize,
+    group_offset: usize,
+    storage_mask: u16,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct Group {
+    begin: usize,
+    new_begin: usize,
+    end: usize,
+    len: usize,
+}
+
+impl Group {
+    pub fn storage_range(&self) -> Range<usize> {
+        self.begin..self.end
+    }
+
+    pub fn new_storage_range(&self) -> Range<usize> {
+        self.new_begin..self.end
+    }
+
+    pub fn include_mask(&self) -> GroupMask {
+        GroupMask::include(self.end - self.begin)
+    }
+
+    pub fn exclude_mask(&self) -> GroupMask {
+        GroupMask::exclude(self.new_begin - self.begin, self.end - self.begin)
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum GroupStatus {
+    MissingComponents,
+    Ungrouped,
+    Grouped,
+}
+
+fn get_group_status(
+    storages: &mut [AtomicRefCell<ComponentStorage>],
+    group_len: usize,
+    entity: Entity,
+) -> GroupStatus {
+    match storages.split_first_mut() {
+        Some((first, others)) => {
+            let status = match first.get_mut().get_index(entity) {
+                Some(index) => {
+                    if (index as usize) < group_len {
+                        GroupStatus::Grouped
+                    } else {
+                        GroupStatus::Ungrouped
+                    }
+                }
+                None => return GroupStatus::MissingComponents,
+            };
+
+            if others
+                .iter_mut()
+                .all(|storage| storage.get_mut().contains(entity))
+            {
+                status
+            } else {
+                GroupStatus::MissingComponents
+            }
+        }
+        None => GroupStatus::Grouped,
+    }
+}
+
+unsafe fn group_components(
+    storages: &mut [AtomicRefCell<ComponentStorage>],
+    group_len: &mut usize,
+    entity: Entity,
+) {
+    for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
+        let index = match storage.get_index(entity) {
+            Some(index) => index,
+            None => unreachable_unchecked(),
+        };
+
+        storage.swap(index, *group_len);
+    }
+
+    *group_len += 1;
+}
+
+unsafe fn ungroup_components(
+    storages: &mut [AtomicRefCell<ComponentStorage>],
+    group_len: &mut usize,
+    entity: Entity,
+) {
+    if *group_len > 0 {
+        let last_index = *group_len - 1;
+
+        for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
+            let index = match storage.get_index(entity) {
+                Some(index) => index,
+                None => unreachable_unchecked(),
+            };
+
+            storage.swap(index, last_index);
+        }
+
+        *group_len -= 1;
     }
 }

@@ -1,25 +1,26 @@
-use crate::group::{Group, GroupMask};
+use crate::components::Group;
+use crate::group::GroupMask;
 use std::ops::Range;
 use std::ptr;
 
 /// Tracks the group to which a component storage belongs.
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy)]
 pub struct GroupInfo<'a> {
     group_family: &'a [Group],
-    group_index: usize,
-    storage_index: usize,
+    group_offset: usize,
+    storage_mask: u16,
 }
 
 impl<'a> GroupInfo<'a> {
     pub(crate) const fn new(
         group_family: &'a [Group],
-        group_index: usize,
-        storage_index: usize,
+        group_offset: usize,
+        storage_mask: u16,
     ) -> Self {
         Self {
             group_family,
-            group_index,
-            storage_index,
+            group_offset,
+            storage_mask,
         }
     }
 }
@@ -28,7 +29,7 @@ impl<'a> GroupInfo<'a> {
 #[derive(Copy, Clone, Default)]
 pub struct CombinedGroupInfo<'a> {
     group_family: Option<&'a [Group]>,
-    max_group_index: usize,
+    max_group_offset: usize,
     group_mask: u16,
 }
 
@@ -38,14 +39,14 @@ impl<'a> CombinedGroupInfo<'a> {
             Some(group_family) => {
                 ptr::eq(group_family, group_info.group_family).then(|| CombinedGroupInfo {
                     group_family: Some(group_family),
-                    max_group_index: self.max_group_index.max(group_info.group_index),
-                    group_mask: self.group_mask | (1 << group_info.storage_index),
+                    max_group_offset: self.max_group_offset.max(group_info.group_offset),
+                    group_mask: self.group_mask | group_info.storage_mask,
                 })
             }
             None => Some(CombinedGroupInfo {
                 group_family: Some(group_info.group_family),
-                max_group_index: group_info.group_index,
-                group_mask: 1 << group_info.storage_index,
+                max_group_offset: group_info.group_offset,
+                group_mask: group_info.storage_mask,
             }),
         }
     }
@@ -83,18 +84,28 @@ pub fn group_range(
         exclude.group_family,
     ])?;
 
-    let max_group_index = base
-        .max_group_index
-        .max(include.max_group_index)
-        .max(exclude.max_group_index);
+    let max_group_offset = base
+        .max_group_offset
+        .max(include.max_group_offset)
+        .max(exclude.max_group_offset);
 
     let group_mask = GroupMask::new(base.group_mask | include.group_mask, exclude.group_mask);
-    let group = group_family[max_group_index as usize];
+    let group = &group_family[max_group_offset as usize];
+
+    println!(
+        "G1: {:#018b} {:#018b}",
+        group_mask.include, group_mask.exclude
+    );
+    println!(
+        "G2: {:#018b} {:#018b}",
+        group.exclude_mask().include,
+        group.exclude_mask().exclude
+    );
 
     if group_mask == group.include_mask() {
         Some(0..group.len())
     } else if group_mask == group.exclude_mask() {
-        let prev_group = group_family[(max_group_index - 1) as usize];
+        let prev_group = &group_family[(max_group_offset - 1) as usize];
         Some(group.len()..prev_group.len())
     } else {
         None
