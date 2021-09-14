@@ -92,16 +92,6 @@ pub fn group_range(
     let group_mask = GroupMask::new(base.group_mask | include.group_mask, exclude.group_mask);
     let group = &group_family[max_group_offset as usize];
 
-    println!(
-        "G1: {:#018b} {:#018b}",
-        group_mask.include, group_mask.exclude
-    );
-    println!(
-        "G2: {:#018b} {:#018b}",
-        group.exclude_mask().include,
-        group.exclude_mask().exclude
-    );
-
     if group_mask == group.include_mask() {
         Some(0..group.len())
     } else if group_mask == group.exclude_mask() {
