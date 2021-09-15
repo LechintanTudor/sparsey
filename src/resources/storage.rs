@@ -1,9 +1,8 @@
 use crate::resources::Resource;
-use crate::utils::ChangeTicks;
+use crate::utils::{ChangeTicks, UnsafeUnwrap};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
-use std::hint::unreachable_unchecked;
 
 pub struct ResourceCell {
     resource: Box<dyn Resource>,
@@ -39,22 +38,16 @@ impl ResourceStorage {
 
         self.resources
             .insert(TypeId::of::<T>(), AtomicRefCell::new(cell))
-            .map(|c| match c.into_inner().resource.downcast() {
-                Ok(resource) => *resource,
-                Err(_) => unsafe { unreachable_unchecked() },
-            })
+            .map(|c| unsafe { *c.into_inner().resource.downcast().unsafe_unwrap() })
     }
 
     pub fn remove<T>(&mut self) -> Option<T>
     where
         T: Resource,
     {
-        self.resources.remove(&TypeId::of::<T>()).map(|c| {
-            match c.into_inner().resource.downcast() {
-                Ok(resource) => *resource,
-                Err(_) => unsafe { unreachable_unchecked() },
-            }
-        })
+        self.resources
+            .remove(&TypeId::of::<T>())
+            .map(|c| unsafe { *c.into_inner().resource.downcast().unsafe_unwrap() })
     }
 
     pub fn contains(&self, resource_type_id: &TypeId) -> bool {

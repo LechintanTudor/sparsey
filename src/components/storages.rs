@@ -2,11 +2,11 @@ use crate::components::Component;
 use crate::group::{GroupInfo, GroupMask};
 use crate::layout::Layout;
 use crate::storage::{ComponentStorage, Entity};
+use crate::utils::UnsafeUnwrap;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::collections::hash_map::Entry;
-use std::hint::unreachable_unchecked;
 use std::mem;
 use std::ops::Range;
 
@@ -410,11 +410,7 @@ unsafe fn group_components(
     entity: Entity,
 ) {
     for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
-        let index = match storage.get_index(entity) {
-            Some(index) => index,
-            None => unreachable_unchecked(),
-        };
-
+        let index = storage.get_index(entity).unsafe_unwrap();
         storage.swap(index, *group_len);
     }
 
@@ -430,11 +426,7 @@ unsafe fn ungroup_components(
         let last_index = *group_len - 1;
 
         for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
-            let index = match storage.get_index(entity) {
-                Some(index) => index,
-                None => unreachable_unchecked(),
-            };
-
+            let index = storage.get_index(entity).unsafe_unwrap();
             storage.swap(index, last_index);
         }
 

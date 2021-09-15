@@ -1,6 +1,5 @@
 use crate::resources::{Resource, ResourceCell};
-use crate::utils::Ticks;
-use std::hint::unreachable_unchecked;
+use crate::utils::{Ticks, UnsafeUnwrap};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -35,10 +34,7 @@ where
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        match self.cell.resource().downcast_ref::<T>() {
-            Some(resource) => resource,
-            None => unsafe { unreachable_unchecked() },
-        }
+        unsafe { self.cell.resource().downcast_ref::<T>().unsafe_unwrap() }
     }
 }
 
@@ -50,10 +46,7 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.cell.ticks.tick_mutated = self.world_tick;
 
-        match self.cell.resource_mut().downcast_mut::<T>() {
-            Some(resource) => resource,
-            None => unsafe { unreachable_unchecked() },
-        }
+        unsafe { self.cell.resource_mut().downcast_mut::<T>().unsafe_unwrap() }
     }
 }
 

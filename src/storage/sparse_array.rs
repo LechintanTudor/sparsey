@@ -1,5 +1,5 @@
 use crate::storage::{Entity, IndexEntity};
-use std::hint::unreachable_unchecked;
+use crate::utils::UnsafeUnwrap;
 use std::{iter, ptr};
 
 const PAGE_SIZE: usize = 32;
@@ -29,10 +29,11 @@ impl SparseArray {
     /// Returns the `IndexEntity` slot at `index` without checking if the
     /// `index` it is valid.
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<IndexEntity> {
-        match self.pages.get_unchecked_mut(index / PAGE_SIZE) {
-            Some(page) => page.get_unchecked_mut(index % PAGE_SIZE),
-            None => unreachable_unchecked(),
-        }
+        self.pages
+            .get_unchecked_mut(index / PAGE_SIZE)
+            .as_mut()
+            .unsafe_unwrap()
+            .get_unchecked_mut(index % PAGE_SIZE)
     }
 
     /// Returns the `IndexEntity` slot at `index`. May allocate memory if the
@@ -55,10 +56,11 @@ impl SparseArray {
         }
 
         unsafe {
-            match self.pages.get_unchecked_mut(page_index) {
-                Some(page) => page.get_unchecked_mut(index % PAGE_SIZE),
-                None => unreachable_unchecked(),
-            }
+            self.pages
+                .get_unchecked_mut(page_index)
+                .as_mut()
+                .unsafe_unwrap()
+                .get_unchecked_mut(index % PAGE_SIZE)
         }
     }
 

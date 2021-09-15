@@ -1,10 +1,10 @@
 use crate::query::{IntoQueryParts, Passthrough, QueryBase, SliceQueryElement};
 use crate::storage::Entity;
+use crate::utils::UnsafeUnwrap;
 use crate::{group, QueryModifier};
 use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use std::hint::unreachable_unchecked;
 use std::ops::Range;
 
 /// Trait used for slicing queries with grouped component storages.
@@ -44,11 +44,11 @@ where
             if !Q::Base::IS_UNIT {
                 Ok(base.slice_entities(range))
             } else {
-                match include.split().0 {
-                    Some(data) => Ok(data.entities.get_unchecked(range)),
-                    // Returned earlier because storages aren't grouped
-                    None => unreachable_unchecked(),
-                }
+                Ok(include
+                    .split()
+                    .0
+                    .map(|data| data.entities.get_unchecked(range))
+                    .unsafe_unwrap())
             }
         }
     }
@@ -74,14 +74,16 @@ where
             if !Q::Base::IS_UNIT {
                 Ok(base.slice_entities_components(range))
             } else {
-                match include.split().0 {
-                    Some(data) => Ok((
-                        data.entities.get_unchecked(range.clone()),
-                        base.slice_components(range),
-                    )),
-                    // Unreacable because we checked earlier if the storages are grouped
-                    None => unreachable_unchecked(),
-                }
+                Ok(include
+                    .split()
+                    .0
+                    .map(|data| {
+                        (
+                            data.entities.get_unchecked(range.clone()),
+                            base.slice_components(range),
+                        )
+                    })
+                    .unsafe_unwrap())
             }
         }
     }
