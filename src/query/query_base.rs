@@ -8,6 +8,8 @@ use crate::utils::Ticks;
 
 /// Trait implemented by the base part of a query. Used for fetching components.
 pub unsafe trait QueryBase<'a> {
+    const ELEMENT_COUNT: usize;
+
     type Item;
     type SparseSplit;
     type DenseSplit;
@@ -86,11 +88,13 @@ where
 }
 
 macro_rules! impl_query_base {
-    ($(($elem:ident, $idx:tt)),*) => {
+    ($count:tt; $(($elem:ident, $idx:tt)),*) => {
         unsafe impl<'a, $($elem),*> QueryBase<'a> for ($($elem,)*)
         where
             $($elem: QueryElement<'a>,)*
         {
+            const ELEMENT_COUNT: usize = $count;
+
             type Item = ($($elem::Item,)*);
             type SparseSplit = ($(SparseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)*);
             type DenseSplit = ($(DenseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)*);
@@ -149,21 +153,21 @@ macro_rules! impl_query_base {
 mod impls {
 	use super::*;
 
-    impl_query_base!();
-	impl_query_base!((A, 0));
-    impl_query_base!((A, 0), (B, 1));
-    impl_query_base!((A, 0), (B, 1), (C, 2));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
-    impl_query_base!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
+    impl_query_base!(0;);
+	impl_query_base!(1; (A, 0));
+    impl_query_base!(2; (A, 0), (B, 1));
+    impl_query_base!(3; (A, 0), (B, 1), (C, 2));
+    impl_query_base!(4; (A, 0), (B, 1), (C, 2), (D, 3));
+    impl_query_base!(5; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_query_base!(6; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_query_base!(7; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_query_base!(8; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_query_base!(9; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_query_base!(10; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+    impl_query_base!(11; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+    impl_query_base!(12; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
+    impl_query_base!(13; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
+    impl_query_base!(14; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
+    impl_query_base!(15; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
+    impl_query_base!(16; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
 }

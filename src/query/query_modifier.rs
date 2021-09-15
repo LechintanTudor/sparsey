@@ -4,6 +4,8 @@ use crate::storage::{Entity, SparseArrayView};
 
 /// Trait implemented by `QueryModifier`s.
 pub unsafe trait QueryModifier<'a> {
+    const ELEMENT_COUNT: usize;
+
     type Split;
 
     fn includes(&self, entity: Entity) -> bool;
@@ -23,6 +25,8 @@ unsafe impl<'a, E> QueryModifier<'a> for E
 where
     E: UnfilteredImmutableQueryElement<'a>,
 {
+    const ELEMENT_COUNT: usize = 1;
+
     type Split = SparseArrayView<'a>;
 
     fn includes(&self, entity: Entity) -> bool {
@@ -64,11 +68,13 @@ macro_rules! sparse_array_view {
 }
 
 macro_rules! impl_query_modifier {
-    ($(($elem:ident, $idx:tt)),*) => {
+    ($count:tt; $(($elem:ident, $idx:tt)),*) => {
         unsafe impl<'a, $($elem),*> QueryModifier<'a> for ($($elem,)*)
         where
             $($elem: UnfilteredImmutableQueryElement<'a>,)*
         {
+            const ELEMENT_COUNT: usize = $count;
+
             type Split = ($(sparse_array_view!($elem),)*);
 
             #[allow(unused_variables)]
@@ -107,21 +113,21 @@ macro_rules! impl_query_modifier {
 mod impls {
 	use super::*;
 
-    impl_query_modifier!();
-	impl_query_modifier!((A, 0));
-    impl_query_modifier!((A, 0), (B, 1));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
+    impl_query_modifier!(0; );
+	impl_query_modifier!(1; (A, 0));
+    impl_query_modifier!(2; (A, 0), (B, 1));
+    impl_query_modifier!(3; (A, 0), (B, 1), (C, 2));
+    impl_query_modifier!(4; (A, 0), (B, 1), (C, 2), (D, 3));
+    impl_query_modifier!(5; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_query_modifier!(6; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_query_modifier!(7; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_query_modifier!(8; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_query_modifier!(9; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_query_modifier!(10; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+    impl_query_modifier!(11; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+    impl_query_modifier!(12; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
+    impl_query_modifier!(13; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
+    impl_query_modifier!(14; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
+    impl_query_modifier!(15; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
+    impl_query_modifier!(16; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
 }
