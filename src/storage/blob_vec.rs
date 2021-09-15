@@ -2,6 +2,8 @@ use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr;
 use std::ptr::NonNull;
 
+const MIN_NON_ZERO_CAP: usize = 4;
+
 /// Container for blobs of data with a given [`Layout`] and destructor.
 pub(crate) struct BlobVec {
     layout: Layout,
@@ -49,7 +51,7 @@ impl BlobVec {
     /// This will cause a reallocation if the vector is full.
     pub unsafe fn push(&mut self, item: *const u8) {
         if self.len == self.cap {
-            self.grow();
+            self.grow_amortized();
         }
 
         ptr::copy(item, self.get_unchecked(self.len), self.layout.size());
@@ -159,19 +161,16 @@ impl BlobVec {
     }
 
     /// Returns the number of items in the vector.
-    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.len
     }
 
     /// Returns `true` if the vector contains no items.
-    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
     /// Returns the number of items the vector can hold without reallocating.
-    #[allow(dead_code)]
     pub fn capacity(&self) -> usize {
         self.cap
     }
@@ -191,12 +190,16 @@ impl BlobVec {
 
     /// Copies all elements to a larger buffer, increasing the capacity of the
     /// vector.
-    fn grow(&mut self) {
+    fn grow_amortized(&mut self) {
         assert!(self.layout.size() != 0, "BlobVec is overfull");
 
         unsafe {
             let (new_ptr, new_layout, new_cap) = if self.cap == 0 {
-                (alloc(self.layout), self.layout, 1)
+                let new_cap = MIN_NON_ZERO_CAP;
+                let new_layout =
+                    repeat_layout(&self.layout, new_cap).expect("Layout should be valid");
+
+                (alloc(new_layout), new_layout, new_cap)
             } else {
                 let new_cap = 2 * self.cap;
                 let new_layout =

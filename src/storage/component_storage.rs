@@ -225,12 +225,18 @@ impl ComponentStorage {
 
     /// Returns the number of components in the storage.
     pub fn len(&self) -> usize {
-        self.entities.len()
+        self.components.len()
     }
 
     /// Returns `true` if the storage is empty.
     pub fn is_empty(&self) -> bool {
-        self.entities.is_empty()
+        self.components.is_empty()
+    }
+
+    /// Returns the number of components that can be stored without
+    /// reallocating.
+    pub fn capacity(&self) -> usize {
+        self.components.capacity()
     }
 
     /// Returns a slice containing all the entities in the storage.
