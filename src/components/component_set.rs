@@ -1,7 +1,8 @@
-use crate::components::{Component, ComponentStorages};
+use crate::components::{Component, ComponentStorages, FamilyMask};
 use crate::group::iter_group_family_indexes;
-use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
+use crate::storage::{ComponentStorage, Entity, EntityStorage, TypedComponentStorage};
 use crate::utils::{panic_missing_comp, ChangeTicks};
+use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 
 /// Trait used to insert and remove components from the `World`.
@@ -16,6 +17,15 @@ where
         components: Self,
         ticks: ChangeTicks,
     );
+
+    /// Creates new entities with components produced by `components_iter`.
+    unsafe fn extend<'a, I>(
+        storages: &mut ComponentStorages,
+        entities: &mut EntityStorage,
+        components_iter: I,
+        ticks: ChangeTicks,
+    ) where
+        I: IntoIterator<Item = Self>;
 
     /// Removes the components from the storages and returns them if
     /// all of them were successfully removed.
@@ -51,6 +61,44 @@ macro_rules! impl_component_set {
 
                 for i in iter_group_family_indexes(family_mask) {
                     storages.group_components(i, entity);
+                }
+            }
+
+            #[allow(unused_mut)]
+            #[allow(unused_variables)]
+            unsafe fn extend<It>(
+                storages: &mut ComponentStorages,
+                entities: &mut EntityStorage,
+                components_iter: It,
+                ticks: ChangeTicks,
+            )
+            where
+                It: IntoIterator<Item = Self>
+            {
+                let initial_entity_count = entities.as_ref().len();
+                let mut family_mask = 0_u16;
+
+                {
+                    let mut borrowed_storages = (
+                        $({
+                            let (storage, mask) = borrow_with_family_mask_mut::<$comp>(storages);
+                            family_mask |= mask;
+                            storage
+                        },)*
+                    );
+
+                    components_iter.into_iter().for_each(|components| {
+                        let entity = entities.create();
+                        $(borrowed_storages.$idx.insert(entity, components.$idx, ticks);)*
+                    });
+                }
+
+                let new_entities = &entities.as_ref()[initial_entity_count..];
+
+                for i in iter_group_family_indexes(family_mask) {
+                    for &entity in new_entities {
+                        storages.group_components(i, entity)
+                    }
                 }
             }
 
@@ -96,12 +144,27 @@ where
 
 fn get_with_family_mask_mut<T>(
     storages: &mut ComponentStorages,
-) -> (TypedComponentStorage<T, &mut ComponentStorage>, u16)
+) -> (TypedComponentStorage<T, &mut ComponentStorage>, FamilyMask)
 where
     T: Component,
 {
     storages
         .get_with_family_mask_mut(&TypeId::of::<T>())
+        .map(|(storage, mask)| unsafe { (TypedComponentStorage::new(storage), mask) })
+        .unwrap_or_else(|| panic_missing_comp::<T>())
+}
+
+fn borrow_with_family_mask_mut<T>(
+    storages: &ComponentStorages,
+) -> (
+    TypedComponentStorage<T, AtomicRefMut<ComponentStorage>>,
+    FamilyMask,
+)
+where
+    T: Component,
+{
+    storages
+        .borrow_with_family_mask_mut(&TypeId::of::<T>())
         .map(|(storage, mask)| unsafe { (TypedComponentStorage::new(storage), mask) })
         .unwrap_or_else(|| panic_missing_comp::<T>())
 }

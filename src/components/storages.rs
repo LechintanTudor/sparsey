@@ -10,6 +10,8 @@ use std::hint::unreachable_unchecked;
 use std::mem;
 use std::ops::Range;
 
+pub type FamilyMask = u16;
+
 #[derive(Default)]
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
@@ -234,36 +236,50 @@ impl ComponentStorages {
         &self,
         type_id: &TypeId,
     ) -> Option<(AtomicRef<ComponentStorage>, Option<GroupInfo>)> {
-        let info = self.component_info.get(type_id)?;
-
-        Some((
-            self.storages[info.storage_index].borrow(),
-            self.group_info.get(info.group_info_index).map(|info| {
-                GroupInfo::new(
-                    &self.groups[self.families[info.family_index].clone()],
-                    info.group_offset,
-                    info.storage_mask,
-                )
-            }),
-        ))
+        self.component_info.get(type_id).map(|info| unsafe {
+            (
+                self.storages.get_unchecked(info.storage_index).borrow(),
+                self.group_info.get(info.group_info_index).map(|info| {
+                    GroupInfo::new(
+                        self.groups
+                            .get_unchecked(self.families.get_unchecked(info.family_index).clone()),
+                        info.group_offset,
+                        info.storage_mask,
+                    )
+                }),
+            )
+        })
     }
 
     pub fn borrow_with_info_mut(
         &self,
         type_id: &TypeId,
     ) -> Option<(AtomicRefMut<ComponentStorage>, Option<GroupInfo>)> {
-        let info = self.component_info.get(type_id)?;
+        self.component_info.get(type_id).map(|info| unsafe {
+            (
+                self.storages.get_unchecked(info.storage_index).borrow_mut(),
+                self.group_info.get(info.group_info_index).map(|info| {
+                    GroupInfo::new(
+                        self.groups
+                            .get_unchecked(self.families.get_unchecked(info.family_index).clone()),
+                        info.group_offset,
+                        info.storage_mask,
+                    )
+                }),
+            )
+        })
+    }
 
-        Some((
-            self.storages[info.storage_index].borrow_mut(),
-            self.group_info.get(info.group_info_index).map(|info| {
-                GroupInfo::new(
-                    &self.groups[self.families[info.family_index].clone()],
-                    info.group_offset,
-                    info.storage_mask,
-                )
-            }),
-        ))
+    pub fn borrow_with_family_mask_mut(
+        &self,
+        type_id: &TypeId,
+    ) -> Option<(AtomicRefMut<ComponentStorage>, FamilyMask)> {
+        self.component_info.get(type_id).map(|info| unsafe {
+            (
+                self.storages.get_unchecked(info.storage_index).borrow_mut(),
+                info.family_mask,
+            )
+        })
     }
 
     pub fn get_mut(&mut self, type_id: &TypeId) -> Option<&mut ComponentStorage> {
@@ -281,7 +297,7 @@ impl ComponentStorages {
     pub fn get_with_family_mask_mut(
         &mut self,
         type_id: &TypeId,
-    ) -> Option<(&mut ComponentStorage, u16)> {
+    ) -> Option<(&mut ComponentStorage, FamilyMask)> {
         let info = self.component_info.get(type_id)?;
 
         unsafe {
@@ -294,7 +310,7 @@ impl ComponentStorages {
         }
     }
 
-    pub fn get_family_mask(&self, type_id: &TypeId) -> u16 {
+    pub fn get_family_mask(&self, type_id: &TypeId) -> FamilyMask {
         self.component_info
             .get(type_id)
             .map(|info| info.family_mask)

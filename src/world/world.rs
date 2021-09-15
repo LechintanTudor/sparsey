@@ -121,16 +121,15 @@ impl World {
         I: IntoIterator<Item = C>,
     {
         let initial_entity_count = self.entities.as_ref().len();
-        let entities = &mut self.entities;
-        let storages = &mut self.storages;
 
-        components_iter.into_iter().for_each(|components| {
-            let entity = entities.create();
-
-            unsafe {
-                C::insert(storages, entity, components, ticks);
-            }
-        });
+        unsafe {
+            C::extend(
+                &mut self.storages,
+                &mut self.entities,
+                components_iter,
+                ticks,
+            );
+        }
 
         &self.entities.as_ref()[initial_entity_count..]
     }

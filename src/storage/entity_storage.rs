@@ -2,7 +2,7 @@ use crate::storage::{Entity, IndexEntity, SparseArray};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 #[derive(Default)]
-pub(crate) struct EntityStorage {
+pub struct EntityStorage {
     storage: EntitySparseSet,
     allocator: EntityAllocator,
 }
