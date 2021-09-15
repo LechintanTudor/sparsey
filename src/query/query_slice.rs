@@ -41,7 +41,7 @@ where
         let range = group_range(&base, &include, &exclude)?;
 
         unsafe {
-            if !Q::Base::IS_UNIT {
+            if <Q::Base as QueryBase>::ELEMENT_COUNT != 0 {
                 Ok(base.slice_entities(range))
             } else {
                 Ok(include
@@ -71,7 +71,7 @@ where
         let range = group_range(&base, &include, &exclude)?;
 
         unsafe {
-            if !Q::Base::IS_UNIT {
+            if <Q::Base as QueryBase>::ELEMENT_COUNT != 0 {
                 Ok(base.slice_entities_components(range))
             } else {
                 Ok(include
@@ -127,8 +127,6 @@ pub unsafe trait SliceQueryBase<'a>
 where
     Self: QueryBase<'a>,
 {
-    const IS_UNIT: bool;
-
     type Slices;
 
     unsafe fn slice_components(self, range: Range<usize>) -> Self::Slices;
@@ -139,8 +137,6 @@ where
 }
 
 unsafe impl<'a> SliceQueryBase<'a> for () {
-    const IS_UNIT: bool = true;
-
     type Slices = ();
 
     unsafe fn slice_components(self, _: Range<usize>) -> Self::Slices {
@@ -169,8 +165,6 @@ macro_rules! impl_slice_query_base {
         where
             $($elem: SliceQueryElement<'a>,)+
         {
-            const IS_UNIT: bool = false;
-
             type Slices = ($(&'a [$elem::Component],)+);
 
             unsafe fn slice_components(self, range: Range<usize>) -> Self::Slices {
