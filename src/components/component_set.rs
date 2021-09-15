@@ -82,7 +82,7 @@ macro_rules! impl_component_set {
                     let mut borrowed_storages = (
                         $({
                             let (storage, mask) = borrow_with_family_mask_mut::<$comp>(storages);
-                            family_mask = family_mask | mask;
+                            family_mask |= mask;
                             storage
                         },)*
                     );
