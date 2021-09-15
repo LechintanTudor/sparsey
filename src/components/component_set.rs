@@ -19,7 +19,7 @@ where
     );
 
     /// Creates new entities with components produced by `components_iter`.
-    unsafe fn extend<'a, I>(
+    unsafe fn extend<I>(
         storages: &mut ComponentStorages,
         entities: &mut EntityStorage,
         components_iter: I,
@@ -82,7 +82,7 @@ macro_rules! impl_component_set {
                     let mut borrowed_storages = (
                         $({
                             let (storage, mask) = borrow_with_family_mask_mut::<$comp>(storages);
-                            family_mask |= mask;
+                            family_mask = family_mask | mask;
                             storage
                         },)*
                     );

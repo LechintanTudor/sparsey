@@ -125,11 +125,11 @@ impl SparseArrayView<'_> {
 }
 
 fn page_index(entity: Entity) -> usize {
-    entity.index() as usize / PAGE_SIZE
+    entity.index() / PAGE_SIZE
 }
 
 fn local_index(entity: Entity) -> usize {
-    entity.index() as usize % PAGE_SIZE
+    entity.index() % PAGE_SIZE
 }
 
 fn uninit_page() -> EntityPage {
