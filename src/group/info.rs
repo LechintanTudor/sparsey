@@ -90,12 +90,12 @@ pub fn group_range(
         .max(exclude.max_group_offset);
 
     let group_mask = GroupMask::new(base.group_mask | include.group_mask, exclude.group_mask);
-    let group = &group_family[max_group_offset as usize];
+    let group = &group_family[max_group_offset];
 
     if group_mask == group.include_mask() {
         Some(0..group.len())
     } else if group_mask == group.exclude_mask() {
-        let prev_group = &group_family[(max_group_offset - 1) as usize];
+        let prev_group = &group_family[max_group_offset - 1];
         Some(group.len()..prev_group.len())
     } else {
         None

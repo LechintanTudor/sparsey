@@ -148,7 +148,7 @@ impl ComponentStorage {
     /// Returns the address of the component mapped to `entity`.
     pub fn get(&self, entity: Entity) -> *const u8 {
         match self.sparse.get_index(entity) {
-            Some(index) => unsafe { self.components.get_unchecked(index as usize) },
+            Some(index) => unsafe { self.components.get_unchecked(index) },
             None => ptr::null(),
         }
     }
@@ -156,20 +156,20 @@ impl ComponentStorage {
     /// Returns the address of the component mapped to `entity`.
     pub fn get_mut(&mut self, entity: Entity) -> *mut u8 {
         match self.sparse.get_index(entity) {
-            Some(index) => unsafe { self.components.get_unchecked(index as usize) },
+            Some(index) => unsafe { self.components.get_unchecked(index) },
             None => ptr::null_mut(),
         }
     }
 
     /// Returns the `ChangeTicks` of the component mapped to `entity`.
     pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
-        let index = self.sparse.get_index(entity)? as usize;
+        let index = self.sparse.get_index(entity)?;
         unsafe { Some(self.ticks.get_unchecked(index)) }
     }
 
     /// Returns the compnent and `ChangeTicks` mapped to `entity`.
     pub fn get_with_ticks(&self, entity: Entity) -> Option<(*const u8, &ChangeTicks)> {
-        let index = self.sparse.get_index(entity)? as usize;
+        let index = self.sparse.get_index(entity)?;
 
         unsafe {
             Some((
@@ -181,7 +181,7 @@ impl ComponentStorage {
 
     /// Returns the compnent and `ChangeTicks` mapped to `entity`.
     pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ChangeTicks)> {
-        let index = self.sparse.get_index(entity)? as usize;
+        let index = self.sparse.get_index(entity)?;
 
         unsafe {
             Some((

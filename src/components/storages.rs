@@ -388,7 +388,7 @@ fn get_group_status(
         Some((first, others)) => {
             let status = match first.get_mut().get_index(entity) {
                 Some(index) => {
-                    if (index as usize) < group_len {
+                    if index < group_len {
                         GroupStatus::Grouped
                     } else {
                         GroupStatus::Ungrouped
