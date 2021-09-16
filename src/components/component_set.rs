@@ -4,6 +4,7 @@ use crate::storage::{ComponentStorage, Entity, EntityStorage, TypedComponentStor
 use crate::utils::{panic_missing_comp, ChangeTicks};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
+use std::ops::Range;
 
 /// Trait used to insert and remove components from the `World`.
 pub unsafe trait ComponentSet
@@ -19,12 +20,14 @@ where
     );
 
     /// Creates new entities with components produced by `components_iter`.
+    /// Returns the range of newly created entities.
     unsafe fn extend<I>(
         storages: &mut ComponentStorages,
         entities: &mut EntityStorage,
         components_iter: I,
         ticks: ChangeTicks,
-    ) where
+    ) -> Range<usize>
+    where
         I: IntoIterator<Item = Self>;
 
     /// Removes the components from the storages and returns them if
@@ -71,7 +74,7 @@ macro_rules! impl_component_set {
                 entities: &mut EntityStorage,
                 components_iter: It,
                 ticks: ChangeTicks,
-            )
+            ) -> Range<usize>
             where
                 It: IntoIterator<Item = Self>
             {
@@ -93,13 +96,16 @@ macro_rules! impl_component_set {
                     });
                 }
 
-                let new_entities = &entities.as_ref()[initial_entity_count..];
+                let new_range = initial_entity_count..entities.len();
+                let new_entities = entities.as_ref().get_unchecked(new_range.clone());
 
                 for i in iter_group_family_indexes(family_mask) {
                     for &entity in new_entities {
                         storages.group_components(i, entity)
                     }
                 }
+
+                new_range
             }
 
             #[allow(unused_mut)]

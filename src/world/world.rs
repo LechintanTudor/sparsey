@@ -120,18 +120,16 @@ impl World {
         C: ComponentSet,
         I: IntoIterator<Item = C>,
     {
-        let initial_entity_count = self.entities.as_ref().len();
-
         unsafe {
-            C::extend(
+            let new_range = C::extend(
                 &mut self.storages,
                 &mut self.entities,
                 components_iter,
                 ticks,
             );
-        }
 
-        &self.entities.as_ref()[initial_entity_count..]
+            self.entities.as_ref().get_unchecked(new_range)
+        }
     }
 
     /// Removes `entity` and all of its `components` from the world.

@@ -1,6 +1,7 @@
 use crate::storage::{Entity, IndexEntity, SparseArray};
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
+/// Sparse set-based storage for entities.
 #[derive(Default)]
 pub struct EntityStorage {
     storage: EntitySparseSet,
@@ -8,6 +9,7 @@ pub struct EntityStorage {
 }
 
 impl EntityStorage {
+    /// Creates a new `Entity` and returns it.
     pub fn create(&mut self) -> Entity {
         self.maintain();
 
@@ -20,12 +22,15 @@ impl EntityStorage {
         entity
     }
 
+    /// Atomically creates a new `Entity` and returns it.
     pub fn create_atomic(&self) -> Entity {
         self.allocator
             .allocate_atomic()
             .expect("No entities left to allocate")
     }
 
+    /// Removes `entity` from the storage if it exits. Returns whether or not
+    /// there was anything to remove.
     pub fn destroy(&mut self, entity: Entity) -> bool {
         self.maintain();
 
@@ -37,19 +42,32 @@ impl EntityStorage {
         }
     }
 
+    /// Returns `true` if the storage contains `entity`.
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.storage.contains(entity)
+    }
+
+    /// Returns the number of entities in the storage.
+    pub fn len(&self) -> usize {
+        self.storage.len()
+    }
+
+    /// Returns `true` if the storage is empty.
+    pub fn is_empty(&self) -> bool {
+        self.storage.is_empty()
+    }
+
+    /// Removes all entities from the storage.
     pub fn clear(&mut self) {
         self.storage.clear();
         self.allocator.clear();
     }
 
+    /// Adds the entities created atomically to the storage.
     pub fn maintain(&mut self) {
         for entity in self.allocator.maintain() {
             self.storage.insert(entity);
         }
-    }
-
-    pub fn contains(&self, entity: Entity) -> bool {
-        self.storage.contains(entity)
     }
 }
 
@@ -104,6 +122,14 @@ impl EntitySparseSet {
 
     fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
+    }
+
+    fn len(&self) -> usize {
+        self.entities.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.entities.is_empty()
     }
 
     fn clear(&mut self) {
