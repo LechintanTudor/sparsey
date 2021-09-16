@@ -227,12 +227,15 @@ impl ComponentStorages {
         }
     }
 
+    /// Removes all entities and components from the storages.
     pub fn clear(&mut self) {
-        self.storages.clear();
-        self.component_info.clear();
-        self.group_info.clear();
-        self.groups.clear();
-        self.families.clear();
+        for storage in self.storages.iter_mut() {
+            storage.get_mut().clear();
+        }
+
+        for group in self.groups.iter_mut() {
+            group.len = 0;
+        }
     }
 
     pub fn borrow_with_info(
