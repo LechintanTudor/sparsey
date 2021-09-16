@@ -290,7 +290,10 @@ impl World {
         self.tick.get()
     }
 
-    pub(crate) unsafe fn register_storage(&mut self, component: TypeId, storage: ComponentStorage) {
-        self.storages.register_storage(component, storage);
+    pub(crate) unsafe fn register_with<F>(&mut self, type_id: TypeId, storage_builder: F)
+    where
+        F: FnOnce() -> ComponentStorage,
+    {
+        self.storages.register_with(type_id, storage_builder);
     }
 }

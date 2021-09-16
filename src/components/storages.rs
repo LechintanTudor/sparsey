@@ -125,11 +125,14 @@ impl ComponentStorages {
         T: Component,
     {
         unsafe {
-            self.register_storage(TypeId::of::<T>(), ComponentStorage::new::<T>());
+            self.register_with(TypeId::of::<T>(), ComponentStorage::new::<T>);
         }
     }
 
-    pub unsafe fn register_storage(&mut self, type_id: TypeId, storage: ComponentStorage) {
+    pub unsafe fn register_with<F>(&mut self, type_id: TypeId, storage_builder: F)
+    where
+        F: FnOnce() -> ComponentStorage,
+    {
         if let Entry::Vacant(entry) = self.component_info.entry(type_id) {
             entry.insert(ComponentInfo {
                 storage_index: self.storages.len(),
@@ -137,7 +140,7 @@ impl ComponentStorages {
                 family_mask: 0,
             });
 
-            self.storages.push(AtomicRefCell::new(storage));
+            self.storages.push(AtomicRefCell::new(storage_builder()));
         }
     }
 
