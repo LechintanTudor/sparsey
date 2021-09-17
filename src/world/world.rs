@@ -75,6 +75,13 @@ impl World {
         self.storages.register::<T>()
     }
 
+    pub(crate) unsafe fn register_with<F>(&mut self, type_id: TypeId, storage_builder: F)
+    where
+        F: FnOnce() -> ComponentStorage,
+    {
+        self.storages.register_with(type_id, storage_builder);
+    }
+
     /// Check if a component type is registered.
     pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
         self.storages.is_registered(component_type_id)
@@ -99,7 +106,7 @@ impl World {
         entity
     }
 
-    /// Creates new `Entities` with the components produced by
+    /// Creates new entities with the components produced by
     /// `components_iter`. Returns the newly created entities as a slice.
     pub fn create_entities<C, I>(&mut self, components_iter: I) -> &[Entity]
     where
@@ -130,8 +137,8 @@ impl World {
         }
     }
 
-    /// Removes `entity` and all of its `components` from the world.
-    /// Returns `true` if `entity` existed in the world before the call.
+    /// Removes `entity` and all of its components from the `World`.
+    /// Returns `true` if the `Entity` was successfully removed.
     pub fn destroy_entity(&mut self, entity: Entity) -> bool {
         if !self.entities.destroy(entity) {
             return false;
@@ -196,7 +203,9 @@ impl World {
     where
         C: ComponentSet,
     {
-        unsafe { C::delete(&mut self.storages, entity) }
+        unsafe {
+            C::delete(&mut self.storages, entity);
+        }
     }
 
     /// Returns `true` if `entity` exists in the `World`.
@@ -204,11 +213,9 @@ impl World {
         self.entities.contains(entity)
     }
 
-    pub fn borrow<'a, T>(&'a self) -> T::Item
-    where
-        T: BorrowWorld<'a>,
-    {
-        T::borrow(self, self.tick.get() - 1)
+    /// Returns all the `entities` in the world as a slice.
+    pub fn entities(&self) -> &[Entity] {
+        self.entities.as_ref()
     }
 
     /// Removes all entities and components in the world.
@@ -223,7 +230,8 @@ impl World {
     where
         T: Resource,
     {
-        self.insert_resource_with_ticks(resource, ChangeTicks::just_added(self.tick.get()))
+        let ticks = ChangeTicks::just_added(self.tick.get());
+        self.insert_resource_with_ticks(resource, ticks)
     }
 
     /// Same as `insert_resource`, but the `ChangeTicks` are provided by the
@@ -244,7 +252,8 @@ impl World {
         self.resources.remove::<T>()
     }
 
-    /// Check if a resource exists.
+    /// Returns `true` if the `World` contains a resource with the given
+    /// `TypeId`.
     pub fn contains_resource(&self, resource_type_id: &TypeId) -> bool {
         self.resources.contains(resource_type_id)
     }
@@ -261,9 +270,22 @@ impl World {
         self.resources.clear();
     }
 
-    /// Advances the current world tick. Should be called after each game
+    /// Borrows a component view or resource view from the `World`.
+    pub fn borrow<'a, T>(&'a self) -> T::Item
+    where
+        T: BorrowWorld<'a>,
+    {
+        T::borrow(self, self.tick.get() - 1)
+    }
+
+    /// Sets the world tick used for change detection.
+    pub fn set_tick(&mut self, tick: NonZeroTicks) {
+        self.tick = tick;
+    }
+
+    /// Advances the world tick. Should be called after each game
     /// update for proper change detection.
-    pub fn increment_ticks(&mut self) -> Result<(), TickOverflow> {
+    pub fn increment_tick(&mut self) -> Result<(), TickOverflow> {
         if self.tick.get() != Ticks::MAX {
             self.tick = NonZeroTicks::new(self.tick.get() + 1).unwrap();
             Ok(())
@@ -273,25 +295,13 @@ impl World {
         }
     }
 
-    /// Returns all the `entities` in the world as a slice.
-    pub fn entities(&self) -> &[Entity] {
-        self.entities.as_ref()
+    /// Returns the world tick used for change detection.
+    pub fn tick(&self) -> Ticks {
+        self.tick.get()
     }
 
     /// Returns the `WorldId` which uniquely identifies this `World`.
     pub fn id(&self) -> WorldId {
         self.id
-    }
-
-    /// Returns the current world tick used for change detection.
-    pub fn tick(&self) -> Ticks {
-        self.tick.get()
-    }
-
-    pub(crate) unsafe fn register_with<F>(&mut self, type_id: TypeId, storage_builder: F)
-    where
-        F: FnOnce() -> ComponentStorage,
-    {
-        self.storages.register_with(type_id, storage_builder);
     }
 }
