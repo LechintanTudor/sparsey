@@ -132,7 +132,7 @@ macro_rules! impl_component_set {
                     storages.ungroup_components(i, entity);
                 }
 
-                $(get_mut::<$comp>(storages).remove(entity);)*
+                $(get_mut_untyped::<$comp>(storages).remove_and_drop(entity);)*
             }
         }
     };
@@ -145,6 +145,15 @@ where
     storages
         .get_mut(&TypeId::of::<T>())
         .map(|storage| unsafe { TypedComponentStorage::new(storage) })
+        .unwrap_or_else(|| panic_missing_comp::<T>())
+}
+
+fn get_mut_untyped<T>(storages: &mut ComponentStorages) -> &mut ComponentStorage
+where
+    T: Component,
+{
+    storages
+        .get_mut(&TypeId::of::<T>())
         .unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
