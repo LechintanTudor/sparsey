@@ -62,7 +62,7 @@ macro_rules! impl_component_set {
                 )*
 
                 for i in iter_group_family_indexes(family_mask) {
-                    storages.group_components(i, entity);
+                    storages.group_components(i, Some(&entity));
                 }
             }
 
@@ -99,7 +99,7 @@ macro_rules! impl_component_set {
 
                 for i in iter_group_family_indexes(family_mask) {
                     for &entity in new_entities {
-                        storages.group_components(i, entity)
+                        storages.group_components(i, Some(&entity))
                     }
                 }
 
@@ -113,7 +113,7 @@ macro_rules! impl_component_set {
                 $(family_mask |= storages.get_family_mask(&TypeId::of::<$comp>());)*
 
                 for i in iter_group_family_indexes(family_mask) {
-                    storages.ungroup_components(i, entity);
+                    storages.ungroup_components(i, Some(&entity));
                 }
 
                 let components = ($(get_mut::<$comp>(storages).remove(entity),)*);
@@ -127,7 +127,7 @@ macro_rules! impl_component_set {
                 $(family_mask |= storages.get_family_mask(&TypeId::of::<$comp>());)*
 
                 for i in iter_group_family_indexes(family_mask) {
-                    storages.ungroup_components(i, entity);
+                    storages.ungroup_components(i, Some(&entity));
                 }
 
                 $(get_mut_untyped::<$comp>(storages).remove_and_drop(entity);)*

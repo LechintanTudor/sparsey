@@ -60,10 +60,7 @@ impl World {
 
         unsafe {
             self.storages = ComponentStorages::new(layout, &mut storages);
-
-            for &entity in self.entities.as_ref() {
-                self.storages.group_all_components(entity);
-            }
+            self.storages.group_all_components(self.entities.as_ref());
         }
     }
 
@@ -144,13 +141,33 @@ impl World {
             return false;
         }
 
-        self.storages.ungroup_all_components(entity);
+        self.storages.ungroup_all_components(Some(&entity));
 
         for storage in self.storages.iter_mut() {
             storage.remove_and_drop(entity);
         }
 
         true
+    }
+
+    /// Removes all entities (and their components) produced by the iterator.
+    /// Returns the number of entities successfully removed.
+    pub fn destroy_entities<'a, E>(&mut self, entities: E) -> usize
+    where
+        E: IntoIterator<Item = &'a Entity> + Clone,
+    {
+        self.storages.ungroup_all_components(entities.clone());
+
+        for storage in self.storages.iter_mut() {
+            entities.clone().into_iter().for_each(|&entity| {
+                storage.remove_and_drop(entity);
+            });
+        }
+
+        entities
+            .into_iter()
+            .map(|&entity| self.entities.destroy(entity) as usize)
+            .sum()
     }
 
     /// Appends the given `components` to `entity` if `entity` exists in the
