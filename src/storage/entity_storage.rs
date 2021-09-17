@@ -1,4 +1,5 @@
 use crate::storage::{Entity, IndexEntity, SparseArray};
+use std::ops::Deref;
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 /// Sparse set-based storage for entities.
@@ -47,16 +48,6 @@ impl EntityStorage {
         self.storage.contains(entity)
     }
 
-    /// Returns the number of entities in the storage.
-    pub fn len(&self) -> usize {
-        self.storage.len()
-    }
-
-    /// Returns `true` if the storage is empty.
-    pub fn is_empty(&self) -> bool {
-        self.storage.is_empty()
-    }
-
     /// Removes all entities from the storage.
     pub fn clear(&mut self) {
         self.storage.clear();
@@ -68,6 +59,14 @@ impl EntityStorage {
         for entity in self.allocator.maintain() {
             self.storage.insert(entity);
         }
+    }
+}
+
+impl Deref for EntityStorage {
+    type Target = [Entity];
+
+    fn deref(&self) -> &Self::Target {
+        &self.storage.entities
     }
 }
 
@@ -122,14 +121,6 @@ impl EntitySparseSet {
 
     fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
-    }
-
-    fn len(&self) -> usize {
-        self.entities.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.entities.is_empty()
     }
 
     fn clear(&mut self) {

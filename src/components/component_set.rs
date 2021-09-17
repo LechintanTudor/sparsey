@@ -4,7 +4,6 @@ use crate::storage::{ComponentStorage, Entity, EntityStorage, TypedComponentStor
 use crate::utils::{panic_missing_comp, ChangeTicks};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
-use std::ops::Range;
 
 /// Trait used to insert and remove components from the `World`.
 pub unsafe trait ComponentSet
@@ -20,13 +19,13 @@ where
     );
 
     /// Creates new entities with components produced by `components_iter`.
-    /// Returns the range of newly created entities.
-    unsafe fn extend<I>(
+    /// Returns the newly created entities as a slice.
+    unsafe fn extend<'a, I>(
         storages: &mut ComponentStorages,
-        entities: &mut EntityStorage,
+        entities: &'a mut EntityStorage,
         components_iter: I,
         ticks: ChangeTicks,
-    ) -> Range<usize>
+    ) -> &'a [Entity]
     where
         I: IntoIterator<Item = Self>;
 
@@ -69,12 +68,12 @@ macro_rules! impl_component_set {
 
             #[allow(unused_mut)]
             #[allow(unused_variables)]
-            unsafe fn extend<It>(
+            unsafe fn extend<'a, It>(
                 storages: &mut ComponentStorages,
-                entities: &mut EntityStorage,
+                entities: &'a mut EntityStorage,
                 components_iter: It,
                 ticks: ChangeTicks,
-            ) -> Range<usize>
+            ) -> &'a [Entity]
             where
                 It: IntoIterator<Item = Self>
             {
@@ -96,8 +95,7 @@ macro_rules! impl_component_set {
                     });
                 }
 
-                let new_range = initial_entity_count..entities.len();
-                let new_entities = entities.as_ref().get_unchecked(new_range.clone());
+                let new_entities = entities.get_unchecked(initial_entity_count..);
 
                 for i in iter_group_family_indexes(family_mask) {
                     for &entity in new_entities {
@@ -105,7 +103,7 @@ macro_rules! impl_component_set {
                     }
                 }
 
-                new_range
+                new_entities
             }
 
             #[allow(unused_mut)]

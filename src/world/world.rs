@@ -121,14 +121,12 @@ impl World {
         I: IntoIterator<Item = C>,
     {
         unsafe {
-            let new_range = C::extend(
+            C::extend(
                 &mut self.storages,
                 &mut self.entities,
                 components_iter,
                 ticks,
-            );
-
-            self.entities.as_ref().get_unchecked(new_range)
+            )
         }
     }
 
