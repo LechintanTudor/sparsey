@@ -1,6 +1,7 @@
 pub use self::component_ref_mut::*;
 pub use self::component_view::*;
 pub use self::filter::*;
+pub use self::group::*;
 pub use self::iter::*;
 pub use self::iter_data::*;
 pub use self::iter_dense::*;
@@ -23,6 +24,7 @@ mod query_split;
 mod component_ref_mut;
 mod component_view;
 mod filter;
+mod group;
 mod iter;
 mod iter_data;
 mod iter_dense;

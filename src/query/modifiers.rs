@@ -24,11 +24,11 @@ where
     }
 
     /// Applies a filter to the query.
-    pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<B, I, (), F>
+    pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<B, I, Passthrough, F>
     where
         F: QueryFilter,
     {
-        IncludeExcludeFilter::new(self.base, self.include, (), filter)
+        IncludeExcludeFilter::new(self.base, self.include, Passthrough, filter)
     }
 }
 
@@ -39,11 +39,11 @@ where
 {
     type Base = B;
     type Include = I;
-    type Exclude = ();
+    type Exclude = Passthrough;
     type Filter = Passthrough;
 
     fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
-        (self.base, self.include, (), Passthrough)
+        (self.base, self.include, Passthrough, Passthrough)
     }
 }
 

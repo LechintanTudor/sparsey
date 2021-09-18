@@ -20,9 +20,9 @@ pub unsafe trait QueryBase<'a> {
 
     fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
 
-    fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit);
+    fn split_sparse(self) -> (IterData<'a>, Self::SparseSplit);
 
-    fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit);
+    fn split_dense(self) -> (IterData<'a>, Self::DenseSplit);
 
     unsafe fn get_from_sparse_split(
         split: &mut Self::SparseSplit,
@@ -51,18 +51,18 @@ where
         Include::new(self, include)
     }
 
-    fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
+    fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, Passthrough, E>
     where
         E: QueryModifier<'a>,
     {
-        IncludeExclude::new(self, (), exclude)
+        IncludeExclude::new(self, Passthrough, exclude)
     }
 
-    fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, (), (), F>
+    fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, Passthrough, Passthrough, F>
     where
         F: QueryFilter,
     {
-        IncludeExcludeFilter::new(self, (), (), filter)
+        IncludeExcludeFilter::new(self, Passthrough, Passthrough, filter)
     }
 }
 
@@ -78,48 +78,111 @@ where
     B: QueryBase<'a>,
 {
     type Base = Self;
-    type Include = ();
-    type Exclude = ();
+    type Include = Passthrough;
+    type Exclude = Passthrough;
     type Filter = Passthrough;
 
     fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
-        (self, (), (), Passthrough)
+        (self, Passthrough, Passthrough, Passthrough)
+    }
+}
+
+unsafe impl<'a, E> QueryBase<'a> for E
+where
+    E: QueryElement<'a>,
+{
+    const ELEMENT_COUNT: usize = 1;
+
+    type Item = E::Item;
+    type SparseSplit = SparseSplitQueryElement<'a, E::Component, E::Filter>;
+    type DenseSplit = DenseSplitQueryElement<'a, E::Component, E::Filter>;
+
+    fn get(self, entity: Entity) -> Option<Self::Item> {
+        QueryElement::get(self, entity)
+    }
+
+    fn contains(&self, entity: Entity) -> bool {
+        QueryElement::contains(self, entity)
+    }
+
+    fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
+        CombinedGroupInfo::default().combine(QueryElement::group_info(self)?)
+    }
+
+    fn split_sparse(self) -> (IterData<'a>, Self::SparseSplit) {
+        let world_tick = self.world_tick();
+        let change_tick = self.change_tick();
+        let (entities, sparse_split) = self.split().into_sparse_split();
+
+        (
+            IterData::new(entities, world_tick, change_tick),
+            sparse_split,
+        )
+    }
+
+    fn split_dense(self) -> (IterData<'a>, Self::DenseSplit) {
+        let world_tick = self.world_tick();
+        let change_tick = self.change_tick();
+        let (entities, dense_split) = self.split().into_dense_split();
+
+        (
+            IterData::new(entities, world_tick, change_tick),
+            dense_split,
+        )
+    }
+
+    unsafe fn get_from_sparse_split(
+        split: &mut Self::SparseSplit,
+        entity: Entity,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item> {
+        split.get::<E>(entity, world_tick, change_tick)
+    }
+
+    unsafe fn get_from_dense_split(
+        split: &mut Self::DenseSplit,
+        index: usize,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item> {
+        split.get::<E>(index, world_tick, change_tick)
     }
 }
 
 macro_rules! impl_query_base {
-    ($count:tt; $(($elem:ident, $idx:tt)),*) => {
-        unsafe impl<'a, $($elem),*> QueryBase<'a> for ($($elem,)*)
+    ($count:tt; $(($elem:ident, $idx:tt)),+) => {
+        unsafe impl<'a, $($elem),+> QueryBase<'a> for ($($elem,)+)
         where
-            $($elem: QueryElement<'a>,)*
+            $($elem: QueryElement<'a>,)+
         {
             const ELEMENT_COUNT: usize = $count;
 
-            type Item = ($($elem::Item,)*);
-            type SparseSplit = ($(SparseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)*);
-            type DenseSplit = ($(DenseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)*);
+            type Item = ($($elem::Item,)+);
+            type SparseSplit = ($(SparseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)+);
+            type DenseSplit = ($(DenseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)+);
 
             #[allow(unused_variables)]
             fn get(self, entity: Entity) -> Option<Self::Item> {
-                Some(($(self.$idx.get(entity)?,)*))
+                Some(($(self.$idx.get(entity)?,)+))
             }
 
             #[allow(unused_variables)]
             fn contains(&self, entity: Entity) -> bool {
-                true $(&& self.$idx.contains(entity))*
+                true $(&& self.$idx.contains(entity))+
             }
 
             #[allow(clippy::needless_question_mark)]
             fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
-                Some(CombinedGroupInfo::default() $(.combine(self.$idx.group_info()?)?)*)
+                Some(CombinedGroupInfo::default() $(.combine(self.$idx.group_info()?)?)+)
             }
 
-            fn split_sparse(self) -> (Option<IterData<'a>>, Self::SparseSplit) {
-                split_sparse!($(($elem, self.$idx)),*)
+            fn split_sparse(self) -> (IterData<'a>, Self::SparseSplit) {
+                split_sparse!($(($elem, self.$idx)),+)
             }
 
-	        fn split_dense(self) -> (Option<IterData<'a>>, Self::DenseSplit) {
-                split_dense!($(($elem, self.$idx)),*)
+	        fn split_dense(self) -> (IterData<'a>, Self::DenseSplit) {
+                split_dense!($(($elem, self.$idx)),+)
             }
 
             #[allow(unused_variables)]
@@ -131,7 +194,7 @@ macro_rules! impl_query_base {
             ) -> Option<Self::Item> {
                 Some(($(
                     split.$idx.get::<$elem>(entity, world_tick, change_tick)?,
-                )*))
+                )+))
             }
 
             #[allow(unused_variables)]
@@ -143,7 +206,7 @@ macro_rules! impl_query_base {
             ) -> Option<Self::Item> {
                 Some(($(
                     split.$idx.get::<$elem>(index, world_tick, change_tick)?,
-                )*))
+                )+))
             }
         }
     };
@@ -153,7 +216,6 @@ macro_rules! impl_query_base {
 mod impls {
 	use super::*;
 
-    impl_query_base!(0;);
 	impl_query_base!(1; (A, 0));
     impl_query_base!(2; (A, 0), (B, 1));
     impl_query_base!(3; (A, 0), (B, 1), (C, 2));

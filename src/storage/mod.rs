@@ -1,6 +1,5 @@
 pub use self::component_storage::*;
 pub use self::entity::*;
-pub use self::iter_components::*;
 pub use self::sparse_array::*;
 
 pub(crate) use self::blob_vec::*;
@@ -11,6 +10,5 @@ mod blob_vec;
 mod component_storage;
 mod entity;
 mod entity_storage;
-mod iter_components;
 mod sparse_array;
 mod typed_component_storage;

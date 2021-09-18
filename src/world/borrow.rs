@@ -88,22 +88,21 @@ where
 }
 
 macro_rules! impl_borrow_world {
-	($($ty:ident),*) => {
-		impl<'a, $($ty),*> BorrowWorld<'a> for ($($ty,)*)
+	($($ty:ident),+) => {
+		impl<'a, $($ty),+> BorrowWorld<'a> for ($($ty,)+)
 		where
-			$($ty: BorrowWorld<'a>,)*
+			$($ty: BorrowWorld<'a>,)+
 		{
-			type Item = ($($ty::Item,)*);
+			type Item = ($($ty::Item,)+);
 
 			#[allow(unused_variables)]
 			fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
-				($($ty::borrow(world, change_tick),)*)
+				($($ty::borrow(world, change_tick),)+)
 			}
 		}
 	};
 }
 
-impl_borrow_world!();
 impl_borrow_world!(A);
 impl_borrow_world!(A, B);
 impl_borrow_world!(A, B, C);

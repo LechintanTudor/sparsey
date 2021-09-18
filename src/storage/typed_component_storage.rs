@@ -1,6 +1,4 @@
-use crate::storage::{
-    ComponentIter, ComponentStorage, ComponentWithTicksIter, Entity, SparseArrayView,
-};
+use crate::storage::{ComponentStorage, Entity, SparseArrayView};
 use crate::utils::ChangeTicks;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -62,20 +60,6 @@ where
         let (sparse, entities, components, ticks) = self.storage.split();
         let components = unsafe { slice::from_raw_parts(components.cast::<T>(), entities.len()) };
         (sparse, entities, components, ticks)
-    }
-
-    pub fn iter(&self) -> ComponentIter<T> {
-        unsafe { ComponentIter::new(self.storage.entities(), self.components()) }
-    }
-
-    pub fn iter_with_ticks(&self) -> ComponentWithTicksIter<T> {
-        unsafe {
-            ComponentWithTicksIter::new(
-                self.storage.entities(),
-                self.components(),
-                self.storage.ticks(),
-            )
-        }
     }
 }
 

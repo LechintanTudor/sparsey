@@ -1,14 +1,12 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
 use crate::query::{
-    ComponentRefMut, Contains, ImmutableQueryElement, QueryElement, SliceQueryElement,
-    SplitQueryElement,
+    ComponentRefMut, Contains, ImmutableQueryElement, QueryElement, SplitQueryElement,
+    UnfilteredImmutableQueryElement,
 };
-use crate::storage::{
-    ComponentIter, ComponentStorage, ComponentWithTicksIter, Entity, TypedComponentStorage,
-};
+use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::{ChangeTicks, Ticks};
-use std::ops::{Deref, DerefMut, Range};
+use std::ops::{Deref, DerefMut};
 
 /// View over a component storage of type `T`.
 pub struct ComponentView<'a, T, S> {
@@ -37,25 +35,10 @@ where
         }
     }
 
-    /// Returns `entity`'s component if it exists.
-    pub fn get(&self, entity: Entity) -> Option<&T> {
-        self.storage.get(entity)
-    }
-
     /// Returns the `ChangeTicks` associated with `entity`'s component, if it
     /// exists.
     pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
         self.storage.get_ticks(entity)
-    }
-
-    /// Returns `entity`'s component and `ChangeTicks` if they exist.
-    pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
-        self.storage.get_with_ticks(entity)
-    }
-
-    /// Returns `true` if `entity` exists in this storage.
-    pub fn contains(&self, entity: Entity) -> bool {
-        self.storage.contains(entity)
     }
 
     /// Returns the number of components in the storage.
@@ -68,30 +51,9 @@ where
         self.storage.is_empty()
     }
 
-    /// Returns all entities in the storage.
-    pub fn entities(&self) -> &[Entity] {
-        self.storage.entities()
-    }
-
-    /// Returns all components in the storage.
-    pub fn components(&self) -> &[T] {
-        self.storage.components()
-    }
-
     /// Returns all the `ChangeTicks` in the storage.
     pub fn ticks(&self) -> &[ChangeTicks] {
         self.storage.ticks()
-    }
-
-    /// Returns an iterator over all components in the storage.
-    pub fn iter(&self) -> ComponentIter<T> {
-        self.storage.iter()
-    }
-
-    /// Returns an iterator over all components and `ChangeTicks` in the
-    /// storage.
-    pub fn iter_with_ticks(&self) -> ComponentWithTicksIter<T> {
-        self.storage.iter_with_ticks()
     }
 }
 
@@ -165,30 +127,17 @@ where
     // Empty
 }
 
-unsafe impl<'a, T, S> SliceQueryElement<'a> for &'a ComponentView<'a, T, S>
+unsafe impl<'a, T, S> UnfilteredImmutableQueryElement<'a> for &'a ComponentView<'a, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage>,
 {
-    #[inline]
-    unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component] {
-        self.storage.components().get_unchecked(range)
+    fn entities(&self) -> &'a [Entity] {
+        self.storage.entities()
     }
 
-    #[inline]
-    unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
-        self.storage.entities().get_unchecked(range)
-    }
-
-    #[inline]
-    unsafe fn slice_entities_components(
-        self,
-        range: Range<usize>,
-    ) -> (&'a [Entity], &'a [Self::Component]) {
-        (
-            self.storage.entities().get_unchecked(range.clone()),
-            self.storage.components().get_unchecked(range),
-        )
+    fn components(&self) -> &'a [Self::Component] {
+        self.storage.components()
     }
 }
 

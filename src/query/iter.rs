@@ -1,5 +1,5 @@
-use crate::group::group_range;
-use crate::query::{DenseIter, IterData, QueryBase, QueryFilter, QueryModifier, SparseIter};
+use crate::query;
+use crate::query::{DenseIter, QueryBase, QueryFilter, QueryModifier, SparseIter};
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
@@ -26,57 +26,34 @@ where
 {
     /// Creates a new iterator from the given query parts.
     pub fn new(base: B, include: I, exclude: E, filter: F) -> Self {
-        match (B::ELEMENT_COUNT, I::ELEMENT_COUNT, E::ELEMENT_COUNT) {
-            (1, 0, 0) => {
-                let (base_data, base) = base.split_dense();
-                let iter_data = base_data.unwrap();
+        if query::is_trivial_group::<B, I, E>() {
+            let (iter_data, base) = base.split_dense();
 
-                unsafe { Iter::Dense(DenseIter::new_unchecked(iter_data, base, filter)) }
-            }
-            (0, 1, 0) => {
-                let (_, base) = base.split_dense();
-                let (include_data, _) = include.split();
-                let iter_data = include_data.unwrap();
+            unsafe { Self::Dense(DenseIter::new_unchecked(iter_data, base, filter)) }
+        } else {
+            match query::group_range(&base, &include, &exclude) {
+                Ok(range) => {
+                    let (base_data, base) = base.split_dense();
+                    let iter_data = base_data.with_range(range);
 
-                unsafe { Iter::Dense(DenseIter::new_unchecked(iter_data, base, filter)) }
-            }
-            _ => {
-                let group_range = match (
-                    base.group_info(),
-                    include.group_info(),
-                    exclude.group_info(),
-                ) {
-                    (Some(base_info), Some(include_info), Some(exclude_info)) => {
-                        group_range(base_info, include_info, exclude_info)
-                    }
-                    _ => None,
-                };
+                    unsafe { Self::Dense(DenseIter::new_unchecked(iter_data, base, filter)) }
+                }
+                Err(_) => {
+                    let (base_data, base) = base.split_sparse();
+                    let (include_data, include) = include.split_modifier();
+                    let (_, exclude) = exclude.split_modifier();
 
-                match group_range {
-                    Some(range) => {
-                        let (base_data, base) = base.split_dense();
+                    let iter_data = if let Some(include_data) = include_data {
+                        if base_data.entities.len() <= include_data.entities.len() {
+                            base_data
+                        } else {
+                            include_data
+                        }
+                    } else {
+                        base_data
+                    };
 
-                        let iter_data = base_data
-                            .or_else(|| include.split().0)
-                            .map(|iter_data| iter_data.with_range(range))
-                            .unwrap_or(IterData::EMPTY);
-
-                        unsafe { Iter::Dense(DenseIter::new_unchecked(iter_data, base, filter)) }
-                    }
-                    None => {
-                        let (base_data, base) = base.split_sparse();
-                        let (include_data, include) = include.split();
-                        let (_, exclude) = exclude.split();
-
-                        let iter_data = [base_data, include_data]
-                            .iter()
-                            .flatten()
-                            .min_by_key(|d| d.entities.len())
-                            .copied()
-                            .unwrap_or(IterData::EMPTY);
-
-                        Iter::Sparse(SparseIter::new(iter_data, base, include, exclude, filter))
-                    }
+                    Self::Sparse(SparseIter::new(iter_data, base, include, exclude, filter))
                 }
             }
         }

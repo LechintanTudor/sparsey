@@ -1,11 +1,9 @@
-use crate::query::{IntoQueryParts, Passthrough, QueryBase, SliceQueryElement};
+use crate::query::{
+    IntoQueryParts, InvalidGroup, Passthrough, QueryBase, UnfilteredImmutableQueryElement,
+};
 use crate::storage::Entity;
-use crate::utils::UnsafeUnwrap;
-use crate::{group, QueryModifier};
-use std::error::Error;
-use std::fmt;
-use std::fmt::{Display, Formatter};
-use std::ops::Range;
+use crate::{query, utils};
+use std::ops::RangeBounds;
 
 /// Trait used for slicing queries with grouped component storages.
 pub unsafe trait SliceQuery<'a>
@@ -14,21 +12,16 @@ where
     Self::Base: SliceQueryBase<'a>,
 {
     /// Returns a slice containing all the entities which match the query.
-    fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages>;
+    fn entities(self) -> Result<&'a [Entity], InvalidGroup>;
 
     /// Returns a tuple of slices containing all components which match the
     /// query.
-    fn components(
-        self,
-    ) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, UngroupedComponentStorages>;
+    fn components(self) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, InvalidGroup>;
 
     /// Returns all entities and components which match the query.
     fn entities_components(
         self,
-    ) -> Result<
-        (&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices),
-        UngroupedComponentStorages,
-    >;
+    ) -> Result<(&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices), InvalidGroup>;
 }
 
 unsafe impl<'a, Q> SliceQuery<'a> for Q
@@ -36,90 +29,40 @@ where
     Q: IntoQueryParts<'a, Filter = Passthrough>,
     Q::Base: SliceQueryBase<'a>,
 {
-    fn entities(self) -> Result<&'a [Entity], UngroupedComponentStorages> {
-        let (base, include, exclude, _) = self.into_query_parts();
-        let range = group_range(&base, &include, &exclude)?;
-
-        unsafe {
-            if <Q::Base as QueryBase>::ELEMENT_COUNT != 0 {
-                Ok(base.slice_entities(range))
-            } else {
-                Ok(include
-                    .split()
-                    .0
-                    .map(|data| data.entities.get_unchecked(range))
-                    .unsafe_unwrap())
-            }
+    fn entities(self) -> Result<&'a [Entity], InvalidGroup> {
+        if query::is_trivial_group::<Q::Base, Q::Include, Q::Exclude>() {
+            let (base, _, _, _) = self.into_query_parts();
+            Ok(unsafe { base.get_entities_unchecked(..) })
+        } else {
+            let (base, include, exclude, _) = self.into_query_parts();
+            let range = query::group_range(&base, &include, &exclude)?;
+            Ok(unsafe { base.get_entities_unchecked(range) })
         }
     }
 
-    fn components(
-        self,
-    ) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, UngroupedComponentStorages> {
-        let (base, include, exclude, _) = self.into_query_parts();
-        let range = group_range(&base, &include, &exclude)?;
-        Ok(unsafe { base.slice_components(range) })
+    fn components(self) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, InvalidGroup> {
+        if query::is_trivial_group::<Q::Base, Q::Include, Q::Exclude>() {
+            let (base, _, _, _) = self.into_query_parts();
+            Ok(unsafe { base.get_components_unchecked(..) })
+        } else {
+            let (base, include, exclude, _) = self.into_query_parts();
+            let range = query::group_range(&base, &include, &exclude)?;
+            Ok(unsafe { base.get_components_unchecked(range) })
+        }
     }
 
     fn entities_components(
         self,
-    ) -> Result<
-        (&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices),
-        UngroupedComponentStorages,
-    > {
-        let (base, include, exclude, _) = self.into_query_parts();
-        let range = group_range(&base, &include, &exclude)?;
-
-        unsafe {
-            if <Q::Base as QueryBase>::ELEMENT_COUNT != 0 {
-                Ok(base.slice_entities_components(range))
-            } else {
-                Ok(include
-                    .split()
-                    .0
-                    .map(|data| {
-                        (
-                            data.entities.get_unchecked(range.clone()),
-                            base.slice_components(range),
-                        )
-                    })
-                    .unsafe_unwrap())
-            }
+    ) -> Result<(&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices), InvalidGroup> {
+        if query::is_trivial_group::<Q::Base, Q::Include, Q::Exclude>() {
+            let (base, _, _, _) = self.into_query_parts();
+            Ok(unsafe { base.get_entities_components_unchecked(..) })
+        } else {
+            let (base, include, exclude, _) = self.into_query_parts();
+            let range = query::group_range(&base, &include, &exclude)?;
+            Ok(unsafe { base.get_entities_components_unchecked(range) })
         }
     }
-}
-
-/// Error returned when trying to slice a query with ungrouped component
-/// storages.
-#[derive(Debug)]
-pub struct UngroupedComponentStorages;
-
-impl Error for UngroupedComponentStorages {}
-
-impl Display for UngroupedComponentStorages {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "Tried to slice query with ungrouped component storages")
-    }
-}
-
-fn group_range<'a, B, I, E>(
-    base: &B,
-    include: &I,
-    exclude: &E,
-) -> Result<Range<usize>, UngroupedComponentStorages>
-where
-    B: QueryBase<'a>,
-    I: QueryModifier<'a>,
-    E: QueryModifier<'a>,
-{
-    (|| -> Option<Range<usize>> {
-        group::group_range(
-            base.group_info()?,
-            include.group_info()?,
-            exclude.group_info()?,
-        )
-    })()
-    .ok_or(UngroupedComponentStorages)
 }
 
 /// Trait used by `QuerySlice` to get component slices from `QueryBase`.
@@ -129,54 +72,94 @@ where
 {
     type Slices;
 
-    unsafe fn slice_components(self, range: Range<usize>) -> Self::Slices;
+    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
+    where
+        R: RangeBounds<usize>;
 
-    unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
+    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::Slices
+    where
+        R: RangeBounds<usize>;
 
-    unsafe fn slice_entities_components(self, range: Range<usize>) -> (&'a [Entity], Self::Slices);
+    unsafe fn get_entities_components_unchecked<R>(self, range: R) -> (&'a [Entity], Self::Slices)
+    where
+        R: RangeBounds<usize>;
 }
 
-unsafe impl<'a> SliceQueryBase<'a> for () {
-    type Slices = ();
+unsafe impl<'a, E> SliceQueryBase<'a> for E
+where
+    E: UnfilteredImmutableQueryElement<'a>,
+{
+    type Slices = &'a [E::Component];
 
-    unsafe fn slice_components(self, _: Range<usize>) -> Self::Slices {
-        ()
+    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
+    where
+        R: RangeBounds<usize>,
+    {
+        UnfilteredImmutableQueryElement::entities(&self)
+            .get_unchecked(utils::range_to_bounds(&range))
     }
 
-    unsafe fn slice_entities(self, _: Range<usize>) -> &'a [Entity] {
-        &[]
+    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::Slices
+    where
+        R: RangeBounds<usize>,
+    {
+        UnfilteredImmutableQueryElement::components(&self)
+            .get_unchecked(utils::range_to_bounds(&range))
     }
 
-    unsafe fn slice_entities_components(self, _: Range<usize>) -> (&'a [Entity], Self::Slices) {
-        (&[], ())
-    }
-}
+    unsafe fn get_entities_components_unchecked<R>(self, range: R) -> (&'a [Entity], Self::Slices)
+    where
+        R: RangeBounds<usize>,
+    {
+        let entities = UnfilteredImmutableQueryElement::entities(&self)
+            .get_unchecked(utils::range_to_bounds(&range));
 
-macro_rules! slice_entities_components {
-    ($self:ident, $range:ident, $first:tt $(, $other:tt)*) => {{
-        let (entities, first_components) = $self.0.slice_entities_components($range.clone());
-        (entities, (first_components, $($self.$other.slice_components($range.clone())),*))
-    }};
+        let components = UnfilteredImmutableQueryElement::components(&self)
+            .get_unchecked(utils::range_to_bounds(&range));
+
+        (entities, components)
+    }
 }
 
 macro_rules! impl_slice_query_base {
-	($(($elem:ident, $idx:tt)),+) => {
+    ($(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> SliceQueryBase<'a> for ($($elem,)+)
         where
-            $($elem: SliceQueryElement<'a>,)+
+            $($elem: UnfilteredImmutableQueryElement<'a>,)+
         {
             type Slices = ($(&'a [$elem::Component],)+);
 
-            unsafe fn slice_components(self, range: Range<usize>) -> Self::Slices {
-                ($(self.$idx.slice_components(range.clone()),)+)
+            unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
+            where
+                R: RangeBounds<usize>,
+            {
+                UnfilteredImmutableQueryElement::entities(&self.0)
+                    .get_unchecked(utils::range_to_bounds(&range))
             }
 
-            unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity] {
-                self.0.slice_entities(range)
+            unsafe fn get_components_unchecked<R>(self, range: R) -> Self::Slices
+            where
+                R: RangeBounds<usize>,
+            {
+                ($(
+                    UnfilteredImmutableQueryElement::components(&self.$idx)
+                        .get_unchecked(utils::range_to_bounds(&range))
+                ,)+)
             }
 
-            unsafe fn slice_entities_components(self, range: Range<usize>) -> (&'a [Entity], Self::Slices) {
-                slice_entities_components!(self, range, $($idx),+)
+            unsafe fn get_entities_components_unchecked<R>(self, range: R) -> (&'a [Entity], Self::Slices)
+            where
+                R: RangeBounds<usize>,
+            {
+                let entities = UnfilteredImmutableQueryElement::entities(&self.0)
+                    .get_unchecked(utils::range_to_bounds(&range));
+
+                let components = ($(
+                    UnfilteredImmutableQueryElement::components(&self.$idx)
+                        .get_unchecked(utils::range_to_bounds(&range))
+                ,)+);
+
+                (entities, components)
             }
         }
     };

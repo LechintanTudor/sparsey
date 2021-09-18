@@ -4,7 +4,6 @@ use crate::query::{Contains, QueryElementFilter};
 use crate::storage::{Entity, SparseArrayView};
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
-use std::ops::Range;
 
 /// Trait implement by types which can be part of a query.
 pub unsafe trait QueryElement<'a> {
@@ -58,34 +57,13 @@ where
 }
 
 /// Trait implemented by unfiltered immutable `QueryElement`s.
-pub trait UnfilteredImmutableQueryElement<'a>
+pub unsafe trait UnfilteredImmutableQueryElement<'a>
 where
     Self: ImmutableQueryElement<'a> + UnfilteredQueryElement<'a>,
 {
-    // Empty
-}
+    fn entities(&self) -> &'a [Entity];
 
-impl<'a, E> UnfilteredImmutableQueryElement<'a> for E
-where
-    E: ImmutableQueryElement<'a> + UnfilteredQueryElement<'a>,
-{
-    // Empty
-}
-
-/// Trait used for getting slices of entities and components from a
-/// `QueryElement`.
-pub unsafe trait SliceQueryElement<'a>
-where
-    Self: UnfilteredImmutableQueryElement<'a>,
-{
-    unsafe fn slice_components(self, range: Range<usize>) -> &'a [Self::Component];
-
-    unsafe fn slice_entities(self, range: Range<usize>) -> &'a [Entity];
-
-    unsafe fn slice_entities_components(
-        self,
-        range: Range<usize>,
-    ) -> (&'a [Entity], &'a [Self::Component]);
+    fn components(&self) -> &'a [Self::Component];
 }
 
 /// Type returned by `QueryElement::split`.
@@ -116,10 +94,6 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
         }
     }
 
-    pub fn into_modifier_split(self) -> (&'a [Entity], SparseArrayView<'a>) {
-        (self.entities, self.sparse)
-    }
-
     pub fn into_sparse_split(self) -> (&'a [Entity], SparseSplitQueryElement<'a, T, F>) {
         (
             self.entities,
@@ -143,6 +117,10 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
             },
         )
     }
+
+    pub fn into_modifier_split(self) -> (&'a [Entity], SparseArrayView<'a>) {
+        (self.entities, self.sparse)
+    }
 }
 
 /// Used to form `QueryBase::SparseSplit`.
@@ -155,15 +133,15 @@ pub struct SparseSplitQueryElement<'a, T, F> {
 }
 
 impl<'a, T, F> SparseSplitQueryElement<'a, T, F> {
-    pub unsafe fn get<V>(
+    pub unsafe fn get<E>(
         &mut self,
         entity: Entity,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Option<V::Item>
+    ) -> Option<E::Item>
     where
         T: Component,
-        V: QueryElement<'a, Component = T>,
+        E: QueryElement<'a, Component = T>,
         F: QueryElementFilter<T>,
     {
         let index = self.sparse.get_index(entity)?;
@@ -172,7 +150,7 @@ impl<'a, T, F> SparseSplitQueryElement<'a, T, F> {
 
         self.filter
             .matches(&*component, &*ticks, world_tick, change_tick)
-            .then(|| V::get_from_parts(component, ticks, world_tick, change_tick))
+            .then(|| E::get_from_parts(component, ticks, world_tick, change_tick))
     }
 }
 
@@ -185,15 +163,15 @@ pub struct DenseSplitQueryElement<'a, T, F> {
 }
 
 impl<'a, T, F> DenseSplitQueryElement<'a, T, F> {
-    pub unsafe fn get<V>(
+    pub unsafe fn get<E>(
         &mut self,
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Option<V::Item>
+    ) -> Option<E::Item>
     where
         T: Component,
-        V: QueryElement<'a, Component = T>,
+        E: QueryElement<'a, Component = T>,
         F: QueryElementFilter<T>,
     {
         let component = self.components.add(index);
@@ -201,6 +179,6 @@ impl<'a, T, F> DenseSplitQueryElement<'a, T, F> {
 
         self.filter
             .matches(&*component, &*ticks, world_tick, change_tick)
-            .then(|| V::get_from_parts(component, ticks, world_tick, change_tick))
+            .then(|| E::get_from_parts(component, ticks, world_tick, change_tick))
     }
 }
