@@ -5,7 +5,7 @@ use crate::utils::{ChangeTicks, Ticks};
 
 /// Wrapper over an `UnfilteredQueryElement` which makes it return `Option`s
 /// instead of failing.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Maybe<E>(E);
 
 /// Wrapps the given `QueryElement` in a `Maybe`.
@@ -45,12 +45,12 @@ where
     }
 
     #[inline]
-    fn world_tick(&self) -> crate::Ticks {
+    fn world_tick(&self) -> Ticks {
         self.0.world_tick()
     }
 
     #[inline]
-    fn change_tick(&self) -> crate::Ticks {
+    fn change_tick(&self) -> Ticks {
         self.0.change_tick()
     }
 
