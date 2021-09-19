@@ -306,7 +306,7 @@ if res_added(&a) {
     // ...
 } 
 
-if res_muated(&a) {
+if res_mutated(&a) {
     // ...
 } 
 
