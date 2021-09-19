@@ -1,0 +1,20 @@
+# Changelog
+All notable changes to this project will be documented in this file.
+
+## Unreleased
+
+## 0.2.0 (2021-09-19)
+### Added
+- Queries over a single component view no longer need to be wrapped in a tuple.
+- Added `World::destroy_entities` for destroying entities in bulk.
+- Added `World::set_tick` for setting the tick used in change detection.
+
+### Changed
+- Iterators over a single component view are now dense, greatly improving performance.
+- Refactor `ComponentSet`, improving the performance of adding and removing components.
+
+### Fixed
+- Fixed `!added`, `!mutated`, `!changed` not being usable in queries.
+
+## 0.1.0 (2021-09-12)
+- First version.
