@@ -154,12 +154,15 @@ impl World {
     /// Returns the number of entities successfully removed.
     pub fn destroy_entities<'a, E>(&mut self, entities: E) -> usize
     where
-        E: IntoIterator<Item = &'a Entity> + Clone,
+        E: IntoIterator<Item = &'a Entity>,
+        E::IntoIter: Clone,
     {
+        let entities = entities.into_iter();
+
         self.storages.ungroup_all_components(entities.clone());
 
         for storage in self.storages.iter_mut() {
-            entities.clone().into_iter().for_each(|&entity| {
+            entities.clone().for_each(|&entity| {
                 storage.remove_and_drop(entity);
             });
         }

@@ -227,9 +227,12 @@ impl ComponentStorages {
 
     pub fn group_all_components<'a, E>(&mut self, entities: E)
     where
-        E: IntoIterator<Item = &'a Entity> + Clone,
+        E: IntoIterator<Item = &'a Entity>,
+        E::IntoIter: Clone,
     {
         if !self.families.is_empty() {
+            let entities = entities.into_iter();
+
             for i in 0..(self.families.len() - 1) {
                 unsafe {
                     self.group_components(i, entities.clone());
@@ -244,9 +247,12 @@ impl ComponentStorages {
 
     pub fn ungroup_all_components<'a, E>(&mut self, entities: E)
     where
-        E: IntoIterator<Item = &'a Entity> + Clone,
+        E: IntoIterator<Item = &'a Entity>,
+        E::IntoIter: Clone,
     {
         if !self.families.is_empty() {
+            let entities = entities.into_iter();
+
             for i in 0..(self.families.len() - 1) {
                 unsafe {
                     self.ungroup_components(i, entities.clone());
