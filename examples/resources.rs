@@ -14,7 +14,7 @@ fn raise_lava(mut lava: ResMut<Lava>) {
 }
 
 fn fall_in_lava(mut commands: Commands, pos: Comp<Position>, lava: Res<Lava>) {
-    for (e, (pos,)) in (&pos,).iter().entities() {
+    for (e, pos) in (&pos).iter().entities() {
         if pos.1 < lava.height {
             println!("{:?} with y={} fell into lava", e, pos.1);
             commands.destroy_entity(e);

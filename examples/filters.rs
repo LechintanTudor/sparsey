@@ -17,7 +17,7 @@ fn apply_difficulty(mut hps: CompMut<Hp>, difficulty: Res<Difficulty>) {
         Difficulty::Easy => {
             println!("[Easy mode, enemies have half Hp]");
 
-            for (mut hp,) in (added(&mut hps),).iter() {
+            for mut hp in added(&mut hps).iter() {
                 hp.0 = hp.0 / 2;
             }
         }
@@ -27,7 +27,7 @@ fn apply_difficulty(mut hps: CompMut<Hp>, difficulty: Res<Difficulty>) {
         Difficulty::Hard => {
             println!("[Hard mode, enemies have double Hp]");
 
-            for (mut hp,) in (added(&mut hps),).iter() {
+            for mut hp in added(&mut hps).iter() {
                 hp.0 = hp.0 * 2;
             }
         }
@@ -35,7 +35,7 @@ fn apply_difficulty(mut hps: CompMut<Hp>, difficulty: Res<Difficulty>) {
 }
 
 fn print_health(hps: Comp<Hp>) {
-    for (e, (hp,)) in (&hps,).iter().entities() {
+    for (e, hp) in (&hps).iter().entities() {
         println!("{:?} has {} hp", e, hp.0);
     }
 

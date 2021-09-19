@@ -86,31 +86,31 @@ let (a, b) = world.borrow::<(Comp<A>, Comp<B>)>();
 
 Check if a view contains an `Entity`.
 ```rust
-if a.contains(entity) {
+if (&a).contains(entity) {
     // ...
 }
 ```
 
 Get the component of an `Entity`.
 ```rust
-if let Some(a) = a.get(entity) {
+if let Some(a) = (&a).get(entity) {
     // ...
 }
 ```
 
 Get all entities with `A` components.
 ```rust
-let entities: &[Entity] = a.entities();
+let entities: &[Entity] = (&a).entities().unwrap();
 ```
 
 Get all `A` components.
 ```rust
-let components: &[A] = a.components();
+let components: &[A] = (&a).components().unwrap();
 ```
 
 Iterate all entities and components.
 ```rust
-for (entity, component) in a.iter().entities() {
+for (entity, component) in (&a).iter().entities() {
     // ...
 }
 ```
@@ -151,14 +151,14 @@ for (a,) in (&a,).include((&b, &c)).iter() {
 
 Iterate `A` components of entities without `B` and `C`.
 ```rust
-for (a,) in (&a,).exclude((&b, &c)).iter() {
+for a in (&a).exclude((&b, &c)).iter() {
     // ...
 }
 ```
 
 Iterate `A` components of entities with `B` and without `C`.
 ```rust
-for (a,) in (&a,).include(&b).exclude(&c).iter() {
+for a in (&a).include(&b).exclude(&c).iter() {
     // ...
 }
 ```
@@ -185,51 +185,51 @@ use sparsey::filters::{added, mutated, changed};
 
 Iterate `A` components which were added/mutated/changed.
 ```rust
-for (a,) in (added(&a),).iter() {
+for a in added(&a).iter() {
     // ...
 }
 
-for (a,) in (mutated(&a),).iter() {
+for a in mutated(&a).iter() {
     // ...
 }
 
-for (a,) in (changed(&a),).iter() {
+for a in changed(&a).iter() {
     // ...
 }
 ```
 
 Iterate `A` components which were not added/mutated/changed.
 ```rust
-for (a,) in (!added(&a),).iter() {
+for a in (!added(&a)).iter() {
     // ...
 }
 
-for (a,) in (!mutated(&a),).iter() {
+for a in (!mutated(&a)).iter() {
     // ...
 }
 
-for (a,) in (!changed(&a),).iter() {
+for a in (!changed(&a)).iter() {
     // ...
 }
 ```
 
 Filter query to only match entities to which `B` and `C` was just added.
 ```rust
-for (a,) in (&a,).filter(added(&b) & added(&c)).iter() {
+for a in (&a).filter(added(&b) & added(&c)).iter() {
     // ...
 }
 ```
 
 Filter query to only match entities to which `B` or `C` was just added.
 ```rust
-for (a,) in (&a,).filter(added(&b) | added(&c)).iter() {
+for a in (&a).filter(added(&b) | added(&c)).iter() {
     // ...
 }
 ```
 
 Filter query to only match entities to which `B` xor `C` was just added.
 ```rust
-for (a,) in (&a,).filter(added(&b) ^ added(&c)).iter() {
+for a in (&a).filter(added(&b) ^ added(&c)).iter() {
     // ...
 }
 ```

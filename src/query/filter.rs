@@ -53,21 +53,12 @@ where
                 })?;
 
         unsafe {
+            let world_tick = self.element.world_tick();
+            let change_tick = self.element.change_tick();
+
             self.filter
-                .matches(
-                    &*component,
-                    &*ticks,
-                    self.element.world_tick(),
-                    self.element.change_tick(),
-                )
-                .then(|| {
-                    E::get_from_parts(
-                        component,
-                        ticks,
-                        self.element.world_tick(),
-                        self.element.change_tick(),
-                    )
-                })
+                .matches(&*component, &*ticks, world_tick, change_tick)
+                .then(|| E::get_from_parts(component, ticks, world_tick, change_tick))
         }
     }
 
@@ -130,12 +121,12 @@ where
 impl<'a, F, E> ops::Not for Filter<F, E>
 where
     F: QueryElementFilter<E::Component>,
-    E: UnfilteredImmutableQueryElement<'a>,
+    E: UnfilteredQueryElement<'a>,
 {
-    type Output = Not<Self>;
+    type Output = Filter<Not<F>, E>;
 
     fn not(self) -> Self::Output {
-        Not::new(self)
+        Filter::new(Not(self.filter), self.element)
     }
 }
 
@@ -148,7 +139,7 @@ where
     type Output = And<Self, F2>;
 
     fn bitand(self, filter: F2) -> Self::Output {
-        And::new(self, filter)
+        And(self, filter)
     }
 }
 
@@ -161,7 +152,7 @@ where
     type Output = Or<Self, F2>;
 
     fn bitor(self, filter: F2) -> Self::Output {
-        Or::new(self, filter)
+        Or(self, filter)
     }
 }
 
@@ -174,6 +165,6 @@ where
     type Output = Xor<Self, F2>;
 
     fn bitxor(self, filter: F2) -> Self::Output {
-        Xor::new(self, filter)
+        Xor(self, filter)
     }
 }

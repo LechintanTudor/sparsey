@@ -17,7 +17,7 @@ struct Immovable;
 
 // Sets the Velocity of Immovable entities to zero.
 fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
-    for (mut vel,) in (&mut vel,).include(&imv).iter() {
+    for mut vel in (&mut vel).include(&imv).iter() {
         vel.0 = 0.0;
     }
 }
@@ -101,10 +101,10 @@ fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (entity, (a, b, c)) in (&a, &b, &c).iter().entities() {}
 
     // Fetch A from all entities which have A, B and C.
-    for (a,) in (&a,).include((&b, &c)).iter() {}
+    for a in (&a).include((&b, &c)).iter() {}
 
     // Fetch A from all entities which have A and B, but not C.
-    for (a,) in (&a,).include(&b).exclude(&c).iter() {}
+    for a in (&a).include(&b).exclude(&c).iter() {}
 }
 ```
 
@@ -146,15 +146,15 @@ All iterations bellow get a significant performance boost without having to chan
 fn iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
     for (a, b) in (&a, &b).iter() {}
 
-    for (a,) in (&a,).include(&b).iter() {}
+    for a in (&a).include(&b).iter() {}
 
     for (a, b, c) in (&a, &b, &c).iter() {}
 
-    for (a,) in (&a,).include((&b, &c)).iter() {}
+    for a in (&a).include((&b, &c)).iter() {}
 
     for (a, b) in (&a, &b).exclude(&c).iter() {}
 
-    for (a,) in (&a,).include(&b).exclude(&c).iter() {}
+    for a in (&a).include(&b).exclude(&c).iter() {}
 }
 ```
 

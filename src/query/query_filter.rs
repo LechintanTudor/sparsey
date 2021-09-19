@@ -16,17 +16,7 @@ impl QueryFilter for Passthrough {
 }
 
 /// Wrapper around a `QueryFilter` which negates its result.
-pub struct Not<F>(F);
-
-impl<F> Not<F>
-where
-    F: QueryFilter,
-{
-    /// Creates a new `Not` with the given filter.
-    pub fn new(filter: F) -> Self {
-        Self(filter)
-    }
-}
+pub struct Not<F>(pub F);
 
 impl<F> QueryFilter for Not<F>
 where
@@ -39,18 +29,7 @@ where
 
 /// `QueryFilter` that only matches entities which match both the filters
 /// contained inside.
-pub struct And<F1, F2>(F1, F2);
-
-impl<F1, F2> And<F1, F2>
-where
-    F1: QueryFilter,
-    F2: QueryFilter,
-{
-    /// Creates a new `And` with the given filters.
-    pub fn new(filter1: F1, filter2: F2) -> Self {
-        Self(filter1, filter2)
-    }
-}
+pub struct And<F1, F2>(pub F1, pub F2);
 
 impl<F1, F2> QueryFilter for And<F1, F2>
 where
@@ -64,18 +43,7 @@ where
 
 /// `QueryFilter` that only matches entities which match either of the filters
 /// contained inside.
-pub struct Or<F1, F2>(F1, F2);
-
-impl<F1, F2> Or<F1, F2>
-where
-    F1: QueryFilter,
-    F2: QueryFilter,
-{
-    /// Creates a new `Or` with the given filters.
-    pub fn new(filter1: F1, filter2: F2) -> Self {
-        Self(filter1, filter2)
-    }
-}
+pub struct Or<F1, F2>(pub F1, pub F2);
 
 impl<F1, F2> QueryFilter for Or<F1, F2>
 where
@@ -89,18 +57,7 @@ where
 
 /// `QueryFilter` that only matches entities which match only one of the filters
 /// contained inside.
-pub struct Xor<F1, F2>(F1, F2);
-
-impl<F1, F2> Xor<F1, F2>
-where
-    F1: QueryFilter,
-    F2: QueryFilter,
-{
-    /// Creates a new `Xor` with the given filters.
-    pub fn new(filter1: F1, filter2: F2) -> Self {
-        Self(filter1, filter2)
-    }
-}
+pub struct Xor<F1, F2>(pub F1, pub F2);
 
 impl<F1, F2> QueryFilter for Xor<F1, F2>
 where
@@ -121,7 +78,7 @@ macro_rules! impl_filter_ops {
 			type Output = Not<Self>;
 
 			fn not(self) -> Self::Output {
-				Not::new(self)
+				Not(self)
 			}
 		}
 
@@ -133,7 +90,7 @@ macro_rules! impl_filter_ops {
 			type Output = And<Self, Filter>;
 
 			fn bitand(self, filter: Filter) -> Self::Output {
-				And::new(self, filter)
+				And(self, filter)
 			}
 		}
 
@@ -145,7 +102,7 @@ macro_rules! impl_filter_ops {
 			type Output = Or<Self, Filter>;
 
 			fn bitor(self, filter: Filter) -> Self::Output {
-				Or::new(self, filter)
+				Or(self, filter)
 			}
 		}
 
@@ -157,7 +114,7 @@ macro_rules! impl_filter_ops {
 			type Output = Xor<Self, Filter>;
 
 			fn bitxor(self, filter: Filter) -> Self::Output {
-				Xor::new(self, filter)
+				Xor(self, filter)
 			}
 		}
 	};
