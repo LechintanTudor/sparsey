@@ -156,7 +156,7 @@ impl ComponentStorage {
     /// Returns the address of the component mapped to `entity`.
     pub fn get_mut(&mut self, entity: Entity) -> *mut u8 {
         match self.sparse.get_index(entity) {
-            Some(index) => unsafe { self.components.get_unchecked(index) },
+            Some(index) => unsafe { self.components.get_unchecked_mut(index) },
             None => ptr::null_mut(),
         }
     }
@@ -185,7 +185,7 @@ impl ComponentStorage {
 
         unsafe {
             Some((
-                self.components.get_unchecked(index),
+                self.components.get_unchecked_mut(index),
                 self.ticks.get_unchecked_mut(index),
             ))
         }
@@ -271,7 +271,7 @@ impl ComponentStorage {
         (
             self.sparse.as_view(),
             self.entities.as_slice(),
-            self.components.as_ptr(),
+            self.components.as_mut_ptr(),
             self.ticks.as_mut_slice(),
         )
     }

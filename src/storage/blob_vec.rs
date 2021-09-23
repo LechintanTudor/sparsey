@@ -18,145 +18,145 @@ impl BlobVec {
     /// Creates a new, empty `BlobVec` capable of holding items with the
     /// given `Layout` and destructor.
     pub unsafe fn new(layout: Layout, drop: unsafe fn(*mut u8)) -> Self {
-        let ptr = NonNull::new_unchecked(layout.align() as *mut u8);
-
-        if layout.size() == 0 {
-            // Times 2 so we can use ptr::copy_nonoverlapping on ZST
-            let swap_space = NonNull::new_unchecked((layout.align() * 2) as *mut u8);
-
-            Self {
-                layout,
-                drop,
-                swap_space,
-                ptr,
-                cap: usize::MAX,
-                len: 0,
-            }
+        let (swap_space, cap) = if layout.size() == 0 {
+            (
+                NonNull::new_unchecked(layout.align() as *mut u8),
+                usize::MAX,
+            )
         } else {
-            let swap_space =
-                NonNull::new(alloc(layout)).unwrap_or_else(|| handle_alloc_error(layout));
+            (
+                NonNull::new(alloc(layout)).unwrap_or_else(|| handle_alloc_error(layout)),
+                0,
+            )
+        };
 
-            Self {
-                layout,
-                drop,
-                swap_space,
-                ptr,
-                cap: 0,
-                len: 0,
-            }
+        Self {
+            layout,
+            drop,
+            swap_space,
+            ptr: NonNull::new_unchecked(layout.align() as *mut u8),
+            cap,
+            len: 0,
         }
     }
 
-    /// Copies the item at the given address to the end of the vector.
+    /// Copies the value at the given address to the end of the vector.
     /// This will cause a reallocation if the vector is full.
-    pub unsafe fn push(&mut self, item: *const u8) {
+    pub unsafe fn push(&mut self, value: *const u8) {
         if self.len == self.cap {
             self.grow_amortized();
         }
 
-        ptr::copy(item, self.get_unchecked(self.len), self.layout.size());
+        let size = self.layout.size();
+        let slot = self.ptr.as_ptr().add(self.len * size);
+
+        ptr::copy_nonoverlapping(value, slot, size);
         self.len += 1;
     }
 
-    /// Replaces the item at `index` with the item at the given address.
+    /// Replaces the item at `index` with the value at the given address.
     /// The destructor of the replaced item is not called.
-    /// Returns the address of the replaced item which is valid until
+    /// Returns the address of the replaced item which remains valid until
     /// the next call to any of the vector's functions.
     pub unsafe fn set_and_forget_prev_unchecked(
         &mut self,
         index: usize,
         value: *const u8,
     ) -> *mut u8 {
-        ptr::copy_nonoverlapping(
-            self.get_unchecked(index),
-            self.swap_space.as_ptr(),
-            self.layout.size(),
-        );
-        ptr::copy(value, self.get_unchecked(index), self.layout.size());
-        self.swap_space.as_ptr()
+        debug_assert!(index < self.len);
+
+        let size = self.layout.size();
+        let to_remove = self.ptr.as_ptr().add(index * size);
+        let swap_space = self.swap_space.as_ptr();
+
+        ptr::copy_nonoverlapping(to_remove, swap_space, size);
+        ptr::copy_nonoverlapping(value, to_remove, size);
+        swap_space
     }
 
-    /// Replaces the item at `index` with the item at the given address
-    /// and calls the destructor for the replaced item..
+    /// Replaces the item at `index` with the value at the given address
+    /// and calls the destructor for the replaced item.
     pub unsafe fn set_and_drop_prev_unchecked(&mut self, index: usize, value: *const u8) {
-        (self.drop)(self.get_unchecked(index));
-        ptr::copy(value, self.get_unchecked(index), self.layout.size());
+        debug_assert!(index < self.len);
+
+        let size = self.layout.size();
+        let to_remove = self.ptr.as_ptr().add(index * size);
+
+        (self.drop)(to_remove);
+        ptr::copy_nonoverlapping(value, to_remove, size);
     }
 
-    /// Removes the item at the given `index` by swapping it with the item at
+    /// Removes the item at `index` by swapping it with the item at
     /// the last position and decrementing the length. The destructor of the
     /// removed items is not called. Returns the address of the removed item
-    /// which is valid until the next call to any of the vector's functions.
+    /// which remains valid until the next call to any of the vector's
+    /// functions.
     pub unsafe fn swap_remove_and_forget_unchecked(&mut self, index: usize) -> *mut u8 {
-        let last_index = self.len - 1;
+        debug_assert!(index < self.len);
 
-        // Copy current element to swap space
-        ptr::copy_nonoverlapping(
-            self.get_unchecked(index),
-            self.swap_space.as_ptr(),
-            self.layout.size(),
-        );
+        self.len -= 1;
 
-        // Overwrite current element with last element
-        ptr::copy(
-            self.get_unchecked(last_index),
-            self.get_unchecked(index),
-            self.layout.size(),
-        );
+        let size = self.layout.size();
+        let to_remove = self.ptr.as_ptr().add(index * size);
+        let swap_space = self.swap_space.as_ptr();
+        let last = self.ptr.as_ptr().add(self.len * size);
 
-        self.len = last_index;
-        self.swap_space.as_ptr()
+        ptr::copy_nonoverlapping(to_remove, swap_space, size);
+        ptr::copy(last, to_remove, size);
+        swap_space
     }
 
     /// Removes the item at the given `index` by swapping it with the item at
     /// the last position and decrementing the length. The destructor of the
-    /// removed items is called.
+    /// removed item is called.
     pub unsafe fn swap_remove_and_drop_unchecked(&mut self, index: usize) {
-        (self.drop)(self.get_unchecked(index));
+        debug_assert!(index < self.len);
 
-        let last_index = self.len - 1;
+        self.len -= 1;
 
-        // Overwrite current element with last element
-        ptr::copy(
-            self.get_unchecked(last_index),
-            self.get_unchecked(index),
-            self.layout.size(),
-        );
+        let size = self.layout.size();
+        let to_remove = self.ptr.as_ptr().add(index * size);
+        let last = self.ptr.as_ptr().add(self.len * size);
 
-        self.len = last_index;
+        (self.drop)(to_remove);
+        ptr::copy(last, to_remove, size);
     }
 
-    /// Swaps the items at the given positions.
+    /// Swaps the items at the given positions without checking if the positions
+    /// are valid.
     pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
-        // Copy first element to swap space
-        ptr::copy_nonoverlapping(
-            self.get_unchecked(a),
-            self.swap_space.as_ptr(),
-            self.layout.size(),
-        );
+        debug_assert!(a < self.len);
+        debug_assert!(b < self.len);
 
-        // Overwrite first element with second element
-        ptr::copy(
-            self.get_unchecked(b),
-            self.get_unchecked(a),
-            self.layout.size(),
-        );
+        let size = self.layout.size();
+        let a = self.ptr.as_ptr().add(a * size);
+        let b = self.ptr.as_ptr().add(b * size);
+        let swap_space = self.swap_space.as_ptr();
 
-        // Overwrite second element with first element
-        ptr::copy_nonoverlapping(
-            self.swap_space.as_ptr(),
-            self.get_unchecked(b),
-            self.layout.size(),
-        );
+        ptr::copy_nonoverlapping(a, swap_space, size);
+        ptr::copy(b, a, size);
+        ptr::copy_nonoverlapping(swap_space, b, size);
     }
 
     /// Returns the address of the item at the given `index`.
-    pub unsafe fn get_unchecked(&self, index: usize) -> *mut u8 {
+    pub unsafe fn get_unchecked(&self, index: usize) -> *const u8 {
+        debug_assert!(index < self.len);
+        self.ptr.as_ptr().add(index * self.layout.size())
+    }
+
+    /// Returns the address of the item at the given `index`.
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> *mut u8 {
+        debug_assert!(index < self.len);
         self.ptr.as_ptr().add(index * self.layout.size())
     }
 
     /// Returns a pointer to the buffer where the items are stored.
-    pub fn as_ptr(&self) -> *mut u8 {
+    pub fn as_ptr(&self) -> *const u8 {
+        self.ptr.as_ptr()
+    }
+
+    /// Returns a pointer to the buffer where the items are stored.
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.ptr.as_ptr()
     }
 
