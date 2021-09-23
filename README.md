@@ -10,7 +10,7 @@ Check out the [Sparsey Cheat Sheet](/guides/cheat_sheet.md) and [examples](/exam
 ```rust
 use sparsey::prelude::*;
 
-/// Components are Send + Sync + 'static types.
+// Components are Send + Sync + 'static types.
 struct Position(f32);
 struct Velocity(f32);
 struct Immovable;
@@ -35,18 +35,18 @@ fn main() {
     world.register::<Position>();
     world.register::<Velocity>();
 
-    /// Create some entities.
+    // Create some entities.
     world.create_entity((Position(0.0), Velocity(1.0)));
     world.create_entity((Position(0.0), Velocity(2.0)));
     world.create_entity((Position(0.0), Velocity(3.0), Immovable));
 
-    /// Create a Dispatcher to run our systems.
+    // Create a Dispatcher to run our systems.
     let mut dispatcher = Dispatcher::builder()
         .add_system(update_velocity.system())
         .add_system(update_position.system())
         .build();
 
-    /// Run the systems 3 times.
+    // Run the systems 3 times.
     for _ in 0..3 {
         dispatcher.run_seq(&mut world).unwrap();
         world.increment_tick().unwrap();
