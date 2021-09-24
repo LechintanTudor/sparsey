@@ -2,6 +2,7 @@
 ## Changed
 - Refactor `BlobVec`, improving the performance of adding, removing and updating components.
 - Improved performance of `World::create_entities` when the components belong to groups.
+- Simplify `QueryModifier` to improve the performance of creating iterators.
 
 # 0.2.0 (2021-09-19)
 ## Added

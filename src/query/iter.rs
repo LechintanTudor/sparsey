@@ -33,25 +33,23 @@ where
         } else {
             match query::group_range(&base, &include, &exclude) {
                 Ok(range) => {
-                    let (base_data, base) = base.split_dense();
-                    let iter_data = base_data.with_range(range);
+                    let (mut iter_data, base) = base.split_dense();
 
-                    unsafe { Self::Dense(DenseIter::new_unchecked(iter_data, base, filter)) }
+                    unsafe {
+                        iter_data.entities = iter_data.entities.get_unchecked(range);
+                        Self::Dense(DenseIter::new_unchecked(iter_data, base, filter))
+                    }
                 }
                 Err(_) => {
-                    let (base_data, base) = base.split_sparse();
-                    let (include_data, include) = include.split_modifier();
+                    let (mut iter_data, base) = base.split_sparse();
+                    let (include_entities, include) = include.split_modifier();
                     let (_, exclude) = exclude.split_modifier();
 
-                    let iter_data = if let Some(include_data) = include_data {
-                        if base_data.entities.len() <= include_data.entities.len() {
-                            base_data
-                        } else {
-                            include_data
+                    if let Some(entities) = include_entities {
+                        if entities.len() < iter_data.entities.len() {
+                            iter_data.entities = entities;
                         }
-                    } else {
-                        base_data
-                    };
+                    }
 
                     Self::Sparse(SparseIter::new(iter_data, base, include, exclude, filter))
                 }

@@ -55,8 +55,6 @@ macro_rules! split_modifier {
 	};
 	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
 		paste::paste! {
-			let world_tick = $first.world_tick();
-			let change_tick = $first.change_tick();
 			let [<split_ $first_type:lower>] = $first.split().into_modifier_split();
 			$(let [<split_ $other_type:lower>] = $other.split().into_modifier_split();)*
 
@@ -66,7 +64,7 @@ macro_rules! split_modifier {
 			]).unwrap();
 
 			(
-				Some(crate::query::IterData::new(entities, world_tick, change_tick)),
+				Some(entities),
 				(
 					[<split_ $first_type:lower>].1,
 					$([<split_ $other_type:lower>].1,)*

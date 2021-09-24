@@ -1,5 +1,5 @@
 use crate::group::CombinedGroupInfo;
-use crate::query::{IterData, Passthrough, UnfilteredImmutableQueryElement};
+use crate::query::{Passthrough, UnfilteredImmutableQueryElement};
 use crate::storage::{Entity, SparseArrayView};
 
 /// Trait implemented by `QueryModifier`s.
@@ -14,7 +14,7 @@ pub unsafe trait QueryModifier<'a> {
 
     fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
 
-    fn split_modifier(self) -> (Option<IterData<'a>>, Self::Split);
+    fn split_modifier(self) -> (Option<&'a [Entity]>, Self::Split);
 
     fn includes_split(split: &Self::Split, entity: Entity) -> bool;
 
@@ -38,7 +38,7 @@ unsafe impl<'a> QueryModifier<'a> for Passthrough {
         Some(CombinedGroupInfo::default())
     }
 
-    fn split_modifier(self) -> (Option<IterData<'a>>, Self::Split) {
+    fn split_modifier(self) -> (Option<&'a [Entity]>, Self::Split) {
         (None, ())
     }
 
@@ -71,15 +71,9 @@ where
         CombinedGroupInfo::default().combine(E::group_info(self)?)
     }
 
-    fn split_modifier(self) -> (Option<IterData<'a>>, Self::Split) {
-        let world_tick = self.world_tick();
-        let change_tick = self.change_tick();
+    fn split_modifier(self) -> (Option<&'a [Entity]>, Self::Split) {
         let (entities, sparse) = E::split(self).into_modifier_split();
-
-        (
-            Some(IterData::new(entities, world_tick, change_tick)),
-            sparse,
-        )
+        (Some(entities), sparse)
     }
 
     fn includes_split(split: &Self::Split, entity: Entity) -> bool {
@@ -119,7 +113,7 @@ macro_rules! impl_query_modifier {
                 Some(CombinedGroupInfo::default() $(.combine(self.$idx.group_info()?)?)+)
             }
 
-            fn split_modifier(self) -> (Option<IterData<'a>>, Self::Split) {
+            fn split_modifier(self) -> (Option<&'a [Entity]>, Self::Split) {
                 split_modifier!($(($elem, self.$idx)),+)
             }
 
