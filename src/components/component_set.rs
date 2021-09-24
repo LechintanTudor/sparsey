@@ -98,9 +98,7 @@ macro_rules! impl_component_set {
                 let new_entities = entities.get_unchecked(initial_entity_count..);
 
                 for i in iter_group_family_indexes(family_mask) {
-                    for &entity in new_entities {
-                        storages.group_components(i, Some(&entity))
-                    }
+                    storages.group_components(i, new_entities);
                 }
 
                 new_entities
