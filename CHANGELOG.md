@@ -1,6 +1,7 @@
 # Unreleased
 ## Added
 - Added `World::resources` for iterating over all `Resource`s and their `TypeId`s.
+- Added `World::storages` for iterating over all `ComponentStorage`s and the `TypeId`s of the components they hold.
 
 ## Changed
 - Refactor `BlobVec`, improving the performance of adding, removing and updating components.

@@ -1,4 +1,4 @@
-use crate::components::{Component, ComponentSet, ComponentStorages};
+use crate::components::{Component, ComponentSet, ComponentStorages, ComponentStoragesIter};
 use crate::layout::Layout;
 use crate::resources::{Resource, ResourceStorage, ResourceStorageIter};
 use crate::storage::{ComponentStorage, Entity, EntityStorage};
@@ -82,6 +82,12 @@ impl World {
     /// Check if a component type is registered.
     pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
         self.storages.is_registered(component_type_id)
+    }
+
+    /// Returns an iterator over all registered storages and the`TypeId`s of the
+    /// components they hold.
+    pub fn storages(&mut self) -> ComponentStoragesIter {
+        self.storages.iter()
     }
 
     /// Creates an `Entity` with the given `components` and returns it.
