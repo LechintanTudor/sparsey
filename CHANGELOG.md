@@ -1,4 +1,7 @@
 # Unreleased
+## Added
+- Added `World::resources` for iterating over all `Resource`s and their `TypeId`s.
+
 ## Changed
 - Refactor `BlobVec`, improving the performance of adding, removing and updating components.
 - Improved performance of `World::create_entities` when the components belong to groups.

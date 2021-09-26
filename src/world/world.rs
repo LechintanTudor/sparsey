@@ -1,6 +1,6 @@
 use crate::components::{Component, ComponentSet, ComponentStorages};
 use crate::layout::Layout;
-use crate::resources::{Resource, ResourceStorage};
+use crate::resources::{Resource, ResourceStorage, ResourceStorageIter};
 use crate::storage::{ComponentStorage, Entity, EntityStorage};
 use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
 use crate::world::{BorrowWorld, NoSuchEntity, TickOverflow};
@@ -281,6 +281,12 @@ impl World {
     /// Removes all resources from the `World`.
     pub fn clear_resources(&mut self) {
         self.resources.clear();
+    }
+
+    /// Returns an iterator over all resources stored in the `World` and their
+    /// `TypeId`s.
+    pub fn resources(&mut self) -> ResourceStorageIter {
+        self.resources.iter()
     }
 
     /// Removes all entities, components and resources from the `World`.
