@@ -1,10 +1,10 @@
 pub use self::component_storage::*;
 pub use self::entity::*;
 pub use self::sparse_array::*;
+pub use self::typed_component_storage::*;
 
 pub(crate) use self::blob_vec::*;
 pub(crate) use self::entity_storage::*;
-pub(crate) use self::typed_component_storage::*;
 
 mod blob_vec;
 mod component_storage;
