@@ -9,6 +9,9 @@
 - Simplify `QueryModifier` to improve the performance of creating iterators.
 - Changed visibility of `TypedComponentStorage` to public.
 
+## Removed
+- Removed all methods from `ComponentView`.
+
 # 0.2.0 (2021-09-19)
 ## Added
 - Queries over a single component view no longer need to be wrapped in a tuple.

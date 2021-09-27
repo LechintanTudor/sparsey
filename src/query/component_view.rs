@@ -34,27 +34,6 @@ where
             change_tick,
         }
     }
-
-    /// Returns the `ChangeTicks` associated with `entity`'s component, if it
-    /// exists.
-    pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
-        self.storage.get_ticks(entity)
-    }
-
-    /// Returns the number of components in the storage.
-    pub fn len(&self) -> usize {
-        self.storage.len()
-    }
-
-    /// Returns `true` if the storage is empty.
-    pub fn is_empty(&self) -> bool {
-        self.storage.is_empty()
-    }
-
-    /// Returns all the `ChangeTicks` in the storage.
-    pub fn ticks(&self) -> &[ChangeTicks] {
-        self.storage.ticks()
-    }
 }
 
 unsafe impl<'a, T, S> QueryElement<'a> for &'a ComponentView<'a, T, S>
