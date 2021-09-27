@@ -206,6 +206,8 @@ impl ComponentStorages {
                     entity,
                 );
 
+                dbg!(status);
+
                 match status {
                     GroupStatus::Grouped => {
                         if ungroup_len == 0 {
@@ -220,6 +222,8 @@ impl ComponentStorages {
             }
 
             let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
+
+            dbg!(&ungroup_range);
 
             for group in groups.get_unchecked_mut(ungroup_range).iter_mut().rev() {
                 ungroup_components(
@@ -236,17 +240,11 @@ impl ComponentStorages {
         E: IntoIterator<Item = &'a Entity>,
         E::IntoIter: Clone,
     {
-        if !self.families.is_empty() {
-            let entities = entities.into_iter();
+        let entities = entities.into_iter();
 
-            for i in 0..(self.families.len() - 1) {
-                unsafe {
-                    self.group_components(i, entities.clone());
-                }
-            }
-
+        for i in 0..self.families.len() {
             unsafe {
-                self.group_components(self.families.len() - 1, entities);
+                self.group_components(i, entities.clone());
             }
         }
     }
@@ -256,17 +254,11 @@ impl ComponentStorages {
         E: IntoIterator<Item = &'a Entity>,
         E::IntoIter: Clone,
     {
-        if !self.families.is_empty() {
-            let entities = entities.into_iter();
+        let entities = entities.into_iter();
 
-            for i in 0..(self.families.len() - 1) {
-                unsafe {
-                    self.ungroup_components(i, entities.clone());
-                }
-            }
-
+        for i in 0..self.families.len() {
             unsafe {
-                self.ungroup_components(self.families.len() - 1, entities);
+                self.ungroup_components(i, entities.clone());
             }
         }
     }
@@ -442,41 +434,38 @@ impl Group {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
 enum GroupStatus {
     MissingComponents,
     Ungrouped,
     Grouped,
 }
 
-fn get_group_status(
+unsafe fn get_group_status(
     storages: &mut [AtomicRefCell<ComponentStorage>],
     group_len: usize,
     entity: Entity,
 ) -> GroupStatus {
-    match storages.split_first_mut() {
-        Some((first, others)) => {
-            let status = match first.get_mut().get_index(entity) {
-                Some(index) => {
-                    if index < group_len {
-                        GroupStatus::Grouped
-                    } else {
-                        GroupStatus::Ungrouped
-                    }
-                }
-                None => return GroupStatus::MissingComponents,
-            };
+    let (first, others) = storages.split_first_mut().unsafe_unwrap();
 
-            if others
-                .iter_mut()
-                .all(|storage| storage.get_mut().contains(entity))
-            {
-                status
+    let status = match first.get_mut().get_index(entity) {
+        Some(index) => {
+            if index < group_len {
+                GroupStatus::Grouped
             } else {
-                GroupStatus::MissingComponents
+                GroupStatus::Ungrouped
             }
         }
-        None => GroupStatus::Grouped,
+        None => return GroupStatus::MissingComponents,
+    };
+
+    if others
+        .iter_mut()
+        .all(|storage| storage.get_mut().contains(entity))
+    {
+        status
+    } else {
+        GroupStatus::MissingComponents
     }
 }
 
@@ -485,9 +474,11 @@ unsafe fn group_components(
     group_len: &mut usize,
     entity: Entity,
 ) {
+    let swap_index = *group_len;
+
     for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
         let index = storage.get_index(entity).unsafe_unwrap();
-        storage.swap(index, *group_len);
+        storage.swap_unchecked(index, swap_index);
     }
 
     *group_len += 1;
@@ -499,11 +490,11 @@ unsafe fn ungroup_components(
     entity: Entity,
 ) {
     if *group_len > 0 {
-        let last_index = *group_len - 1;
+        let swap_index = *group_len - 1;
 
         for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
             let index = storage.get_index(entity).unsafe_unwrap();
-            storage.swap(index, last_index);
+            storage.swap_unchecked(index, swap_index);
         }
 
         *group_len -= 1;

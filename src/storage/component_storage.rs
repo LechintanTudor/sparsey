@@ -196,31 +196,12 @@ impl ComponentStorage {
         self.sparse.contains(entity)
     }
 
-    /// Returns the index in the dense vector of `entity`.
-    pub fn get_index(&self, entity: Entity) -> Option<usize> {
-        self.sparse.get_index(entity)
-    }
-
     /// Removes all entities and components in the storage.
     pub fn clear(&mut self) {
         self.sparse.clear();
         self.entities.clear();
         self.ticks.clear();
         self.components.clear();
-    }
-
-    /// Swaps the entities at the given dense indexes.
-    pub fn swap(&mut self, a: usize, b: usize) {
-        let sparse_a = self.entities[a].index();
-        let sparse_b = self.entities[b].index();
-
-        unsafe {
-            self.sparse.swap_unchecked(sparse_a, sparse_b);
-            self.components.swap_unchecked(a, b);
-        }
-
-        self.entities.swap(a, b);
-        self.ticks.swap(a, b);
     }
 
     /// Returns the number of components in the storage.
@@ -274,5 +255,25 @@ impl ComponentStorage {
             self.components.as_mut_ptr(),
             self.ticks.as_mut_slice(),
         )
+    }
+
+    /// Returns the index in the dense vector of `entity`.
+    pub(crate) fn get_index(&self, entity: Entity) -> Option<usize> {
+        self.sparse.get_index(entity)
+    }
+
+    /// Swaps the entities at the given indexes without checking if the indexes
+    /// are valid.
+    pub(crate) unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+        debug_assert!(a < self.entities.len());
+        debug_assert!(b < self.entities.len());
+
+        let sparse_a = self.entities.get_unchecked(a).index();
+        let sparse_b = self.entities.get_unchecked(b).index();
+        self.sparse.swap_unchecked(sparse_a, sparse_b);
+
+        self.components.swap_unchecked(a, b);
+        self.entities.swap(a, b);
+        self.ticks.swap(a, b);
     }
 }
