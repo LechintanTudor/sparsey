@@ -1,5 +1,4 @@
-use crate::components::{Component, ComponentStorages, FamilyMask};
-use crate::group::iter_group_family_indexes;
+use crate::components::{Component, ComponentStorages, FamilyMask, FamilyMaskIter, GroupMask};
 use crate::storage::{ComponentStorage, Entity, EntityStorage, TypedComponentStorage};
 use crate::utils::{panic_missing_comp, ChangeTicks};
 use atomic_refcell::AtomicRefMut;
@@ -38,7 +37,7 @@ where
 }
 
 macro_rules! impl_component_set {
-    ($len:tt, $(($comp:ident, $idx:tt)),*) => {
+    ($(($comp:ident, $idx:tt)),*) => {
         unsafe impl<$($comp),*> ComponentSet for ($($comp,)*)
         where
             $($comp: Component,)*
@@ -51,7 +50,7 @@ macro_rules! impl_component_set {
                 components: Self,
                 ticks: ChangeTicks,
             ) {
-                let mut family_mask = 0_u16;
+                let mut family_mask = FamilyMask::default();
 
                 $(
                     {
@@ -61,7 +60,7 @@ macro_rules! impl_component_set {
                     }
                 )*
 
-                for i in iter_group_family_indexes(family_mask) {
+                for i in FamilyMaskIter::new(family_mask) {
                     storages.group_components(i, Some(&entity));
                 }
             }
@@ -78,7 +77,7 @@ macro_rules! impl_component_set {
                 It: IntoIterator<Item = Self>
             {
                 let initial_entity_count = entities.as_ref().len();
-                let mut family_mask = 0_u16;
+                let mut family_mask = FamilyMask::default();
 
                 {
                     let mut borrowed_storages = (
@@ -97,7 +96,7 @@ macro_rules! impl_component_set {
 
                 let new_entities = entities.get_unchecked(initial_entity_count..);
 
-                for i in iter_group_family_indexes(family_mask) {
+                for i in FamilyMaskIter::new(family_mask) {
                     storages.group_components(i, new_entities);
                 }
 
@@ -107,50 +106,62 @@ macro_rules! impl_component_set {
             #[allow(unused_mut)]
             #[allow(unused_variables)]
             unsafe fn remove(storages: &mut ComponentStorages, entity: Entity) -> Option<Self> {
-                let mut family_mask = 0_u16;
-                $(family_mask |= storages.get_family_mask(&TypeId::of::<$comp>());)*
+                let mut family_mask = FamilyMask::default();
+                let mut group_mask = GroupMask::default();
 
-                for i in iter_group_family_indexes(family_mask) {
-                    storages.ungroup_components(i, Some(&entity));
+                let storage_ptrs = ($(
+                    {
+                        let (storage_ptr, family, group) = storages.get_as_ptr_with_masks(&TypeId::of::<$comp>());
+
+                        if storage_ptr.is_null() {
+                            panic_missing_comp::<$comp>();
+                        }
+
+                        family_mask |= family;
+                        group_mask |= group;
+                        storage_ptr
+                    },
+                )*);
+
+                for i in FamilyMaskIter::new(family_mask) {
+                    storages.ungroup_components(i, group_mask, Some(&entity));
                 }
 
-                let components = ($(get_mut::<$comp>(storages).remove(entity),)*);
+                let components = ($(
+                    TypedComponentStorage::<$comp, _>::new(&mut *storage_ptrs.$idx).remove(entity),
+                )*);
+
                 Some(($(components.$idx?,)*))
             }
 
             #[allow(unused_mut)]
             #[allow(unused_variables)]
             unsafe fn delete(storages: &mut ComponentStorages, entity: Entity) {
-                let mut family_mask = 0_u16;
-                $(family_mask |= storages.get_family_mask(&TypeId::of::<$comp>());)*
+                let mut family_mask = FamilyMask::default();
+                let mut group_mask = GroupMask::default();
 
-                for i in iter_group_family_indexes(family_mask) {
-                    storages.ungroup_components(i, Some(&entity));
+                let storage_ptrs = ($(
+                    {
+                        let (storage_ptr, family, group) = storages.get_as_ptr_with_masks(&TypeId::of::<$comp>());
+
+                        if storage_ptr.is_null() {
+                            panic_missing_comp::<$comp>();
+                        }
+
+                        family_mask |= family;
+                        group_mask |= group;
+                        storage_ptr
+                    },
+                )*);
+
+                for i in FamilyMaskIter::new(family_mask) {
+                    storages.ungroup_components(i, group_mask, Some(&entity));
                 }
 
-                $(get_mut_untyped::<$comp>(storages).remove_and_drop(entity);)*
+                $((&mut *storage_ptrs.$idx).remove_and_drop(entity);)*
             }
         }
     };
-}
-
-fn get_mut<T>(storages: &mut ComponentStorages) -> TypedComponentStorage<T, &mut ComponentStorage>
-where
-    T: Component,
-{
-    storages
-        .get_mut(&TypeId::of::<T>())
-        .map(|storage| unsafe { TypedComponentStorage::new(storage) })
-        .unwrap_or_else(|| panic_missing_comp::<T>())
-}
-
-fn get_mut_untyped<T>(storages: &mut ComponentStorages) -> &mut ComponentStorage
-where
-    T: Component,
-{
-    storages
-        .get_mut(&TypeId::of::<T>())
-        .unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
 fn get_with_family_mask_mut<T>(
@@ -184,21 +195,21 @@ where
 mod impls {
     use super::*;
 
-    impl_component_set!(0,);
-    impl_component_set!(1, (A, 0));
-    impl_component_set!(2, (A, 0), (B, 1));
-    impl_component_set!(3, (A, 0), (B, 1), (C, 2));
-    impl_component_set!(4, (A, 0), (B, 1), (C, 2), (D, 3));
-    impl_component_set!(5, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_component_set!(6, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_component_set!(7, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_component_set!(8, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
-    impl_component_set!(9, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
-    impl_component_set!(10, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
-    impl_component_set!(11, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
-    impl_component_set!(12, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
-    impl_component_set!(13, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
-    impl_component_set!(14, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
-    impl_component_set!(15, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
-    impl_component_set!(16, (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
+    impl_component_set!();
+    impl_component_set!((A, 0));
+    impl_component_set!((A, 0), (B, 1));
+    impl_component_set!((A, 0), (B, 1), (C, 2));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
+    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
 }

@@ -1,10 +1,10 @@
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Debug)]
-pub(crate) struct GroupMask {
+pub(crate) struct QueryMask {
     pub include: u16,
     pub exclude: u16,
 }
 
-impl GroupMask {
+impl QueryMask {
     pub const EMPTY: Self = Self::new(0, 0);
 
     pub const fn new(include: u16, exclude: u16) -> Self {

@@ -1,5 +1,5 @@
 use crate::components::Group;
-use crate::group::GroupMask;
+use crate::group::QueryMask;
 use std::ops::Range;
 use std::ptr;
 
@@ -89,7 +89,7 @@ pub fn group_range(
         .max(include.max_group_offset)
         .max(exclude.max_group_offset);
 
-    let group_mask = GroupMask::new(base.group_mask | include.group_mask, exclude.group_mask);
+    let group_mask = QueryMask::new(base.group_mask | include.group_mask, exclude.group_mask);
     let group = &group_family[max_group_offset];
 
     if group_mask == group.include_mask() {

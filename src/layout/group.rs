@@ -71,6 +71,10 @@ impl LayoutGroupFamily {
     pub fn group_arities(&self) -> &[usize] {
         &self.group_arities
     }
+
+    pub fn max_arity(&self) -> usize {
+        self.group_arities.last().copied().unwrap_or(0)
+    }
 }
 
 /// Trait used for creating a `LayoutGroup`. Implemented for tuples up to arity

@@ -8,9 +8,13 @@
 - Improved performance of `World::create_entities` when the components belong to groups.
 - Simplify `QueryModifier` to improve the performance of creating iterators.
 - Changed visibility of `TypedComponentStorage` to public.
+- Improved performance of grouping and ungrouping components.
 
 ## Removed
 - Removed all methods from `ComponentView`.
+
+## Fixed
+- Removing a component from a nested group no longer ungroups the components of the parent groups.
 
 # 0.2.0 (2021-09-19)
 ## Added
