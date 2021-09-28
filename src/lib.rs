@@ -1,6 +1,31 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::module_inception)]
 
+//! Sparsey is a sparse set-based Entity Component System with lots of features
+//! and nice syntax \~( ˘▾˘\~) ```
+//! use sparsey::prelude::*;
+//!
+//! struct Position(f32, f32);
+//! struct Velocity(f32, f32);
+//!
+//! fn main() {
+//!     let mut world = World::default();
+//!     world.register::<Position>();
+//!     world.register::<Velocity>();
+//!
+//!     world.create_entity((Position(0.0, 0.0), Velocity(1.0, 2.0)));
+//!     world.create_entity((Position(0.0, 0.0), Velocity(3.0, 4.0)));
+//!
+//!     let (mut positions, velocities)
+//!         = world.borrow::<(CompMut<Position>, Comp<Velocity>)>();
+//!
+//!     for (mut position, velocity) in (&mut positions, &velocities).iter() {
+//!         position.0 += velocity.0;
+//!         position.1 += velocity.1;
+//!     }
+//! }
+//! ```
+
 /// Exports functions for filtering component and resource views.
 pub mod filters {
     pub use crate::query::{added, changed, contains, maybe, mutated};
