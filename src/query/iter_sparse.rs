@@ -2,7 +2,7 @@ use crate::query::{IterData, QueryBase, QueryFilter, QueryModifier};
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
-/// Iterator over ungrouped component storages.
+/// Iterator over components of ungrouped `ComponentStorage`s.
 pub struct SparseIter<'a, B, I, E, F>
 where
     B: QueryBase<'a>,

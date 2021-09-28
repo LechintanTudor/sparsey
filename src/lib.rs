@@ -2,7 +2,8 @@
 #![allow(clippy::module_inception)]
 
 //! Sparsey is a sparse set-based Entity Component System with lots of features
-//! and nice syntax \~( ˘▾˘\~) ```
+//! and nice syntax \~( ˘▾˘\~)
+//! ```
 //! use sparsey::prelude::*;
 //!
 //! struct Position(f32, f32);

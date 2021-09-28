@@ -99,7 +99,7 @@ impl IndexEntity {
 }
 
 /// Used by `EntityStorage` to recycle indexes. Entities with the same index and
-/// different `Versions` are considered different.
+/// different `Version`s are considered different.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Version(NonZeroU32);
 
