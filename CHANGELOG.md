@@ -1,4 +1,4 @@
-# Unreleased
+# 0.3.0 (2021-09-28)
 ## Added
 - Added `World::resources` for iterating over all `Resource`s and their `TypeId`s.
 - Added `World::storages` for iterating over all `ComponentStorage`s and the `TypeId`s of the components they hold.
