@@ -42,6 +42,7 @@ macro_rules! impl_component_set {
         where
             $($comp: Component,)*
         {
+            #[allow(clippy::eval_order_dependence)]
             #[allow(unused_mut)]
             #[allow(unused_variables)]
             unsafe fn insert(
@@ -65,6 +66,7 @@ macro_rules! impl_component_set {
                 }
             }
 
+            #[allow(clippy::eval_order_dependence)]
             #[allow(unused_mut)]
             #[allow(unused_variables)]
             unsafe fn extend<'a, It>(
@@ -103,6 +105,7 @@ macro_rules! impl_component_set {
                 new_entities
             }
 
+            #[allow(clippy::eval_order_dependence)]
             #[allow(unused_mut)]
             #[allow(unused_variables)]
             unsafe fn remove(storages: &mut ComponentStorages, entity: Entity) -> Option<Self> {
@@ -134,6 +137,7 @@ macro_rules! impl_component_set {
                 Some(($(components.$idx?,)*))
             }
 
+            #[allow(clippy::eval_order_dependence)]
             #[allow(unused_mut)]
             #[allow(unused_variables)]
             unsafe fn delete(storages: &mut ComponentStorages, entity: Entity) {

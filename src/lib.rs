@@ -1,6 +1,5 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::module_inception)]
-#![allow(clippy::unused_unit)]
 
 /// Exports functions for filtering component and resource views.
 pub mod filters {

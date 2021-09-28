@@ -109,6 +109,7 @@ macro_rules! impl_query_modifier {
                 $(!self.$idx.contains(entity))&&+
             }
 
+            #[allow(clippy::needless_question_mark)]
             fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
                 Some(CombinedGroupInfo::default() $(.combine(self.$idx.group_info()?)?)+)
             }
