@@ -12,8 +12,8 @@ pub unsafe trait Runnable {
     fn run(&mut self, registry: &Registry) -> SystemResult;
 }
 
-// Encapsulates a system function that can be run locally. Implements
-// `Runnable`.
+/// Encapsulates a system function that can be run locally. Implements
+/// `Runnable`.
 pub struct LocalSystem {
     function: Box<dyn FnMut(&Registry) -> SystemResult + 'static>,
     accesses: Vec<RegistryAccess>,

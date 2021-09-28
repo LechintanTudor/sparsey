@@ -83,6 +83,7 @@ impl ResourceStorage {
     }
 }
 
+/// Iterator over the resources in a `World`.
 pub struct ResourceStorageIter<'a> {
     inner: HashMapIterMut<'a, TypeId, AtomicRefCell<ResourceCell>>,
 }

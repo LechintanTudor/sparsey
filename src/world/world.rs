@@ -22,7 +22,7 @@ impl WorldId {
     }
 }
 
-/// Container for component storages and entities.
+/// Container for entities, components and resources.
 pub struct World {
     pub(crate) id: WorldId,
     pub(crate) tick: NonZeroTicks,

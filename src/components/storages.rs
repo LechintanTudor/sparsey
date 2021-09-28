@@ -10,6 +10,7 @@ use std::collections::hash_map::{Entry, IterMut as HashMapIterMut};
 use std::ops::Range;
 use std::{mem, ptr};
 
+/// Container for `ComponentStorage`s. Also manages component grouping.
 #[derive(Default)]
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
