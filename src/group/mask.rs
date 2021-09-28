@@ -1,13 +1,15 @@
+pub(crate) type StorageMask = u16;
+
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Debug)]
 pub(crate) struct QueryMask {
-    pub include: u16,
-    pub exclude: u16,
+    include: StorageMask,
+    exclude: StorageMask,
 }
 
 impl QueryMask {
     pub const EMPTY: Self = Self::new(0, 0);
 
-    pub const fn new(include: u16, exclude: u16) -> Self {
+    pub const fn new(include: StorageMask, exclude: StorageMask) -> Self {
         Self { include, exclude }
     }
 

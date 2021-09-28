@@ -1,9 +1,11 @@
 use crate::layout::{LayoutGroup, LayoutGroupFamily};
 use std::mem;
 
+pub(crate) const MAX_GROUP_COUNT: usize = 32;
+
 /// Describes the layout of component storages in the `World`.
 pub struct Layout {
-    group_families: Vec<LayoutGroupFamily>,
+    families: Vec<LayoutGroupFamily>,
 }
 
 impl Layout {
@@ -12,37 +14,37 @@ impl Layout {
         LayoutBuilder::default()
     }
 
-    pub(crate) fn group_families(&self) -> &[LayoutGroupFamily] {
-        &self.group_families
+    pub(crate) fn families(&self) -> &[LayoutGroupFamily] {
+        &self.families
     }
 }
 
 /// Enables creating a `Layout` using the builder pattern.
 #[derive(Default)]
 pub struct LayoutBuilder {
-    group_families: Vec<Vec<LayoutGroup>>,
+    families: Vec<Vec<LayoutGroup>>,
 }
 
 impl LayoutBuilder {
     /// Adds a `group` to the `Layout`. Panics if the group partially overlaps
     /// with previous groups.
     pub fn add_group(&mut self, group: LayoutGroup) -> &mut Self {
-        let mut group_family_index = Option::<usize>::None;
+        let mut family_index = Option::<usize>::None;
 
         for (i, first_group) in self
-            .group_families
+            .families
             .iter()
             .flat_map(|group_set| group_set.first())
             .enumerate()
         {
             if !group.components().is_disjoint(first_group.components()) {
-                group_family_index = Some(i);
+                family_index = Some(i);
 
-                for i in (i + 1)..self.group_families.len() {
+                for i in (i + 1)..self.families.len() {
                     assert!(
                         group
                             .components()
-                            .is_disjoint(self.group_families[i].last().unwrap().components()),
+                            .is_disjoint(self.families[i].last().unwrap().components()),
                         "Groups are not allowed to only partially overlap",
                     )
                 }
@@ -51,9 +53,9 @@ impl LayoutBuilder {
             }
         }
 
-        match group_family_index {
+        match family_index {
             Some(i) => {
-                let group_family = &mut self.group_families[i];
+                let group_family = &mut self.families[i];
 
                 for (i, old_group) in group_family.iter().enumerate() {
                     if group.components().is_subset(old_group.components()) {
@@ -69,7 +71,7 @@ impl LayoutBuilder {
 
                 group_family.push(group);
             }
-            None => self.group_families.push(vec![group]),
+            None => self.families.push(vec![group]),
         }
 
         self
@@ -77,11 +79,22 @@ impl LayoutBuilder {
 
     /// Returns the `Layout` with the previously added groups.
     pub fn build(&mut self) -> Layout {
-        let group_families = mem::take(&mut self.group_families)
+        let families = mem::take(&mut self.families)
             .iter()
             .map(|groups| unsafe { LayoutGroupFamily::new_unchecked(groups) })
-            .collect();
+            .collect::<Vec<_>>();
 
-        Layout { group_families }
+        let group_count = families
+            .iter()
+            .map(|family| family.group_count())
+            .sum::<usize>();
+
+        assert!(
+            group_count <= MAX_GROUP_COUNT,
+            "Layouts can have at most {} groups",
+            MAX_GROUP_COUNT
+        );
+
+        Layout { families }
     }
 }

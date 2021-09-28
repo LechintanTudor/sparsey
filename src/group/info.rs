@@ -1,5 +1,5 @@
 use crate::components::Group;
-use crate::group::QueryMask;
+use crate::group::{QueryMask, StorageMask};
 use std::ops::Range;
 use std::ptr;
 
@@ -8,14 +8,14 @@ use std::ptr;
 pub struct GroupInfo<'a> {
     group_family: &'a [Group],
     group_offset: usize,
-    storage_mask: u16,
+    storage_mask: StorageMask,
 }
 
 impl<'a> GroupInfo<'a> {
     pub(crate) const fn new(
         group_family: &'a [Group],
         group_offset: usize,
-        storage_mask: u16,
+        storage_mask: StorageMask,
     ) -> Self {
         Self {
             group_family,
@@ -30,7 +30,7 @@ impl<'a> GroupInfo<'a> {
 pub struct CombinedGroupInfo<'a> {
     group_family: Option<&'a [Group]>,
     max_group_offset: usize,
-    group_mask: u16,
+    storage_mask: StorageMask,
 }
 
 impl<'a> CombinedGroupInfo<'a> {
@@ -40,13 +40,13 @@ impl<'a> CombinedGroupInfo<'a> {
                 ptr::eq(group_family, group_info.group_family).then(|| CombinedGroupInfo {
                     group_family: Some(group_family),
                     max_group_offset: self.max_group_offset.max(group_info.group_offset),
-                    group_mask: self.group_mask | group_info.storage_mask,
+                    storage_mask: self.storage_mask | group_info.storage_mask,
                 })
             }
             None => Some(CombinedGroupInfo {
                 group_family: Some(group_info.group_family),
                 max_group_offset: group_info.group_offset,
-                group_mask: group_info.storage_mask,
+                storage_mask: group_info.storage_mask,
             }),
         }
     }
@@ -89,7 +89,10 @@ pub fn group_range(
         .max(include.max_group_offset)
         .max(exclude.max_group_offset);
 
-    let group_mask = QueryMask::new(base.group_mask | include.group_mask, exclude.group_mask);
+    let group_mask = QueryMask::new(
+        base.storage_mask | include.storage_mask,
+        exclude.storage_mask,
+    );
     let group = &group_family[max_group_offset];
 
     if group_mask == group.include_mask() {

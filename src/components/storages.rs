@@ -1,6 +1,6 @@
 use crate::components;
 use crate::components::{Component, FamilyMask, GroupMask, GroupStatus};
-use crate::group::{GroupInfo, QueryMask};
+use crate::group::{GroupInfo, QueryMask, StorageMask};
 use crate::layout::Layout;
 use crate::storage::{ComponentStorage, Entity};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
@@ -31,7 +31,7 @@ impl ComponentStorages {
         let mut families = Vec::new();
 
         // Iterate group families.
-        for (family_index, family) in layout.group_families().iter().enumerate() {
+        for (family_index, family) in layout.families().iter().enumerate() {
             let first_group_index = groups.len();
             let first_storage_index = storages.len();
 
@@ -380,7 +380,7 @@ struct ComponentInfo {
 struct ComponentGroupInfo {
     family_index: usize,
     group_offset: usize,
-    storage_mask: u16,
+    storage_mask: StorageMask,
 }
 
 #[derive(Clone, Copy)]

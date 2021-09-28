@@ -4,9 +4,9 @@ use std::collections::HashSet;
 use std::iter::FromIterator;
 
 /// The minimum number of component storages in a group.
-pub const MIN_GROUP_ARITY: usize = 2;
+pub(crate) const MIN_GROUP_ARITY: usize = 2;
 /// The maximum number of component storages in a group.
-pub const MAX_GROUP_ARITY: usize = 16;
+pub(crate) const MAX_GROUP_ARITY: usize = 16;
 
 /// Describes a set of component storages to be grouped together.
 /// Can be constructed using a `LayoutGroupDescriptor`.
@@ -70,6 +70,10 @@ impl LayoutGroupFamily {
 
     pub fn group_arities(&self) -> &[usize] {
         &self.group_arities
+    }
+
+    pub fn group_count(&self) -> usize {
+        self.group_arities.len()
     }
 
     pub fn max_arity(&self) -> usize {
