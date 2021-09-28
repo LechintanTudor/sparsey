@@ -16,7 +16,7 @@ impl QueryFilter for Passthrough {
 }
 
 /// Wrapper around a `QueryFilter` which negates its result.
-pub struct Not<F>(pub F);
+pub struct Not<F>(pub(crate) F);
 
 impl<F> QueryFilter for Not<F>
 where
@@ -29,7 +29,7 @@ where
 
 /// `QueryFilter` that only matches entities which match both the filters
 /// contained inside.
-pub struct And<F1, F2>(pub F1, pub F2);
+pub struct And<F1, F2>(pub(crate) F1, pub(crate) F2);
 
 impl<F1, F2> QueryFilter for And<F1, F2>
 where
@@ -43,7 +43,7 @@ where
 
 /// `QueryFilter` that only matches entities which match either of the filters
 /// contained inside.
-pub struct Or<F1, F2>(pub F1, pub F2);
+pub struct Or<F1, F2>(pub(crate) F1, pub(crate) F2);
 
 impl<F1, F2> QueryFilter for Or<F1, F2>
 where
@@ -57,7 +57,7 @@ where
 
 /// `QueryFilter` that only matches entities which match only one of the filters
 /// contained inside.
-pub struct Xor<F1, F2>(pub F1, pub F2);
+pub struct Xor<F1, F2>(pub(crate) F1, pub(crate) F2);
 
 impl<F1, F2> QueryFilter for Xor<F1, F2>
 where
