@@ -34,6 +34,7 @@ where
 {
     type Target = T;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.component
     }
@@ -43,6 +44,7 @@ impl<T> DerefMut for ComponentRefMut<'_, T>
 where
     T: Component,
 {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.ticks.tick_mutated = self.world_tick;
         self.component

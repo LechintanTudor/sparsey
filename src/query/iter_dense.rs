@@ -38,12 +38,12 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let entity = *self.data.entities.get(self.index)?;
+            let entity = self.data.entities.get(self.index)?;
 
             let index = self.index;
             self.index += 1;
 
-            if self.filter.matches(entity) {
+            if self.filter.matches(*entity) {
                 let item = unsafe {
                     B::get_from_dense_split(
                         &mut self.base,

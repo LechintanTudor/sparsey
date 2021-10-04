@@ -79,14 +79,14 @@ where
         }
     }
 
-    fn for_each<Func>(self, f: Func)
+    fn fold<Acc, Func>(self, init: Acc, f: Func) -> Acc
     where
         Self: Sized,
-        Func: FnMut(Self::Item),
+        Func: FnMut(Acc, Self::Item) -> Acc,
     {
         match self {
-            Self::Sparse(sparse) => sparse.for_each(f),
-            Self::Dense(dense) => dense.for_each(f),
+            Self::Sparse(sparse) => sparse.fold(init, f),
+            Self::Dense(dense) => dense.fold(init, f),
         }
     }
 }

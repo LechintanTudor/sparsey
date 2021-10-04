@@ -346,9 +346,7 @@ fn run_systems_seq<S>(
     S: Runnable,
 {
     let registry = unsafe { Registry::new(world, command_buffers, change_tick) };
-
     let new_errors = systems.iter_mut().flat_map(|sys| sys.run(&registry).err());
-
     errors.extend(new_errors);
 }
 

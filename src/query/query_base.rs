@@ -97,14 +97,17 @@ where
     type SparseSplit = SparseSplitQueryElement<'a, E::Component, E::Filter>;
     type DenseSplit = DenseSplitQueryElement<'a, E::Component, E::Filter>;
 
+    #[inline]
     fn get(self, entity: Entity) -> Option<Self::Item> {
         QueryElement::get(self, entity)
     }
 
+    #[inline]
     fn contains(&self, entity: Entity) -> bool {
         QueryElement::contains(self, entity)
     }
 
+    #[inline]
     fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
         CombinedGroupInfo::default().combine(QueryElement::group_info(self)?)
     }
@@ -131,6 +134,7 @@ where
         )
     }
 
+    #[inline]
     unsafe fn get_from_sparse_split(
         split: &mut Self::SparseSplit,
         entity: Entity,
@@ -140,6 +144,7 @@ where
         split.get::<E>(entity, world_tick, change_tick)
     }
 
+    #[inline]
     unsafe fn get_from_dense_split(
         split: &mut Self::DenseSplit,
         index: usize,
@@ -151,7 +156,7 @@ where
 }
 
 macro_rules! impl_query_base {
-    ($count:tt; $(($elem:ident, $idx:tt)),+) => {
+    ($count:tt; $(#[$attrib:meta];)* $(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> QueryBase<'a> for ($($elem,)+)
         where
             $($elem: QueryElement<'a>,)+
@@ -162,11 +167,13 @@ macro_rules! impl_query_base {
             type SparseSplit = ($(SparseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)+);
             type DenseSplit = ($(DenseSplitQueryElement<'a, $elem::Component, $elem::Filter>,)+);
 
+            $(#[$attrib])*
             #[allow(unused_variables)]
             fn get(self, entity: Entity) -> Option<Self::Item> {
                 Some(($(self.$idx.get(entity)?,)+))
             }
 
+            $(#[$attrib])*
             #[allow(unused_variables)]
             fn contains(&self, entity: Entity) -> bool {
                 true $(&& self.$idx.contains(entity))+
@@ -185,6 +192,7 @@ macro_rules! impl_query_base {
                 split_dense!($(($elem, self.$idx)),+)
             }
 
+            $(#[$attrib])*
             #[allow(unused_variables)]
             unsafe fn get_from_sparse_split(
                 split: &mut Self::SparseSplit,
@@ -197,6 +205,7 @@ macro_rules! impl_query_base {
                 )+))
             }
 
+            $(#[$attrib])*
             #[allow(unused_variables)]
             unsafe fn get_from_dense_split(
                 split: &mut Self::DenseSplit,
@@ -216,9 +225,9 @@ macro_rules! impl_query_base {
 mod impls {
 	use super::*;
 
-	impl_query_base!(1; (A, 0));
-    impl_query_base!(2; (A, 0), (B, 1));
-    impl_query_base!(3; (A, 0), (B, 1), (C, 2));
+	impl_query_base!(1; #[inline]; (A, 0));
+    impl_query_base!(2; #[inline]; (A, 0), (B, 1));
+    impl_query_base!(3; #[inline]; (A, 0), (B, 1), (C, 2));
     impl_query_base!(4; (A, 0), (B, 1), (C, 2), (D, 3));
     impl_query_base!(5; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
     impl_query_base!(6; (A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));

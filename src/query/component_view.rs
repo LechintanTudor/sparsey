@@ -111,10 +111,12 @@ where
     T: Component,
     S: Deref<Target = ComponentStorage>,
 {
+    #[inline]
     fn entities(&self) -> &'a [Entity] {
         self.storage.entities()
     }
 
+    #[inline]
     fn components(&self) -> &'a [Self::Component] {
         self.storage.components()
     }

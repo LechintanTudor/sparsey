@@ -10,6 +10,7 @@ pub trait QueryFilter {
 pub struct Passthrough;
 
 impl QueryFilter for Passthrough {
+    #[inline(always)]
     fn matches(&self, _entity: Entity) -> bool {
         true
     }
@@ -22,6 +23,7 @@ impl<F> QueryFilter for Not<F>
 where
     F: QueryFilter,
 {
+    #[inline]
     fn matches(&self, entity: Entity) -> bool {
         !self.0.matches(entity)
     }
@@ -36,6 +38,7 @@ where
     F1: QueryFilter,
     F2: QueryFilter,
 {
+    #[inline]
     fn matches(&self, entity: Entity) -> bool {
         self.0.matches(entity) && self.1.matches(entity)
     }
@@ -50,6 +53,7 @@ where
     F1: QueryFilter,
     F2: QueryFilter,
 {
+    #[inline]
     fn matches(&self, entity: Entity) -> bool {
         self.0.matches(entity) || self.1.matches(entity)
     }
@@ -64,6 +68,7 @@ where
     F1: QueryFilter,
     F2: QueryFilter,
 {
+    #[inline]
     fn matches(&self, entity: Entity) -> bool {
         self.0.matches(entity) != self.1.matches(entity)
     }

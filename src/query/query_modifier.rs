@@ -26,26 +26,32 @@ unsafe impl<'a> QueryModifier<'a> for Passthrough {
 
     type Split = ();
 
+    #[inline(always)]
     fn includes(&self, _: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn excludes(&self, _: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
         Some(CombinedGroupInfo::default())
     }
 
+    #[inline(always)]
     fn split_modifier(self) -> (Option<&'a [Entity]>, Self::Split) {
         (None, ())
     }
 
+    #[inline(always)]
     fn includes_split(_: &Self::Split, _: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn excludes_split(_: &Self::Split, _: Entity) -> bool {
         true
     }
@@ -59,10 +65,12 @@ where
 
     type Split = SparseArrayView<'a>;
 
+    #[inline]
     fn includes(&self, entity: Entity) -> bool {
         self.contains(entity)
     }
 
+    #[inline]
     fn excludes(&self, entity: Entity) -> bool {
         !self.contains(entity)
     }
@@ -76,10 +84,12 @@ where
         (Some(entities), sparse)
     }
 
+    #[inline]
     fn includes_split(split: &Self::Split, entity: Entity) -> bool {
         split.contains(entity)
     }
 
+    #[inline]
     fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
         !split.contains(entity)
     }
@@ -92,7 +102,7 @@ macro_rules! sparse_array_view {
 }
 
 macro_rules! impl_query_modifier {
-    ($(($elem:ident, $idx:tt)),+) => {
+    ($(#[$attrib:meta];)* $(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> QueryModifier<'a> for ($($elem,)+)
         where
             $($elem: UnfilteredImmutableQueryElement<'a>,)+
@@ -101,10 +111,12 @@ macro_rules! impl_query_modifier {
 
             type Split = ($(sparse_array_view!($elem),)+);
 
+            $(#[$attrib])*
             fn includes(&self, entity: Entity) -> bool {
                 $(self.$idx.contains(entity))&&+
             }
 
+            $(#[$attrib])*
             fn excludes(&self, entity: Entity) -> bool {
                 $(!self.$idx.contains(entity))&&+
             }
@@ -118,10 +130,12 @@ macro_rules! impl_query_modifier {
                 split_modifier!($(($elem, self.$idx)),+)
             }
 
+            $(#[$attrib])*
             fn includes_split(split: &Self::Split, entity: Entity) -> bool {
                 $(split.$idx.contains(entity))&&+
             }
 
+            $(#[$attrib])*
             fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
                 $(!split.$idx.contains(entity))&&+
             }
@@ -133,9 +147,9 @@ macro_rules! impl_query_modifier {
 mod impls {
 	use super::*;
 
-	impl_query_modifier!((A, 0));
-    impl_query_modifier!((A, 0), (B, 1));
-    impl_query_modifier!((A, 0), (B, 1), (C, 2));
+	impl_query_modifier!(#[inline]; (A, 0));
+    impl_query_modifier!(#[inline]; (A, 0), (B, 1));
+    impl_query_modifier!(#[inline]; (A, 0), (B, 1), (C, 2));
     impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3));
     impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
     impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
