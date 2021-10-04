@@ -1,3 +1,7 @@
+# 0.3.1 (2021-10-04)
+## Changed
+- Inlined some functions to improve iteration performance.
+
 # 0.3.0 (2021-09-28)
 ## Added
 - Added `World::resources` for iterating over all `Resource`s and their `TypeId`s.
