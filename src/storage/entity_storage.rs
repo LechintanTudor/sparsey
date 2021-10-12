@@ -1,4 +1,5 @@
-use crate::storage::{Entity, IndexEntity, SparseArray};
+use crate::storage::{Entity, IndexEntity, SparseArray, Version};
+use std::num::NonZeroU32;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
@@ -11,7 +12,7 @@ pub struct EntityStorage {
 
 impl EntityStorage {
     /// Creates a new `Entity` and returns it.
-    pub fn create(&mut self) -> Entity {
+    pub(crate) fn create(&mut self) -> Entity {
         self.maintain();
 
         let entity = self
@@ -24,7 +25,7 @@ impl EntityStorage {
     }
 
     /// Atomically creates a new `Entity` and returns it.
-    pub fn create_atomic(&self) -> Entity {
+    pub(crate) fn create_atomic(&self) -> Entity {
         self.allocator
             .allocate_atomic()
             .expect("No entities left to allocate")
@@ -32,7 +33,7 @@ impl EntityStorage {
 
     /// Removes `entity` from the storage if it exits. Returns whether or not
     /// there was anything to remove.
-    pub fn destroy(&mut self, entity: Entity) -> bool {
+    pub(crate) fn destroy(&mut self, entity: Entity) -> bool {
         self.maintain();
 
         if self.storage.remove(entity) {
@@ -44,18 +45,18 @@ impl EntityStorage {
     }
 
     /// Returns `true` if the storage contains `entity`.
-    pub fn contains(&self, entity: Entity) -> bool {
+    pub(crate) fn contains(&self, entity: Entity) -> bool {
         self.storage.contains(entity)
     }
 
     /// Removes all entities from the storage.
-    pub fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         self.storage.clear();
         self.allocator.clear();
     }
 
     /// Adds the entities created atomically to the storage.
-    pub fn maintain(&mut self) {
+    pub(crate) fn maintain(&mut self) {
         for entity in self.allocator.maintain() {
             self.storage.insert(entity);
         }
@@ -147,7 +148,7 @@ impl EntityAllocator {
             None => {
                 let current_id = *self.current_id.get_mut();
                 *self.current_id.get_mut() = self.current_id.get_mut().checked_add(1)?;
-                Some(Entity::with_index(current_id))
+                Some(Entity::with_id(current_id))
             }
         }
     }
@@ -155,13 +156,15 @@ impl EntityAllocator {
     fn allocate_atomic(&self) -> Option<Entity> {
         match atomic_decrement_usize(&self.recycled_len) {
             Some(recycled_len) => Some(self.recycled[recycled_len - 1]),
-            None => atomic_increment_u32(&self.current_id).map(Entity::with_index),
+            None => atomic_increment_u32(&self.current_id).map(Entity::with_id),
         }
     }
 
     fn deallocate(&mut self, entity: Entity) {
-        if let Some(next_entity) = entity.with_next_version() {
-            self.recycled.push(next_entity);
+        if entity.version().id() != u32::MAX {
+            let next_version_id = unsafe { NonZeroU32::new_unchecked(entity.version().id() + 1) };
+            self.recycled
+                .push(Entity::new(entity.id(), Version::new(next_version_id)));
             *self.recycled_len.get_mut() += 1;
         }
     }
@@ -182,7 +185,7 @@ impl EntityAllocator {
 
         self.recycled
             .drain(remaining..)
-            .chain(new_id_range.into_iter().map(Entity::with_index))
+            .chain(new_id_range.into_iter().map(Entity::with_id))
     }
 }
 

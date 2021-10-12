@@ -18,7 +18,7 @@ pub struct ComponentStorage {
 }
 
 impl ComponentStorage {
-    pub fn new<T>() -> Self
+    pub(crate) fn new<T>() -> Self
     where
         T: 'static,
     {
@@ -32,7 +32,10 @@ impl ComponentStorage {
         }
     }
 
-    pub unsafe fn from_layout_drop(layout: Layout, drop: Option<unsafe fn(*mut u8)>) -> Self {
+    pub(crate) unsafe fn from_layout_drop(
+        layout: Layout,
+        drop: Option<unsafe fn(*mut u8)>,
+    ) -> Self {
         let swap_space = if layout.size() != 0 {
             NonNull::new(alloc(layout)).unwrap_or_else(|| handle_alloc_error(layout))
         } else {
@@ -54,7 +57,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub unsafe fn insert_and_forget_prev(
+    pub(crate) unsafe fn insert_and_forget_prev(
         &mut self,
         entity: Entity,
         component: *const u8,
@@ -100,7 +103,8 @@ impl ComponentStorage {
         }
     }
 
-    pub unsafe fn insert_and_drop_prev(
+    #[allow(dead_code)]
+    pub(crate) unsafe fn insert_and_drop_prev(
         &mut self,
         entity: Entity,
         component: *const u8,
@@ -144,7 +148,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn remove_and_forget(&mut self, entity: Entity) -> Option<NonNull<u8>> {
+    pub(crate) fn remove_and_forget(&mut self, entity: Entity) -> Option<NonNull<u8>> {
         let index = self.sparse.remove(entity)?;
 
         self.len -= 1;
@@ -172,7 +176,7 @@ impl ComponentStorage {
         Some(self.swap_space)
     }
 
-    pub fn remove_and_drop(&mut self, entity: Entity) {
+    pub(crate) fn remove_and_drop(&mut self, entity: Entity) {
         let index = match self.sparse.remove(entity) {
             Some(index) => index,
             None => return,
@@ -200,7 +204,7 @@ impl ComponentStorage {
         }
     }
 
-    pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+    pub(crate) unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
         debug_assert!(a < self.len);
         debug_assert!(b < self.len);
 
@@ -248,7 +252,7 @@ impl ComponentStorage {
         }
     }
 
-    pub fn get_with_ticks_mut(
+    pub(crate) fn get_with_ticks_mut(
         &mut self,
         entity: Entity,
     ) -> Option<(NonNull<u8>, &mut ChangeTicks)> {
@@ -262,7 +266,7 @@ impl ComponentStorage {
     }
 
     #[inline]
-    pub fn get_index(&self, entity: Entity) -> Option<usize> {
+    pub(crate) fn get_index(&self, entity: Entity) -> Option<usize> {
         self.sparse.get_index(entity)
     }
 
@@ -295,7 +299,7 @@ impl ComponentStorage {
         unsafe { slice::from_raw_parts(self.ticks.as_ptr(), self.len) }
     }
 
-    pub fn split_for_iteration(
+    pub(crate) fn split_for_iteration(
         &self,
     ) -> (SparseArrayView, &[Entity], *const u8, *const ChangeTicks) {
         (
@@ -306,7 +310,7 @@ impl ComponentStorage {
         )
     }
 
-    pub fn split_for_iteration_mut(
+    pub(crate) fn split_for_iteration_mut(
         &mut self,
     ) -> (SparseArrayView, &[Entity], *mut u8, *mut ChangeTicks) {
         (
@@ -317,7 +321,7 @@ impl ComponentStorage {
         )
     }
 
-    pub fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         if self.needs_drop {
             let len = self.len;
             self.len = 0;

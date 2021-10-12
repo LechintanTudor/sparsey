@@ -10,13 +10,13 @@ use std::any::TypeId;
 pub enum RegistryAccess {
     /// Command buffer for queueing commands.
     Commands,
-    /// Shared view over a component storage from the `World`.
+    /// Shared view over a component storage.
     Comp(ComponentInfo),
-    /// Exclusive view over a component storage from the `World`.
+    /// Exclusive view over a component storage.
     CompMut(ComponentInfo),
-    /// Shared view over a resource from `Resources`.
+    /// Shared view over a resource.
     Res(TypeId),
-    /// Exclusive view over a resource from `Resources`.
+    /// Exclusive view over a resource.
     ResMut(TypeId),
 }
 
@@ -84,7 +84,7 @@ unsafe impl<'a, 'b> BorrowRegistry<'a> for Commands<'b> {
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
         Commands::new(
             registry.command_buffers.next().unwrap(),
-            &registry.world.entities,
+            registry.world.entity_storage(),
         )
     }
 }

@@ -5,7 +5,7 @@ pub type Ticks = u32;
 /// Same as `Ticks`, but non zero.
 pub type NonZeroTicks = NonZeroU32;
 
-/// Holds the ticks in which a component was added and last mutated.
+/// Holds the `Ticks` in which a component was added and last mutated.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Default, Debug)]
 pub struct ChangeTicks {
     /// The tick when the component was added.

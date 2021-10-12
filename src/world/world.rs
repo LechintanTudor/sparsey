@@ -24,11 +24,11 @@ impl WorldId {
 
 /// Container for entities, components and resources.
 pub struct World {
-    pub(crate) id: WorldId,
-    pub(crate) tick: NonZeroTicks,
-    pub(crate) entities: EntityStorage,
-    pub(crate) storages: ComponentStorages,
-    pub(crate) resources: ResourceStorage,
+    id: WorldId,
+    tick: NonZeroTicks,
+    entities: EntityStorage,
+    storages: ComponentStorages,
+    resources: ResourceStorage,
 }
 
 impl Default for World {
@@ -133,8 +133,8 @@ impl World {
     {
         unsafe {
             C::extend(
-                &mut self.storages,
                 &mut self.entities,
+                &mut self.storages,
                 components_iter,
                 ticks,
             )
@@ -338,5 +338,24 @@ impl World {
     /// Returns the `WorldId` which uniquely identifies this `World`.
     pub fn id(&self) -> WorldId {
         self.id
+    }
+
+    pub(crate) fn maintain(&mut self) {
+        self.entities.maintain();
+    }
+
+    #[inline]
+    pub(crate) fn entity_storage(&self) -> &EntityStorage {
+        &self.entities
+    }
+
+    #[inline]
+    pub(crate) fn component_storages(&self) -> &ComponentStorages {
+        &self.storages
+    }
+
+    #[inline]
+    pub(crate) fn resource_storage(&self) -> &ResourceStorage {
+        &self.resources
     }
 }

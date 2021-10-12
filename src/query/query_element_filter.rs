@@ -7,6 +7,7 @@ pub trait QueryElementFilter<T>
 where
     T: Component,
 {
+    /// Returns `true` if the component and ticks match the filter.
     fn matches(
         &self,
         component: &T,

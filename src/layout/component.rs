@@ -35,7 +35,7 @@ impl ComponentInfo {
         self.component.type_id()
     }
 
-    /// Returns the type name of the component..
+    /// Returns the type name of the component.
     pub fn type_name(&self) -> &'static str {
         self.component.type_name()
     }

@@ -86,7 +86,7 @@ where
     }
 
     /// Splits the storage for iteration.
-    pub fn split_for_iteration(
+    pub(crate) fn split_for_iteration(
         &self,
     ) -> (SparseArrayView, &[Entity], *const T, *const ChangeTicks) {
         let (sparse, entities, components, ticks) = self.storage.split_for_iteration();
@@ -100,7 +100,7 @@ where
 {
     /// Inserts a component into the storage and returns the previous one, if
     /// any.
-    pub fn insert(&mut self, entity: Entity, component: T, ticks: ChangeTicks) -> Option<T> {
+    pub(crate) fn insert(&mut self, entity: Entity, component: T, ticks: ChangeTicks) -> Option<T> {
         unsafe {
             let raw_component = &component as *const _ as *const _;
             let prev = self
@@ -115,7 +115,7 @@ where
     /// Removes `entity` from the storage and returns its component, if it
     /// exists.
     #[must_use = "use `delete` to discard the component"]
-    pub fn remove(&mut self, entity: Entity) -> Option<T> {
+    pub(crate) fn remove(&mut self, entity: Entity) -> Option<T> {
         unsafe {
             self.storage
                 .remove_and_forget(entity)
@@ -125,26 +125,30 @@ where
 
     // Removes `entity` from the storage if it exists. This is faster than removing
     // it.
-    #[inline]
-    pub fn delete(&mut self, entity: Entity) {
+    #[allow(dead_code)]
+    pub(crate) fn delete(&mut self, entity: Entity) {
         self.storage.remove_and_drop(entity)
     }
 
     /// Removes all entities, components and `ChangeTicks` from the storage.
-    pub fn clear(&mut self) {
+    #[allow(dead_code)]
+    pub(crate) fn clear(&mut self) {
         self.storage.clear();
     }
 
     /// Returns the component and `ChangeTicks` of `entity`, if it was found in
     /// the storage.
-    pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(&mut T, &mut ChangeTicks)> {
+    pub(crate) fn get_with_ticks_mut(
+        &mut self,
+        entity: Entity,
+    ) -> Option<(&mut T, &mut ChangeTicks)> {
         self.storage
             .get_with_ticks_mut(entity)
             .map(|(component, ticks)| unsafe { (component.cast::<T>().as_mut(), ticks) })
     }
 
     /// Splits the storage for iteration.
-    pub fn split_for_iteration_mut(
+    pub(crate) fn split_for_iteration_mut(
         &mut self,
     ) -> (SparseArrayView, &[Entity], *mut T, *mut ChangeTicks) {
         let (sparse, entities, components, ticks) = self.storage.split_for_iteration_mut();

@@ -31,11 +31,11 @@ where
 
     fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
         let (storage, info) = world
-            .storages
+            .component_storages()
             .borrow_with_info(&TypeId::of::<T>())
             .unwrap_or_else(|| panic_missing_comp::<T>());
 
-        unsafe { Comp::new(storage, info, world.tick.get(), change_tick) }
+        unsafe { Comp::new(storage, info, world.tick(), change_tick) }
     }
 }
 
@@ -47,11 +47,11 @@ where
 
     fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
         let (storage, info) = world
-            .storages
+            .component_storages()
             .borrow_with_info_mut(&TypeId::of::<T>())
             .unwrap_or_else(|| panic_missing_comp::<T>());
 
-        unsafe { CompMut::new(storage, info, world.tick.get(), change_tick) }
+        unsafe { CompMut::new(storage, info, world.tick(), change_tick) }
     }
 }
 
@@ -63,11 +63,11 @@ where
 
     fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
         let cell = world
-            .resources
+            .resource_storage()
             .borrow(&TypeId::of::<T>())
             .unwrap_or_else(|| panic_missing_res::<T>());
 
-        unsafe { Res::new(cell, world.tick.get(), change_tick) }
+        unsafe { Res::new(cell, world.tick(), change_tick) }
     }
 }
 
@@ -79,11 +79,11 @@ where
 
     fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
         let cell = world
-            .resources
+            .resource_storage()
             .borrow_mut(&TypeId::of::<T>())
             .unwrap_or_else(|| panic_missing_res::<T>());
 
-        unsafe { ResMut::new(cell, world.tick.get(), change_tick) }
+        unsafe { ResMut::new(cell, world.tick(), change_tick) }
     }
 }
 

@@ -2,6 +2,7 @@ use crate::storage::Entity;
 
 /// Trait implemented by query filters.
 pub trait QueryFilter {
+    /// Returns `true` if the `Entity` macthes the filter.
     fn matches(&self, entity: Entity) -> bool;
 }
 

@@ -20,8 +20,8 @@ where
     /// Creates new entities with components produced by `components_iter`.
     /// Returns the newly created entities as a slice.
     unsafe fn extend<'a, I>(
-        storages: &mut ComponentStorages,
         entities: &'a mut EntityStorage,
+        storages: &mut ComponentStorages,
         components_iter: I,
         ticks: ChangeTicks,
     ) -> &'a [Entity]
@@ -71,8 +71,8 @@ macro_rules! impl_component_set {
             #[allow(unused_mut)]
             #[allow(unused_variables)]
             unsafe fn extend<'a, It>(
-                storages: &mut ComponentStorages,
                 entities: &'a mut EntityStorage,
+                storages: &mut ComponentStorages,
                 components_iter: It,
                 ticks: ChangeTicks,
             ) -> &'a [Entity]

@@ -34,7 +34,7 @@ pub struct CombinedGroupInfo<'a> {
 }
 
 impl<'a> CombinedGroupInfo<'a> {
-    pub fn combine(self, group_info: GroupInfo<'a>) -> Option<Self> {
+    pub(crate) fn combine(self, group_info: GroupInfo<'a>) -> Option<Self> {
         match self.group_family {
             Some(group_family) => {
                 ptr::eq(group_family, group_info.group_family).then(|| CombinedGroupInfo {
@@ -73,7 +73,7 @@ fn common_group_family<'a>(group_families: &[Option<&'a [Group]>]) -> Option<&'a
 
 /// Returns the range of elements the storages have in common if the
 /// `CombinedGroupInfo`s form a group.
-pub fn group_range(
+pub(crate) fn group_range(
     base: CombinedGroupInfo,
     include: CombinedGroupInfo,
     exclude: CombinedGroupInfo,
