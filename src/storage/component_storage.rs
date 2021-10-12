@@ -6,8 +6,6 @@ use std::{mem, ptr, slice};
 
 pub struct ComponentStorage {
     layout: Layout,
-    drop: unsafe fn(*mut u8),
-    needs_drop: bool,
     sparse: SparseArray,
     entities: NonNull<Entity>,
     components: NonNull<u8>,
@@ -15,6 +13,8 @@ pub struct ComponentStorage {
     cap: usize,
     len: usize,
     swap_space: NonNull<u8>,
+    drop: unsafe fn(*mut u8),
+    needs_drop: bool,
 }
 
 impl ComponentStorage {
@@ -41,8 +41,6 @@ impl ComponentStorage {
 
         Self {
             layout,
-            drop: drop.unwrap_or(|_| ()),
-            needs_drop: drop.is_some(),
             sparse: SparseArray::default(),
             entities: NonNull::dangling(),
             components: NonNull::new_unchecked(layout.align() as _),
@@ -50,6 +48,8 @@ impl ComponentStorage {
             cap: 0,
             len: 0,
             swap_space,
+            drop: drop.unwrap_or(|_| ()),
+            needs_drop: drop.is_some(),
         }
     }
 
