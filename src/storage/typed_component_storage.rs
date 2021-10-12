@@ -26,7 +26,11 @@ where
     /// Returns the component of `entity`, if it was found in the storage.
     #[inline]
     pub fn get(&self, entity: Entity) -> Option<&T> {
-        unsafe { self.storage.get(entity).map(|v| &*v.as_ptr().cast::<T>()) }
+        unsafe {
+            self.storage
+                .get(entity)
+                .map(|component| component.cast::<T>().as_ref())
+        }
     }
 
     /// Returns the `ChangeTicks` of the component of `entity`, if it was found
@@ -38,11 +42,10 @@ where
 
     /// Returns the component and `ChangeTicks` of `entity`, if it was found in
     /// the storage.
-    #[inline]
     pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
         self.storage
             .get_with_ticks(entity)
-            .map(|(value, ticks)| unsafe { (&*value.as_ptr().cast::<T>(), ticks) })
+            .map(|(component, ticks)| unsafe { (component.cast::<T>().as_ref(), ticks) })
     }
 
     /// Returns `true` if `entity` was found in the storage.
@@ -95,16 +98,17 @@ impl<T, S> TypedComponentStorage<T, S>
 where
     S: Deref<Target = ComponentStorage> + DerefMut,
 {
-    /// Inserts a value into the storage and returns the previous one, if any.
-    pub fn insert(&mut self, entity: Entity, value: T, ticks: ChangeTicks) -> Option<T> {
+    /// Inserts a component into the storage and returns the previous one, if
+    /// any.
+    pub fn insert(&mut self, entity: Entity, component: T, ticks: ChangeTicks) -> Option<T> {
         unsafe {
-            let raw_value = &value as *const _ as *const _;
+            let raw_component = &component as *const _ as *const _;
             let prev = self
                 .storage
-                .insert_and_forget_prev(entity, raw_value, ticks);
-            mem::forget(value);
+                .insert_and_forget_prev(entity, raw_component, ticks);
+            mem::forget(component);
 
-            prev.map(|v| ptr::read(v.as_ptr().cast::<T>()))
+            prev.map(|component| ptr::read(component.cast::<T>().as_ptr()))
         }
     }
 
@@ -115,7 +119,7 @@ where
         unsafe {
             self.storage
                 .remove_and_forget(entity)
-                .map(|v| ptr::read(v.as_ptr().cast::<T>()))
+                .map(|component| ptr::read(component.cast::<T>().as_ptr()))
         }
     }
 
@@ -133,11 +137,10 @@ where
 
     /// Returns the component and `ChangeTicks` of `entity`, if it was found in
     /// the storage.
-    #[inline]
     pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(&mut T, &mut ChangeTicks)> {
         self.storage
             .get_with_ticks_mut(entity)
-            .map(|(value, ticks)| unsafe { (&mut *value.as_ptr().cast::<T>(), ticks) })
+            .map(|(component, ticks)| unsafe { (component.cast::<T>().as_mut(), ticks) })
     }
 
     /// Splits the storage for iteration.
