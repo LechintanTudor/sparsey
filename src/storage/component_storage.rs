@@ -1,279 +1,474 @@
-use crate::storage::{BlobVec, Entity, IndexEntity, SparseArray, SparseArrayView};
+use crate::storage::{Entity, IndexEntity, SparseArray, SparseArrayView};
 use crate::utils::ChangeTicks;
-use std::alloc::Layout;
-use std::ptr;
+use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
+use std::ptr::NonNull;
+use std::{mem, ptr, slice};
 
-/// Maps entities to components stored as blobs of data.
 pub struct ComponentStorage {
+    layout: Layout,
+    drop: unsafe fn(*mut u8),
+    needs_drop: bool,
     sparse: SparseArray,
-    entities: Vec<Entity>,
-    components: BlobVec,
-    ticks: Vec<ChangeTicks>,
+    entities: NonNull<Entity>,
+    components: NonNull<u8>,
+    ticks: NonNull<ChangeTicks>,
+    cap: usize,
+    len: usize,
+    swap_space: NonNull<u8>,
 }
 
 impl ComponentStorage {
-    /// Creates a storage suitable for storing components of type `T`.
     pub fn new<T>() -> Self
     where
         T: 'static,
     {
         unsafe {
-            Self::from_layout_drop(Layout::new::<T>(), |ptr| ptr::drop_in_place::<T>(ptr as _))
+            if mem::needs_drop::<T>() {
+                Self::from_layout_drop(Layout::new::<T>(), Some(drop_in_place::<T>))
+            } else {
+                Self::from_layout_drop(Layout::new::<T>(), None)
+            }
         }
     }
 
-    /// Creates a storage suitable for storing components with the given layout
-    /// and destructor.
-    pub unsafe fn from_layout_drop(layout: Layout, drop: unsafe fn(*mut u8)) -> Self {
+    pub unsafe fn from_layout_drop(layout: Layout, drop: Option<unsafe fn(*mut u8)>) -> Self {
+        let (cap, swap_space) = if layout.size() == 0 {
+            (usize::MAX, NonNull::new_unchecked(layout.align() as _))
+        } else {
+            let swap_space =
+                NonNull::new(alloc(layout)).unwrap_or_else(|| handle_alloc_error(layout));
+
+            (0, swap_space)
+        };
+
         Self {
+            layout,
+            drop: drop.unwrap_or(|_| ()),
+            needs_drop: drop.is_some(),
             sparse: SparseArray::default(),
-            entities: Vec::new(),
-            components: BlobVec::new(layout, drop),
-            ticks: Vec::new(),
+            entities: NonNull::dangling(),
+            components: NonNull::new_unchecked(layout.align() as _),
+            ticks: NonNull::dangling(),
+            cap,
+            len: 0,
+            swap_space,
         }
     }
 
-    /// Sets the component of `entity` to `component` and returns the address of
-    /// the previous component, which is valid until the next call to any of the
-    /// storage's functions.
     pub unsafe fn insert_and_forget_prev(
         &mut self,
         entity: Entity,
         component: *const u8,
         ticks: ChangeTicks,
-    ) -> *mut u8 {
+    ) -> Option<NonNull<u8>> {
+        debug_assert!(!component.is_null());
+
         let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
         match index_entity {
             Some(index_entity) => {
                 let index = index_entity.index();
-                *self.entities.get_unchecked_mut(index) = entity;
-                *self.ticks.get_unchecked_mut(index) = ticks;
-                self.components
-                    .set_and_forget_prev_unchecked(index, component)
+                *self.entities.as_ptr().add(index) = entity;
+
+                let size = self.layout.size();
+                let to_remove = self.components.as_ptr().add(index * size);
+                let swap_space = self.swap_space.as_ptr();
+
+                ptr::copy_nonoverlapping(to_remove, swap_space, size);
+                ptr::copy_nonoverlapping(component, to_remove, size);
+
+                *self.ticks.as_ptr().add(index) = ticks;
+
+                Some(self.swap_space)
             }
             None => {
-                *index_entity = Some(IndexEntity::new(
-                    self.entities.len() as u32,
-                    entity.version(),
-                ));
-                self.entities.push(entity);
-                self.ticks.push(ticks);
-                self.components.push(component);
-                ptr::null_mut()
+                *index_entity = Some(IndexEntity::new(self.len as u32, entity.version()));
+
+                if self.len == self.cap {
+                    self.grow_amortized();
+                }
+
+                let size = self.layout.size();
+                let slot = self.components.as_ptr().add(self.len * size);
+
+                *self.entities.as_ptr().add(self.len) = entity;
+                ptr::copy_nonoverlapping(component, slot, size);
+                *self.ticks.as_ptr().add(self.len) = ticks;
+
+                self.len += 1;
+                None
             }
         }
     }
 
-    /// Sets the component of `entity` to `component` and calls the desturctor
-    /// of the previous component.
     pub unsafe fn insert_and_drop_prev(
         &mut self,
         entity: Entity,
         component: *const u8,
         ticks: ChangeTicks,
     ) {
+        debug_assert!(!component.is_null());
+
         let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
         match index_entity {
             Some(index_entity) => {
                 let index = index_entity.index();
-                *self.entities.get_unchecked_mut(index) = entity;
-                *self.ticks.get_unchecked_mut(index) = ticks;
-                self.components
-                    .set_and_drop_prev_unchecked(index, component);
+                *self.entities.as_ptr().add(index) = entity;
+
+                let size = self.layout.size();
+                let to_remove = self.components.as_ptr().add(index * size);
+
+                (self.drop)(to_remove);
+                ptr::copy_nonoverlapping(component, to_remove, size);
+
+                *self.ticks.as_ptr().add(index) = ticks;
             }
             None => {
-                *index_entity = Some(IndexEntity::new(
-                    self.entities.len() as u32,
-                    entity.version(),
-                ));
-                self.entities.push(entity);
-                self.ticks.push(ticks);
-                self.components.push(component);
+                *index_entity = Some(IndexEntity::new(self.len as u32, entity.version()));
+
+                if self.len == self.cap {
+                    self.grow_amortized();
+                }
+
+                *self.entities.as_ptr().add(self.len) = entity;
+
+                let size = self.layout.size();
+                let slot = self.components.as_ptr().add(self.len * size);
+                ptr::copy_nonoverlapping(component, slot, size);
+
+                *self.ticks.as_ptr().add(self.len) = ticks;
+
+                self.len += 1;
             }
         }
     }
 
-    /// Removes the component at `entity` and return its address which is valid
-    /// until the next call to any of the storage's functions.
-    pub fn remove_and_forget(&mut self, entity: Entity) -> *mut u8 {
-        let dense_index = match self.sparse.remove(entity) {
-            Some(dense_index) => dense_index,
-            None => return ptr::null_mut(),
-        };
+    pub fn remove_and_forget(&mut self, entity: Entity) -> Option<NonNull<u8>> {
+        let index = self.sparse.remove(entity)?;
 
-        self.entities.swap_remove(dense_index);
-        self.ticks.swap_remove(dense_index);
-
-        if let Some(entity) = self.entities.get(dense_index) {
-            let new_index_entity = IndexEntity::new(dense_index as u32, entity.version());
-
-            unsafe {
-                *self.sparse.get_unchecked_mut(entity.index()) = Some(new_index_entity);
-            }
-        }
+        self.len -= 1;
 
         unsafe {
-            self.components
-                .swap_remove_and_forget_unchecked(dense_index)
+            let last_entity = *self.entities.as_ptr().add(self.len);
+            *self.entities.as_ptr().add(index) = last_entity;
+
+            if index < self.len {
+                let index_entity = IndexEntity::new(index as u32, last_entity.version());
+                *self.sparse.get_unchecked_mut(last_entity.index()) = Some(index_entity);
+            }
+
+            let size = self.layout.size();
+            let to_remove = self.components.as_ptr().add(index * size);
+            let last = self.components.as_ptr().add(self.len);
+            let swap_space = self.swap_space.as_ptr();
+
+            ptr::copy_nonoverlapping(to_remove, swap_space, size);
+            ptr::copy(last, to_remove, size);
+
+            *self.ticks.as_ptr().add(index) = *self.ticks.as_ptr().add(self.len);
         }
+
+        Some(self.swap_space)
     }
 
-    /// Removes the component at `entity` and calls its destructor.
-    pub fn remove_and_drop(&mut self, entity: Entity) -> bool {
-        let dense_index = match self.sparse.remove(entity) {
-            Some(dense_index) => dense_index,
-            None => return false,
+    pub fn remove_and_drop(&mut self, entity: Entity) {
+        let index = match self.sparse.remove(entity) {
+            Some(index) => index,
+            None => return,
         };
 
-        self.entities.swap_remove(dense_index);
-        self.ticks.swap_remove(dense_index);
-
-        if let Some(entity) = self.entities.get(dense_index) {
-            let new_index_entity = IndexEntity::new(dense_index as u32, entity.version());
-
-            unsafe {
-                *self.sparse.get_unchecked_mut(entity.index()) = Some(new_index_entity);
-            }
-        }
+        self.len -= 1;
 
         unsafe {
-            self.components.swap_remove_and_drop_unchecked(dense_index);
-        }
+            let last_entity = *self.entities.as_ptr().add(self.len);
+            *self.entities.as_ptr().add(index) = last_entity;
 
-        true
-    }
+            if index < self.len {
+                let index_entity = IndexEntity::new(index as u32, last_entity.version());
+                *self.sparse.get_unchecked_mut(last_entity.index()) = Some(index_entity);
+            }
 
-    /// Returns the address of the component mapped to `entity`.
-    pub fn get(&self, entity: Entity) -> *const u8 {
-        match self.sparse.get_index(entity) {
-            Some(index) => unsafe { self.components.get_unchecked(index) },
-            None => ptr::null(),
-        }
-    }
+            let size = self.layout.size();
+            let to_remove = self.components.as_ptr().add(index * size);
+            let last = self.components.as_ptr().add(self.len);
 
-    /// Returns the address of the component mapped to `entity`.
-    pub fn get_mut(&mut self, entity: Entity) -> *mut u8 {
-        match self.sparse.get_index(entity) {
-            Some(index) => unsafe { self.components.get_unchecked_mut(index) },
-            None => ptr::null_mut(),
+            (self.drop)(to_remove);
+            ptr::copy(last, to_remove, size);
+
+            *self.ticks.as_ptr().add(index) = *self.ticks.as_ptr().add(self.len);
         }
     }
 
-    /// Returns the `ChangeTicks` of the component mapped to `entity`.
+    pub unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+        debug_assert!(a < self.len);
+        debug_assert!(b < self.len);
+
+        let entity_a = self.entities.as_ptr().add(a);
+        let entity_b = self.entities.as_ptr().add(b);
+        ptr::swap(entity_a, entity_b);
+
+        let sparse_a = (*entity_a).index();
+        let sparse_b = (*entity_b).index();
+        self.sparse.swap_unchecked(sparse_a, sparse_b);
+
+        let size = self.layout.size();
+        let component_a = self.components.as_ptr().add(a * size);
+        let component_b = self.components.as_ptr().add(b * size);
+        let swap_space = self.swap_space.as_ptr();
+
+        ptr::copy_nonoverlapping(component_a, swap_space, size);
+        ptr::copy(component_b, component_a, size);
+        ptr::copy_nonoverlapping(swap_space, component_b, size);
+
+        ptr::swap(self.ticks.as_ptr().add(a), self.ticks.as_ptr().add(b));
+    }
+
+    pub fn get(&self, entity: Entity) -> Option<NonNull<u8>> {
+        let index = self.sparse.get_index(entity)?;
+
+        unsafe {
+            let component = self.components.as_ptr().add(index * self.layout.size());
+            Some(NonNull::new_unchecked(component))
+        }
+    }
+
     pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
         let index = self.sparse.get_index(entity)?;
-        unsafe { Some(self.ticks.get_unchecked(index)) }
+        unsafe { Some(&*self.ticks.as_ptr().add(index)) }
     }
 
-    /// Returns the compnent and `ChangeTicks` mapped to `entity`.
-    pub fn get_with_ticks(&self, entity: Entity) -> Option<(*const u8, &ChangeTicks)> {
+    pub fn get_with_ticks(&self, entity: Entity) -> Option<(NonNull<u8>, &ChangeTicks)> {
         let index = self.sparse.get_index(entity)?;
 
         unsafe {
-            Some((
-                self.components.get_unchecked(index),
-                self.ticks.get_unchecked(index),
-            ))
+            let component = self.components.as_ptr().add(index * self.layout.size());
+            let ticks = self.ticks.as_ptr().add(index);
+            Some((NonNull::new_unchecked(component), &*ticks))
         }
     }
 
-    /// Returns the compnent and `ChangeTicks` mapped to `entity`.
-    pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(*mut u8, &mut ChangeTicks)> {
+    pub fn get_with_ticks_mut(
+        &mut self,
+        entity: Entity,
+    ) -> Option<(NonNull<u8>, &mut ChangeTicks)> {
         let index = self.sparse.get_index(entity)?;
 
         unsafe {
-            Some((
-                self.components.get_unchecked_mut(index),
-                self.ticks.get_unchecked_mut(index),
-            ))
+            let component = self.components.as_ptr().add(index * self.layout.size());
+            let ticks = self.ticks.as_ptr().add(index);
+            Some((NonNull::new_unchecked(component), &mut *ticks))
         }
     }
 
-    /// Returns `true` if the storage contains `entity`.
+    #[inline]
+    pub fn get_index(&self, entity: Entity) -> Option<usize> {
+        self.sparse.get_index(entity)
+    }
+
+    #[inline]
     pub fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
     }
 
-    /// Removes all entities and components in the storage.
-    pub fn clear(&mut self) {
-        self.sparse.clear();
-        self.entities.clear();
-        self.ticks.clear();
-        self.components.clear();
-    }
-
-    /// Returns the number of components in the storage.
+    #[inline]
     pub fn len(&self) -> usize {
-        self.components.len()
+        self.len
     }
 
-    /// Returns `true` if the storage is empty.
+    #[inline]
     pub fn is_empty(&self) -> bool {
-        self.components.is_empty()
+        self.len == 0
     }
 
-    /// Returns the number of components that can be stored without
-    /// reallocating.
+    #[inline]
     pub fn capacity(&self) -> usize {
-        self.components.capacity()
+        self.cap
     }
 
-    /// Returns a slice containing all the entities in the storage.
+    #[inline]
     pub fn entities(&self) -> &[Entity] {
-        &self.entities
+        unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) }
     }
 
-    /// Returns a pointer to the type-erased components.
+    #[inline]
     pub fn components(&self) -> *const u8 {
         self.components.as_ptr()
     }
 
-    /// Returns a slice containing the ticks for all components in the storage.
+    #[inline]
     pub fn ticks(&self) -> &[ChangeTicks] {
-        &self.ticks
+        unsafe { slice::from_raw_parts(self.ticks.as_ptr(), self.len) }
     }
 
-    /// Returns a tuple containing the `SparseArray`, `entities`, `components`
-    /// and `component ticks` of the storage.
-    pub fn split(&self) -> (SparseArrayView, &[Entity], *const u8, &[ChangeTicks]) {
+    pub fn split_for_iteration(
+        &self,
+    ) -> (SparseArrayView, &[Entity], *const u8, *const ChangeTicks) {
         (
             self.sparse.as_view(),
-            self.entities.as_slice(),
+            unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
             self.components.as_ptr(),
-            self.ticks.as_slice(),
+            self.ticks.as_ptr(),
         )
     }
 
-    /// Returns a tuple containing the `SparseArray`, `entities`, `components`
-    /// and `component ticks` of the storage.
-    pub fn split_mut(&mut self) -> (SparseArrayView, &[Entity], *mut u8, &mut [ChangeTicks]) {
+    pub fn split_for_iteration_mut(
+        &mut self,
+    ) -> (SparseArrayView, &[Entity], *mut u8, *mut ChangeTicks) {
         (
             self.sparse.as_view(),
-            self.entities.as_slice(),
-            self.components.as_mut_ptr(),
-            self.ticks.as_mut_slice(),
+            unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
+            self.components.as_ptr(),
+            self.ticks.as_ptr(),
         )
     }
 
-    /// Returns the index in the dense vector of `entity`.
-    pub(crate) fn get_index(&self, entity: Entity) -> Option<usize> {
-        self.sparse.get_index(entity)
+    pub fn clear(&mut self) {
+        if self.needs_drop {
+            let len = self.len;
+            self.len = 0;
+
+            for i in 0..len {
+                unsafe {
+                    (self.drop)(self.components.as_ptr().add(i));
+                }
+            }
+        } else {
+            self.len = 0;
+        }
     }
 
-    /// Swaps the entities at the given indexes without checking if the indexes
-    /// are valid.
-    pub(crate) unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
-        debug_assert!(a < self.entities.len());
-        debug_assert!(b < self.entities.len());
+    fn grow_amortized(&mut self) {
+        assert!(self.layout.size() != 0, "ComponentStorage is full");
 
-        let sparse_a = self.entities.get_unchecked(a).index();
-        let sparse_b = self.entities.get_unchecked(b).index();
-        self.sparse.swap_unchecked(sparse_a, sparse_b);
+        unsafe {
+            let (entities, components, ticks, cap) = if self.cap == 0 {
+                let entities = NonNull::new(alloc(Layout::new::<Entity>()))
+                    .unwrap_or_else(|| handle_alloc_error(Layout::new::<Entity>()));
 
-        self.components.swap_unchecked(a, b);
-        self.entities.swap(a, b);
-        self.ticks.swap(a, b);
+                let components = NonNull::new(alloc(self.layout))
+                    .unwrap_or_else(|| handle_alloc_error(self.layout));
+
+                let ticks = NonNull::new(alloc(Layout::new::<ChangeTicks>()))
+                    .unwrap_or_else(|| handle_alloc_error(Layout::new::<ChangeTicks>()));
+
+                (entities, components, ticks, 1)
+            } else {
+                let cap = 2 * self.cap;
+
+                let old_layout = array_layout::<Entity>(self.cap);
+                let layout = array_layout::<Entity>(cap);
+                let entities = NonNull::new(realloc(
+                    self.entities.as_ptr().cast(),
+                    old_layout,
+                    layout.size(),
+                ))
+                .unwrap_or_else(|| handle_alloc_error(layout));
+
+                let old_layout = repeat_layout(&self.layout, self.cap);
+                let layout = repeat_layout(&self.layout, cap);
+                let components =
+                    NonNull::new(realloc(self.components.as_ptr(), old_layout, layout.size()))
+                        .unwrap_or_else(|| handle_alloc_error(layout));
+
+                let old_layout = array_layout::<ChangeTicks>(self.cap);
+                let layout = array_layout::<ChangeTicks>(cap);
+                let ticks = NonNull::new(realloc(
+                    self.ticks.as_ptr().cast(),
+                    old_layout,
+                    layout.size(),
+                ))
+                .unwrap_or_else(|| handle_alloc_error(layout));
+
+                (entities, components, ticks, cap)
+            };
+
+            self.entities = entities.cast();
+            self.components = components;
+            self.ticks = ticks.cast();
+            self.cap = cap;
+        }
     }
+}
+
+impl Drop for ComponentStorage {
+    fn drop(&mut self) {
+        if self.layout.size() != 0 {
+            unsafe {
+                dealloc(self.swap_space.as_ptr(), self.layout);
+            }
+        }
+
+        if self.cap != 0 {
+            self.clear();
+
+            unsafe {
+                dealloc(
+                    self.entities.as_ptr().cast(),
+                    array_layout::<Entity>(self.cap),
+                );
+
+                if self.layout.size() != 0 {
+                    dealloc(
+                        self.components.as_ptr(),
+                        repeat_layout(&self.layout, self.cap),
+                    );
+                }
+
+                dealloc(
+                    self.ticks.as_ptr().cast(),
+                    array_layout::<ChangeTicks>(self.cap),
+                );
+            }
+        }
+    }
+}
+
+unsafe fn drop_in_place<T>(ptr: *mut u8) {
+    ptr::drop_in_place(ptr as *mut T)
+}
+
+fn array_layout<T>(n: usize) -> Layout {
+    Layout::array::<T>(n).expect("Layout size overflow")
+}
+
+// From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
+fn repeat_layout(layout: &Layout, n: usize) -> Layout {
+    // This cannot overflow. Quoting from the invariant of Layout:
+    // > `size`, when rounded up to the nearest multiple of `align`,
+    // > must not overflow (i.e., the rounded value must be less than
+    // > `usize::MAX`)
+    let padded_size = layout.size() + padding_needed_for(layout, layout.align());
+    let alloc_size = padded_size.checked_mul(n).expect("Layout size overflow");
+
+    // SAFETY: self.align is already known to be valid and alloc_size has been
+    // padded already.
+    unsafe { Layout::from_size_align_unchecked(alloc_size, layout.align()) }
+}
+
+// From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
+fn padding_needed_for(layout: &Layout, align: usize) -> usize {
+    let len = layout.size();
+
+    // Rounded up value is:
+    //   len_rounded_up = (len + align - 1) & !(align - 1);
+    // and then we return the padding difference: `len_rounded_up - len`.
+    //
+    // We use modular arithmetic throughout:
+    //
+    // 1. align is guaranteed to be > 0, so align - 1 is always
+    //    valid.
+    //
+    // 2. `len + align - 1` can overflow by at most `align - 1`,
+    //    so the &-mask with `!(align - 1)` will ensure that in the
+    //    case of overflow, `len_rounded_up` will itself be 0.
+    //    Thus the returned padding, when added to `len`, yields 0,
+    //    which trivially satisfies the alignment `align`.
+    //
+    // (Of course, attempts to allocate blocks of memory whose
+    // size and padding overflow in the above manner should cause
+    // the allocator to yield an error anyway.)
+
+    let len_rounded_up = len.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
+    len_rounded_up.wrapping_sub(len)
 }
