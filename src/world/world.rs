@@ -80,6 +80,7 @@ impl World {
     }
 
     /// Check if a component type is registered.
+    #[must_use]
     pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
         self.storages.is_registered(component_type_id)
     }
@@ -236,6 +237,7 @@ impl World {
     }
 
     /// Returns `true` if `entity` exists in the `World`.
+    #[must_use]
     pub fn contains_entity(&self, entity: Entity) -> bool {
         self.entities.contains(entity)
     }

@@ -33,14 +33,14 @@ fn main() {
     let mut world = World::default();
     dispatcher.set_up(&mut world);
 
+    world.create_entity((Position(0, 0),));
     world.create_entity((Position(0, 1),));
     world.create_entity((Position(0, 2),));
     world.create_entity((Position(0, 3),));
     world.create_entity((Position(0, 4),));
     world.create_entity((Position(0, 5),));
-    world.create_entity((Position(0, 6),));
 
-    world.insert_resource(Lava { height: 1 });
+    world.insert_resource(Lava { height: 0 });
 
     for _ in 0..3 {
         dispatcher.run_seq(&mut world).unwrap();

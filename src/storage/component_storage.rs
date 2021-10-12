@@ -160,7 +160,7 @@ impl ComponentStorage {
 
             let size = self.layout.size();
             let to_remove = self.components.as_ptr().add(index * size);
-            let last = self.components.as_ptr().add(self.len);
+            let last = self.components.as_ptr().add(self.len * size);
             let swap_space = self.swap_space.as_ptr();
 
             ptr::copy_nonoverlapping(to_remove, swap_space, size);
@@ -191,7 +191,7 @@ impl ComponentStorage {
 
             let size = self.layout.size();
             let to_remove = self.components.as_ptr().add(index * size);
-            let last = self.components.as_ptr().add(self.len);
+            let last = self.components.as_ptr().add(self.len * size);
 
             (self.drop)(to_remove);
             ptr::copy(last, to_remove, size);
@@ -324,7 +324,7 @@ impl ComponentStorage {
 
             for i in 0..len {
                 unsafe {
-                    (self.drop)(self.components.as_ptr().add(i));
+                    (self.drop)(self.components.as_ptr().add(i * self.layout.size()));
                 }
             }
         } else {
