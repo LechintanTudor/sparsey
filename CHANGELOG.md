@@ -1,3 +1,10 @@
+# Unreleased
+## Changed
+- Reworked `ComponentStorage` to make adding, removing and swapping components faster.
+
+## Fixed
+- Removed debug `println` from `ComponentStorages`.
+
 # 0.3.1 (2021-10-04)
 ## Changed
 - Inlined some functions to improve iteration performance.

@@ -30,6 +30,7 @@ where
 
     /// Removes the components from the storages and returns them if
     /// all of them were successfully removed.
+    #[must_use = "use `delete` to discard the components"]
     unsafe fn remove(storages: &mut ComponentStorages, entity: Entity) -> Option<Self>;
 
     /// Deletes the components from storages. This is faster than removing them.

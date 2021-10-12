@@ -24,18 +24,21 @@ where
     }
 
     /// Returns the component of `entity`, if it was found in the storage.
+    #[inline]
     pub fn get(&self, entity: Entity) -> Option<&T> {
         unsafe { self.storage.get(entity).map(|v| &*v.as_ptr().cast::<T>()) }
     }
 
     /// Returns the `ChangeTicks` of the component of `entity`, if it was found
     /// in the storage.
+    #[inline]
     pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
         self.storage.get_ticks(entity)
     }
 
     /// Returns the component and `ChangeTicks` of `entity`, if it was found in
-    /// the storage,
+    /// the storage.
+    #[inline]
     pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
         self.storage
             .get_with_ticks(entity)
@@ -43,6 +46,7 @@ where
     }
 
     /// Returns `true` if `entity` was found in the storage.
+    #[inline]
     pub fn contains(&self, entity: Entity) -> bool {
         self.storage.contains(entity)
     }
@@ -87,17 +91,6 @@ where
     }
 }
 
-impl<T, S> Deref for TypedComponentStorage<T, S>
-where
-    S: Deref<Target = ComponentStorage>,
-{
-    type Target = [T];
-
-    fn deref(&self) -> &Self::Target {
-        unsafe { slice::from_raw_parts(self.storage.components().cast::<T>(), self.storage.len()) }
-    }
-}
-
 impl<T, S> TypedComponentStorage<T, S>
 where
     S: Deref<Target = ComponentStorage> + DerefMut,
@@ -117,6 +110,7 @@ where
 
     /// Removes `entity` from the storage and returns its component, if it
     /// exists.
+    #[must_use = "use `delete` to discard the component"]
     pub fn remove(&mut self, entity: Entity) -> Option<T> {
         unsafe {
             self.storage
@@ -138,7 +132,8 @@ where
     }
 
     /// Returns the component and `ChangeTicks` of `entity`, if it was found in
-    /// the storage,
+    /// the storage.
+    #[inline]
     pub fn get_with_ticks_mut(&mut self, entity: Entity) -> Option<(&mut T, &mut ChangeTicks)> {
         self.storage
             .get_with_ticks_mut(entity)

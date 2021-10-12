@@ -24,7 +24,8 @@ impl ComponentStorage {
     {
         unsafe {
             if mem::needs_drop::<T>() {
-                Self::from_layout_drop(Layout::new::<T>(), Some(drop_in_place::<T>))
+                let drop = |ptr: *mut u8| ptr::drop_in_place(ptr as *mut T);
+                Self::from_layout_drop(Layout::new::<T>(), Some(drop))
             } else {
                 Self::from_layout_drop(Layout::new::<T>(), None)
             }
@@ -32,13 +33,10 @@ impl ComponentStorage {
     }
 
     pub unsafe fn from_layout_drop(layout: Layout, drop: Option<unsafe fn(*mut u8)>) -> Self {
-        let (cap, swap_space) = if layout.size() == 0 {
-            (usize::MAX, NonNull::new_unchecked(layout.align() as _))
+        let swap_space = if layout.size() != 0 {
+            NonNull::new(alloc(layout)).unwrap_or_else(|| handle_alloc_error(layout))
         } else {
-            let swap_space =
-                NonNull::new(alloc(layout)).unwrap_or_else(|| handle_alloc_error(layout));
-
-            (0, swap_space)
+            NonNull::new_unchecked(layout.align() as _)
         };
 
         Self {
@@ -49,12 +47,13 @@ impl ComponentStorage {
             entities: NonNull::dangling(),
             components: NonNull::new_unchecked(layout.align() as _),
             ticks: NonNull::dangling(),
-            cap,
+            cap: 0,
             len: 0,
             swap_space,
         }
     }
 
+    #[must_use]
     pub unsafe fn insert_and_forget_prev(
         &mut self,
         entity: Entity,
@@ -144,6 +143,7 @@ impl ComponentStorage {
         }
     }
 
+    #[must_use]
     pub fn remove_and_forget(&mut self, entity: Entity) -> Option<NonNull<u8>> {
         let index = self.sparse.remove(entity)?;
 
@@ -271,32 +271,26 @@ impl ComponentStorage {
         self.sparse.contains(entity)
     }
 
-    #[inline]
     pub fn len(&self) -> usize {
         self.len
     }
 
-    #[inline]
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    #[inline]
     pub fn capacity(&self) -> usize {
         self.cap
     }
 
-    #[inline]
     pub fn entities(&self) -> &[Entity] {
         unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) }
     }
 
-    #[inline]
     pub fn components(&self) -> *const u8 {
         self.components.as_ptr()
     }
 
-    #[inline]
     pub fn ticks(&self) -> &[ChangeTicks] {
         unsafe { slice::from_raw_parts(self.ticks.as_ptr(), self.len) }
     }
@@ -339,15 +333,17 @@ impl ComponentStorage {
     }
 
     fn grow_amortized(&mut self) {
-        assert!(self.layout.size() != 0, "ComponentStorage is full");
-
         unsafe {
             let (entities, components, ticks, cap) = if self.cap == 0 {
                 let entities = NonNull::new(alloc(Layout::new::<Entity>()))
                     .unwrap_or_else(|| handle_alloc_error(Layout::new::<Entity>()));
 
-                let components = NonNull::new(alloc(self.layout))
-                    .unwrap_or_else(|| handle_alloc_error(self.layout));
+                let components = if self.layout.size() != 0 {
+                    NonNull::new(alloc(self.layout))
+                        .unwrap_or_else(|| handle_alloc_error(self.layout))
+                } else {
+                    self.components
+                };
 
                 let ticks = NonNull::new(alloc(Layout::new::<ChangeTicks>()))
                     .unwrap_or_else(|| handle_alloc_error(Layout::new::<ChangeTicks>()));
@@ -356,29 +352,39 @@ impl ComponentStorage {
             } else {
                 let cap = 2 * self.cap;
 
-                let old_layout = array_layout::<Entity>(self.cap);
-                let layout = array_layout::<Entity>(cap);
-                let entities = NonNull::new(realloc(
-                    self.entities.as_ptr().cast(),
-                    old_layout,
-                    layout.size(),
-                ))
-                .unwrap_or_else(|| handle_alloc_error(layout));
+                let entities = {
+                    let old_layout = array_layout::<Entity>(self.cap);
+                    let layout = array_layout::<Entity>(cap);
 
-                let old_layout = repeat_layout(&self.layout, self.cap);
-                let layout = repeat_layout(&self.layout, cap);
-                let components =
+                    NonNull::new(realloc(
+                        self.entities.as_ptr().cast(),
+                        old_layout,
+                        layout.size(),
+                    ))
+                    .unwrap_or_else(|| handle_alloc_error(layout))
+                };
+
+                let components = if self.layout.size() != 0 {
+                    let old_layout = repeat_layout(&self.layout, self.cap);
+                    let layout = repeat_layout(&self.layout, cap);
+
                     NonNull::new(realloc(self.components.as_ptr(), old_layout, layout.size()))
-                        .unwrap_or_else(|| handle_alloc_error(layout));
+                        .unwrap_or_else(|| handle_alloc_error(layout))
+                } else {
+                    self.components
+                };
 
-                let old_layout = array_layout::<ChangeTicks>(self.cap);
-                let layout = array_layout::<ChangeTicks>(cap);
-                let ticks = NonNull::new(realloc(
-                    self.ticks.as_ptr().cast(),
-                    old_layout,
-                    layout.size(),
-                ))
-                .unwrap_or_else(|| handle_alloc_error(layout));
+                let ticks = {
+                    let old_layout = array_layout::<ChangeTicks>(self.cap);
+                    let layout = array_layout::<ChangeTicks>(cap);
+
+                    NonNull::new(realloc(
+                        self.ticks.as_ptr().cast(),
+                        old_layout,
+                        layout.size(),
+                    ))
+                    .unwrap_or_else(|| handle_alloc_error(layout))
+                };
 
                 (entities, components, ticks, cap)
             };
@@ -422,10 +428,6 @@ impl Drop for ComponentStorage {
             }
         }
     }
-}
-
-unsafe fn drop_in_place<T>(ptr: *mut u8) {
-    ptr::drop_in_place(ptr as *mut T)
 }
 
 fn array_layout<T>(n: usize) -> Layout {

@@ -230,8 +230,6 @@ impl ComponentStorages {
 
             let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
-            println!("Group mask: {:#034b}", group_mask);
-
             for i in ungroup_range
                 .rev()
                 .take_while(|i| (group_mask & (1 << i)) != 0)

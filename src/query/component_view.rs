@@ -77,7 +77,6 @@ where
 
     fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter> {
         let (sparse, entities, components, ticks) = self.storage.split_for_iteration();
-
         SplitQueryElement::new(sparse, entities, components as _, ticks as _, Contains)
     }
 
@@ -158,7 +157,6 @@ where
 
     fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter> {
         let (sparse, entities, components, ticks) = self.storage.split_for_iteration_mut();
-
         SplitQueryElement::new(sparse, entities, components, ticks, Contains)
     }
 
