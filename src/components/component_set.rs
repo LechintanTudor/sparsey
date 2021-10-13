@@ -163,7 +163,7 @@ macro_rules! impl_component_set {
                     storages.ungroup_components(i, group_mask, Some(&entity));
                 }
 
-                $((&mut *storage_ptrs.$idx).remove_and_drop(entity);)*
+                $(TypedComponentStorage::<$comp, _>::new(&mut *storage_ptrs.$idx).remove(entity);)*
             }
         }
     };
