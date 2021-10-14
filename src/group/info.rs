@@ -1,74 +1,85 @@
 use crate::components::Group;
 use crate::group::{QueryMask, StorageMask};
+use std::marker::PhantomData;
 use std::ops::Range;
 use std::ptr;
+use std::ptr::NonNull;
 
 /// Tracks the group to which a component storage belongs.
 #[derive(Clone, Copy)]
 pub struct GroupInfo<'a> {
-    group_family: &'a [Group],
-    group_offset: usize,
+    family: NonNull<Group>,
+    offset: usize,
     storage_mask: StorageMask,
+    _phantom: PhantomData<&'a [Group]>,
 }
 
 impl<'a> GroupInfo<'a> {
-    pub(crate) const fn new(
-        group_family: &'a [Group],
-        group_offset: usize,
+    /// SAFETY: `family` must point to a slice with lifetime `'a`, indexable by
+    /// `offset`.
+    pub(crate) unsafe fn new(
+        family: NonNull<Group>,
+        offset: usize,
         storage_mask: StorageMask,
     ) -> Self {
         Self {
-            group_family,
-            group_offset,
+            family,
+            offset,
             storage_mask,
+            _phantom: PhantomData,
         }
     }
 }
 
-/// Tracks the group to which a multiple component storages belong.
+/// Tracks the group to which multiple component storages belong.
 #[derive(Copy, Clone, Default)]
 pub struct CombinedGroupInfo<'a> {
-    group_family: Option<&'a [Group]>,
-    max_group_offset: usize,
+    family: Option<NonNull<Group>>,
+    max_offset: usize,
     storage_mask: StorageMask,
+    _phantom: PhantomData<&'a [Group]>,
 }
 
 impl<'a> CombinedGroupInfo<'a> {
-    pub(crate) fn combine(self, group_info: GroupInfo<'a>) -> Option<Self> {
-        match self.group_family {
+    pub(crate) fn combine(self, info: GroupInfo<'a>) -> Option<Self> {
+        match self.family {
             Some(group_family) => {
-                ptr::eq(group_family, group_info.group_family).then(|| CombinedGroupInfo {
-                    group_family: Some(group_family),
-                    max_group_offset: self.max_group_offset.max(group_info.group_offset),
-                    storage_mask: self.storage_mask | group_info.storage_mask,
+                ptr::eq(group_family.as_ptr(), info.family.as_ptr()).then(|| CombinedGroupInfo {
+                    family: Some(group_family),
+                    max_offset: self.max_offset.max(info.offset),
+                    storage_mask: self.storage_mask | info.storage_mask,
+                    _phantom: PhantomData,
                 })
             }
             None => Some(CombinedGroupInfo {
-                group_family: Some(group_info.group_family),
-                max_group_offset: group_info.group_offset,
-                storage_mask: group_info.storage_mask,
+                family: Some(info.family),
+                max_offset: info.offset,
+                storage_mask: info.storage_mask,
+                _phantom: PhantomData,
             }),
         }
     }
 }
 
-fn common_group_family<'a>(group_families: &[Option<&'a [Group]>]) -> Option<&'a [Group]> {
-    let mut group_family: Option<&[Group]> = None;
+fn common_family(
+    base_family: Option<NonNull<Group>>,
+    include_family: Option<NonNull<Group>>,
+    exclude_family: Option<NonNull<Group>>,
+) -> Option<NonNull<Group>> {
+    let mut common_family = base_family;
 
-    for &gf in group_families {
-        if let Some(gf) = gf {
-            match group_family {
-                Some(group_family) => {
-                    if !ptr::eq(group_family, gf) {
-                        return None;
-                    }
+    for family in [include_family, exclude_family].iter().flatten() {
+        match common_family {
+            Some(common_family) => {
+                if !ptr::eq(family.as_ptr(), common_family.as_ptr()) {
+                    return None;
                 }
-                None => group_family = Some(gf),
             }
+            None => common_family = Some(*family),
         }
     }
 
-    group_family
+    common_family
 }
 
 /// Returns the range of elements the storages have in common if the
@@ -78,27 +89,24 @@ pub(crate) fn group_range(
     include: CombinedGroupInfo,
     exclude: CombinedGroupInfo,
 ) -> Option<Range<usize>> {
-    let group_family = common_group_family(&[
-        base.group_family,
-        include.group_family,
-        exclude.group_family,
-    ])?;
+    let family = common_family(base.family, include.family, exclude.family)?;
 
-    let max_group_offset = base
-        .max_group_offset
-        .max(include.max_group_offset)
-        .max(exclude.max_group_offset);
+    let max_offset = base
+        .max_offset
+        .max(include.max_offset)
+        .max(exclude.max_offset);
 
-    let group_mask = QueryMask::new(
+    let query_mask = QueryMask::new(
         base.storage_mask | include.storage_mask,
         exclude.storage_mask,
     );
-    let group = &group_family[max_group_offset];
 
-    if group_mask == group.include_mask() {
+    let group = unsafe { &*family.as_ptr().add(max_offset) };
+
+    if query_mask == group.include_mask() {
         Some(0..group.len())
-    } else if group_mask == group.exclude_mask() {
-        let prev_group = &group_family[max_group_offset - 1];
+    } else if query_mask == group.exclude_mask() {
+        let prev_group = unsafe { &*family.as_ptr().add(max_offset - 1) };
         Some(group.len()..prev_group.len())
     } else {
         None

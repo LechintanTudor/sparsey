@@ -7,8 +7,6 @@ pub(crate) struct QueryMask {
 }
 
 impl QueryMask {
-    pub const EMPTY: Self = Self::new(0, 0);
-
     pub const fn new(include: StorageMask, exclude: StorageMask) -> Self {
         Self { include, exclude }
     }
@@ -29,7 +27,7 @@ impl QueryMask {
                 exclude: ((1 << exclude_count) - 1) << prev_arity,
             }
         } else {
-            Self::EMPTY
+            Self::new(0, 0)
         }
     }
 }

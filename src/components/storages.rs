@@ -8,6 +8,7 @@ use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::collections::hash_map::{Entry, IterMut as HashMapIterMut};
 use std::ops::Range;
+use std::ptr::NonNull;
 use std::{mem, ptr};
 
 /// Container for `ComponentStorage`s. Also manages component grouping.
@@ -288,12 +289,9 @@ impl ComponentStorages {
             (
                 self.storages.get_unchecked(info.storage_index).borrow(),
                 self.group_info.get(info.group_info_index).map(|info| {
-                    GroupInfo::new(
-                        self.groups
-                            .get_unchecked(self.families.get_unchecked(info.family_index).clone()),
-                        info.group_offset,
-                        info.storage_mask,
-                    )
+                    let group_index = self.families.get_unchecked(info.family_index).start;
+                    let group = NonNull::from(self.groups.get_unchecked(group_index));
+                    GroupInfo::new(group, info.group_offset, info.storage_mask)
                 }),
             )
         })
@@ -307,12 +305,9 @@ impl ComponentStorages {
             (
                 self.storages.get_unchecked(info.storage_index).borrow_mut(),
                 self.group_info.get(info.group_info_index).map(|info| {
-                    GroupInfo::new(
-                        self.groups
-                            .get_unchecked(self.families.get_unchecked(info.family_index).clone()),
-                        info.group_offset,
-                        info.storage_mask,
-                    )
+                    let group_index = self.families.get_unchecked(info.family_index).start;
+                    let group = NonNull::from(self.groups.get_unchecked(group_index));
+                    GroupInfo::new(group, info.group_offset, info.storage_mask)
                 }),
             )
         })
