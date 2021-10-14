@@ -8,7 +8,7 @@ use crate::storage::{ComponentStorage, Entity, TypedComponentStorage};
 use crate::utils::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut};
 
-/// View over a component storage of type `T`.
+/// View over a `ComponentStorage` of type `T`.
 pub struct ComponentView<'a, T, S> {
     storage: TypedComponentStorage<T, S>,
     group_info: Option<GroupInfo<'a>>,
@@ -33,6 +33,11 @@ where
             world_tick,
             change_tick,
         }
+    }
+
+    /// Returns a reference to the view's `ComponentStorage`.
+    pub fn storage(&self) -> &TypedComponentStorage<T, S> {
+        &self.storage
     }
 }
 
