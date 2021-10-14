@@ -113,7 +113,7 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
                 components: self.components,
                 ticks: self.ticks,
                 filter: self.filter,
-                lifetime: PhantomData,
+                _phantom: PhantomData,
             },
         )
     }
@@ -159,7 +159,7 @@ pub struct DenseSplitQueryElement<'a, T, F> {
     pub components: *mut T,
     pub ticks: *mut ChangeTicks,
     pub filter: F,
-    lifetime: PhantomData<&'a ()>,
+    _phantom: PhantomData<&'a [T]>,
 }
 
 impl<'a, T, F> DenseSplitQueryElement<'a, T, F> {

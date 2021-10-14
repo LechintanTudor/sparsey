@@ -8,7 +8,7 @@ pub struct ResourceView<T, C> {
     cell: C,
     world_tick: Ticks,
     change_tick: Ticks,
-    resource: PhantomData<*const T>,
+    _phantom: PhantomData<*const T>,
 }
 
 impl<T, C> ResourceView<T, C>
@@ -21,7 +21,7 @@ where
             cell,
             world_tick,
             change_tick,
-            resource: PhantomData,
+            _phantom: PhantomData,
         }
     }
 }

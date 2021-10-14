@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut};
 /// Wrapper around a `ComponentStorage` which strongly types it.
 pub struct TypedComponentStorage<T, S> {
     storage: S,
-    component: PhantomData<*const T>,
+    _phantom: PhantomData<*const T>,
 }
 
 impl<T, S> TypedComponentStorage<T, S>
@@ -18,7 +18,7 @@ where
     pub(crate) unsafe fn new(storage: S) -> Self {
         Self {
             storage,
-            component: PhantomData,
+            _phantom: PhantomData,
         }
     }
 
