@@ -1,21 +1,19 @@
 use crate::components::Component;
 use crate::layout::ComponentInfo;
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 use std::iter::FromIterator;
 
-/// The minimum number of component storages in a group.
 pub(crate) const MIN_GROUP_ARITY: usize = 2;
-/// The maximum number of component storages in a group.
 pub(crate) const MAX_GROUP_ARITY: usize = 16;
 
-/// Describes a set of component storages to be grouped together.
-/// Can be constructed using a `LayoutGroupDescriptor`.
+/// Holds the `Component` types of `ComponentStorage`s which should be grouped
+/// together.
 pub struct LayoutGroup {
-    components: HashSet<ComponentInfo>,
+    components: FxHashSet<ComponentInfo>,
 }
 
 impl LayoutGroup {
-    pub(crate) fn new(components: HashSet<ComponentInfo>) -> Self {
+    pub(crate) fn new(components: FxHashSet<ComponentInfo>) -> Self {
         assert!(
             components.len() >= MIN_GROUP_ARITY,
             "Groups must have at least {} component types",
@@ -31,7 +29,7 @@ impl LayoutGroup {
         Self { components }
     }
 
-    pub(crate) fn components(&self) -> &HashSet<ComponentInfo> {
+    pub(crate) fn components(&self) -> &FxHashSet<ComponentInfo> {
         &self.components
     }
 }
@@ -81,10 +79,9 @@ impl LayoutGroupFamily {
     }
 }
 
-/// Trait used for creating a `LayoutGroup`. Implemented for tuples up to arity
-/// 16.
+/// Builder trait for `LayoutGroup`s. Implemented for tuples up to arity 16.
 pub trait LayoutGroupDescriptor {
-    /// Creates a `LayoutGroup` with the given components.
+    /// Creates a `LayoutGroup` with the given `Component`s.
     fn group() -> LayoutGroup;
 }
 
@@ -95,7 +92,7 @@ macro_rules! impl_layout_group_descriptor {
             $($comp: Component,)+
         {
             fn group() -> LayoutGroup {
-                LayoutGroup::new(HashSet::from_iter([
+                LayoutGroup::new(FxHashSet::from_iter([
                     $(ComponentInfo::new::<$comp>()),+
                 ]))
             }

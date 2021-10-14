@@ -4,8 +4,8 @@ use crate::utils::{panic_missing_comp, ChangeTicks};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 
+/// Handles adding/removing `Component`s to/from storages.
 /// Trait implemented by `Component` tuples up to arity 16.
-///  Handles adding/removing components to/from storages.
 ///
 /// # Safety
 /// All operations must preserve component grouping.

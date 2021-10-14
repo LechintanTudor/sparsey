@@ -6,7 +6,7 @@ use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
-/// Holds information about a component type.
+/// Holds information about a `Component` type.
 pub struct ComponentInfo {
     component: Box<dyn AbstractType>,
 }
@@ -20,7 +20,7 @@ impl Clone for ComponentInfo {
 }
 
 impl ComponentInfo {
-    /// Creates a new `ComponentInfo` for the given component type.
+    /// Creates a new `ComponentInfo` for the given `Component` type.
     pub fn new<T>() -> Self
     where
         T: Component,
@@ -30,17 +30,17 @@ impl ComponentInfo {
         }
     }
 
-    /// Returns the `TypeId` of the component.
+    /// Returns the `TypeId` of the `Component`.
     pub fn type_id(&self) -> TypeId {
         self.component.type_id()
     }
 
-    /// Returns the type name of the component.
+    /// Returns the type name of the `Component`.
     pub fn type_name(&self) -> &'static str {
         self.component.type_name()
     }
 
-    /// Returns an empty `ComponentStorage` for the component.
+    /// Returns an empty `ComponentStorage` for the `Component`.
     pub fn create_storage(&self) -> ComponentStorage {
         self.component.create_storage()
     }

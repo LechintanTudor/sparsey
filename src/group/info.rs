@@ -5,7 +5,7 @@ use std::ops::Range;
 use std::ptr;
 use std::ptr::NonNull;
 
-/// Tracks the group to which a component storage belongs.
+/// Tracks the group to which a `ComponentStorage` belongs.
 #[derive(Clone, Copy)]
 pub struct GroupInfo<'a> {
     family: NonNull<Group>,
@@ -15,7 +15,8 @@ pub struct GroupInfo<'a> {
 }
 
 impl<'a> GroupInfo<'a> {
-    /// SAFETY: `family` must point to a slice with lifetime `'a`, indexable by
+    /// # Safety
+    /// `family` must point to a slice with lifetime `'a`, indexable by
     /// `offset`.
     pub(crate) unsafe fn new(
         family: NonNull<Group>,
@@ -31,7 +32,7 @@ impl<'a> GroupInfo<'a> {
     }
 }
 
-/// Tracks the group to which multiple component storages belong.
+/// Tracks the group to which multiple `ComponentStorage`s belong.
 #[derive(Copy, Clone, Default)]
 pub struct CombinedGroupInfo<'a> {
     family: Option<NonNull<Group>>,
