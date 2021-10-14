@@ -3,7 +3,7 @@ use std::mem;
 
 pub(crate) const MAX_GROUP_COUNT: usize = 32;
 
-/// Describes the layout of component storages in the `World`.
+/// Describes the layout of `ComponentStorage`s within a `World`.
 pub struct Layout {
     families: Vec<LayoutGroupFamily>,
 }
