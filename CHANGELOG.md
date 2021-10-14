@@ -1,6 +1,8 @@
 # Unreleased
 ## Changed
 - Reworked `ComponentStorage` to make adding, removing and swapping components faster.
+- Optimize the implementation of `ComponentSet` for the unit type.
+- All methods of `ComponentSet` are now safe.
 
 ## Fixed
 - Removed debug `println` from `ComponentStorages`.

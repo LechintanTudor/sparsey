@@ -131,14 +131,12 @@ impl World {
         C: ComponentSet,
         I: IntoIterator<Item = C>,
     {
-        unsafe {
-            C::extend(
-                &mut self.entities,
-                &mut self.storages,
-                components_iter,
-                ticks,
-            )
-        }
+        C::extend(
+            &mut self.entities,
+            &mut self.storages,
+            components_iter,
+            ticks,
+        )
     }
 
     /// Removes `entity` and all of its components from the `World`.
@@ -208,10 +206,7 @@ impl World {
             return Err(NoSuchEntity);
         }
 
-        unsafe {
-            C::insert(&mut self.storages, entity, components, ticks);
-        }
-
+        C::insert(&mut self.storages, entity, components, ticks);
         Ok(())
     }
 
@@ -222,7 +217,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        unsafe { C::remove(&mut self.storages, entity) }
+        C::remove(&mut self.storages, entity)
     }
 
     /// Deletes a component set from `entity`. This is faster than removing
@@ -231,9 +226,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        unsafe {
-            C::delete(&mut self.storages, entity);
-        }
+        C::delete(&mut self.storages, entity);
     }
 
     /// Returns `true` if `entity` exists in the `World`.

@@ -5,19 +5,23 @@ pub(crate) fn new_group_mask(index: usize, arity: usize, family_arity: usize) ->
     ((1 << (family_arity + 1 - arity)) - 1) << index
 }
 
+pub(crate) fn iter_bit_indexes(mask: u32) -> BitIndexIter {
+    BitIndexIter::new(mask)
+}
+
 #[derive(Clone, Debug)]
-pub(crate) struct FamilyMaskIter {
+pub(crate) struct BitIndexIter {
     mask: u32,
     offset: u32,
 }
 
-impl FamilyMaskIter {
-    pub fn new(mask: u32) -> FamilyMaskIter {
-        FamilyMaskIter { mask, offset: 0 }
+impl BitIndexIter {
+    fn new(mask: u32) -> BitIndexIter {
+        BitIndexIter { mask, offset: 0 }
     }
 }
 
-impl Iterator for FamilyMaskIter {
+impl Iterator for BitIndexIter {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {

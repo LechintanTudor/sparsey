@@ -71,12 +71,6 @@ impl Deref for EntityStorage {
     }
 }
 
-impl AsRef<[Entity]> for EntityStorage {
-    fn as_ref(&self) -> &[Entity] {
-        &self.storage.entities
-    }
-}
-
 #[derive(Clone, Default, Debug)]
 struct EntitySparseSet {
     sparse: SparseArray,
