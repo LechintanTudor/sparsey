@@ -1,14 +1,14 @@
 use crate::query::{Iter, QueryBase, QueryFilter, QueryModifier};
 use crate::storage::Entity;
 
-/// Trait used for splitting a query into its parts.
+/// Trait used for splitting a `Query` into its parts.
 pub trait IntoQueryParts<'a> {
     type Base: QueryBase<'a>;
     type Include: QueryModifier<'a>;
     type Exclude: QueryModifier<'a>;
     type Filter: QueryFilter;
 
-    /// Splits a query into its parts.
+    /// Splits a `Query` into its parts.
     fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter);
 }
 

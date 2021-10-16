@@ -6,7 +6,7 @@ use crate::query::{
 use crate::storage::Entity;
 use crate::utils::Ticks;
 
-/// Trait implemented by the base part of a query. Used for fetching components.
+/// Trait implemented by the part of the `Query` that fetches components.
 pub unsafe trait QueryBase<'a> {
     const ELEMENT_COUNT: usize;
 

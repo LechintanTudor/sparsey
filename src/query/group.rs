@@ -5,12 +5,14 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::Range;
 
-/// Error returned when trying to slice a query with ungrouped component
+/// Error returned when trying to slice a `Query` with ungrouped component
 /// storages.
 #[derive(Debug)]
 pub struct InvalidGroup;
 
-impl Error for InvalidGroup {}
+impl Error for InvalidGroup {
+    // Empty
+}
 
 impl Display for InvalidGroup {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

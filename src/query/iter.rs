@@ -3,7 +3,7 @@ use crate::query::{DenseIter, QueryBase, QueryFilter, QueryModifier, SparseIter}
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
-/// Iterator over components of grouped or ungrouped `ComponentStorage`s.
+/// Iterator over grouped or ungrouped queries.
 pub enum Iter<'a, B, I, E, F>
 where
     B: QueryBase<'a>,
@@ -11,9 +11,9 @@ where
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    /// Iterator over components of ungrouped `ComponentStorage`s.
+    /// Iterator over ungrouped queries.
     Sparse(SparseIter<'a, B, I, E, F>),
-    /// Iterator over components of grouped `ComponentStorage`s. Extremely fast.
+    /// Iterator over grouped queries. Extremely fast.
     Dense(DenseIter<'a, B, F>),
 }
 
@@ -24,7 +24,7 @@ where
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    /// Creates a new iterator from the given query parts.
+    /// Creates a new iterator from the given `Query` parts.
     pub(crate) fn new(base: B, include: I, exclude: E, filter: F) -> Self {
         if query::is_trivial_group::<B, I, E>() {
             let (iter_data, base) = base.split_dense();

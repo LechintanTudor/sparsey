@@ -11,6 +11,7 @@ pub struct TypedComponentStorage<T, S> {
 
 impl<T, S> TypedComponentStorage<T, S>
 where
+    T: 'static,
     S: Deref<Target = ComponentStorage>,
 {
     /// Creates a new `TypedComponentStorage` from the given storage.
@@ -75,6 +76,11 @@ where
         self.storage.ticks()
     }
 
+    /// Returns a reference to the inner `ComponentStorage`.
+    pub(crate) fn storage(&self) -> &ComponentStorage {
+        &self.storage
+    }
+
     /// Splits the storage for iteration.
     pub(crate) fn split_for_iteration(
         &self,
@@ -85,6 +91,7 @@ where
 
 impl<T, S> TypedComponentStorage<T, S>
 where
+    T: 'static,
     S: Deref<Target = ComponentStorage> + DerefMut,
 {
     /// Inserts a component into the storage and returns the previous one, if

@@ -1,6 +1,6 @@
 use crate::storage::Entity;
 
-/// Trait implemented by query filters.
+/// Trait implemented by the part of the `Query` that filters the results.
 pub trait QueryFilter {
     /// Returns `true` if the `Entity` macthes the filter.
     fn matches(&self, entity: Entity) -> bool;

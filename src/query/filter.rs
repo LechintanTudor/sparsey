@@ -6,6 +6,7 @@ use crate::query::{
 use crate::storage::Entity;
 use crate::utils::{ChangeTicks, Ticks};
 use std::ops;
+use std::ptr::NonNull;
 
 /// Wrapper around a `QueryElement`. Used for applying filters.
 pub struct Filter<F, E> {
@@ -18,10 +19,9 @@ where
     F: QueryElementFilter<E::Component>,
     E: UnfilteredQueryElement<'a>,
 {
-    /// Creates a new `Filter` with the given `QueryElementFilter` and
-    /// `QueryElement`.
-    pub fn new(filter: F, element: E) -> Self {
-        Self { filter, element }
+    /// Applies a filter to the given `QueryElement`.
+    pub fn new(element: E, filter: F) -> Self {
+        Self { element, filter }
     }
 }
 
@@ -45,20 +45,21 @@ where
     type Filter = F;
 
     fn get(self, entity: Entity) -> Option<Self::Item> {
-        let (component, ticks) =
-            self.element
-                .get_with_ticks(entity)
-                .map(|(component, ticks)| {
-                    (component as *const _ as *mut _, ticks as *const _ as *mut _)
-                })?;
+        let Filter { element, filter } = self;
+
+        let (component, ticks) = element
+            .get_with_ticks(entity)
+            .map(|(component, ticks)| (NonNull::from(component), NonNull::from(ticks)))?;
 
         unsafe {
-            let world_tick = self.element.world_tick();
-            let change_tick = self.element.change_tick();
+            let world_tick = element.world_tick();
+            let change_tick = element.change_tick();
 
-            self.filter
-                .matches(&*component, &*ticks, world_tick, change_tick)
-                .then(|| E::get_from_parts(component, ticks, world_tick, change_tick))
+            filter
+                .matches(component.as_ref(), ticks.as_ref(), world_tick, change_tick)
+                .then(|| {
+                    E::get_from_parts(component.as_ptr(), ticks.as_ptr(), world_tick, change_tick)
+                })
         }
     }
 
@@ -126,7 +127,7 @@ where
     type Output = Filter<Not<F>, E>;
 
     fn not(self) -> Self::Output {
-        Filter::new(Not(self.filter), self.element)
+        Filter::new(self.element, Not(self.filter))
     }
 }
 

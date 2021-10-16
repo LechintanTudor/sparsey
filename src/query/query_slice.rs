@@ -11,14 +11,14 @@ where
     Self: IntoQueryParts<'a, Filter = Passthrough>,
     Self::Base: SliceQueryBase<'a>,
 {
-    /// Returns a slice containing all the entities which match the query.
+    /// Returns a slice containing all the entities that match the `Query`.
     fn entities(self) -> Result<&'a [Entity], InvalidGroup>;
 
-    /// Returns a tuple of slices containing all components which match the
-    /// query.
+    /// Returns a tuple of slices containing all components that match the
+    /// `Query`.
     fn components(self) -> Result<<Self::Base as SliceQueryBase<'a>>::Slices, InvalidGroup>;
 
-    /// Returns all entities and components which match the query.
+    /// Returns all entities and components that match the `Query`.
     fn entities_components(
         self,
     ) -> Result<(&'a [Entity], <Self::Base as SliceQueryBase<'a>>::Slices), InvalidGroup>;
@@ -72,14 +72,20 @@ where
 {
     type Slices;
 
+    /// # Safety
+    /// The `Query` must be safely indexable by `range`.
     unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
     where
         R: RangeBounds<usize>;
 
+    /// # Safety
+    /// The `Query` must be safely indexable by `range`.
     unsafe fn get_components_unchecked<R>(self, range: R) -> Self::Slices
     where
         R: RangeBounds<usize>;
 
+    /// # Safety
+    /// The `Query` must be safely indexable by `range`.
     unsafe fn get_entities_components_unchecked<R>(self, range: R) -> (&'a [Entity], Self::Slices)
     where
         R: RangeBounds<usize>;

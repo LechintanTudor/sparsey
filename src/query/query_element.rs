@@ -77,7 +77,7 @@ pub struct SplitQueryElement<'a, T, F> {
 }
 
 impl<'a, T, F> SplitQueryElement<'a, T, F> {
-    /// Creates a new `SplitQueryElement`.
+    /// Creates a new `SplitQueryElement` with the given `Query` parts.
     pub fn new(
         sparse: SparseArrayView<'a>,
         entities: &'a [Entity],
@@ -94,7 +94,7 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
         }
     }
 
-    pub fn into_sparse_split(self) -> (&'a [Entity], SparseSplitQueryElement<'a, T, F>) {
+    pub(crate) fn into_sparse_split(self) -> (&'a [Entity], SparseSplitQueryElement<'a, T, F>) {
         (
             self.entities,
             SparseSplitQueryElement {
@@ -106,7 +106,7 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
         )
     }
 
-    pub fn into_dense_split(self) -> (&'a [Entity], DenseSplitQueryElement<'a, T, F>) {
+    pub(crate) fn into_dense_split(self) -> (&'a [Entity], DenseSplitQueryElement<'a, T, F>) {
         (
             self.entities,
             DenseSplitQueryElement {
@@ -118,7 +118,7 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
         )
     }
 
-    pub fn into_modifier_split(self) -> (&'a [Entity], SparseArrayView<'a>) {
+    pub(crate) fn into_modifier_split(self) -> (&'a [Entity], SparseArrayView<'a>) {
         (self.entities, self.sparse)
     }
 }
@@ -133,7 +133,7 @@ pub struct SparseSplitQueryElement<'a, T, F> {
 }
 
 impl<'a, T, F> SparseSplitQueryElement<'a, T, F> {
-    pub unsafe fn get<E>(
+    pub(crate) unsafe fn get<E>(
         &mut self,
         entity: Entity,
         world_tick: Ticks,
@@ -163,7 +163,7 @@ pub struct DenseSplitQueryElement<'a, T, F> {
 }
 
 impl<'a, T, F> DenseSplitQueryElement<'a, T, F> {
-    pub unsafe fn get<E>(
+    pub(crate) unsafe fn get<E>(
         &mut self,
         index: usize,
         world_tick: Ticks,

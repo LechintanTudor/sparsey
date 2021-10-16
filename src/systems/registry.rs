@@ -65,12 +65,14 @@ pub unsafe trait BorrowRegistry<'a> {
     /// The data resulting from the borrow.
     type Item;
 
-    /// The type of data acessed.
+    /// Returns he type of data acessed.
     fn access() -> RegistryAccess;
 
-    /// Borrow the data from the registry.
-    /// Unsafe because it doesn't ensure !Sync or !Send
-    /// resources are borrowed correctly.
+    /// Borrows data from the registry.
+    ///
+    /// # Safety
+    /// The caller must ensure that !Send and !Sync items are borrowed
+    /// correctly.
     unsafe fn borrow(registry: &'a Registry) -> Self::Item;
 }
 

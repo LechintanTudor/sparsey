@@ -2,7 +2,8 @@ use crate::group::CombinedGroupInfo;
 use crate::query::{Passthrough, UnfilteredImmutableQueryElement};
 use crate::storage::{Entity, SparseArrayView};
 
-/// Trait implemented by `QueryModifier`s.
+/// Trait implemented by the part of the `Query` that checks if an `Entity`
+/// includes or excludes a set of components.
 pub unsafe trait QueryModifier<'a> {
     const IS_PASSTHROUGH: bool;
 

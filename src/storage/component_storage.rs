@@ -4,6 +4,7 @@ use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr::NonNull;
 use std::{mem, ptr, slice};
 
+/// Type-erased storage for `Component`s.
 pub struct ComponentStorage {
     layout: Layout,
     sparse: SparseArray,
@@ -18,7 +19,10 @@ pub struct ComponentStorage {
 }
 
 impl ComponentStorage {
-    pub(crate) fn new<T>() -> Self {
+    pub(crate) fn new<T>() -> Self
+    where
+        T: 'static,
+    {
         let layout = Layout::new::<T>();
 
         let swap_space = unsafe {
@@ -50,7 +54,10 @@ impl ComponentStorage {
         entity: Entity,
         component: T,
         ticks: ChangeTicks,
-    ) -> Option<T> {
+    ) -> Option<T>
+    where
+        T: 'static,
+    {
         let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
 
         match index_entity {
@@ -83,7 +90,10 @@ impl ComponentStorage {
         }
     }
 
-    pub(crate) unsafe fn remove<T>(&mut self, entity: Entity) -> Option<T> {
+    pub(crate) unsafe fn remove<T>(&mut self, entity: Entity) -> Option<T>
+    where
+        T: 'static,
+    {
         let index = self.sparse.remove(entity)?;
 
         self.len -= 1;
@@ -156,7 +166,10 @@ impl ComponentStorage {
         ptr::swap(self.ticks.as_ptr().add(a), self.ticks.as_ptr().add(b));
     }
 
-    pub(crate) unsafe fn get<T>(&self, entity: Entity) -> Option<&T> {
+    pub(crate) unsafe fn get<T>(&self, entity: Entity) -> Option<&T>
+    where
+        T: 'static,
+    {
         let index = self.sparse.get_index(entity)?;
         Some(&*self.components.cast::<T>().as_ptr().add(index))
     }
@@ -166,7 +179,10 @@ impl ComponentStorage {
         unsafe { Some(&*self.ticks.as_ptr().add(index)) }
     }
 
-    pub(crate) unsafe fn get_with_ticks<T>(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
+    pub(crate) unsafe fn get_with_ticks<T>(&self, entity: Entity) -> Option<(&T, &ChangeTicks)>
+    where
+        T: 'static,
+    {
         let index = self.sparse.get_index(entity)?;
         Some((
             &*self.components.cast::<T>().as_ptr().add(index),
@@ -177,7 +193,10 @@ impl ComponentStorage {
     pub(crate) unsafe fn get_with_ticks_mut<T>(
         &mut self,
         entity: Entity,
-    ) -> Option<(&mut T, &mut ChangeTicks)> {
+    ) -> Option<(&mut T, &mut ChangeTicks)>
+    where
+        T: 'static,
+    {
         let index = self.sparse.get_index(entity)?;
         Some((
             &mut *self.components.cast::<T>().as_ptr().add(index),
@@ -209,7 +228,10 @@ impl ComponentStorage {
         unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) }
     }
 
-    pub(crate) unsafe fn components<T>(&self) -> &[T] {
+    pub(crate) unsafe fn components<T>(&self) -> &[T]
+    where
+        T: 'static,
+    {
         slice::from_raw_parts(self.components.cast::<T>().as_ptr(), self.len)
     }
 
@@ -219,7 +241,10 @@ impl ComponentStorage {
 
     pub(crate) fn split_for_iteration<T>(
         &self,
-    ) -> (SparseArrayView, &[Entity], *const T, *const ChangeTicks) {
+    ) -> (SparseArrayView, &[Entity], *const T, *const ChangeTicks)
+    where
+        T: 'static,
+    {
         (
             self.sparse.as_view(),
             unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
@@ -230,7 +255,10 @@ impl ComponentStorage {
 
     pub(crate) fn split_for_iteration_mut<T>(
         &mut self,
-    ) -> (SparseArrayView, &[Entity], *mut T, *mut ChangeTicks) {
+    ) -> (SparseArrayView, &[Entity], *mut T, *mut ChangeTicks)
+    where
+        T: 'static,
+    {
         (
             self.sparse.as_view(),
             unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },

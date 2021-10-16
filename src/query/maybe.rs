@@ -5,7 +5,6 @@ use crate::utils::{ChangeTicks, Ticks};
 
 /// Wrapper over an `UnfilteredQueryElement` which makes it return `Option`s
 /// instead of failing.
-#[derive(Clone, Copy)]
 pub struct Maybe<E>(E);
 
 /// Wrapps the given `QueryElement` in a `Maybe`.

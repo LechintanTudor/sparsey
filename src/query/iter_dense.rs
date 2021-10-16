@@ -2,16 +2,16 @@ use crate::query::{IterData, QueryBase, QueryFilter};
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
 
-/// Iterator over components of grouped `ComponentStorage`s. Extremely fast.
+/// Iterator over grouped queries. Extremely fast.
 pub struct DenseIter<'a, B, F>
 where
     B: QueryBase<'a>,
     F: QueryFilter,
 {
     data: IterData<'a>,
-    index: usize,
     base: B::DenseSplit,
     filter: F,
+    index: usize,
 }
 
 impl<'a, B, F> DenseIter<'a, B, F>
@@ -22,9 +22,9 @@ where
     pub(crate) unsafe fn new_unchecked(data: IterData<'a>, base: B::DenseSplit, filter: F) -> Self {
         Self {
             data,
-            index: 0,
             base,
             filter,
+            index: 0,
         }
     }
 }

@@ -35,9 +35,9 @@ where
         }
     }
 
-    /// Returns a reference to the view's `ComponentStorage`.
-    pub fn storage(&self) -> &TypedComponentStorage<T, S> {
-        &self.storage
+    /// Returns a wrapper around the view's `ComponentStorage`.
+    pub fn storage(&self) -> TypedComponentStorage<T, &ComponentStorage> {
+        unsafe { TypedComponentStorage::new(self.storage.storage()) }
     }
 }
 

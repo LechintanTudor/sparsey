@@ -1,7 +1,7 @@
 use crate::storage::Entity;
 use crate::utils::Ticks;
 
-/// Data used internally by query iterators.
+/// Data used internally by `Query` iterators.
 #[derive(Clone, Copy, Debug)]
 pub struct IterData<'a> {
     /// The entities over which to iterate.
