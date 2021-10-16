@@ -81,7 +81,7 @@ impl Dispatcher {
 
     /// Adds the required component storages to the `World` to avoid
     /// having to add them manually via `World::register`.
-    pub fn set_up(&self, world: &mut World) {
+    pub fn register_storages(&self, world: &mut World) {
         for step in self.steps.iter() {
             match step {
                 Step::RunSystems(systems) => {
@@ -148,9 +148,9 @@ impl Dispatcher {
                 Step::FlushCommands => {
                     world.maintain();
 
-                    for command in self.command_buffers.drain() {
-                        command(world);
-                    }
+                    self.command_buffers
+                        .drain()
+                        .for_each(|command| command(world));
                 }
             }
         }
@@ -223,8 +223,8 @@ impl Dispatcher {
         }
     }
 
-    /// Get the maximum number of systems which can run concurrently.
-    /// Can be used to set up the number of threads in the `rayon::ThreadPool`.
+    /// Returns the maximum number of systems that can run concurrently.
+    /// Can be used to set the number of threads in the `rayon::ThreadPool`.
     pub fn max_concurrecy(&self) -> usize {
         let mut max_concurrecy = 1;
 

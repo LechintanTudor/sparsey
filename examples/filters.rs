@@ -49,7 +49,7 @@ fn main() {
         .build();
 
     let mut world = World::default();
-    dispatcher.set_up(&mut world);
+    dispatcher.register_storages(&mut world);
 
     for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
         world.insert_resource(difficulty);

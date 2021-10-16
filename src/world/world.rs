@@ -1,6 +1,6 @@
-use crate::components::{Component, ComponentSet, ComponentStorages, ComponentStoragesIter};
+use crate::components::{Component, ComponentSet, ComponentStorages};
 use crate::layout::Layout;
-use crate::resources::{Resource, ResourceStorage, ResourceStorageIter};
+use crate::resources::{Resource, ResourceStorage};
 use crate::storage::{ComponentStorage, Entity, EntityStorage};
 use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
 use crate::world::{BorrowWorld, NoSuchEntity, TickOverflow};
@@ -83,12 +83,6 @@ impl World {
     #[must_use]
     pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
         self.storages.is_registered(component_type_id)
-    }
-
-    /// Returns an iterator over all registered storages and the`TypeId`s of the
-    /// components they hold.
-    pub fn storages(&mut self) -> ComponentStoragesIter {
-        self.storages.iter()
     }
 
     /// Creates an `Entity` with the given `components` and returns it.
@@ -276,6 +270,7 @@ impl World {
 
     /// Returns `true` if the `World` contains a resource with the given
     /// `TypeId`.
+    #[must_use]
     pub fn contains_resource(&self, resource_type_id: &TypeId) -> bool {
         self.resources.contains(resource_type_id)
     }
@@ -283,12 +278,6 @@ impl World {
     /// Removes all resources from the `World`.
     pub fn clear_resources(&mut self) {
         self.resources.clear();
-    }
-
-    /// Returns an iterator over all resources stored in the `World` and their
-    /// `TypeId`s.
-    pub fn resources(&mut self) -> ResourceStorageIter {
-        self.resources.iter()
     }
 
     /// Removes all entities, components and resources from the `World`.

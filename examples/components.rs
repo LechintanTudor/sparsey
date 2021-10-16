@@ -40,7 +40,7 @@ fn main() {
         .build();
 
     let mut world = World::default();
-    dispatcher.set_up(&mut world);
+    dispatcher.register_storages(&mut world);
 
     world.create_entity((Position(0, 0), Velocity(1, 1)));
     world.create_entity((Position(0, 0), Velocity(2, 2)));

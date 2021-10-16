@@ -3,7 +3,6 @@ use crate::utils::{ChangeTicks, UnsafeUnwrap};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
-use std::collections::hash_map::IterMut as HashMapIterMut;
 
 /// Container for a type-erased `Resource` and its `ChangeTicks`.
 pub struct ResourceCell {
@@ -76,32 +75,5 @@ impl ResourceStorage {
         self.resources
             .get(resource_type_id)
             .map(AtomicRefCell::borrow_mut)
-    }
-
-    pub fn iter(&mut self) -> ResourceStorageIter {
-        ResourceStorageIter::new(self)
-    }
-}
-
-/// Iterator over the resources in a `World`.
-pub struct ResourceStorageIter<'a> {
-    inner: HashMapIterMut<'a, TypeId, AtomicRefCell<ResourceCell>>,
-}
-
-impl<'a> ResourceStorageIter<'a> {
-    fn new(resource_storage: &'a mut ResourceStorage) -> Self {
-        Self {
-            inner: resource_storage.resources.iter_mut(),
-        }
-    }
-}
-
-impl<'a> Iterator for ResourceStorageIter<'a> {
-    type Item = (&'a TypeId, &'a ResourceCell);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner
-            .next()
-            .map(|(type_id, cell)| (type_id, &*cell.get_mut()))
     }
 }

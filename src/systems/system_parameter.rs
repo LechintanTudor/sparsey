@@ -56,6 +56,20 @@ where
     // Empty
 }
 
+unsafe impl<'a, T> SystemParam for Option<Res<'a, T>>
+where
+    T: Resource + Sync,
+{
+    // Empty
+}
+
+unsafe impl<'a, T> SystemParam for Option<ResMut<'a, T>>
+where
+    T: Resource + Send,
+{
+    // Empty
+}
+
 unsafe impl<'a> SystemParam for Commands<'a> {
     // Empty
 }

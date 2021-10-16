@@ -45,7 +45,6 @@ where
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.cell.ticks.tick_mutated = self.world_tick;
-
         unsafe { self.cell.value_mut().downcast_mut::<T>().unsafe_unwrap() }
     }
 }

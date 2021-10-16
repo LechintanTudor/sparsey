@@ -62,12 +62,11 @@ where
     type Item = Res<'a, T>;
 
     fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
-        let cell = world
+        world
             .resource_storage()
             .borrow(&TypeId::of::<T>())
-            .unwrap_or_else(|| panic_missing_res::<T>());
-
-        unsafe { Res::new(cell, world.tick(), change_tick) }
+            .map(|cell| unsafe { Res::new(cell, world.tick(), change_tick) })
+            .unwrap_or_else(|| panic_missing_res::<T>())
     }
 }
 
@@ -78,12 +77,39 @@ where
     type Item = ResMut<'a, T>;
 
     fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
-        let cell = world
+        world
             .resource_storage()
             .borrow_mut(&TypeId::of::<T>())
-            .unwrap_or_else(|| panic_missing_res::<T>());
+            .map(|cell| unsafe { ResMut::new(cell, world.tick(), change_tick) })
+            .unwrap_or_else(|| panic_missing_res::<T>())
+    }
+}
 
-        unsafe { ResMut::new(cell, world.tick(), change_tick) }
+impl<'a, 'b, T> BorrowWorld<'a> for Option<Res<'b, T>>
+where
+    T: Resource,
+{
+    type Item = Option<Res<'a, T>>;
+
+    fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
+        world
+            .resource_storage()
+            .borrow(&TypeId::of::<T>())
+            .map(|cell| unsafe { Res::new(cell, world.tick(), change_tick) })
+    }
+}
+
+impl<'a, 'b, T> BorrowWorld<'a> for Option<ResMut<'b, T>>
+where
+    T: Resource,
+{
+    type Item = Option<ResMut<'a, T>>;
+
+    fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
+        world
+            .resource_storage()
+            .borrow_mut(&TypeId::of::<T>())
+            .map(|cell| unsafe { ResMut::new(cell, world.tick(), change_tick) })
     }
 }
 

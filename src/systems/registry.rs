@@ -150,3 +150,33 @@ where
         <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
     }
 }
+
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Option<Res<'b, T>>
+where
+    T: Resource,
+{
+    type Item = Option<Res<'a, T>>;
+
+    fn access() -> RegistryAccess {
+        RegistryAccess::Res(TypeId::of::<T>())
+    }
+
+    unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+    }
+}
+
+unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Option<ResMut<'b, T>>
+where
+    T: Resource,
+{
+    type Item = Option<ResMut<'a, T>>;
+
+    fn access() -> RegistryAccess {
+        RegistryAccess::ResMut(TypeId::of::<T>())
+    }
+
+    unsafe fn borrow(registry: &'a Registry) -> Self::Item {
+        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+    }
+}

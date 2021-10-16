@@ -35,7 +35,7 @@ fn main() {
         .build();
 
     let mut world = World::default();
-    dispatcher.set_up(&mut world);
+    dispatcher.register_storages(&mut world);
 
     world.create_entities((0..100).map(|i| (Position(0, 0), Velocity(i, i), Hp(100), HpRegen(i))));
 

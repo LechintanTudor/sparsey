@@ -6,7 +6,7 @@ use crate::storage::{ComponentStorage, Entity};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
-use std::collections::hash_map::{Entry, IterMut as HashMapIterMut};
+use std::collections::hash_map::Entry;
 use std::ops::Range;
 use std::ptr::NonNull;
 use std::{mem, ptr};
@@ -152,12 +152,6 @@ impl ComponentStorages {
 
     pub(crate) fn is_registered(&self, type_id: &TypeId) -> bool {
         self.component_info.contains_key(type_id)
-    }
-
-    /// Returns an iterator over all storages and the `TypeId`s of the
-    /// components they hold.
-    pub(crate) fn iter(&mut self) -> ComponentStoragesIter {
-        ComponentStoragesIter::new(self)
     }
 
     pub(crate) unsafe fn group_components<'a, E>(&mut self, family_index: usize, entities: E)
@@ -404,31 +398,5 @@ impl Group {
 
     pub fn len(&self) -> usize {
         self.len
-    }
-}
-
-/// Iterator over all storages in `ComponentStorages` and the `TypeId`s of the
-/// components they hold.
-pub struct ComponentStoragesIter<'a> {
-    inner: HashMapIterMut<'a, TypeId, ComponentInfo>,
-    storages: *const AtomicRefCell<ComponentStorage>,
-}
-
-impl<'a> ComponentStoragesIter<'a> {
-    fn new(component_storages: &'a mut ComponentStorages) -> Self {
-        Self {
-            inner: component_storages.component_info.iter_mut(),
-            storages: component_storages.storages.as_ptr(),
-        }
-    }
-}
-
-impl<'a> Iterator for ComponentStoragesIter<'a> {
-    type Item = (&'a TypeId, &'a ComponentStorage);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let (type_id, info) = self.inner.next()?;
-        let storage = unsafe { &*(*self.storages.add(info.storage_index)).as_ptr() };
-        Some((type_id, storage))
     }
 }
