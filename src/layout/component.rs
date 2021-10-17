@@ -41,7 +41,7 @@ impl ComponentInfo {
     }
 
     /// Returns an empty `ComponentStorage` for the `Component`.
-    pub fn create_storage(&self) -> ComponentStorage {
+    pub(crate) fn create_storage(&self) -> ComponentStorage {
         self.component.create_storage()
     }
 }
