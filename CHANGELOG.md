@@ -1,8 +1,19 @@
 # Unreleased
+## Added
+- `World::borrow` now accepts `Option<Res<T>>` and `Option<ResMut<T>>`.
+- Systems can now have `Option<Res<T>>` and `Option<ResMut<T>>` as parameters.
+- Added `ComponentView::storage` to get a reference to the view's `ComponentStorage`.
+- Added `#[must_use]` to functions whose returns should not be discarded.  
+
 ## Changed
 - Reworked `ComponentStorage` to make adding, removing and swapping components faster.
 - Optimize the implementation of `ComponentSet` for the unit type.
 - All methods of `ComponentSet` are now safe.
+- Reduce size of `System`, `LocalSystem` and `GroupInfo` structs.
+- Items not meant to be used outside `Sparsey` are now `pub(crate)`.
+
+## Removed
+- Removed `World::resources` and `World::storages` iterators.
 
 ## Fixed
 - Removed debug `println` from `ComponentStorages`.
