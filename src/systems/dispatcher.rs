@@ -207,9 +207,11 @@ impl Dispatcher {
                     run_local_fns(systems, world, &mut errors);
                 }
                 Step::FlushCommands => {
-                    for command in self.command_buffers.drain() {
-                        command(world);
-                    }
+                    world.maintain();
+
+                    self.command_buffers
+                        .drain()
+                        .for_each(|command| command(world));
                 }
             }
         }

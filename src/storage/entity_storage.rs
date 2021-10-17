@@ -57,9 +57,12 @@ impl EntityStorage {
 
     /// Adds the entities created atomically to the storage.
     pub(crate) fn maintain(&mut self) {
-        for entity in self.allocator.maintain() {
-            self.storage.insert(entity);
-        }
+        let allocator = &mut self.allocator;
+        let storage = &mut self.storage;
+
+        allocator
+            .maintain()
+            .for_each(|entity| storage.insert(entity));
     }
 }
 
