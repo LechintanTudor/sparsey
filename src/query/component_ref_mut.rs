@@ -2,7 +2,7 @@ use crate::components::Component;
 use crate::utils::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut};
 
-/// Type returned by iterators over `CompMut`s. Updates the `component's
+/// Type returned by iterators over `CompMut`s. Updates the component's
 /// `ChangeTicks` when the component is mutated.
 pub struct ComponentRefMut<'a, T>
 where
