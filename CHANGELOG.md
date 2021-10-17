@@ -1,4 +1,4 @@
-# Unreleased
+# 0.4.0 (2021-10-17)
 ## Added
 - `World::borrow` now accepts `Option<Res<T>>` and `Option<ResMut<T>>`.
 - Systems can now have `Option<Res<T>>` and `Option<ResMut<T>>` as parameters.
