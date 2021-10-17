@@ -3,7 +3,7 @@ use crate::systems::{
 };
 use crate::world::World;
 
-/// Trait implemented by systems. `Send` systems can be run from any thread.
+/// Trait implemented by systems..
 pub unsafe trait Runnable {
     /// Returns all data accessed by the system.
     fn accesses(&self) -> &[RegistryAccess];
@@ -16,7 +16,7 @@ pub unsafe trait Runnable {
 /// `Runnable`.
 pub struct LocalSystem {
     function: Box<dyn FnMut(&Registry) -> SystemResult + 'static>,
-    accesses: Vec<RegistryAccess>,
+    accesses: Box<[RegistryAccess]>,
 }
 
 unsafe impl Sync for LocalSystem {}
@@ -41,8 +41,11 @@ pub unsafe trait IntoLocalSystem<Params, Return> {
 /// `Runnable`.
 pub struct System {
     function: Box<dyn FnMut(&Registry) -> SystemResult + Send + 'static>,
-    accesses: Vec<RegistryAccess>,
+    accesses: Box<[RegistryAccess]>,
 }
+
+unsafe impl Send for System {}
+unsafe impl Sync for System {}
 
 unsafe impl Runnable for System {
     fn accesses(&self) -> &[RegistryAccess] {
@@ -132,9 +135,9 @@ macro_rules! impl_into_system {
                         self($(<$param as BorrowRegistry>::borrow(registry)),*);
                         Ok(())
                     }),
-                    accesses: vec![
+                    accesses: Box::new([
                         $(<$param as BorrowRegistry>::access()),*
-                    ],
+                    ]),
                 }
             }
         }
@@ -153,9 +156,9 @@ macro_rules! impl_into_system {
                     function: Box::new(move |registry| unsafe {
                         self($(<$param as BorrowRegistry>::borrow(registry)),*)
                     }),
-                    accesses: vec![
+                    accesses: Box::new([
                         $(<$param as BorrowRegistry>::access()),*
-                    ],
+                    ]),
                 }
             }
         }
@@ -175,9 +178,9 @@ macro_rules! impl_into_system {
                         self($(<$param as BorrowRegistry>::borrow(registry)),*);
                         Ok(())
                     }),
-                    accesses: vec![
+                    accesses: Box::new([
                         $(<$param as BorrowRegistry>::access()),*
-                    ],
+                    ]),
                 }
             }
         }
@@ -196,9 +199,9 @@ macro_rules! impl_into_system {
                     function: Box::new(move |registry| unsafe {
                         self($(<$param as BorrowRegistry>::borrow(registry)),*)
                     }),
-                    accesses: vec![
+                    accesses: Box::new([
                         $(<$param as BorrowRegistry>::access()),*
-                    ],
+                    ]),
                 }
             }
         }
