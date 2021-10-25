@@ -1,4 +1,4 @@
-use crate::storage::{Entity, IndexEntity, SparseArray, Version};
+use crate::storage::{Entity, EntitySparseArray, IndexEntity, Version};
 use std::num::NonZeroU32;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
@@ -76,7 +76,7 @@ impl Deref for EntityStorage {
 
 #[derive(Clone, Default, Debug)]
 struct EntitySparseSet {
-    sparse: SparseArray,
+    sparse: EntitySparseArray,
     entities: Vec<Entity>,
 }
 

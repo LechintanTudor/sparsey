@@ -6,11 +6,11 @@ const PAGE_SIZE: usize = 32;
 type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
 #[derive(Clone, Debug, Default)]
-pub struct SparseArray {
+pub struct EntitySparseArray {
     pages: Vec<EntityPage>,
 }
 
-impl SparseArray {
+impl EntitySparseArray {
     /// Returns whether or not the array contains `entity`.
     pub fn contains(&self, entity: Entity) -> bool {
         self.get_index(entity).is_some()

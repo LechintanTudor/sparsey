@@ -1,6 +1,6 @@
 use crate::group::CombinedGroupInfo;
 use crate::query::{Passthrough, UnfilteredImmutableQueryElement};
-use crate::storage::{Entity, SparseArray};
+use crate::storage::{Entity, EntitySparseArray};
 
 /// Trait implemented by the part of the `Query` that checks if an `Entity`
 /// includes or excludes a set of components.
@@ -64,7 +64,7 @@ where
 {
     const IS_PASSTHROUGH: bool = false;
 
-    type Split = &'a SparseArray;
+    type Split = &'a EntitySparseArray;
 
     #[inline]
     fn includes(&self, entity: Entity) -> bool {
@@ -96,9 +96,9 @@ where
     }
 }
 
-macro_rules! sparse_array {
+macro_rules! entity_sparse_array {
     ($elem:ident) => {
-        &'a SparseArray
+        &'a EntitySparseArray
     };
 }
 
@@ -110,7 +110,7 @@ macro_rules! impl_query_modifier {
         {
             const IS_PASSTHROUGH: bool = false;
 
-            type Split = ($(sparse_array!($elem),)+);
+            type Split = ($(entity_sparse_array!($elem),)+);
 
             $(#[$attrib])*
             fn includes(&self, entity: Entity) -> bool {

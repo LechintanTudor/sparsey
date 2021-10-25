@@ -1,4 +1,4 @@
-use crate::storage::{Entity, IndexEntity, SparseArray};
+use crate::storage::{Entity, EntitySparseArray, IndexEntity};
 use crate::utils::ChangeTicks;
 use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr::NonNull;
@@ -7,7 +7,7 @@ use std::{mem, ptr, slice};
 /// Type-erased storage for `Component`s.
 pub struct ComponentStorage {
     layout: Layout,
-    sparse: SparseArray,
+    sparse: EntitySparseArray,
     entities: NonNull<Entity>,
     components: NonNull<u8>,
     ticks: NonNull<ChangeTicks>,
@@ -37,7 +37,7 @@ impl ComponentStorage {
 
         Self {
             layout,
-            sparse: SparseArray::default(),
+            sparse: EntitySparseArray::default(),
             entities: NonNull::dangling(),
             components,
             ticks: NonNull::dangling(),
@@ -241,7 +241,7 @@ impl ComponentStorage {
 
     pub(crate) fn split_for_iteration<T>(
         &self,
-    ) -> (&SparseArray, &[Entity], *const T, *const ChangeTicks)
+    ) -> (&EntitySparseArray, &[Entity], *const T, *const ChangeTicks)
     where
         T: 'static,
     {
@@ -255,7 +255,7 @@ impl ComponentStorage {
 
     pub(crate) fn split_for_iteration_mut<T>(
         &mut self,
-    ) -> (&SparseArray, &[Entity], *mut T, *mut ChangeTicks)
+    ) -> (&EntitySparseArray, &[Entity], *mut T, *mut ChangeTicks)
     where
         T: 'static,
     {
