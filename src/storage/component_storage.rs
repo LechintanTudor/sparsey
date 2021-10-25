@@ -1,4 +1,4 @@
-use crate::storage::{Entity, IndexEntity, SparseArray, SparseArrayView};
+use crate::storage::{Entity, IndexEntity, SparseArray};
 use crate::utils::ChangeTicks;
 use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr::NonNull;
@@ -241,12 +241,12 @@ impl ComponentStorage {
 
     pub(crate) fn split_for_iteration<T>(
         &self,
-    ) -> (SparseArrayView, &[Entity], *const T, *const ChangeTicks)
+    ) -> (&SparseArray, &[Entity], *const T, *const ChangeTicks)
     where
         T: 'static,
     {
         (
-            self.sparse.as_view(),
+            &self.sparse,
             unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
             self.components.cast::<T>().as_ptr(),
             self.ticks.as_ptr(),
@@ -255,12 +255,12 @@ impl ComponentStorage {
 
     pub(crate) fn split_for_iteration_mut<T>(
         &mut self,
-    ) -> (SparseArrayView, &[Entity], *mut T, *mut ChangeTicks)
+    ) -> (&SparseArray, &[Entity], *mut T, *mut ChangeTicks)
     where
         T: 'static,
     {
         (
-            self.sparse.as_view(),
+            &self.sparse,
             unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
             self.components.cast::<T>().as_ptr(),
             self.ticks.as_ptr(),

@@ -1,4 +1,4 @@
-use crate::storage::{ComponentStorage, Entity, SparseArrayView};
+use crate::storage::{ComponentStorage, Entity, SparseArray};
 use crate::utils::ChangeTicks;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -84,7 +84,7 @@ where
     /// Splits the storage for iteration.
     pub(crate) fn split_for_iteration(
         &self,
-    ) -> (SparseArrayView, &[Entity], *const T, *const ChangeTicks) {
+    ) -> (&SparseArray, &[Entity], *const T, *const ChangeTicks) {
         self.storage.split_for_iteration::<T>()
     }
 }
@@ -124,7 +124,7 @@ where
     /// Splits the storage for iteration.
     pub(crate) fn split_for_iteration_mut(
         &mut self,
-    ) -> (SparseArrayView, &[Entity], *mut T, *mut ChangeTicks) {
+    ) -> (&SparseArray, &[Entity], *mut T, *mut ChangeTicks) {
         self.storage.split_for_iteration_mut::<T>()
     }
 }

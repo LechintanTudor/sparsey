@@ -1,7 +1,7 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
 use crate::query::{Contains, QueryElementFilter};
-use crate::storage::{Entity, SparseArrayView};
+use crate::storage::{Entity, SparseArray};
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
 
@@ -69,7 +69,7 @@ where
 /// Type returned by `QueryElement::split`.
 #[non_exhaustive]
 pub struct SplitQueryElement<'a, T, F> {
-    pub sparse: SparseArrayView<'a>,
+    pub sparse: &'a SparseArray,
     pub entities: &'a [Entity],
     pub components: *mut T,
     pub ticks: *mut ChangeTicks,
@@ -79,7 +79,7 @@ pub struct SplitQueryElement<'a, T, F> {
 impl<'a, T, F> SplitQueryElement<'a, T, F> {
     /// Creates a new `SplitQueryElement` with the given `Query` parts.
     pub fn new(
-        sparse: SparseArrayView<'a>,
+        sparse: &'a SparseArray,
         entities: &'a [Entity],
         components: *mut T,
         ticks: *mut ChangeTicks,
@@ -118,7 +118,7 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
         )
     }
 
-    pub(crate) fn into_modifier_split(self) -> (&'a [Entity], SparseArrayView<'a>) {
+    pub(crate) fn into_modifier_split(self) -> (&'a [Entity], &'a SparseArray) {
         (self.entities, self.sparse)
     }
 }
@@ -126,7 +126,7 @@ impl<'a, T, F> SplitQueryElement<'a, T, F> {
 /// Used to form `QueryBase::SparseSplit`.
 #[non_exhaustive]
 pub struct SparseSplitQueryElement<'a, T, F> {
-    pub sparse: SparseArrayView<'a>,
+    pub sparse: &'a SparseArray,
     pub components: *mut T,
     pub ticks: *mut ChangeTicks,
     pub filter: F,
