@@ -17,6 +17,7 @@ impl<'a, T> ComponentRefMut<'a, T>
 where
     T: Component,
 {
+    #[inline]
     pub(crate) fn new(component: &'a mut T, ticks: &'a mut ChangeTicks, world_tick: Ticks) -> Self {
         Self {
             component,

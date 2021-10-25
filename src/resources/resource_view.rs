@@ -33,6 +33,7 @@ where
 {
     type Target = T;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         unsafe { self.cell.value().downcast_ref::<T>().unsafe_unwrap() }
     }
@@ -43,6 +44,7 @@ where
     T: Resource,
     C: Deref<Target = ResourceCell> + DerefMut,
 {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.cell.ticks.tick_mutated = self.world_tick;
         unsafe { self.cell.value_mut().downcast_mut::<T>().unsafe_unwrap() }

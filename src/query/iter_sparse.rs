@@ -58,8 +58,8 @@ where
             self.index += 1;
 
             if self.filter.matches(entity)
-                && I::includes_split(&self.include, entity)
                 && E::excludes_split(&self.exclude, entity)
+                && I::includes_split(&self.include, entity)
             {
                 let item = unsafe {
                     B::get_from_sparse_split(
@@ -91,8 +91,8 @@ where
             self.index += 1;
 
             if self.filter.matches(entity)
-                && I::includes_split(&self.include, entity)
                 && E::excludes_split(&self.exclude, entity)
+                && I::includes_split(&self.include, entity)
             {
                 let item = unsafe {
                     B::get_from_sparse_split(

@@ -53,6 +53,7 @@ where
         self.0.change_tick()
     }
 
+    #[inline]
     fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter> {
         self.0.split()
     }
