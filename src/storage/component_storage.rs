@@ -4,16 +4,60 @@ use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr::NonNull;
 use std::{mem, ptr, slice};
 
-/// Type-erased storage for `Component`s.
-pub struct ComponentStorage {
-    layout: Layout,
-    sparse: EntitySparseArray,
-    entities: NonNull<Entity>,
+pub struct ComponentStorageData {
     components: NonNull<u8>,
     ticks: NonNull<ChangeTicks>,
-    cap: usize,
+}
+
+impl ComponentStorageData {
+    fn from_layout(layout: &Layout) -> Self {
+        let components = unsafe { NonNull::new_unchecked(layout.align() as _) };
+
+        Self {
+            components,
+            ticks: NonNull::dangling(),
+        }
+    }
+
+    #[inline]
+    pub(crate) unsafe fn get_unchecked<T>(&self, index: usize) -> &T {
+        &*self.components.cast::<T>().as_ptr().add(index)
+    }
+
+    #[inline]
+    pub(crate) unsafe fn get_ticks_unchecked(&self, index: usize) -> &ChangeTicks {
+        &*self.ticks.as_ptr().add(index)
+    }
+
+    #[inline]
+    pub(crate) unsafe fn get_with_ticks_unchecked<T>(&self, index: usize) -> (&T, &ChangeTicks) {
+        (
+            &*self.components.cast::<T>().as_ptr().add(index),
+            &*self.ticks.as_ptr().add(index),
+        )
+    }
+
+    #[inline]
+    pub(crate) unsafe fn get_with_ticks_unchecked_mut<T>(
+        &mut self,
+        index: usize,
+    ) -> (&mut T, &mut ChangeTicks) {
+        (
+            &mut *self.components.cast::<T>().as_ptr().add(index),
+            &mut *self.ticks.as_ptr().add(index),
+        )
+    }
+}
+
+/// Type-erased storage for `Component`s.
+pub struct ComponentStorage {
+    entities: NonNull<Entity>,
     len: usize,
+    sparse: EntitySparseArray,
+    data: ComponentStorageData,
+    layout: Layout,
     swap_space: NonNull<u8>,
+    cap: usize,
     drop: unsafe fn(*mut u8),
     needs_drop: bool,
 }
@@ -33,16 +77,13 @@ impl ComponentStorage {
             }
         };
 
-        let components = unsafe { NonNull::new_unchecked(layout.align() as _) };
-
         Self {
-            layout,
-            sparse: EntitySparseArray::default(),
             entities: NonNull::dangling(),
-            components,
-            ticks: NonNull::dangling(),
-            cap: 0,
             len: 0,
+            sparse: EntitySparseArray::default(),
+            data: ComponentStorageData::from_layout(&layout),
+            cap: 0,
+            layout,
             swap_space,
             drop: drop_in_place::<T>,
             needs_drop: mem::needs_drop::<T>(),
@@ -64,9 +105,10 @@ impl ComponentStorage {
             Some(index_entity) => {
                 let index = index_entity.index();
                 *self.entities.as_ptr().add(index) = entity;
-                *self.ticks.as_ptr().add(index) = ticks;
+                *self.data.ticks.as_ptr().add(index) = ticks;
                 Some(
-                    self.components
+                    self.data
+                        .components
                         .cast::<T>()
                         .as_ptr()
                         .add(index)
@@ -81,8 +123,8 @@ impl ComponentStorage {
                 }
 
                 *self.entities.as_ptr().add(self.len) = entity;
-                *self.components.cast::<T>().as_ptr().add(self.len) = component;
-                *self.ticks.as_ptr().add(self.len) = ticks;
+                *self.data.components.cast::<T>().as_ptr().add(self.len) = component;
+                *self.data.ticks.as_ptr().add(self.len) = ticks;
 
                 self.len += 1;
                 None
@@ -106,9 +148,9 @@ impl ComponentStorage {
             *self.sparse.get_unchecked_mut(last_entity.index()) = Some(index_entity);
         }
 
-        *self.ticks.as_ptr().add(index) = *self.ticks.as_ptr().add(self.len);
+        *self.data.ticks.as_ptr().add(index) = *self.data.ticks.as_ptr().add(self.len);
 
-        let components = self.components.cast::<T>().as_ptr();
+        let components = self.data.components.cast::<T>().as_ptr();
         let removed = components.add(index).read();
         ptr::copy(components.add(self.len), components.add(index), 1);
         Some(removed)
@@ -132,13 +174,13 @@ impl ComponentStorage {
             }
 
             let size = self.layout.size();
-            let to_remove = self.components.as_ptr().add(index * size);
-            let last = self.components.as_ptr().add(self.len * size);
+            let to_remove = self.data.components.as_ptr().add(index * size);
+            let last = self.data.components.as_ptr().add(self.len * size);
 
             (self.drop)(to_remove);
             ptr::copy(last, to_remove, size);
 
-            *self.ticks.as_ptr().add(index) = *self.ticks.as_ptr().add(self.len);
+            *self.data.ticks.as_ptr().add(index) = *self.data.ticks.as_ptr().add(self.len);
         }
     }
 
@@ -155,53 +197,41 @@ impl ComponentStorage {
         self.sparse.swap_unchecked(sparse_a, sparse_b);
 
         let size = self.layout.size();
-        let component_a = self.components.as_ptr().add(a * size);
-        let component_b = self.components.as_ptr().add(b * size);
+        let component_a = self.data.components.as_ptr().add(a * size);
+        let component_b = self.data.components.as_ptr().add(b * size);
         let swap_space = self.swap_space.as_ptr();
 
         ptr::copy_nonoverlapping(component_a, swap_space, size);
         ptr::copy(component_b, component_a, size);
         ptr::copy_nonoverlapping(swap_space, component_b, size);
 
-        ptr::swap(self.ticks.as_ptr().add(a), self.ticks.as_ptr().add(b));
+        ptr::swap(
+            self.data.ticks.as_ptr().add(a),
+            self.data.ticks.as_ptr().add(b),
+        );
     }
 
-    pub(crate) unsafe fn get<T>(&self, entity: Entity) -> Option<&T>
-    where
-        T: 'static,
-    {
+    pub(crate) unsafe fn get<T>(&self, entity: Entity) -> Option<&T> {
         let index = self.sparse.get_index(entity)?;
-        Some(&*self.components.cast::<T>().as_ptr().add(index))
+        Some(self.data.get_unchecked::<T>(index))
     }
 
     pub(crate) fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
         let index = self.sparse.get_index(entity)?;
-        unsafe { Some(&*self.ticks.as_ptr().add(index)) }
+        unsafe { Some(self.data.get_ticks_unchecked(index)) }
     }
 
-    pub(crate) unsafe fn get_with_ticks<T>(&self, entity: Entity) -> Option<(&T, &ChangeTicks)>
-    where
-        T: 'static,
-    {
+    pub(crate) unsafe fn get_with_ticks<T>(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
         let index = self.sparse.get_index(entity)?;
-        Some((
-            &*self.components.cast::<T>().as_ptr().add(index),
-            &*self.ticks.as_ptr().add(index),
-        ))
+        Some(self.data.get_with_ticks_unchecked(index))
     }
 
     pub(crate) unsafe fn get_with_ticks_mut<T>(
         &mut self,
         entity: Entity,
-    ) -> Option<(&mut T, &mut ChangeTicks)>
-    where
-        T: 'static,
-    {
+    ) -> Option<(&mut T, &mut ChangeTicks)> {
         let index = self.sparse.get_index(entity)?;
-        Some((
-            &mut *self.components.cast::<T>().as_ptr().add(index),
-            &mut *self.ticks.as_ptr().add(index),
-        ))
+        Some(self.data.get_with_ticks_unchecked_mut::<T>(index))
     }
 
     pub(crate) fn get_index(&self, entity: Entity) -> Option<usize> {
@@ -232,11 +262,11 @@ impl ComponentStorage {
     where
         T: 'static,
     {
-        slice::from_raw_parts(self.components.cast::<T>().as_ptr(), self.len)
+        slice::from_raw_parts(self.data.components.cast::<T>().as_ptr(), self.len)
     }
 
     pub(crate) fn ticks(&self) -> &[ChangeTicks] {
-        unsafe { slice::from_raw_parts(self.ticks.as_ptr(), self.len) }
+        unsafe { slice::from_raw_parts(self.data.ticks.as_ptr(), self.len) }
     }
 
     pub(crate) fn split_for_iteration<T>(
@@ -248,8 +278,8 @@ impl ComponentStorage {
         (
             &self.sparse,
             unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
-            self.components.cast::<T>().as_ptr(),
-            self.ticks.as_ptr(),
+            self.data.components.cast::<T>().as_ptr(),
+            self.data.ticks.as_ptr(),
         )
     }
 
@@ -262,8 +292,26 @@ impl ComponentStorage {
         (
             &self.sparse,
             unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
-            self.components.cast::<T>().as_ptr(),
-            self.ticks.as_ptr(),
+            self.data.components.cast::<T>().as_ptr(),
+            self.data.ticks.as_ptr(),
+        )
+    }
+
+    pub(crate) fn split(&self) -> (&[Entity], &EntitySparseArray, &ComponentStorageData) {
+        (
+            unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
+            &self.sparse,
+            &self.data,
+        )
+    }
+
+    pub(crate) unsafe fn split_mut(
+        &mut self,
+    ) -> (&[Entity], &EntitySparseArray, &mut ComponentStorageData) {
+        (
+            slice::from_raw_parts(self.entities.as_ptr(), self.len),
+            &self.sparse,
+            &mut self.data,
         )
     }
 
@@ -274,7 +322,7 @@ impl ComponentStorage {
 
             for i in 0..len {
                 unsafe {
-                    (self.drop)(self.components.as_ptr().add(i * self.layout.size()));
+                    (self.drop)(self.data.components.as_ptr().add(i * self.layout.size()));
                 }
             }
         } else {
@@ -292,7 +340,7 @@ impl ComponentStorage {
                     NonNull::new(alloc(self.layout))
                         .unwrap_or_else(|| handle_alloc_error(self.layout))
                 } else {
-                    self.components
+                    self.data.components
                 };
 
                 let ticks = NonNull::new(alloc(Layout::new::<ChangeTicks>()))
@@ -318,10 +366,14 @@ impl ComponentStorage {
                     let old_layout = repeat_layout(&self.layout, self.cap);
                     let layout = repeat_layout(&self.layout, cap);
 
-                    NonNull::new(realloc(self.components.as_ptr(), old_layout, layout.size()))
-                        .unwrap_or_else(|| handle_alloc_error(layout))
+                    NonNull::new(realloc(
+                        self.data.components.as_ptr(),
+                        old_layout,
+                        layout.size(),
+                    ))
+                    .unwrap_or_else(|| handle_alloc_error(layout))
                 } else {
-                    self.components
+                    self.data.components
                 };
 
                 let ticks = {
@@ -329,7 +381,7 @@ impl ComponentStorage {
                     let layout = array_layout::<ChangeTicks>(cap);
 
                     NonNull::new(realloc(
-                        self.ticks.as_ptr().cast(),
+                        self.data.ticks.as_ptr().cast(),
                         old_layout,
                         layout.size(),
                     ))
@@ -340,8 +392,8 @@ impl ComponentStorage {
             };
 
             self.entities = entities.cast();
-            self.components = components;
-            self.ticks = ticks.cast();
+            self.data.components = components;
+            self.data.ticks = ticks.cast();
             self.cap = cap;
         }
     }
@@ -366,13 +418,13 @@ impl Drop for ComponentStorage {
 
                 if self.layout.size() != 0 {
                     dealloc(
-                        self.components.as_ptr(),
+                        self.data.components.as_ptr(),
                         repeat_layout(&self.layout, self.cap),
                     );
                 }
 
                 dealloc(
-                    self.ticks.as_ptr().cast(),
+                    self.data.ticks.as_ptr().cast(),
                     array_layout::<ChangeTicks>(self.cap),
                 );
             }
