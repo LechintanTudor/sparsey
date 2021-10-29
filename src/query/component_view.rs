@@ -10,10 +10,10 @@ use std::ops::{Deref, DerefMut};
 
 /// View over a `ComponentStorage` of type `T`.
 pub struct ComponentView<'a, T, S> {
-    storage: TypedComponentStorage<T, S>,
-    group_info: Option<GroupInfo<'a>>,
-    world_tick: Ticks,
-    change_tick: Ticks,
+    pub(crate) storage: TypedComponentStorage<T, S>,
+    pub(crate) group_info: Option<GroupInfo<'a>>,
+    pub(crate) world_tick: Ticks,
+    pub(crate) change_tick: Ticks,
 }
 
 impl<'a, T, S> ComponentView<'a, T, S>

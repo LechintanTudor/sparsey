@@ -74,7 +74,7 @@ impl Entity {
 /// Used internally by `EntitySparseArray` to map `Entity` indexes to dense
 /// indexes.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub(crate) struct IndexEntity {
+pub struct IndexEntity {
     id: u32,
     version: Version,
 }
