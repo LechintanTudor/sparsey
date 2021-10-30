@@ -5,8 +5,8 @@ use std::ptr::NonNull;
 use std::{mem, ptr, slice};
 
 pub struct ComponentStorageData {
-    components: NonNull<u8>,
-    ticks: NonNull<ChangeTicks>,
+    pub(crate) components: NonNull<u8>,
+    pub(crate) ticks: NonNull<ChangeTicks>,
 }
 
 impl ComponentStorageData {

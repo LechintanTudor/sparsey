@@ -7,6 +7,8 @@ pub trait QueryElementFilter<T>
 where
     T: Component,
 {
+    const IS_PASSTHROUGH: bool = false;
+
     /// Returns `true` if the component and ticks match the filter.
     fn matches(
         &self,
@@ -25,6 +27,8 @@ impl<T> QueryElementFilter<T> for Contains
 where
     T: Component,
 {
+    const IS_PASSTHROUGH: bool = true;
+
     #[inline]
     fn matches(
         &self,
