@@ -16,6 +16,13 @@ impl EntitySparseArray {
         self.get_index(entity).is_some()
     }
 
+    pub fn get(&self, entity: Entity) -> Option<&IndexEntity> {
+        self.pages
+            .get(page_index(entity))
+            .and_then(|p| p.as_ref())
+            .and_then(|p| p[local_index(entity)].as_ref())
+    }
+
     /// Returns the index mapped to `entity`.
     pub fn get_index(&self, entity: Entity) -> Option<usize> {
         self.pages

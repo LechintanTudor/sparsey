@@ -3,6 +3,11 @@ use crate::query::{Contains, QueryElementFilter};
 use crate::storage::{ComponentStorageData, Entity, EntitySparseArray, IndexEntity};
 use crate::utils::Ticks;
 
+pub struct QueryElementData<'a, F> {
+    pub data: &'a ComponentStorageData,
+    pub filter: F,
+}
+
 pub unsafe trait UnfilteredQueryElement2<'a> {
     type Item: 'a;
     type Component: Component;
@@ -45,15 +50,14 @@ pub unsafe trait QueryElement2<'a> {
 
     fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity>;
 
-    unsafe fn get_unchecked<F>(self, index: usize) -> Option<Self::Item>;
+    unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item>;
 
     fn split(
         self,
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        &'a ComponentStorageData,
-        Self::Filter,
+        QueryElementData<'a, Self::Filter>,
     );
 
     unsafe fn get_from_parts_unchecked(
@@ -81,7 +85,7 @@ where
         UnfilteredQueryElement2::get_index_entity(self, entity)
     }
 
-    unsafe fn get_unchecked<F>(self, index: usize) -> Option<Self::Item> {
+    unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item> {
         UnfilteredQueryElement2::get_unchecked(self, index, &Contains)
     }
 
@@ -90,11 +94,17 @@ where
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        &'a ComponentStorageData,
-        Self::Filter,
+        QueryElementData<'a, Self::Filter>,
     ) {
         let (entities, sparse, data) = UnfilteredQueryElement2::split(self);
-        (entities, sparse, data, Contains)
+        (
+            entities,
+            sparse,
+            QueryElementData {
+                data,
+                filter: Contains,
+            },
+        )
     }
 
     unsafe fn get_from_parts_unchecked(
