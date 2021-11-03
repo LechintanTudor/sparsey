@@ -56,7 +56,7 @@ where
     }
 
     fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
-        todo!()
+        CombinedGroupInfo::default().combine(QueryElement2::group_info(self)?)
     }
 
     fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {

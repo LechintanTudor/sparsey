@@ -54,6 +54,18 @@ where
     type Item = &'a T;
     type Component = T;
 
+    fn group_info(&self) -> Option<GroupInfo<'a>> {
+        self.group_info
+    }
+
+    fn world_tick(&self) -> Ticks {
+        self.world_tick
+    }
+
+    fn change_tick(&self) -> Ticks {
+        self.change_tick
+    }
+
     fn contains<F>(&self, entity: Entity, filter: &F) -> bool
     where
         F: QueryElementFilter<Self::Component>,
@@ -203,6 +215,18 @@ where
 {
     type Item = ComponentRefMut<'a, T>;
     type Component = T;
+
+    fn group_info(&self) -> Option<GroupInfo<'a>> {
+        self.group_info
+    }
+
+    fn world_tick(&self) -> Ticks {
+        self.world_tick
+    }
+
+    fn change_tick(&self) -> Ticks {
+        self.change_tick
+    }
 
     fn contains<F>(&self, entity: Entity, filter: &F) -> bool
     where

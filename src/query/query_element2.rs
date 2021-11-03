@@ -2,6 +2,7 @@ use crate::components::Component;
 use crate::query::{Contains, QueryElementFilter};
 use crate::storage::{ComponentStorageData, Entity, EntitySparseArray, IndexEntity};
 use crate::utils::Ticks;
+use crate::GroupInfo;
 
 pub struct QueryElementData<'a, F> {
     pub data: &'a ComponentStorageData,
@@ -11,6 +12,12 @@ pub struct QueryElementData<'a, F> {
 pub unsafe trait UnfilteredQueryElement2<'a> {
     type Item: 'a;
     type Component: Component;
+
+    fn group_info(&self) -> Option<GroupInfo<'a>>;
+
+    fn world_tick(&self) -> Ticks;
+
+    fn change_tick(&self) -> Ticks;
 
     fn contains<F>(&self, entity: Entity, filter: &F) -> bool
     where
@@ -46,6 +53,12 @@ pub unsafe trait QueryElement2<'a> {
     type Component: Component;
     type Filter: QueryElementFilter<Self::Component>;
 
+    fn group_info(&self) -> Option<GroupInfo<'a>>;
+
+    fn world_tick(&self) -> Ticks;
+
+    fn change_tick(&self) -> Ticks;
+
     fn contains(&self, entity: Entity) -> bool;
 
     fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity>;
@@ -76,6 +89,18 @@ where
     type Item = E::Item;
     type Component = E::Component;
     type Filter = Contains;
+
+    fn group_info(&self) -> Option<GroupInfo<'a>> {
+        UnfilteredQueryElement2::group_info(self)
+    }
+
+    fn world_tick(&self) -> Ticks {
+        UnfilteredQueryElement2::world_tick(self)
+    }
+
+    fn change_tick(&self) -> Ticks {
+        UnfilteredQueryElement2::change_tick(self)
+    }
 
     fn contains(&self, entity: Entity) -> bool {
         UnfilteredQueryElement2::contains(self, entity, &Contains)
