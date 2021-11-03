@@ -81,7 +81,7 @@ where
     }
 
     fn split_modifier(self) -> (Option<&'a [Entity]>, Self::Split) {
-        let (entities, sparse) = E::split(self).into_modifier_split();
+        let (entities, sparse, _) = E::split(self);
         (Some(entities), sparse)
     }
 
@@ -128,7 +128,7 @@ macro_rules! impl_query_modifier {
             }
 
             fn split_modifier(self) -> (Option<&'a [Entity]>, Self::Split) {
-                split_modifier!($(($elem, self.$idx)),+)
+                split_modifier!($((self.$idx, $idx)),+)
             }
 
             $(#[$attrib])*

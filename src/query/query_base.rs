@@ -1,5 +1,8 @@
 use crate::group::CombinedGroupInfo;
-use crate::query::{IterData, QueryElement, QueryElementData};
+use crate::query::{
+    Include, IncludeExclude, IncludeExcludeFilter, IntoQueryParts, IterData, Passthrough,
+    QueryElement, QueryElementData, QueryFilter, QueryModifier,
+};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
@@ -88,6 +91,53 @@ where
     }
 }
 
+pub trait QueryBaseModifiers<'a>
+where
+    Self: QueryBase<'a> + Sized,
+{
+    fn include<I>(self, include: I) -> Include<Self, I>
+    where
+        I: QueryModifier<'a>,
+    {
+        Include::new(self, include)
+    }
+
+    fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, Passthrough, E>
+    where
+        E: QueryModifier<'a>,
+    {
+        IncludeExclude::new(self, Passthrough, exclude)
+    }
+
+    fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, Passthrough, Passthrough, F>
+    where
+        F: QueryFilter,
+    {
+        IncludeExcludeFilter::new(self, Passthrough, Passthrough, filter)
+    }
+}
+
+impl<'a, B> QueryBaseModifiers<'a> for B
+where
+    B: QueryBase<'a> + Sized,
+{
+    // Empty
+}
+
+impl<'a, B> IntoQueryParts<'a> for B
+where
+    B: QueryBase<'a>,
+{
+    type Base = Self;
+    type Include = Passthrough;
+    type Exclude = Passthrough;
+    type Filter = Passthrough;
+
+    fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter) {
+        (self, Passthrough, Passthrough, Passthrough)
+    }
+}
+
 macro_rules! entity_sparse_array {
     ($elem:ident) => {
         &'a EntitySparseArray
@@ -119,11 +169,11 @@ macro_rules! impl_query_base {
             }
 
             fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-                todo!()
+                split_sparse!($((self.$idx, $idx)),+)
             }
 
             fn split_dense(self) -> (IterData<'a>, Self::Data) {
-                todo!()
+                split_dense!($((self.$idx, $idx)),+)
             }
 
             unsafe fn get_from_sparse_parts(

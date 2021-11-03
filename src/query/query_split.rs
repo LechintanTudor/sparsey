@@ -1,77 +1,58 @@
 use crate::storage::Entity;
 
+macro_rules! ticks {
+    ($elem:expr $(, $t:expr)*) => {
+        ($elem.world_tick(), $elem.change_tick())
+    };
+}
+
 macro_rules! split_sparse {
-	() => {
-		(None, ())
-	};
-	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
-		paste::paste! {
-			let world_tick = $first.world_tick();
-			let change_tick = $first.change_tick();
-			let [<split_ $first_type:lower>] = $first.split().into_sparse_split();
-			$(let [<split_ $other_type:lower>] = $other.split().into_sparse_split();)*
+	($(($elem:expr, $idx:tt)),+) => {
+		{
+			let (world_tick, change_tick) = ticks!($($elem),+);
+			let splits = ($($elem.split(),)+);
 
-			let entities = crate::query::shortest_entity_slice(&[
-				[<split_ $first_type:lower>].0
-				$(, [<split_ $other_type:lower>].0)*
-			]).unwrap();
+			let entities = crate::query::shortest_entity_slice(&[$(splits.$idx.0),+])
+				.unwrap();
+			let sparse = ($(splits.$idx.1,)+);
+			let data = ($(splits.$idx.2,)+);
 
-			(
-				crate::query::IterData::new(entities, world_tick, change_tick),
-				(
-					[<split_ $first_type:lower>].1,
-					$([<split_ $other_type:lower>].1,)*
-				)
-			)
+			let iter_data = crate::query::IterData::new(entities, world_tick, change_tick);
+			(iter_data, sparse, data)
 		}
-	}};
+	};
 }
 
 macro_rules! split_dense {
-	() => {
-		(None, ())
-	};
-	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
-		paste::paste! {
-			let world_tick = $first.world_tick();
-			let change_tick = $first.change_tick();
-			let (entities, [<split_ $first_type:lower>]) = $first.split().into_dense_split();
-			$(let [<split_ $other_type:lower>] = $other.split().into_dense_split().1;)*
+	(($first_elem:expr, $first_idx:tt) $(, ($other_elem:expr, $other_idx:tt))*) => {
+		{
+			let world_tick = $first_elem.world_tick();
+			let change_tick = $first_elem.change_tick();
+			let (entities, first_data) = {
+				let (entities, _, data) = $first_elem.split();
+				(entities, data)
+			};
 
-			(
-				crate::query::IterData::new(entities, world_tick, change_tick),
-				(
-					[<split_ $first_type:lower>],
-					$([<split_ $other_type:lower>],)*
-				)
-			)
+			let iter_data = crate::query::IterData::new(entities, world_tick, change_tick);
+			let data = (first_data, $($other_elem.split().2),*);
+			(iter_data, data)
 		}
-	}};
+	};
 }
 
 macro_rules! split_modifier {
-	() => {
-		(None, ())
-	};
-	(($first_type:ident, $first:expr) $(, ($other_type:ident, $other:expr))*) => {{
-		paste::paste! {
-			let [<split_ $first_type:lower>] = $first.split().into_modifier_split();
-			$(let [<split_ $other_type:lower>] = $other.split().into_modifier_split();)*
+	($(($elem:expr, $idx:tt)),+) => {
+		{
+			let splits = (
+				$({ let (entities, sparse, _) = $elem.split(); (entities, sparse) },)+
+			);
 
-			let entities = crate::query::shortest_entity_slice(&[
-				[<split_ $first_type:lower>].0
-				$(, [<split_ $other_type:lower>].0)*
-			]).unwrap();
+			let entities = crate::query::shortest_entity_slice(&[$(splits.$idx.0),+]);
+			let sparse = ($(splits.$idx.1,)+);
 
-			(
-				Some(entities),
-				(
-					[<split_ $first_type:lower>].1,
-					$([<split_ $other_type:lower>].1,)*
-				)
-			)
+			(entities, sparse)
 		}
-	}};
+	};
 }
 
 pub(crate) fn shortest_entity_slice<'a>(slices: &[&'a [Entity]]) -> Option<&'a [Entity]> {
