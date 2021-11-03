@@ -1,5 +1,5 @@
 use crate::query::{
-    IntoQueryParts, InvalidGroup, Passthrough, QueryBase, UnfilteredImmutableQueryElement,
+    ImmutableUnfilteredQueryElement, IntoQueryParts, InvalidGroup, Passthrough, QueryBase,
 };
 use crate::storage::Entity;
 use crate::{query, utils};
@@ -93,7 +93,7 @@ where
 
 unsafe impl<'a, E> SliceQueryBase<'a> for E
 where
-    E: UnfilteredImmutableQueryElement<'a>,
+    E: ImmutableUnfilteredQueryElement<'a>,
 {
     type Slices = &'a [E::Component];
 
@@ -101,7 +101,7 @@ where
     where
         R: RangeBounds<usize>,
     {
-        UnfilteredImmutableQueryElement::entities(&self)
+        ImmutableUnfilteredQueryElement::entities(&self)
             .get_unchecked(utils::range_to_bounds(&range))
     }
 
@@ -109,7 +109,7 @@ where
     where
         R: RangeBounds<usize>,
     {
-        UnfilteredImmutableQueryElement::components(&self)
+        ImmutableUnfilteredQueryElement::components(&self)
             .get_unchecked(utils::range_to_bounds(&range))
     }
 
@@ -117,10 +117,10 @@ where
     where
         R: RangeBounds<usize>,
     {
-        let entities = UnfilteredImmutableQueryElement::entities(&self)
+        let entities = ImmutableUnfilteredQueryElement::entities(&self)
             .get_unchecked(utils::range_to_bounds(&range));
 
-        let components = UnfilteredImmutableQueryElement::components(&self)
+        let components = ImmutableUnfilteredQueryElement::components(&self)
             .get_unchecked(utils::range_to_bounds(&range));
 
         (entities, components)
@@ -131,7 +131,7 @@ macro_rules! impl_slice_query_base {
     ($(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> SliceQueryBase<'a> for ($($elem,)+)
         where
-            $($elem: UnfilteredImmutableQueryElement<'a>,)+
+            $($elem: ImmutableUnfilteredQueryElement<'a>,)+
         {
             type Slices = ($(&'a [$elem::Component],)+);
 
@@ -139,7 +139,7 @@ macro_rules! impl_slice_query_base {
             where
                 R: RangeBounds<usize>,
             {
-                UnfilteredImmutableQueryElement::entities(&self.0)
+                ImmutableUnfilteredQueryElement::entities(&self.0)
                     .get_unchecked(utils::range_to_bounds(&range))
             }
 
@@ -148,7 +148,7 @@ macro_rules! impl_slice_query_base {
                 R: RangeBounds<usize>,
             {
                 ($(
-                    UnfilteredImmutableQueryElement::components(&self.$idx)
+                    ImmutableUnfilteredQueryElement::components(&self.$idx)
                         .get_unchecked(utils::range_to_bounds(&range))
                 ,)+)
             }
@@ -157,11 +157,11 @@ macro_rules! impl_slice_query_base {
             where
                 R: RangeBounds<usize>,
             {
-                let entities = UnfilteredImmutableQueryElement::entities(&self.0)
+                let entities = ImmutableUnfilteredQueryElement::entities(&self.0)
                     .get_unchecked(utils::range_to_bounds(&range));
 
                 let components = ($(
-                    UnfilteredImmutableQueryElement::components(&self.$idx)
+                    ImmutableUnfilteredQueryElement::components(&self.$idx)
                         .get_unchecked(utils::range_to_bounds(&range))
                 ,)+);
 

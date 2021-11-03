@@ -1,8 +1,8 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
 use crate::query::{
-    ComponentRefMut, Contains, ImmutableQueryElement, QueryElement, QueryElementFilter,
-    SplitQueryElement, UnfilteredImmutableQueryElement, UnfilteredQueryElement2,
+    ComponentRefMut, Contains, ImmutableUnfilteredQueryElement, QueryElement, QueryElementFilter,
+    UnfilteredQueryElement,
 };
 use crate::storage::{
     ComponentStorage, ComponentStorageData, Entity, EntitySparseArray, IndexEntity,
@@ -46,7 +46,7 @@ where
     }
 }
 
-unsafe impl<'a, T, S> UnfilteredQueryElement2<'a> for &'a ComponentView<'a, T, S>
+unsafe impl<'a, T, S> UnfilteredQueryElement<'a> for &'a ComponentView<'a, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage>,
@@ -128,71 +128,7 @@ where
     }
 }
 
-unsafe impl<'a, T, S> QueryElement<'a> for &'a ComponentView<'a, T, S>
-where
-    T: Component,
-    S: Deref<Target = ComponentStorage>,
-{
-    type Item = &'a T;
-    type Component = T;
-    type Filter = Contains;
-
-    #[inline]
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        self.storage.get(entity)
-    }
-
-    #[inline]
-    fn get_with_ticks(&self, entity: Entity) -> Option<(&Self::Component, &ChangeTicks)> {
-        self.storage.get_with_ticks(entity)
-    }
-
-    #[inline]
-    fn contains(&self, entity: Entity) -> bool {
-        self.storage.contains(entity)
-    }
-
-    #[inline]
-    fn group_info(&self) -> Option<GroupInfo<'a>> {
-        self.group_info
-    }
-
-    #[inline]
-    fn world_tick(&self) -> Ticks {
-        self.world_tick
-    }
-
-    #[inline]
-    fn change_tick(&self) -> Ticks {
-        self.change_tick
-    }
-
-    #[inline]
-    fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter> {
-        let (sparse, entities, components, ticks) = self.storage.split_for_iteration();
-        SplitQueryElement::new(sparse, entities, components as _, ticks as _, Contains)
-    }
-
-    #[inline]
-    unsafe fn get_from_parts(
-        component: *mut Self::Component,
-        _ticks: *mut ChangeTicks,
-        _world_tick: Ticks,
-        _change_tick: Ticks,
-    ) -> Self::Item {
-        &*component
-    }
-}
-
-unsafe impl<'a, T, S> ImmutableQueryElement<'a> for &'a ComponentView<'a, T, S>
-where
-    T: Component,
-    S: Deref<Target = ComponentStorage>,
-{
-    // Empty
-}
-
-unsafe impl<'a, T, S> UnfilteredImmutableQueryElement<'a> for &'a ComponentView<'a, T, S>
+unsafe impl<'a, T, S> ImmutableUnfilteredQueryElement<'a> for &'a ComponentView<'a, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage>,
@@ -208,7 +144,7 @@ where
     }
 }
 
-unsafe impl<'a, 'b, T, S> UnfilteredQueryElement2<'a> for &'a mut ComponentView<'b, T, S>
+unsafe impl<'a, 'b, T, S> UnfilteredQueryElement<'a> for &'a mut ComponentView<'b, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage> + DerefMut,
@@ -287,62 +223,5 @@ where
         } else {
             None
         }
-    }
-}
-
-unsafe impl<'a, 'b, T, S> QueryElement<'a> for &'a mut ComponentView<'b, T, S>
-where
-    T: Component,
-    S: Deref<Target = ComponentStorage> + DerefMut,
-{
-    type Item = ComponentRefMut<'a, T>;
-    type Component = T;
-    type Filter = Contains;
-
-    #[inline]
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        let (component, ticks) = self.storage.get_with_ticks_mut(entity)?;
-        Some(ComponentRefMut::new(component, ticks, self.world_tick))
-    }
-
-    #[inline]
-    fn get_with_ticks(&self, entity: Entity) -> Option<(&Self::Component, &ChangeTicks)> {
-        self.storage.get_with_ticks(entity)
-    }
-
-    #[inline]
-    fn contains(&self, entity: Entity) -> bool {
-        self.storage.contains(entity)
-    }
-
-    #[inline]
-    fn group_info(&self) -> Option<GroupInfo<'a>> {
-        self.group_info
-    }
-
-    #[inline]
-    fn world_tick(&self) -> Ticks {
-        self.world_tick
-    }
-
-    #[inline]
-    fn change_tick(&self) -> Ticks {
-        self.change_tick
-    }
-
-    #[inline]
-    fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter> {
-        let (sparse, entities, components, ticks) = self.storage.split_for_iteration_mut();
-        SplitQueryElement::new(sparse, entities, components, ticks, Contains)
-    }
-
-    #[inline]
-    unsafe fn get_from_parts(
-        component: *mut Self::Component,
-        ticks: *mut ChangeTicks,
-        world_tick: Ticks,
-        _change_tick: Ticks,
-    ) -> Self::Item {
-        ComponentRefMut::new(&mut *component, &mut *ticks, world_tick)
     }
 }

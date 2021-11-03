@@ -10,8 +10,9 @@ where
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    data: IterData<'a>,
-    base: B::SparseSplit,
+    iter_data: IterData<'a>,
+    sparse: B::Sparse,
+    data: B::Data,
     include: I::Split,
     exclude: E::Split,
     filter: F,
@@ -26,15 +27,17 @@ where
     F: QueryFilter,
 {
     pub(crate) fn new(
-        data: IterData<'a>,
-        base: B::SparseSplit,
+        iter_data: IterData<'a>,
+        sparse: B::Sparse,
+        data: B::Data,
         include: I::Split,
         exclude: E::Split,
         filter: F,
     ) -> Self {
         Self {
+            iter_data,
+            sparse,
             data,
-            base,
             include,
             exclude,
             filter,
@@ -54,7 +57,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let entity = *self.data.entities.get(self.index)?;
+            let entity = *self.iter_data.entities.get(self.index)?;
             self.index += 1;
 
             if self.filter.matches(entity)
@@ -62,11 +65,12 @@ where
                 && I::includes_split(&self.include, entity)
             {
                 let item = unsafe {
-                    B::get_from_sparse_split(
-                        &mut self.base,
+                    B::get_from_sparse_parts(
+                        &self.sparse,
                         entity,
-                        self.data.world_tick,
-                        self.data.change_tick,
+                        &self.data,
+                        self.iter_data.world_tick,
+                        self.iter_data.change_tick,
                     )
                 };
 
@@ -87,7 +91,7 @@ where
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         loop {
-            let entity = *self.data.entities.get(self.index)?;
+            let entity = *self.iter_data.entities.get(self.index)?;
             self.index += 1;
 
             if self.filter.matches(entity)
@@ -95,11 +99,12 @@ where
                 && I::includes_split(&self.include, entity)
             {
                 let item = unsafe {
-                    B::get_from_sparse_split(
-                        &mut self.base,
+                    B::get_from_sparse_parts(
+                        &self.sparse,
                         entity,
-                        self.data.world_tick,
-                        self.data.change_tick,
+                        &self.data,
+                        self.iter_data.world_tick,
+                        self.iter_data.change_tick,
                     )
                 };
 

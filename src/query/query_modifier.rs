@@ -1,5 +1,5 @@
 use crate::group::CombinedGroupInfo;
-use crate::query::{Passthrough, UnfilteredImmutableQueryElement};
+use crate::query::{Contains, ImmutableUnfilteredQueryElement, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 
 /// Trait implemented by the part of the `Query` that checks if an `Entity`
@@ -60,7 +60,7 @@ unsafe impl<'a> QueryModifier<'a> for Passthrough {
 
 unsafe impl<'a, E> QueryModifier<'a> for E
 where
-    E: UnfilteredImmutableQueryElement<'a>,
+    E: ImmutableUnfilteredQueryElement<'a>,
 {
     const IS_PASSTHROUGH: bool = false;
 
@@ -68,12 +68,12 @@ where
 
     #[inline]
     fn includes(&self, entity: Entity) -> bool {
-        self.contains(entity)
+        self.contains(entity, &Contains)
     }
 
     #[inline]
     fn excludes(&self, entity: Entity) -> bool {
-        !self.contains(entity)
+        !self.contains(entity, &Contains)
     }
 
     fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
@@ -106,7 +106,7 @@ macro_rules! impl_query_modifier {
     ($(#[$attrib:meta];)* $(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> QueryModifier<'a> for ($($elem,)+)
         where
-            $($elem: UnfilteredImmutableQueryElement<'a>,)+
+            $($elem: ImmutableUnfilteredQueryElement<'a>,)+
         {
             const IS_PASSTHROUGH: bool = false;
 
@@ -114,12 +114,12 @@ macro_rules! impl_query_modifier {
 
             $(#[$attrib])*
             fn includes(&self, entity: Entity) -> bool {
-                $(self.$idx.contains(entity))&&+
+                $(self.$idx.contains(entity, &Contains))&&+
             }
 
             $(#[$attrib])*
             fn excludes(&self, entity: Entity) -> bool {
-                $(!self.$idx.contains(entity))&&+
+                $(!self.$idx.contains(entity, &Contains))&&+
             }
 
             #[allow(clippy::needless_question_mark)]

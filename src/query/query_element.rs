@@ -1,21 +1,17 @@
 use crate::components::Component;
-use crate::group::GroupInfo;
 use crate::query::{Contains, QueryElementFilter};
-use crate::storage::{Entity, EntitySparseArray};
-use crate::utils::{ChangeTicks, Ticks};
-use std::marker::PhantomData;
+use crate::storage::{ComponentStorageData, Entity, EntitySparseArray, IndexEntity};
+use crate::utils::Ticks;
+use crate::GroupInfo;
 
-/// Trait implement by types which can be part of a query.
-pub unsafe trait QueryElement<'a> {
+pub struct QueryElementData<'a, F> {
+    pub data: &'a ComponentStorageData,
+    pub filter: F,
+}
+
+pub unsafe trait UnfilteredQueryElement<'a> {
     type Item: 'a;
     type Component: Component;
-    type Filter: QueryElementFilter<Self::Component>;
-
-    fn get(self, entity: Entity) -> Option<Self::Item>;
-
-    fn get_with_ticks(&self, entity: Entity) -> Option<(&Self::Component, &ChangeTicks)>;
-
-    fn contains(&self, entity: Entity) -> bool;
 
     fn group_info(&self) -> Option<GroupInfo<'a>>;
 
@@ -23,162 +19,141 @@ pub unsafe trait QueryElement<'a> {
 
     fn change_tick(&self) -> Ticks;
 
-    fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter>;
+    fn contains<F>(&self, entity: Entity, filter: &F) -> bool
+    where
+        F: QueryElementFilter<Self::Component>;
 
-    unsafe fn get_from_parts(
-        component: *mut Self::Component,
-        ticks: *mut ChangeTicks,
+    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity>;
+
+    unsafe fn get_unchecked<F>(self, index: usize, filter: &F) -> Option<Self::Item>
+    where
+        F: QueryElementFilter<Self::Component>;
+
+    fn split(
+        self,
+    ) -> (
+        &'a [Entity],
+        &'a EntitySparseArray,
+        &'a ComponentStorageData,
+    );
+
+    unsafe fn get_from_parts_unchecked<F>(
+        data: &ComponentStorageData,
+        index: usize,
+        filter: &F,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Self::Item;
+    ) -> Option<Self::Item>
+    where
+        F: QueryElementFilter<Self::Component>;
 }
 
-/// Trait implemented by immutable `QueryElement`s.
-pub unsafe trait ImmutableQueryElement<'a>
+pub unsafe trait ImmutableUnfilteredQueryElement<'a>
 where
-    Self: QueryElement<'a>,
-{
-    // Empty
-}
-
-/// Trait implemented by unfiltered `QueryElement`s.
-pub trait UnfilteredQueryElement<'a>
-where
-    Self: QueryElement<'a, Filter = Contains>,
-{
-    // Empty
-}
-
-impl<'a, E> UnfilteredQueryElement<'a> for E
-where
-    E: QueryElement<'a, Filter = Contains>,
-{
-    // Empty
-}
-
-/// Trait implemented by unfiltered immutable `QueryElement`s.
-pub unsafe trait UnfilteredImmutableQueryElement<'a>
-where
-    Self: ImmutableQueryElement<'a> + UnfilteredQueryElement<'a>,
+    Self: UnfilteredQueryElement<'a>,
 {
     fn entities(&self) -> &'a [Entity];
 
     fn components(&self) -> &'a [Self::Component];
 }
 
-/// Type returned by `QueryElement::split`.
-#[non_exhaustive]
-pub struct SplitQueryElement<'a, T, F> {
-    pub sparse: &'a EntitySparseArray,
-    pub entities: &'a [Entity],
-    pub components: *mut T,
-    pub ticks: *mut ChangeTicks,
-    pub filter: F,
-}
+pub unsafe trait QueryElement<'a> {
+    type Item: 'a;
+    type Component: Component;
+    type Filter: QueryElementFilter<Self::Component>;
 
-impl<'a, T, F> SplitQueryElement<'a, T, F> {
-    /// Creates a new `SplitQueryElement` with the given `Query` parts.
-    pub fn new(
-        sparse: &'a EntitySparseArray,
-        entities: &'a [Entity],
-        components: *mut T,
-        ticks: *mut ChangeTicks,
-        filter: F,
-    ) -> Self {
-        Self {
-            sparse,
-            entities,
-            components,
-            ticks,
-            filter,
-        }
-    }
+    fn group_info(&self) -> Option<GroupInfo<'a>>;
 
-    pub(crate) fn into_sparse_split(self) -> (&'a [Entity], SparseSplitQueryElement<'a, T, F>) {
-        (
-            self.entities,
-            SparseSplitQueryElement {
-                sparse: self.sparse,
-                components: self.components,
-                ticks: self.ticks,
-                filter: self.filter,
-            },
-        )
-    }
+    fn world_tick(&self) -> Ticks;
 
-    pub(crate) fn into_dense_split(self) -> (&'a [Entity], DenseSplitQueryElement<'a, T, F>) {
-        (
-            self.entities,
-            DenseSplitQueryElement {
-                components: self.components,
-                ticks: self.ticks,
-                filter: self.filter,
-                _phantom: PhantomData,
-            },
-        )
-    }
+    fn change_tick(&self) -> Ticks;
 
-    pub(crate) fn into_modifier_split(self) -> (&'a [Entity], &'a EntitySparseArray) {
-        (self.entities, self.sparse)
-    }
-}
+    fn contains(&self, entity: Entity) -> bool;
 
-/// Used to form `QueryBase::SparseSplit`.
-#[non_exhaustive]
-pub struct SparseSplitQueryElement<'a, T, F> {
-    pub sparse: &'a EntitySparseArray,
-    pub components: *mut T,
-    pub ticks: *mut ChangeTicks,
-    pub filter: F,
-}
+    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity>;
 
-impl<'a, T, F> SparseSplitQueryElement<'a, T, F> {
-    pub(crate) unsafe fn get<E>(
-        &mut self,
-        entity: Entity,
-        world_tick: Ticks,
-        change_tick: Ticks,
-    ) -> Option<E::Item>
-    where
-        T: Component,
-        E: QueryElement<'a, Component = T>,
-        F: QueryElementFilter<T>,
-    {
-        let index = self.sparse.get_index(entity)?;
-        let component = self.components.add(index);
-        let ticks = self.ticks.add(index);
+    unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item>;
 
-        self.filter
-            .matches(&*component, &*ticks, world_tick, change_tick)
-            .then(|| E::get_from_parts(component, ticks, world_tick, change_tick))
-    }
-}
+    fn split(
+        self,
+    ) -> (
+        &'a [Entity],
+        &'a EntitySparseArray,
+        QueryElementData<'a, Self::Filter>,
+    );
 
-/// Used to form `QueryBase::DenseSplit`.
-pub struct DenseSplitQueryElement<'a, T, F> {
-    pub components: *mut T,
-    pub ticks: *mut ChangeTicks,
-    pub filter: F,
-    _phantom: PhantomData<&'a [T]>,
-}
-
-impl<'a, T, F> DenseSplitQueryElement<'a, T, F> {
-    pub(crate) unsafe fn get<E>(
-        &mut self,
+    unsafe fn get_from_parts_unchecked(
+        data: &ComponentStorageData,
         index: usize,
+        filter: &Self::Filter,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Option<E::Item>
-    where
-        T: Component,
-        E: QueryElement<'a, Component = T>,
-        F: QueryElementFilter<T>,
-    {
-        let component = self.components.add(index);
-        let ticks = self.ticks.add(index);
+    ) -> Option<Self::Item>;
+}
 
-        self.filter
-            .matches(&*component, &*ticks, world_tick, change_tick)
-            .then(|| E::get_from_parts(component, ticks, world_tick, change_tick))
+unsafe impl<'a, E> QueryElement<'a> for E
+where
+    E: UnfilteredQueryElement<'a>,
+{
+    type Item = E::Item;
+    type Component = E::Component;
+    type Filter = Contains;
+
+    fn group_info(&self) -> Option<GroupInfo<'a>> {
+        UnfilteredQueryElement::group_info(self)
+    }
+
+    fn world_tick(&self) -> Ticks {
+        UnfilteredQueryElement::world_tick(self)
+    }
+
+    fn change_tick(&self) -> Ticks {
+        UnfilteredQueryElement::change_tick(self)
+    }
+
+    fn contains(&self, entity: Entity) -> bool {
+        UnfilteredQueryElement::contains(self, entity, &Contains)
+    }
+
+    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
+        UnfilteredQueryElement::get_index_entity(self, entity)
+    }
+
+    unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item> {
+        UnfilteredQueryElement::get_unchecked(self, index, &Contains)
+    }
+
+    fn split(
+        self,
+    ) -> (
+        &'a [Entity],
+        &'a EntitySparseArray,
+        QueryElementData<'a, Self::Filter>,
+    ) {
+        let (entities, sparse, data) = UnfilteredQueryElement::split(self);
+        (
+            entities,
+            sparse,
+            QueryElementData {
+                data,
+                filter: Contains,
+            },
+        )
+    }
+
+    unsafe fn get_from_parts_unchecked(
+        data: &ComponentStorageData,
+        index: usize,
+        filter: &Self::Filter,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item> {
+        <E as UnfilteredQueryElement>::get_from_parts_unchecked(
+            data,
+            index,
+            filter,
+            world_tick,
+            change_tick,
+        )
     }
 }

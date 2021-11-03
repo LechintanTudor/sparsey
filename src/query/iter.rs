@@ -27,21 +27,21 @@ where
     /// Creates a new iterator from the given `Query` parts.
     pub(crate) fn new(base: B, include: I, exclude: E, filter: F) -> Self {
         if query::is_trivial_group::<B, I, E>() {
-            let (iter_data, base) = base.split_dense();
+            let (iter_data, data) = base.split_dense();
 
-            unsafe { Self::Dense(DenseIter::new_unchecked(iter_data, base, filter)) }
+            unsafe { Self::Dense(DenseIter::new_unchecked(iter_data, data, filter)) }
         } else {
             match query::group_range(&base, &include, &exclude) {
                 Ok(range) => {
-                    let (mut iter_data, base) = base.split_dense();
+                    let (mut iter_data, data) = base.split_dense();
 
                     unsafe {
                         iter_data.entities = iter_data.entities.get_unchecked(range);
-                        Self::Dense(DenseIter::new_unchecked(iter_data, base, filter))
+                        Self::Dense(DenseIter::new_unchecked(iter_data, data, filter))
                     }
                 }
                 Err(_) => {
-                    let (mut iter_data, base) = base.split_sparse();
+                    let (mut iter_data, sparse, data) = base.split_sparse();
                     let (include_entities, include) = include.split_modifier();
                     let (_, exclude) = exclude.split_modifier();
 
@@ -51,7 +51,9 @@ where
                         }
                     }
 
-                    Self::Sparse(SparseIter::new(iter_data, base, include, exclude, filter))
+                    Self::Sparse(SparseIter::new(
+                        iter_data, sparse, data, include, exclude, filter,
+                    ))
                 }
             }
         }

@@ -8,8 +8,8 @@ where
     B: QueryBase<'a>,
     F: QueryFilter,
 {
-    data: IterData<'a>,
-    base: B::DenseSplit,
+    iter_data: IterData<'a>,
+    data: B::Data,
     filter: F,
     index: usize,
 }
@@ -19,10 +19,10 @@ where
     B: QueryBase<'a>,
     F: QueryFilter,
 {
-    pub(crate) unsafe fn new_unchecked(data: IterData<'a>, base: B::DenseSplit, filter: F) -> Self {
+    pub(crate) unsafe fn new_unchecked(iter_data: IterData<'a>, data: B::Data, filter: F) -> Self {
         Self {
+            iter_data,
             data,
-            base,
             filter,
             index: 0,
         }
@@ -38,18 +38,18 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let entity = self.data.entities.get(self.index)?;
+            let entity = self.iter_data.entities.get(self.index)?;
 
             let index = self.index;
             self.index += 1;
 
             if self.filter.matches(*entity) {
                 let item = unsafe {
-                    B::get_from_dense_split(
-                        &mut self.base,
+                    B::get_from_dense_parts_unchecked(
+                        &self.data,
                         index,
-                        self.data.world_tick,
-                        self.data.change_tick,
+                        self.iter_data.world_tick,
+                        self.iter_data.change_tick,
                     )
                 };
 
@@ -68,18 +68,18 @@ where
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         loop {
-            let entity = *self.data.entities.get(self.index)?;
+            let entity = *self.iter_data.entities.get(self.index)?;
 
             let index = self.index;
             self.index += 1;
 
             if self.filter.matches(entity) {
                 let item = unsafe {
-                    B::get_from_dense_split(
-                        &mut self.base,
+                    B::get_from_dense_parts_unchecked(
+                        &self.data,
                         index,
-                        self.data.world_tick,
-                        self.data.change_tick,
+                        self.iter_data.world_tick,
+                        self.iter_data.change_tick,
                     )
                 };
 
