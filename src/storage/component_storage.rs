@@ -30,7 +30,7 @@ impl ComponentStorageData {
     }
 
     #[inline]
-    pub(crate) unsafe fn get_with_ticks_unchecked<T>(&self, index: usize) -> (&T, &ChangeTicks) {
+    unsafe fn get_with_ticks_unchecked<T>(&self, index: usize) -> (&T, &ChangeTicks) {
         (
             &*self.components.cast::<T>().as_ptr().add(index),
             &*self.ticks.as_ptr().add(index),
@@ -211,6 +211,21 @@ impl ComponentStorage {
         );
     }
 
+    pub(crate) unsafe fn get_unchecked<T>(&self, index: usize) -> &T {
+        self.data.get_unchecked::<T>(index)
+    }
+
+    pub(crate) unsafe fn get_with_ticks_unchecked<T>(&self, index: usize) -> (&T, &ChangeTicks) {
+        self.data.get_with_ticks_unchecked::<T>(index)
+    }
+
+    pub(crate) unsafe fn get_with_ticks_unchecked_mut<T>(
+        &mut self,
+        index: usize,
+    ) -> (&mut T, &mut ChangeTicks) {
+        self.data.get_with_ticks_unchecked_mut::<T>(index)
+    }
+
     pub(crate) unsafe fn get<T>(&self, entity: Entity) -> Option<&T> {
         let index = self.sparse.get_index(entity)?;
         Some(self.data.get_unchecked::<T>(index))
@@ -234,8 +249,8 @@ impl ComponentStorage {
         Some(self.data.get_with_ticks_unchecked_mut::<T>(index))
     }
 
-    pub(crate) fn get_index(&self, entity: Entity) -> Option<usize> {
-        self.sparse.get_index(entity)
+    pub(crate) fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
+        self.sparse.get(entity)
     }
 
     pub(crate) fn contains(&self, entity: Entity) -> bool {
@@ -269,49 +284,11 @@ impl ComponentStorage {
         unsafe { slice::from_raw_parts(self.data.ticks.as_ptr(), self.len) }
     }
 
-    pub(crate) fn split_for_iteration<T>(
-        &self,
-    ) -> (&EntitySparseArray, &[Entity], *const T, *const ChangeTicks)
-    where
-        T: 'static,
-    {
-        (
-            &self.sparse,
-            unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
-            self.data.components.cast::<T>().as_ptr(),
-            self.data.ticks.as_ptr(),
-        )
-    }
-
-    pub(crate) fn split_for_iteration_mut<T>(
-        &mut self,
-    ) -> (&EntitySparseArray, &[Entity], *mut T, *mut ChangeTicks)
-    where
-        T: 'static,
-    {
-        (
-            &self.sparse,
-            unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
-            self.data.components.cast::<T>().as_ptr(),
-            self.data.ticks.as_ptr(),
-        )
-    }
-
     pub(crate) fn split(&self) -> (&[Entity], &EntitySparseArray, &ComponentStorageData) {
         (
             unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
             &self.sparse,
             &self.data,
-        )
-    }
-
-    pub(crate) unsafe fn split_mut(
-        &mut self,
-    ) -> (&[Entity], &EntitySparseArray, &mut ComponentStorageData) {
-        (
-            slice::from_raw_parts(self.entities.as_ptr(), self.len),
-            &self.sparse,
-            &mut self.data,
         )
     }
 

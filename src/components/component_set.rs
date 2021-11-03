@@ -1,5 +1,5 @@
 use crate::components::{iter_bit_indexes, Component, ComponentStorages, FamilyMask, GroupMask};
-use crate::storage::{ComponentStorage, Entity, EntityStorage, TypedComponentStorage};
+use crate::storage::{ComponentStorage, Entity, EntityStorage};
 use crate::utils::{panic_missing_comp, ChangeTicks};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
@@ -92,8 +92,8 @@ macro_rules! impl_component_set {
 
                 $(
                     {
-                        let (mut storage, mask) = get_with_family_mask_mut::<$comp>(storages);
-                        storage.insert(entity, components.$idx, ticks);
+                        let (storage, mask) = get_with_family_mask_mut::<$comp>(storages);
+                        unsafe { storage.insert::<$comp>(entity, components.$idx, ticks); }
                         family_mask |= mask;
                     }
                 )+
@@ -129,7 +129,10 @@ macro_rules! impl_component_set {
 
                     components_iter.into_iter().for_each(|components| {
                         let entity = entities.create();
-                        $(borrowed_storages.$idx.insert(entity, components.$idx, ticks);)+
+
+                        unsafe {
+                            $(borrowed_storages.$idx.insert::<$comp>(entity, components.$idx, ticks);)+
+                        }
                     });
                 }
 
@@ -169,9 +172,9 @@ macro_rules! impl_component_set {
                     }
                 }
 
-                let components = unsafe { ($(
-                    TypedComponentStorage::<$comp, _>::new(&mut *storage_ptrs.$idx).remove(entity),
-                )+) };
+                let components = unsafe { (
+                    $((&mut *storage_ptrs.$idx).remove::<$comp>(entity),)+
+                ) };
 
                 Some(($(components.$idx?,)+))
             }
@@ -202,7 +205,7 @@ macro_rules! impl_component_set {
                 }
 
                 unsafe {
-                    $(TypedComponentStorage::<$comp, _>::new(&mut *storage_ptrs.$idx).remove(entity);)+
+                    $((&mut *storage_ptrs.$idx).remove::<$comp>(entity);)+
                 }
             }
         }
@@ -211,28 +214,23 @@ macro_rules! impl_component_set {
 
 fn get_with_family_mask_mut<T>(
     storages: &mut ComponentStorages,
-) -> (TypedComponentStorage<T, &mut ComponentStorage>, FamilyMask)
+) -> (&mut ComponentStorage, FamilyMask)
 where
     T: Component,
 {
     storages
         .get_with_family_mask_mut(&TypeId::of::<T>())
-        .map(|(storage, mask)| unsafe { (TypedComponentStorage::new(storage), mask) })
         .unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
 fn borrow_with_family_mask_mut<T>(
     storages: &ComponentStorages,
-) -> (
-    TypedComponentStorage<T, AtomicRefMut<ComponentStorage>>,
-    FamilyMask,
-)
+) -> (AtomicRefMut<ComponentStorage>, FamilyMask)
 where
     T: Component,
 {
     storages
         .borrow_with_family_mask_mut(&TypeId::of::<T>())
-        .map(|(storage, mask)| unsafe { (TypedComponentStorage::new(storage), mask) })
         .unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
