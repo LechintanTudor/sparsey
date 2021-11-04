@@ -63,11 +63,23 @@ where
     }
 
     fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-        todo!()
+        let world_tick = QueryElement::world_tick(&self);
+        let change_tick = QueryElement::change_tick(&self);
+        let (entities, sparse, data) = QueryElement::split(self);
+
+        (
+            IterData::new(entities, world_tick, change_tick),
+            sparse,
+            data,
+        )
     }
 
     fn split_dense(self) -> (IterData<'a>, Self::Data) {
-        todo!()
+        let world_tick = QueryElement::world_tick(&self);
+        let change_tick = QueryElement::change_tick(&self);
+        let (entities, _, data) = QueryElement::split(self);
+
+        (IterData::new(entities, world_tick, change_tick), data)
     }
 
     unsafe fn get_from_sparse_parts(
@@ -157,15 +169,22 @@ macro_rules! impl_query_base {
             type Data = ($(QueryElementData<'a, $elem::Filter>,)+);
 
             fn get(self, entity: Entity) -> Option<Self::Item> {
-                todo!()
+                let indexes = ($(self.$idx.get_index_entity(entity)?.index(),)+);
+
+                unsafe {
+                    Some((
+                        $(self.$idx.get_unchecked(indexes.$idx)?,)+
+                    ))
+                }
             }
 
             fn contains(&self, entity: Entity) -> bool {
-                todo!()
+                $(self.$idx.contains(entity))&&+
             }
 
+            #[allow(clippy::needless_question_mark)]
             fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
-                todo!()
+                Some(CombinedGroupInfo::default() $(.combine(self.$idx.group_info()?)?)+)
             }
 
             fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
@@ -183,7 +202,19 @@ macro_rules! impl_query_base {
                 world_tick: Ticks,
                 change_tick: Ticks,
             ) -> Option<Self::Item> {
-                todo!()
+                let indexes = ($(sparse.$idx.get(entity)?.index(),)+);
+
+                Some((
+                    $(
+                        $elem::get_from_parts_unchecked(
+                            data.$idx.data,
+                            indexes.$idx,
+                            &data.$idx.filter,
+                            world_tick,
+                            change_tick,
+                        )?,
+                    )+
+                ))
             }
 
             unsafe fn get_from_dense_parts_unchecked(
@@ -192,7 +223,17 @@ macro_rules! impl_query_base {
                 world_tick: Ticks,
                 change_tick: Ticks,
             ) -> Option<Self::Item> {
-                todo!()
+                Some((
+                    $(
+                        $elem::get_from_parts_unchecked(
+                            data.$idx.data,
+                            index,
+                            &data.$idx.filter,
+                            world_tick,
+                            change_tick,
+                        )?,
+                    )+
+                ))
             }
         }
     };

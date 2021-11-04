@@ -25,11 +25,6 @@ impl ComponentStorageData {
     }
 
     #[inline]
-    pub(crate) unsafe fn get_ticks_unchecked(&self, index: usize) -> &ChangeTicks {
-        &*self.ticks.as_ptr().add(index)
-    }
-
-    #[inline]
     unsafe fn get_with_ticks_unchecked<T>(&self, index: usize) -> (&T, &ChangeTicks) {
         (
             &*self.components.cast::<T>().as_ptr().add(index),
@@ -226,27 +221,9 @@ impl ComponentStorage {
         self.data.get_with_ticks_unchecked_mut::<T>(index)
     }
 
-    pub(crate) unsafe fn get<T>(&self, entity: Entity) -> Option<&T> {
-        let index = self.sparse.get_index(entity)?;
-        Some(self.data.get_unchecked::<T>(index))
-    }
-
-    pub(crate) fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
-        let index = self.sparse.get_index(entity)?;
-        unsafe { Some(self.data.get_ticks_unchecked(index)) }
-    }
-
     pub(crate) unsafe fn get_with_ticks<T>(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
         let index = self.sparse.get_index(entity)?;
         Some(self.data.get_with_ticks_unchecked(index))
-    }
-
-    pub(crate) unsafe fn get_with_ticks_mut<T>(
-        &mut self,
-        entity: Entity,
-    ) -> Option<(&mut T, &mut ChangeTicks)> {
-        let index = self.sparse.get_index(entity)?;
-        Some(self.data.get_with_ticks_unchecked_mut::<T>(index))
     }
 
     pub(crate) fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {

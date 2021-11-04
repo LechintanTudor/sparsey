@@ -1,7 +1,7 @@
 use crate::group::GroupInfo;
-use crate::query::{Contains, QueryElement, SplitQueryElement, UnfilteredQueryElement};
-use crate::storage::Entity;
-use crate::utils::{ChangeTicks, Ticks};
+use crate::query::{QueryElement, QueryElementData, UnfilteredQueryElement};
+use crate::storage::{ComponentStorageData, Entity, EntitySparseArray, IndexEntity};
+use crate::utils::Ticks;
 
 /// Wrapper over an `UnfilteredQueryElement` which makes it return `Option`s
 /// instead of failing.
@@ -17,54 +17,59 @@ where
 
 unsafe impl<'a, E> QueryElement<'a> for Maybe<E>
 where
-    E: UnfilteredQueryElement<'a>,
+    E: QueryElement<'a>,
 {
     type Item = Option<E::Item>;
     type Component = E::Component;
-    type Filter = Contains;
+    type Filter = E::Filter;
 
-    #[inline]
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        Some(self.0.get(entity))
-    }
-
-    #[inline]
-    fn get_with_ticks(&self, entity: Entity) -> Option<(&Self::Component, &ChangeTicks)> {
-        self.0.get_with_ticks(entity)
-    }
-
-    #[inline]
-    fn contains(&self, entity: Entity) -> bool {
-        self.0.contains(entity)
-    }
-
-    #[inline]
     fn group_info(&self) -> Option<GroupInfo<'a>> {
         self.0.group_info()
     }
 
-    #[inline]
     fn world_tick(&self) -> Ticks {
         self.0.world_tick()
     }
 
-    #[inline]
     fn change_tick(&self) -> Ticks {
-        self.0.change_tick()
+        self.0.world_tick()
     }
 
-    #[inline]
-    fn split(self) -> SplitQueryElement<'a, Self::Component, Self::Filter> {
+    fn contains(&self, entity: Entity) -> bool {
+        self.0.contains(entity)
+    }
+
+    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
+        self.0.get_index_entity(entity)
+    }
+
+    unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item> {
+        Some(self.0.get_unchecked(index))
+    }
+
+    fn split(
+        self,
+    ) -> (
+        &'a [Entity],
+        &'a EntitySparseArray,
+        QueryElementData<'a, Self::Filter>,
+    ) {
         self.0.split()
     }
 
-    #[inline]
-    unsafe fn get_from_parts(
-        component: *mut Self::Component,
-        ticks: *mut ChangeTicks,
+    unsafe fn get_from_parts_unchecked(
+        data: &ComponentStorageData,
+        index: usize,
+        filter: &Self::Filter,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Self::Item {
-        Some(E::get_from_parts(component, ticks, world_tick, change_tick))
+    ) -> Option<Self::Item> {
+        Some(<E as QueryElement>::get_from_parts_unchecked(
+            data,
+            index,
+            filter,
+            world_tick,
+            change_tick,
+        ))
     }
 }
