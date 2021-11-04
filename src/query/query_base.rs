@@ -49,11 +49,13 @@ where
     type Sparse = &'a EntitySparseArray;
     type Data = QueryElementData<'a, E::Filter>;
 
+    #[inline]
     fn get(self, entity: Entity) -> Option<Self::Item> {
         let index = QueryElement::get_index_entity(&self, entity)?.index();
         unsafe { QueryElement::get_unchecked(self, index) }
     }
 
+    #[inline]
     fn contains(&self, entity: Entity) -> bool {
         QueryElement::contains(self, entity)
     }
@@ -82,6 +84,7 @@ where
         (IterData::new(entities, world_tick, change_tick), data)
     }
 
+    #[inline]
     unsafe fn get_from_sparse_parts(
         sparse: &Self::Sparse,
         entity: Entity,
@@ -93,6 +96,7 @@ where
         E::get_from_parts_unchecked(data.data, index, &data.filter, world_tick, change_tick)
     }
 
+    #[inline]
     unsafe fn get_from_dense_parts_unchecked(
         data: &Self::Data,
         index: usize,
@@ -177,6 +181,7 @@ macro_rules! impl_query_base {
                     ))
                 }
             }
+
 
             fn contains(&self, entity: Entity) -> bool {
                 $(self.$idx.contains(entity))&&+

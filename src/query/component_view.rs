@@ -48,18 +48,22 @@ where
     type Item = &'a T;
     type Component = T;
 
+    #[inline]
     fn group_info(&self) -> Option<GroupInfo<'a>> {
         self.group_info
     }
 
+    #[inline]
     fn world_tick(&self) -> Ticks {
         self.world_tick
     }
 
+    #[inline]
     fn change_tick(&self) -> Ticks {
         self.change_tick
     }
 
+    #[inline]
     fn contains<F>(&self, entity: Entity, filter: &F) -> bool
     where
         F: QueryElementFilter<Self::Component>,
@@ -78,10 +82,12 @@ where
         F::matches(filter, component, ticks, self.world_tick, self.change_tick)
     }
 
+    #[inline]
     fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
         self.storage.get_index_entity(entity)
     }
 
+    #[inline]
     unsafe fn get_unchecked<F>(self, index: usize, filter: &F) -> Option<Self::Item>
     where
         F: QueryElementFilter<Self::Component>,
@@ -99,6 +105,7 @@ where
         }
     }
 
+    #[inline]
     fn split(
         self,
     ) -> (
@@ -109,6 +116,7 @@ where
         self.storage.split()
     }
 
+    #[inline]
     unsafe fn get_from_parts_unchecked<F>(
         data: &ComponentStorageData,
         index: usize,
@@ -158,18 +166,22 @@ where
     type Item = ComponentRefMut<'a, T>;
     type Component = T;
 
+    #[inline]
     fn group_info(&self) -> Option<GroupInfo<'a>> {
         self.group_info
     }
 
+    #[inline]
     fn world_tick(&self) -> Ticks {
         self.world_tick
     }
 
+    #[inline]
     fn change_tick(&self) -> Ticks {
         self.change_tick
     }
 
+    #[inline]
     fn contains<F>(&self, entity: Entity, filter: &F) -> bool
     where
         F: QueryElementFilter<Self::Component>,
@@ -188,10 +200,12 @@ where
         filter.matches(component, ticks, self.world_tick, self.change_tick)
     }
 
+    #[inline]
     fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
         self.storage.get_index_entity(entity)
     }
 
+    #[inline]
     unsafe fn get_unchecked<F>(self, index: usize, filter: &F) -> Option<Self::Item>
     where
         F: QueryElementFilter<Self::Component>,
@@ -209,6 +223,7 @@ where
         }
     }
 
+    #[inline]
     fn split(
         self,
     ) -> (
@@ -219,6 +234,7 @@ where
         self.storage.split()
     }
 
+    #[inline]
     unsafe fn get_from_parts_unchecked<F>(
         data: &ComponentStorageData,
         index: usize,

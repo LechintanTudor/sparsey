@@ -99,30 +99,37 @@ where
     type Component = E::Component;
     type Filter = Contains;
 
+    #[inline]
     fn group_info(&self) -> Option<GroupInfo<'a>> {
         UnfilteredQueryElement::group_info(self)
     }
 
+    #[inline]
     fn world_tick(&self) -> Ticks {
         UnfilteredQueryElement::world_tick(self)
     }
 
+    #[inline]
     fn change_tick(&self) -> Ticks {
         UnfilteredQueryElement::change_tick(self)
     }
 
+    #[inline]
     fn contains(&self, entity: Entity) -> bool {
         UnfilteredQueryElement::contains(self, entity, &Contains)
     }
 
+    #[inline]
     fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
         UnfilteredQueryElement::get_index_entity(self, entity)
     }
 
+    #[inline]
     unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item> {
         UnfilteredQueryElement::get_unchecked(self, index, &Contains)
     }
 
+    #[inline]
     fn split(
         self,
     ) -> (
@@ -141,6 +148,7 @@ where
         )
     }
 
+    #[inline]
     unsafe fn get_from_parts_unchecked(
         data: &ComponentStorageData,
         index: usize,
