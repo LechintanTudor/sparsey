@@ -268,6 +268,13 @@ impl World {
         self.resources.remove::<T>()
     }
 
+    /// Removes the resource with the given `TypeId` from the `World`. Returns
+    /// `true` if the resource was successfully removed.
+    #[inline]
+    pub fn delete_resource(&mut self, resource_type_id: &TypeId) -> bool {
+        self.resources.delete(resource_type_id)
+    }
+
     /// Returns `true` if the `World` contains a resource with the given
     /// `TypeId`.
     #[must_use]

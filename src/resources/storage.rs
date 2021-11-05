@@ -57,6 +57,10 @@ impl ResourceStorage {
             .map(|c| unsafe { *c.into_inner().value.downcast().unsafe_unwrap() })
     }
 
+    pub fn delete(&mut self, resource_type_id: &TypeId) -> bool {
+        self.resources.remove(resource_type_id).is_some()
+    }
+
     pub fn contains(&self, resource_type_id: &TypeId) -> bool {
         self.resources.contains_key(resource_type_id)
     }
