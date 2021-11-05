@@ -320,11 +320,13 @@ impl World {
     }
 
     /// Returns the world tick used for change detection.
+    #[inline]
     pub fn tick(&self) -> Ticks {
         self.tick.get()
     }
 
     /// Returns the `WorldId` which uniquely identifies this `World`.
+    #[inline]
     pub fn id(&self) -> WorldId {
         self.id
     }

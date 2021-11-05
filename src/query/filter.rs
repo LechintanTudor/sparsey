@@ -30,6 +30,7 @@ where
     F: QueryElementFilter<E::Component>,
     E: ImmutableUnfilteredQueryElement<'a>,
 {
+    #[inline]
     fn matches(&self, entity: Entity) -> bool {
         <Self as QueryElement<'a>>::contains(self, entity)
     }
@@ -44,30 +45,37 @@ where
     type Component = E::Component;
     type Filter = F;
 
+    #[inline]
     fn group_info(&self) -> Option<GroupInfo<'a>> {
         self.element.group_info()
     }
 
+    #[inline]
     fn world_tick(&self) -> Ticks {
         self.element.world_tick()
     }
 
+    #[inline]
     fn change_tick(&self) -> Ticks {
         self.element.change_tick()
     }
 
+    #[inline]
     fn contains(&self, entity: Entity) -> bool {
         self.element.contains(entity, &self.filter)
     }
 
+    #[inline]
     fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
         self.element.get_index_entity(entity)
     }
 
+    #[inline]
     unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item> {
         self.element.get_unchecked(index, &self.filter)
     }
 
+    #[inline]
     fn split(
         self,
     ) -> (
@@ -83,6 +91,7 @@ where
         )
     }
 
+    #[inline]
     unsafe fn get_from_parts_unchecked(
         components: NonNull<Self::Component>,
         ticks: NonNull<ChangeTicks>,

@@ -164,10 +164,12 @@ impl ComponentStorage {
         ptr::swap(self.ticks.as_ptr().add(a), self.ticks.as_ptr().add(b));
     }
 
+    #[inline]
     pub(crate) unsafe fn get_unchecked<T>(&self, index: usize) -> &T {
         &*self.components.cast::<T>().as_ptr().add(index)
     }
 
+    #[inline]
     pub(crate) unsafe fn get_with_ticks_unchecked<T>(&self, index: usize) -> (&T, &ChangeTicks) {
         (
             &*self.components.cast::<T>().as_ptr().add(index),
@@ -175,6 +177,7 @@ impl ComponentStorage {
         )
     }
 
+    #[inline]
     pub(crate) unsafe fn get_with_ticks_unchecked_mut<T>(
         &mut self,
         index: usize,
@@ -194,33 +197,32 @@ impl ComponentStorage {
         self.sparse.get(entity)
     }
 
+    #[inline]
     pub(crate) fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
     }
 
+    #[inline]
     pub(crate) fn len(&self) -> usize {
         self.len
     }
 
+    #[inline]
     pub(crate) fn is_empty(&self) -> bool {
         self.len == 0
     }
 
-    pub(crate) fn capacity(&self) -> usize {
-        self.cap
-    }
-
+    #[inline]
     pub(crate) fn entities(&self) -> &[Entity] {
         unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) }
     }
 
-    pub(crate) unsafe fn components<T>(&self) -> &[T]
-    where
-        T: 'static,
-    {
+    #[inline]
+    pub(crate) unsafe fn components<T>(&self) -> &[T] {
         slice::from_raw_parts(self.components.cast::<T>().as_ptr(), self.len)
     }
 
+    #[inline]
     pub(crate) fn ticks(&self) -> &[ChangeTicks] {
         unsafe { slice::from_raw_parts(self.ticks.as_ptr(), self.len) }
     }

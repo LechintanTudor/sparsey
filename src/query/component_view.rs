@@ -37,6 +37,31 @@ where
             _phantom: PhantomData,
         }
     }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.storage.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.storage.is_empty()
+    }
+
+    #[inline]
+    pub fn entities(&self) -> &[Entity] {
+        self.storage.entities()
+    }
+
+    #[inline]
+    pub fn components(&self) -> &[T] {
+        unsafe { self.storage.components::<T>() }
+    }
+
+    #[inline]
+    pub fn ticks(&self) -> &[ChangeTicks] {
+        self.storage.ticks()
+    }
 }
 
 unsafe impl<'a, T, S> UnfilteredQueryElement<'a> for &'a ComponentView<'a, T, S>
