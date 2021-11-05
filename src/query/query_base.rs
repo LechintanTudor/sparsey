@@ -47,7 +47,7 @@ where
 
     type Item = E::Item;
     type Sparse = &'a EntitySparseArray;
-    type Data = QueryElementData<'a, E::Filter>;
+    type Data = QueryElementData<'a, E::Component, E::Filter>;
 
     #[inline]
     fn get(self, entity: Entity) -> Option<Self::Item> {
@@ -93,7 +93,14 @@ where
         change_tick: Ticks,
     ) -> Option<Self::Item> {
         let index = sparse.get(entity)?.index();
-        E::get_from_parts_unchecked(data.data, index, &data.filter, world_tick, change_tick)
+        E::get_from_parts_unchecked(
+            data.components,
+            data.ticks,
+            index,
+            &data.filter,
+            world_tick,
+            change_tick,
+        )
     }
 
     #[inline]
@@ -103,7 +110,14 @@ where
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        E::get_from_parts_unchecked(data.data, index, &data.filter, world_tick, change_tick)
+        E::get_from_parts_unchecked(
+            data.components,
+            data.ticks,
+            index,
+            &data.filter,
+            world_tick,
+            change_tick,
+        )
     }
 }
 
@@ -170,7 +184,7 @@ macro_rules! impl_query_base {
 
             type Item = ($($elem::Item,)+);
             type Sparse = ($(entity_sparse_array!($elem),)+);
-            type Data = ($(QueryElementData<'a, $elem::Filter>,)+);
+            type Data = ($(QueryElementData<'a, $elem::Component, $elem::Filter>,)+);
 
             fn get(self, entity: Entity) -> Option<Self::Item> {
                 let indexes = ($(self.$idx.get_index_entity(entity)?.index(),)+);
@@ -200,6 +214,7 @@ macro_rules! impl_query_base {
                 split_dense!($((self.$idx, $idx)),+)
             }
 
+            #[inline]
             unsafe fn get_from_sparse_parts(
                 sparse: &Self::Sparse,
                 entity: Entity,
@@ -212,7 +227,8 @@ macro_rules! impl_query_base {
                 Some((
                     $(
                         $elem::get_from_parts_unchecked(
-                            data.$idx.data,
+                            data.$idx.components,
+                            data.$idx.ticks,
                             indexes.$idx,
                             &data.$idx.filter,
                             world_tick,
@@ -222,6 +238,7 @@ macro_rules! impl_query_base {
                 ))
             }
 
+            #[inline]
             unsafe fn get_from_dense_parts_unchecked(
                 data: &Self::Data,
                 index: usize,
@@ -231,7 +248,8 @@ macro_rules! impl_query_base {
                 Some((
                     $(
                         $elem::get_from_parts_unchecked(
-                            data.$idx.data,
+                            data.$idx.components,
+                            data.$idx.ticks,
                             index,
                             &data.$idx.filter,
                             world_tick,

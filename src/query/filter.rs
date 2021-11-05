@@ -3,9 +3,10 @@ use crate::query::{
     And, ImmutableUnfilteredQueryElement, Not, Or, QueryElement, QueryElementData,
     QueryElementFilter, QueryFilter, UnfilteredQueryElement, Xor,
 };
-use crate::storage::{ComponentStorageData, Entity, EntitySparseArray, IndexEntity};
-use crate::utils::Ticks;
+use crate::storage::{Entity, EntitySparseArray, IndexEntity};
+use crate::utils::{ChangeTicks, Ticks};
 use std::ops;
+use std::ptr::NonNull;
 
 /// Wrapper around a `QueryElement`. Used for applying filters.
 pub struct Filter<F, E> {
@@ -72,27 +73,25 @@ where
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        QueryElementData<'a, Self::Filter>,
+        QueryElementData<'a, Self::Component, Self::Filter>,
     ) {
-        let (entities, sparse, data) = E::split(self.element);
+        let (entities, sparse, components, ticks) = E::split(self.element);
         (
             entities,
             sparse,
-            QueryElementData {
-                data,
-                filter: self.filter,
-            },
+            QueryElementData::new(components, ticks, self.filter),
         )
     }
 
     unsafe fn get_from_parts_unchecked(
-        data: &ComponentStorageData,
+        components: NonNull<Self::Component>,
+        ticks: NonNull<ChangeTicks>,
         index: usize,
         filter: &Self::Filter,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        E::get_from_parts_unchecked(data, index, filter, world_tick, change_tick)
+        E::get_from_parts_unchecked(components, ticks, index, filter, world_tick, change_tick)
     }
 }
 

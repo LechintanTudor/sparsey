@@ -44,7 +44,7 @@ macro_rules! split_modifier {
 	($(($elem:expr, $idx:tt)),+) => {
 		{
 			let splits = (
-				$({ let (entities, sparse, _) = $elem.split(); (entities, sparse) },)+
+				$({ let (entities, sparse, _, _) = $elem.split(); (entities, sparse) },)+
 			);
 
 			let entities = crate::query::shortest_entity_slice(&[$(splits.$idx.0),+]);

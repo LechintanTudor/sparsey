@@ -81,7 +81,7 @@ where
     }
 
     fn split_modifier(self) -> (Option<&'a [Entity]>, Self::Split) {
-        let (entities, sparse, _) = E::split(self);
+        let (entities, sparse, _, _) = E::split(self);
         (Some(entities), sparse)
     }
 

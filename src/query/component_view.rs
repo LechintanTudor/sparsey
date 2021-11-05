@@ -3,12 +3,11 @@ use crate::group::GroupInfo;
 use crate::query::{
     ComponentRefMut, ImmutableUnfilteredQueryElement, QueryElementFilter, UnfilteredQueryElement,
 };
-use crate::storage::{
-    ComponentStorage, ComponentStorageData, Entity, EntitySparseArray, IndexEntity,
-};
-use crate::utils::Ticks;
+use crate::storage::{ComponentStorage, Entity, EntitySparseArray, IndexEntity};
+use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
+use std::ptr::NonNull;
 
 /// View over a `ComponentStorage` of type `T`.
 pub struct ComponentView<'a, T, S> {
@@ -111,14 +110,16 @@ where
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        &'a ComponentStorageData,
+        NonNull<Self::Component>,
+        NonNull<ChangeTicks>,
     ) {
         self.storage.split()
     }
 
     #[inline]
     unsafe fn get_from_parts_unchecked<F>(
-        data: &ComponentStorageData,
+        components: NonNull<Self::Component>,
+        ticks: NonNull<ChangeTicks>,
         index: usize,
         filter: &F,
         world_tick: Ticks,
@@ -128,11 +129,11 @@ where
         F: QueryElementFilter<Self::Component>,
     {
         if F::IS_PASSTHROUGH {
-            return Some(&*data.components.cast::<T>().as_ptr().add(index));
+            return Some(&*components.cast::<T>().as_ptr().add(index));
         }
 
-        let component = &*data.components.cast::<T>().as_ptr().add(index);
-        let ticks = &*data.ticks.as_ptr().add(index);
+        let component = &*components.cast::<T>().as_ptr().add(index);
+        let ticks = &*ticks.as_ptr().add(index);
 
         if F::matches(filter, component, ticks, world_tick, change_tick) {
             Some(component)
@@ -229,14 +230,16 @@ where
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        &'a ComponentStorageData,
+        NonNull<Self::Component>,
+        NonNull<ChangeTicks>,
     ) {
         self.storage.split()
     }
 
     #[inline]
     unsafe fn get_from_parts_unchecked<F>(
-        data: &ComponentStorageData,
+        components: NonNull<Self::Component>,
+        ticks: NonNull<ChangeTicks>,
         index: usize,
         filter: &F,
         world_tick: Ticks,
@@ -245,8 +248,8 @@ where
     where
         F: QueryElementFilter<Self::Component>,
     {
-        let component = &mut *data.components.cast::<T>().as_ptr().add(index);
-        let ticks = &mut *data.ticks.as_ptr().add(index);
+        let component = &mut *components.cast::<T>().as_ptr().add(index);
+        let ticks = &mut *ticks.as_ptr().add(index);
 
         if F::IS_PASSTHROUGH {
             return Some(ComponentRefMut::new(component, ticks, world_tick));

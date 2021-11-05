@@ -1,7 +1,9 @@
+use std::ptr::NonNull;
+
 use crate::group::GroupInfo;
 use crate::query::{QueryElement, QueryElementData, UnfilteredQueryElement};
-use crate::storage::{ComponentStorageData, Entity, EntitySparseArray, IndexEntity};
-use crate::utils::Ticks;
+use crate::storage::{Entity, EntitySparseArray, IndexEntity};
+use crate::utils::{ChangeTicks, Ticks};
 
 /// Wrapper over an `UnfilteredQueryElement` which makes it return `Option`s
 /// instead of failing.
@@ -23,49 +25,59 @@ where
     type Component = E::Component;
     type Filter = E::Filter;
 
+    #[inline]
     fn group_info(&self) -> Option<GroupInfo<'a>> {
         self.0.group_info()
     }
 
+    #[inline]
     fn world_tick(&self) -> Ticks {
         self.0.world_tick()
     }
 
+    #[inline]
     fn change_tick(&self) -> Ticks {
         self.0.world_tick()
     }
 
+    #[inline]
     fn contains(&self, entity: Entity) -> bool {
         self.0.contains(entity)
     }
 
+    #[inline]
     fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
         self.0.get_index_entity(entity)
     }
 
+    #[inline]
     unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item> {
         Some(self.0.get_unchecked(index))
     }
 
+    #[inline]
     fn split(
         self,
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        QueryElementData<'a, Self::Filter>,
+        QueryElementData<'a, Self::Component, Self::Filter>,
     ) {
         self.0.split()
     }
 
+    #[inline]
     unsafe fn get_from_parts_unchecked(
-        data: &ComponentStorageData,
+        components: NonNull<Self::Component>,
+        ticks: NonNull<ChangeTicks>,
         index: usize,
         filter: &Self::Filter,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
         Some(<E as QueryElement>::get_from_parts_unchecked(
-            data,
+            components,
+            ticks,
             index,
             filter,
             world_tick,
