@@ -1,3 +1,10 @@
+# Unreleased
+## Added
+- Added `World::delete_resource` to remove a `Resource` with a given `TypeId`.
+
+## Changed
+- Cleaned up `QueryElement` to make the code faster and easier to maintain.
+
 # 0.4.0 (2021-10-17)
 ## Added
 - `World::borrow` now accepts `Option<Res<T>>` and `Option<ResMut<T>>`.
