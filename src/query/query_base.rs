@@ -1,4 +1,4 @@
-use crate::group::CombinedGroupInfo;
+use crate::components::CombinedGroupInfo;
 use crate::query::{
     Include, IncludeExclude, IncludeExcludeFilter, IntoQueryParts, IterData, Passthrough,
     QueryElement, QueryElementData, QueryFilter, QueryModifier,

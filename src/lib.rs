@@ -46,7 +46,6 @@ pub mod prelude {
 }
 
 pub use self::components::*;
-pub use self::group::*;
 pub use self::layout::*;
 pub use self::query::*;
 pub use self::resources::*;
@@ -56,7 +55,6 @@ pub use self::utils::*;
 pub use self::world::*;
 
 mod components;
-mod group;
 mod layout;
 mod query;
 mod resources;

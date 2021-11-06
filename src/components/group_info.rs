@@ -1,5 +1,4 @@
-use crate::components::Group;
-use crate::group::{QueryMask, StorageMask};
+use crate::components::{Group, QueryMask, StorageMask};
 use std::marker::PhantomData;
 use std::ops::Range;
 use std::ptr;

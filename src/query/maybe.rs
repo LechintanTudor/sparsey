@@ -1,9 +1,8 @@
-use std::ptr::NonNull;
-
-use crate::group::GroupInfo;
+use crate::components::GroupInfo;
 use crate::query::{QueryElement, QueryElementData, UnfilteredQueryElement};
 use crate::storage::{Entity, EntitySparseArray, IndexEntity};
 use crate::utils::{ChangeTicks, Ticks};
+use std::ptr::NonNull;
 
 /// Wrapper over an `UnfilteredQueryElement` which makes it return `Option`s
 /// instead of failing.

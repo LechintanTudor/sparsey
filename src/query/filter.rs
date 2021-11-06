@@ -1,4 +1,4 @@
-use crate::group::GroupInfo;
+use crate::components::GroupInfo;
 use crate::query::{
     And, ImmutableUnfilteredQueryElement, Not, Or, QueryElement, QueryElementData,
     QueryElementFilter, QueryFilter, UnfilteredQueryElement, Xor,

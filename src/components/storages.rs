@@ -1,6 +1,7 @@
 use crate::components;
-use crate::components::{Component, FamilyMask, GroupMask, GroupStatus};
-use crate::group::{GroupInfo, QueryMask, StorageMask};
+use crate::components::{
+    Component, FamilyMask, GroupInfo, GroupMask, GroupStatus, QueryMask, StorageMask,
+};
 use crate::layout::Layout;
 use crate::storage::{ComponentStorage, Entity};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};

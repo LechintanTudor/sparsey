@@ -1,4 +1,4 @@
-use crate::group::CombinedGroupInfo;
+use crate::components::CombinedGroupInfo;
 use crate::query::{ImmutableUnfilteredQueryElement, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 

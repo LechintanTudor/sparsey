@@ -1,4 +1,4 @@
-use crate::group;
+use crate::components;
 use crate::query::{QueryBase, QueryModifier};
 use std::error::Error;
 use std::fmt;
@@ -44,7 +44,7 @@ where
     debug_assert!(!is_trivial_group::<B, I, E>());
 
     (|| -> Option<Range<usize>> {
-        group::group_range(
+        components::group_range(
             base.group_info()?,
             include.group_info()?,
             exclude.group_info()?,

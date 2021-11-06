@@ -1,5 +1,4 @@
-use crate::components::Component;
-use crate::group::GroupInfo;
+use crate::components::{Component, GroupInfo};
 use crate::query::{
     ComponentRefMut, ImmutableUnfilteredQueryElement, QueryElementFilter, UnfilteredQueryElement,
 };
