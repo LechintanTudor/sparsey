@@ -2,35 +2,38 @@ use crate::storage::{Entity, IndexEntity};
 use crate::utils::UnsafeUnwrap;
 use std::{iter, ptr};
 
-const PAGE_SIZE: usize = 32;
+const PAGE_SIZE: usize = 64;
 type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
+/// Maps sparse indexes to dense indexes. Used internally by `ComponentStorage`.
 #[derive(Clone, Debug, Default)]
 pub struct EntitySparseArray {
     pages: Vec<EntityPage>,
 }
 
 impl EntitySparseArray {
-    /// Returns whether or not the array contains `entity`.
-    pub fn contains(&self, entity: Entity) -> bool {
-        self.get_index(entity).is_some()
-    }
-
-    pub fn get(&self, entity: Entity) -> Option<&IndexEntity> {
+    /// Returns the `IndexEntity` at the given `Entity`.
+    pub fn get_entity(&self, entity: Entity) -> Option<&IndexEntity> {
         self.pages
             .get(page_index(entity))
-            .and_then(|p| p.as_ref())
+            .and_then(Option::as_ref)
             .and_then(|p| p[local_index(entity)].as_ref())
+            .filter(|e| e.version() == entity.version())
     }
 
-    /// Returns the index mapped to `entity`.
-    pub fn get_index(&self, entity: Entity) -> Option<usize> {
+    /// Returns `true` if the array contains `entity`.
+    pub fn contains_entity(&self, entity: Entity) -> bool {
+        self.get_entity(entity).is_some()
+    }
+
+    /// Removes `entity` from the array and returns the `index` mapped to it.
+    pub(crate) fn remove_entity(&mut self, entity: Entity) -> Option<IndexEntity> {
         self.pages
-            .get(page_index(entity))
-            .and_then(|p| p.as_ref())
-            .and_then(|p| p[local_index(entity)])
-            .filter(|e| e.version() == entity.version())
-            .map(|e| e.index())
+            .get_mut(page_index(entity))
+            .and_then(Option::as_mut)
+            .map(|page| &mut page[local_index(entity)])
+            .filter(|e| e.map(|e| e.version()) == Some(entity.version()))?
+            .take()
     }
 
     /// Returns the `IndexEntity` slot at `index` without checking if the
@@ -79,31 +82,18 @@ impl EntitySparseArray {
         ptr::swap(pa, pb);
     }
 
-    /// Removes `entity` from the array and returns the `index` mapped to it.
-    pub(crate) fn remove(&mut self, entity: Entity) -> Option<usize> {
-        Some(self.get_mut(entity)?.take()?.index())
-    }
-
     /// Removes all entities from the array.
     pub(crate) fn clear(&mut self) {
         self.pages.iter_mut().for_each(|p| *p = None);
     }
-
-    fn get_mut(&mut self, entity: Entity) -> Option<&mut Option<IndexEntity>> {
-        self.pages
-            .get_mut(page_index(entity))
-            .and_then(|page| page.as_mut())
-            .map(|page| &mut page[local_index(entity)])
-            .filter(|e| e.map(|e| e.version()) == Some(entity.version()))
-    }
 }
 
 fn page_index(entity: Entity) -> usize {
-    entity.index() / PAGE_SIZE
+    entity.sparse() / PAGE_SIZE
 }
 
 fn local_index(entity: Entity) -> usize {
-    entity.index() % PAGE_SIZE
+    entity.sparse() % PAGE_SIZE
 }
 
 fn uninit_page() -> EntityPage {

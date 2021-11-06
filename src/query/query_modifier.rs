@@ -87,12 +87,12 @@ where
 
     #[inline]
     fn includes_split(split: &Self::Split, entity: Entity) -> bool {
-        split.contains(entity)
+        split.contains_entity(entity)
     }
 
     #[inline]
     fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
-        !split.contains(entity)
+        !split.contains_entity(entity)
     }
 }
 
@@ -133,12 +133,12 @@ macro_rules! impl_query_modifier {
 
             $(#[$attrib])*
             fn includes_split(split: &Self::Split, entity: Entity) -> bool {
-                $(split.$idx.contains(entity))&&+
+                $(split.$idx.contains_entity(entity))&&+
             }
 
             $(#[$attrib])*
             fn excludes_split(split: &Self::Split, entity: Entity) -> bool {
-                $(!split.$idx.contains(entity))&&+
+                $(!split.$idx.contains_entity(entity))&&+
             }
         }
     };

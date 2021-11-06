@@ -82,11 +82,11 @@ struct EntitySparseSet {
 
 impl EntitySparseSet {
     fn insert(&mut self, entity: Entity) {
-        let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
+        let index_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
         match index_entity {
             Some(index_entity) => unsafe {
-                *self.entities.get_unchecked_mut(index_entity.index()) = entity;
+                *self.entities.get_unchecked_mut(index_entity.dense()) = entity;
             },
             None => {
                 *index_entity = Some(IndexEntity::new(
@@ -99,8 +99,8 @@ impl EntitySparseSet {
     }
 
     fn remove(&mut self, entity: Entity) -> bool {
-        let dense_index = match self.sparse.remove(entity) {
-            Some(dense_index) => dense_index,
+        let dense_index = match self.sparse.remove_entity(entity) {
+            Some(entity) => entity.dense(),
             None => return false,
         };
 
@@ -110,7 +110,7 @@ impl EntitySparseSet {
             let new_index_entity = IndexEntity::new(dense_index as u32, entity.version());
 
             unsafe {
-                *self.sparse.get_unchecked_mut(entity.index()) = Some(new_index_entity);
+                *self.sparse.get_unchecked_mut(entity.sparse()) = Some(new_index_entity);
             }
         }
 
@@ -118,7 +118,7 @@ impl EntitySparseSet {
     }
 
     fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains(entity)
+        self.sparse.contains_entity(entity)
     }
 
     fn clear(&mut self) {

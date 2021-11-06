@@ -51,7 +51,7 @@ where
 
     #[inline]
     fn get(self, entity: Entity) -> Option<Self::Item> {
-        let index = QueryElement::get_index_entity(&self, entity)?.index();
+        let index = QueryElement::get_index_entity(&self, entity)?.dense();
         unsafe { QueryElement::get_unchecked(self, index) }
     }
 
@@ -92,7 +92,7 @@ where
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        let index = sparse.get(entity)?.index();
+        let index = sparse.get_entity(entity)?.dense();
         E::get_from_parts_unchecked(
             data.components,
             data.ticks,
@@ -187,7 +187,7 @@ macro_rules! impl_query_base {
             type Data = ($(QueryElementData<'a, $elem::Component, $elem::Filter>,)+);
 
             fn get(self, entity: Entity) -> Option<Self::Item> {
-                let indexes = ($(self.$idx.get_index_entity(entity)?.index(),)+);
+                let indexes = ($(self.$idx.get_index_entity(entity)?.dense(),)+);
 
                 unsafe {
                     Some((
@@ -222,7 +222,7 @@ macro_rules! impl_query_base {
                 world_tick: Ticks,
                 change_tick: Ticks,
             ) -> Option<Self::Item> {
-                let indexes = ($(sparse.$idx.get(entity)?.index(),)+);
+                let indexes = ($(sparse.$idx.get_entity(entity)?.dense(),)+);
 
                 Some((
                     $(

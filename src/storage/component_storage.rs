@@ -56,11 +56,11 @@ impl ComponentStorage {
     where
         T: 'static,
     {
-        let index_entity = self.sparse.get_mut_or_allocate_at(entity.index());
+        let index_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
         match index_entity {
             Some(index_entity) => {
-                let index = index_entity.index();
+                let index = index_entity.dense();
                 *self.entities.as_ptr().add(index) = entity;
                 *self.ticks.as_ptr().add(index) = ticks;
                 Some(
@@ -92,7 +92,7 @@ impl ComponentStorage {
     where
         T: 'static,
     {
-        let index = self.sparse.remove(entity)?;
+        let index = self.sparse.remove_entity(entity)?.dense();
 
         self.len -= 1;
 
@@ -101,7 +101,7 @@ impl ComponentStorage {
 
         if index < self.len {
             let index_entity = IndexEntity::new(index as u32, last_entity.version());
-            *self.sparse.get_unchecked_mut(last_entity.index()) = Some(index_entity);
+            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(index_entity);
         }
 
         *self.ticks.as_ptr().add(index) = *self.ticks.as_ptr().add(self.len);
@@ -113,8 +113,8 @@ impl ComponentStorage {
     }
 
     pub(crate) fn remove_and_drop(&mut self, entity: Entity) {
-        let index = match self.sparse.remove(entity) {
-            Some(index) => index,
+        let index = match self.sparse.remove_entity(entity) {
+            Some(entity) => entity.dense(),
             None => return,
         };
 
@@ -126,7 +126,7 @@ impl ComponentStorage {
 
             if index < self.len {
                 let index_entity = IndexEntity::new(index as u32, last_entity.version());
-                *self.sparse.get_unchecked_mut(last_entity.index()) = Some(index_entity);
+                *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(index_entity);
             }
 
             let size = self.layout.size();
@@ -148,8 +148,8 @@ impl ComponentStorage {
         let entity_b = self.entities.as_ptr().add(b);
         ptr::swap(entity_a, entity_b);
 
-        let sparse_a = (*entity_a).index();
-        let sparse_b = (*entity_b).index();
+        let sparse_a = (*entity_a).sparse();
+        let sparse_b = (*entity_b).sparse();
         self.sparse.swap_unchecked(sparse_a, sparse_b);
 
         let size = self.layout.size();
@@ -189,17 +189,17 @@ impl ComponentStorage {
     }
 
     pub(crate) unsafe fn get_with_ticks<T>(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
-        let index = self.sparse.get_index(entity)?;
+        let index = self.sparse.get_entity(entity)?.dense();
         Some(self.get_with_ticks_unchecked(index))
     }
 
     pub(crate) fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.sparse.get(entity)
+        self.sparse.get_entity(entity)
     }
 
     #[inline]
     pub(crate) fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains(entity)
+        self.sparse.contains_entity(entity)
     }
 
     #[inline]

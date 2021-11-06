@@ -58,9 +58,10 @@ impl Entity {
         self.id
     }
 
-    /// Returns the id of the entity, extended to a usize.
+    /// Returns the id of the entity, extended to a usize. Used to index sparse
+    /// arrays.
     #[inline]
-    pub const fn index(&self) -> usize {
+    pub const fn sparse(&self) -> usize {
         self.id as _
     }
 
@@ -80,16 +81,20 @@ pub struct IndexEntity {
 }
 
 impl IndexEntity {
+    /// Creates a new `IndexEntity` with the given `id` and `Version`.
     #[inline]
     pub const fn new(id: u32, version: Version) -> Self {
         Self { id, version }
     }
 
+    /// Returns the `id` of the entity extended to a `usize`. Used to index
+    /// dense arrays.
     #[inline]
-    pub const fn index(&self) -> usize {
+    pub const fn dense(&self) -> usize {
         self.id as _
     }
 
+    /// Returns the `Version` of the entity.
     #[inline]
     pub const fn version(&self) -> Version {
         self.version

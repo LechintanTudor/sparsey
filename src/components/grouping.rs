@@ -19,7 +19,7 @@ pub(crate) unsafe fn get_group_status(
 
     let status = match first.get_mut().get_index_entity(entity) {
         Some(index_entity) => {
-            if index_entity.index() < group_len {
+            if index_entity.dense() < group_len {
                 GroupStatus::Grouped
             } else {
                 GroupStatus::Ungrouped
@@ -47,7 +47,7 @@ pub(crate) unsafe fn group_components(
     let swap_index = *group_len;
 
     for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
-        let index = storage.get_index_entity(entity).unsafe_unwrap().index();
+        let index = storage.get_index_entity(entity).unsafe_unwrap().dense();
         storage.swap_unchecked(index, swap_index);
     }
 
@@ -64,7 +64,7 @@ pub(crate) unsafe fn ungroup_components(
         let swap_index = *group_len - 1;
 
         for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
-            let index = storage.get_index_entity(entity).unsafe_unwrap().index();
+            let index = storage.get_index_entity(entity).unsafe_unwrap().dense();
             storage.swap_unchecked(index, swap_index);
         }
 
