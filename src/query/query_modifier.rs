@@ -1,5 +1,5 @@
 use crate::group::CombinedGroupInfo;
-use crate::query::{Contains, ImmutableUnfilteredQueryElement, Passthrough};
+use crate::query::{ImmutableUnfilteredQueryElement, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 
 /// Trait implemented by the part of the `Query` that checks if an `Entity`
@@ -68,12 +68,12 @@ where
 
     #[inline]
     fn includes(&self, entity: Entity) -> bool {
-        self.contains(entity, &Contains)
+        self.contains(entity, &Passthrough)
     }
 
     #[inline]
     fn excludes(&self, entity: Entity) -> bool {
-        !self.contains(entity, &Contains)
+        !self.contains(entity, &Passthrough)
     }
 
     fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
@@ -114,12 +114,12 @@ macro_rules! impl_query_modifier {
 
             $(#[$attrib])*
             fn includes(&self, entity: Entity) -> bool {
-                $(self.$idx.contains(entity, &Contains))&&+
+                $(self.$idx.contains(entity, &Passthrough))&&+
             }
 
             $(#[$attrib])*
             fn excludes(&self, entity: Entity) -> bool {
-                $(!self.$idx.contains(entity, &Contains))&&+
+                $(!self.$idx.contains(entity, &Passthrough))&&+
             }
 
             #[allow(clippy::needless_question_mark)]

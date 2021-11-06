@@ -214,7 +214,6 @@ macro_rules! impl_query_base {
                 split_dense!($((self.$idx, $idx)),+)
             }
 
-            #[inline]
             unsafe fn get_from_sparse_parts(
                 sparse: &Self::Sparse,
                 entity: Entity,
@@ -238,7 +237,6 @@ macro_rules! impl_query_base {
                 ))
             }
 
-            #[inline]
             unsafe fn get_from_dense_parts_unchecked(
                 data: &Self::Data,
                 index: usize,

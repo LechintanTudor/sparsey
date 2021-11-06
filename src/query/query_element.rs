@@ -1,11 +1,12 @@
 use crate::components::Component;
 use crate::group::GroupInfo;
-use crate::query::{Contains, QueryElementFilter};
+use crate::query::{Passthrough, QueryElementFilter};
 use crate::storage::{Entity, EntitySparseArray, IndexEntity};
 use crate::utils::{ChangeTicks, Ticks};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
+/// Holds a `QueryElement`'s components, ticks and filter.
 pub struct QueryElementData<'a, T, F> {
     pub components: NonNull<T>,
     pub ticks: NonNull<ChangeTicks>,
@@ -14,7 +15,7 @@ pub struct QueryElementData<'a, T, F> {
 }
 
 impl<'a, T, F> QueryElementData<'a, T, F> {
-    pub fn new(components: NonNull<T>, ticks: NonNull<ChangeTicks>, filter: F) -> Self {
+    pub(crate) fn new(components: NonNull<T>, ticks: NonNull<ChangeTicks>, filter: F) -> Self {
         Self {
             components,
             ticks,
@@ -24,6 +25,7 @@ impl<'a, T, F> QueryElementData<'a, T, F> {
     }
 }
 
+/// Trait implemented by unfiltered items that can be used in queries.
 pub unsafe trait UnfilteredQueryElement<'a> {
     type Item: 'a;
     type Component: Component;
@@ -65,6 +67,7 @@ pub unsafe trait UnfilteredQueryElement<'a> {
         F: QueryElementFilter<Self::Component>;
 }
 
+/// Trait used internally for query slicing.
 pub unsafe trait ImmutableUnfilteredQueryElement<'a>
 where
     Self: UnfilteredQueryElement<'a>,
@@ -74,6 +77,7 @@ where
     fn components(&self) -> &'a [Self::Component];
 }
 
+/// Trait implemented by all items that can be used in queries.
 pub unsafe trait QueryElement<'a> {
     type Item: 'a;
     type Component: Component;
@@ -115,7 +119,7 @@ where
 {
     type Item = E::Item;
     type Component = E::Component;
-    type Filter = Contains;
+    type Filter = Passthrough;
 
     #[inline]
     fn group_info(&self) -> Option<GroupInfo<'a>> {
@@ -134,7 +138,7 @@ where
 
     #[inline]
     fn contains(&self, entity: Entity) -> bool {
-        UnfilteredQueryElement::contains(self, entity, &Contains)
+        UnfilteredQueryElement::contains(self, entity, &Passthrough)
     }
 
     #[inline]
@@ -144,7 +148,7 @@ where
 
     #[inline]
     unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item> {
-        UnfilteredQueryElement::get_unchecked(self, index, &Contains)
+        UnfilteredQueryElement::get_unchecked(self, index, &Passthrough)
     }
 
     #[inline]
@@ -159,7 +163,7 @@ where
         (
             entities,
             sparse,
-            QueryElementData::new(components, ticks, Contains),
+            QueryElementData::new(components, ticks, Passthrough),
         )
     }
 

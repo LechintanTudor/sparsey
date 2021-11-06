@@ -1,5 +1,5 @@
 use crate::components::Component;
-use crate::query::{Filter, Not, UnfilteredQueryElement};
+use crate::query::{Filter, Not, Passthrough, UnfilteredQueryElement};
 use crate::utils::{ChangeTicks, Ticks};
 
 /// Trait used for filtering `QueryElement`s.
@@ -19,11 +19,7 @@ where
     ) -> bool;
 }
 
-/// `QueryElementFilter` that matches all components.
-#[derive(Clone, Copy, Default)]
-pub struct Contains;
-
-impl<T> QueryElementFilter<T> for Contains
+impl<T> QueryElementFilter<T> for Passthrough
 where
     T: Component,
 {
@@ -119,11 +115,11 @@ where
 }
 
 /// Creates a new `Filter` that matches all components.
-pub fn contains<'a, E>(element: E) -> Filter<Contains, E>
+pub fn contains<'a, E>(element: E) -> Filter<Passthrough, E>
 where
     E: UnfilteredQueryElement<'a>,
 {
-    Filter::new(element, Contains)
+    Filter::new(element, Passthrough)
 }
 
 /// Creates a new `Filter` that ony matches newly added components.
