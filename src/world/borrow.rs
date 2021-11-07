@@ -121,7 +121,6 @@ macro_rules! impl_borrow_world {
 		{
 			type Item = ($($ty::Item,)+);
 
-			#[allow(unused_variables)]
 			fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
 				($($ty::borrow(world, change_tick),)+)
 			}

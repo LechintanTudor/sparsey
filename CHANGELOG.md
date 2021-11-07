@@ -1,9 +1,14 @@
 # Unreleased
 ## Added
+- Implemented `fold` for `EntityIter`, greatly improving the performance of `for_each`.
 - Added `World::delete_resource` to remove a `Resource` with a given `TypeId`.
 
 ## Changed
 - Cleaned up `QueryElement` to make the code faster and easier to maintain.
+- `World::increment_tick` no longer sets the world tick to zero on overflow.
+
+## Fixed
+- `IntoEntityIterator` is now only implemented for `EntityIterator`s, not all `Iterator`s. 
 
 # 0.4.0 (2021-10-17)
 ## Added

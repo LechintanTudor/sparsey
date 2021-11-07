@@ -3,7 +3,7 @@ use crate::layout::Layout;
 use crate::resources::{Resource, ResourceStorage};
 use crate::storage::{ComponentStorage, Entity, EntityStorage};
 use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
-use crate::world::{BorrowWorld, NoSuchEntity, TickOverflow};
+use crate::world::{BorrowWorld, CannotIncrementWorldTick, NoSuchEntity};
 use std::any::TypeId;
 use std::mem;
 use std::num::NonZeroU64;
@@ -270,7 +270,6 @@ impl World {
 
     /// Removes the resource with the given `TypeId` from the `World`. Returns
     /// `true` if the resource was successfully removed.
-    #[inline]
     pub fn delete_resource(&mut self, resource_type_id: &TypeId) -> bool {
         self.resources.delete(resource_type_id)
     }
@@ -307,16 +306,17 @@ impl World {
         self.tick = tick;
     }
 
-    /// Advances the world tick. Should be called after each game
-    /// update for proper change detection.
-    pub fn increment_tick(&mut self) -> Result<(), TickOverflow> {
-        if self.tick.get() != Ticks::MAX {
-            self.tick = NonZeroTicks::new(self.tick.get() + 1).unwrap();
-            Ok(())
-        } else {
-            self.tick = NonZeroTicks::new(1).unwrap();
-            Err(TickOverflow)
+    /// Increments the world tick. Should be called after each game update for
+    /// proper change detection. Returns an error if the world tick is equal to
+    /// `Ticks::MAX`.
+    pub fn increment_tick(&mut self) -> Result<(), CannotIncrementWorldTick> {
+        if self.tick.get() == Ticks::MAX {
+            return Err(CannotIncrementWorldTick);
         }
+
+        let new_tick = self.tick.get() + 1;
+        self.tick = NonZeroTicks::new(new_tick).unwrap();
+        Ok(())
     }
 
     /// Returns the world tick used for change detection.

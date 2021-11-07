@@ -106,4 +106,15 @@ where
             Self::Dense(dense) => dense.next_with_entity(),
         }
     }
+
+    fn fold_with_entity<Acc, Func>(self, init: Acc, f: Func) -> Acc
+    where
+        Self: Sized,
+        Func: FnMut(Acc, (Entity, Self::Item)) -> Acc,
+    {
+        match self {
+            Self::Sparse(sparse) => sparse.fold_with_entity(init, f),
+            Self::Dense(dense) => dense.fold_with_entity(init, f),
+        }
+    }
 }

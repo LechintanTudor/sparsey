@@ -15,17 +15,17 @@ impl Display for NoSuchEntity {
     }
 }
 
-/// Error returned when the `World` tick overflows.
+/// Error returned when the `World` tick cannot be incremented.
 #[derive(Debug)]
-pub struct TickOverflow;
+pub struct CannotIncrementWorldTick;
 
-impl Error for TickOverflow {}
+impl Error for CannotIncrementWorldTick {}
 
-impl Display for TickOverflow {
+impl Display for CannotIncrementWorldTick {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Tick overflow occurred; component change detection may not work as expected"
+            "Cannot increment the world tick without overflowing the counter"
         )
     }
 }
