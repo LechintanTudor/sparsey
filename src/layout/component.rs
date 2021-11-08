@@ -1,22 +1,14 @@
 use crate::components::Component;
 use crate::storage::ComponentStorage;
-use std::any;
 use std::any::TypeId;
 use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
+use std::{any, fmt};
 
 /// Holds information about a `Component` type.
 pub struct ComponentInfo {
     component: Box<dyn AbstractType>,
-}
-
-impl Clone for ComponentInfo {
-    fn clone(&self) -> Self {
-        Self {
-            component: self.component.clone(),
-        }
-    }
 }
 
 impl ComponentInfo {
@@ -46,6 +38,14 @@ impl ComponentInfo {
     }
 }
 
+impl Clone for ComponentInfo {
+    fn clone(&self) -> Self {
+        Self {
+            component: self.component.clone(),
+        }
+    }
+}
+
 impl PartialEq for ComponentInfo {
     fn eq(&self, other: &Self) -> bool {
         self.type_id().eq(&other.type_id())
@@ -72,6 +72,12 @@ impl Hash for ComponentInfo {
         H: Hasher,
     {
         self.type_id().hash(state);
+    }
+}
+
+impl fmt::Debug for ComponentInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.component.type_name())
     }
 }
 

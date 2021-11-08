@@ -1,3 +1,4 @@
+use std::fmt;
 use std::num::NonZeroU32;
 
 /// Used by `EntityStorage` to recycle indexes. Entities with the same id and
@@ -30,10 +31,19 @@ impl Version {
 }
 
 /// Handle used to fetch components from `ComponentStorages`.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Entity {
     id: u32,
     version: Version,
+}
+
+impl fmt::Debug for Entity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Entity")
+            .field("id", &self.id)
+            .field("version", &self.version.0)
+            .finish()
+    }
 }
 
 impl Entity {
@@ -58,8 +68,8 @@ impl Entity {
         self.id
     }
 
-    /// Returns the id of the entity, extended to a usize. Used to index sparse
-    /// arrays.
+    /// Returns the id of the entity extended to a usize. Used as an index into
+    /// `EntitySparseArray`s.
     #[inline]
     pub const fn sparse(&self) -> usize {
         self.id as _
@@ -74,10 +84,19 @@ impl Entity {
 
 /// Used internally by `EntitySparseArray` to map `Entity` indexes to dense
 /// indexes.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct IndexEntity {
     id: u32,
     version: Version,
+}
+
+impl fmt::Debug for IndexEntity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IndexEntity")
+            .field("id", &self.id)
+            .field("version", &self.version.0)
+            .finish()
+    }
 }
 
 impl IndexEntity {

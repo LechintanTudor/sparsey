@@ -4,6 +4,7 @@ use crate::query::{
 };
 use crate::storage::{ComponentStorage, Entity, EntitySparseArray, IndexEntity};
 use crate::utils::{ChangeTicks, Ticks};
+use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
@@ -60,6 +61,17 @@ where
     #[inline]
     pub fn ticks(&self) -> &[ChangeTicks] {
         self.storage.ticks()
+    }
+}
+
+impl<'a, T, S> fmt::Debug for ComponentView<'a, T, S>
+where
+    T: Component + fmt::Debug,
+    S: Deref<Target = ComponentStorage>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let entries = unsafe { self.storage.iter::<T>() };
+        f.debug_list().entries(entries).finish()
     }
 }
 

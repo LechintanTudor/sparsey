@@ -243,6 +243,19 @@ impl ComponentStorage {
         )
     }
 
+    pub(crate) unsafe fn iter<T>(&self) -> impl Iterator<Item = (&Entity, &T, &ChangeTicks)>
+    where
+        T: 'static,
+    {
+        self.entities().iter().enumerate().map(|(i, entity)| {
+            (
+                entity,
+                &*self.components.cast::<T>().as_ptr().add(i),
+                &*self.ticks.as_ptr().add(i),
+            )
+        })
+    }
+
     pub(crate) fn clear(&mut self) {
         if self.needs_drop {
             let len = self.len;

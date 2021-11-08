@@ -1,5 +1,6 @@
 use crate::resources::{Resource, ResourceCell};
 use crate::utils::{Ticks, UnsafeUnwrap};
+use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -48,6 +49,19 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.cell.ticks.tick_mutated = self.world_tick;
         unsafe { self.cell.value_mut().downcast_mut::<T>().unsafe_unwrap() }
+    }
+}
+
+impl<T, C> fmt::Debug for ResourceView<T, C>
+where
+    T: Resource + fmt::Debug,
+    C: Deref<Target = ResourceCell>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ResourceView")
+            .field("value", self.deref())
+            .field("ticks", self.cell.ticks())
+            .finish()
     }
 }
 

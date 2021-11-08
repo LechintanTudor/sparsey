@@ -1,10 +1,12 @@
 # Unreleased
 ## Added
 - Implemented `fold` for `EntityIter`, greatly improving the performance of `for_each`.
+- Implemented `fmt::Debug` for `ComponentView` and `ResourceView`.
 - Added `World::delete_resource` to remove a `Resource` with a given `TypeId`.
 
 ## Changed
 - Cleaned up `QueryElement` to make the code faster and easier to maintain.
+- Replaced `ComponentView::storage` with methods on `ComponentView`.
 - `World::increment_tick` no longer sets the world tick to zero on overflow.
 
 ## Fixed

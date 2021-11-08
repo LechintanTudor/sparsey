@@ -25,8 +25,8 @@ impl ResourceCell {
     }
 
     /// Returns the resource's `ChangeTicks`.
-    pub fn ticks(&self) -> ChangeTicks {
-        self.ticks
+    pub fn ticks(&self) -> &ChangeTicks {
+        &self.ticks
     }
 }
 
