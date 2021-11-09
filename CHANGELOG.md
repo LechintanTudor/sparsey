@@ -1,4 +1,4 @@
-# Unreleased
+# 0.5.0 (2021-11-09)
 ## Added
 - Implemented `fold` for `EntityIter`, greatly improving the performance of `for_each`.
 - Implemented `fmt::Debug` for `ComponentView` and `ResourceView`.

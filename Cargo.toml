@@ -1,6 +1,6 @@
 [package]
 name = "sparsey"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Sparse set-based entity component system"
 authors = ["Tudor-Cristian Lechintan <lechintantudor02@gmail.com>"]
@@ -16,9 +16,8 @@ parallel = ["rayon"]
 
 [dependencies]
 anyhow = "1"
-atomic_refcell = "0.1.7"
+atomic_refcell = "0.1.8"
 downcast-rs = "1.2"
-paste = "1"
 rustc-hash = "1.1"
 
 rayon = { version = "1.5", optional = true }
