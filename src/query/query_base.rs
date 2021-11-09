@@ -6,6 +6,8 @@ use crate::query::{
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
+/// Trait implemented by the part of the `Query`  that fetches components from
+/// storages.
 pub unsafe trait QueryBase<'a> {
     const ELEMENT_COUNT: usize;
 
@@ -121,10 +123,12 @@ where
     }
 }
 
+/// Trait used for applying modifiers and filters to a `QueryBase`.
 pub trait QueryBaseModifiers<'a>
 where
     Self: QueryBase<'a> + Sized,
 {
+    /// Applies an include modifier to the `Query`.
     fn include<I>(self, include: I) -> Include<Self, I>
     where
         I: QueryModifier<'a>,
@@ -132,6 +136,7 @@ where
         Include::new(self, include)
     }
 
+    /// Applies an exclude modifier to the `Query`.
     fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, Passthrough, E>
     where
         E: QueryModifier<'a>,
@@ -139,6 +144,7 @@ where
         IncludeExclude::new(self, Passthrough, exclude)
     }
 
+    /// Applies a filter to the `Query`.
     fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, Passthrough, Passthrough, F>
     where
         F: QueryFilter,
