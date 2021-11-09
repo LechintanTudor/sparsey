@@ -16,15 +16,18 @@ impl ResourceCell {
     }
 
     /// Returns a type-erased reference to the resource stored inside.
+    #[inline]
     pub fn value(&self) -> &dyn Resource {
         &*self.value
     }
 
+    #[inline]
     pub(crate) fn value_mut(&mut self) -> &mut dyn Resource {
         &mut *self.value
     }
 
     /// Returns the resource's `ChangeTicks`.
+    #[inline]
     pub fn ticks(&self) -> &ChangeTicks {
         &self.ticks
     }
