@@ -38,26 +38,43 @@ where
         }
     }
 
+    /// Returns the `ChangeTicks` of `entity`'s component.
+    #[inline]
+    pub fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
+        self.storage.get_ticks(entity)
+    }
+
+    /// Returns the component and `ChangeTicks` of `entity`.
+    #[inline]
+    pub fn get_with_ticks(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
+        unsafe { self.storage.get_with_ticks::<T>(entity) }
+    }
+
+    /// Returns the number of components in the view.
     #[inline]
     pub fn len(&self) -> usize {
         self.storage.len()
     }
 
+    /// Returns `true` if the view is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.storage.is_empty()
     }
 
+    /// Returns all entities in the view as a slice.
     #[inline]
     pub fn entities(&self) -> &[Entity] {
         self.storage.entities()
     }
 
+    /// Returns all components in the view as a slice.
     #[inline]
     pub fn components(&self) -> &[T] {
         unsafe { self.storage.components::<T>() }
     }
 
+    /// Returns all `ChangeTicks` in the view as a slice.
     #[inline]
     pub fn ticks(&self) -> &[ChangeTicks] {
         self.storage.ticks()

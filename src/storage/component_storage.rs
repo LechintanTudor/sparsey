@@ -187,12 +187,19 @@ impl ComponentStorage {
             &mut *self.ticks.as_ptr().add(index),
         )
     }
+    #[inline]
+    pub(crate) fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
+        let index = self.sparse.get_entity(entity)?.dense();
+        unsafe { Some(&*self.ticks.as_ptr().add(index)) }
+    }
 
+    #[inline]
     pub(crate) unsafe fn get_with_ticks<T>(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
         let index = self.sparse.get_entity(entity)?.dense();
         Some(self.get_with_ticks_unchecked(index))
     }
 
+    #[inline]
     pub(crate) fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
         self.sparse.get_entity(entity)
     }
