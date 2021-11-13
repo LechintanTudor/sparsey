@@ -253,7 +253,7 @@ let entities: &[Entity] = (&a, &b).entities().unwrap();
 
 Get all components of entities with `A` and `B`.
 ```rust
-let (a, b, c): (&[A], &[B]) = (&a, &b).components().unwrap();
+let (a, b): (&[A], &[B]) = (&a, &b).components().unwrap();
 ```
 
 Get the entities with `A` and `B` and their components.
