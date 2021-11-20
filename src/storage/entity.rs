@@ -47,13 +47,13 @@ impl fmt::Debug for Entity {
 }
 
 impl Entity {
-    /// Creates a new entity with the given id`and `Version`.
+    /// Creates a new entity with the given `id` and `Version`.
     #[inline]
     pub const fn new(id: u32, version: Version) -> Self {
         Self { id, version }
     }
 
-    /// Creates a new entity with the given id and default `Version`.
+    /// Creates a new entity with the given `id` and default `Version`.
     #[inline]
     pub const fn with_id(id: u32) -> Self {
         Self {

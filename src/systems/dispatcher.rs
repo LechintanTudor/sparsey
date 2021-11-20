@@ -46,7 +46,7 @@ impl DispatcherBuilder {
         self
     }
 
-    /// Merge two `Dispatchers`. After the call `other` is empty.
+    /// Merge two `Dispatcher`s. After the call `other` is empty.
     pub fn merge(&mut self, other: &mut DispatcherBuilder) -> &mut Self {
         self.simple_steps.append(&mut other.simple_steps);
         self
