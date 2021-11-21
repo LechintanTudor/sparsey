@@ -1,5 +1,6 @@
 pub use self::component_ref_mut::*;
 pub use self::component_view::*;
+pub use self::fetch::*;
 pub use self::filter::*;
 pub use self::group::*;
 pub use self::iter::*;
@@ -15,6 +16,7 @@ pub use self::query_element_filter::*;
 pub use self::query_filter::*;
 pub use self::query_modifier::*;
 pub use self::query_slice::*;
+pub use self::slice::*;
 
 pub(crate) use self::query_split::*;
 
@@ -23,6 +25,7 @@ mod query_split;
 
 mod component_ref_mut;
 mod component_view;
+mod fetch;
 mod filter;
 mod group;
 mod iter;
@@ -38,3 +41,4 @@ mod query_element_filter;
 mod query_filter;
 mod query_modifier;
 mod query_slice;
+mod slice;
