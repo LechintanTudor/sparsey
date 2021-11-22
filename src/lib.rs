@@ -28,10 +28,10 @@
 //! ```
 
 /// Exports functions for filtering component and resource views.
-pub mod filters {
-    pub use crate::query::{added, changed, contains, maybe, mutated};
-    pub use crate::resources::{res_added, res_changed, res_mutated};
-}
+// pub mod filters {
+//     pub use crate::query::{added, changed, contains, maybe, mutated};
+//     pub use crate::resources::{res_added, res_changed, res_mutated};
+// }
 
 /// Exports most commonly used items.
 // pub mod prelude {
@@ -53,11 +53,11 @@ pub mod filters {
 // pub use self::systems::*;
 // pub use self::utils::*;
 // pub use self::world::*;
-mod components;
-mod layout;
-mod query;
-mod resources;
-mod storage;
-mod systems;
-mod utils;
-mod world;
+pub mod components;
+pub mod layout;
+pub mod query;
+pub mod resources;
+pub mod storage;
+pub mod systems;
+pub mod utils;
+pub mod world;

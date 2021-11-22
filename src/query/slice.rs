@@ -1,9 +1,9 @@
-use crate::query::{FetchComponent, FetchComponentSet};
+use crate::query::{GetComponent, GetComponentSet};
 use crate::storage::Entity;
 
 pub trait SliceComponent<'a>
 where
-    Self: FetchComponent<'a>,
+    Self: GetComponent<'a>,
 {
     fn entities(&self) -> &[Entity];
 
@@ -12,7 +12,7 @@ where
 
 pub trait SliceComponentSet<'a>
 where
-    Self: FetchComponentSet<'a>,
+    Self: GetComponentSet<'a>,
 {
     type Slices;
 }
