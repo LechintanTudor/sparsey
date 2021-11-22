@@ -16,8 +16,8 @@ use std::{mem, ptr};
 #[derive(Default)]
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
-    component_info: FxHashMap<TypeId, ComponentInfo>,
-    group_info: Vec<ComponentGroupInfo>,
+    component_meta: FxHashMap<TypeId, ComponentMeta>,
+    group_meta: Vec<ComponentGroupMeta>,
     groups: Vec<Group>,
     families: Vec<Range<usize>>,
 }
@@ -27,9 +27,9 @@ impl ComponentStorages {
         layout: &Layout,
         spare_storages: &mut FxHashMap<TypeId, ComponentStorage>,
     ) -> Self {
-        let mut component_info = FxHashMap::default();
+        let mut component_meta = FxHashMap::default();
         let mut storages = Vec::new();
-        let mut group_info = Vec::new();
+        let mut group_meta = Vec::new();
         let mut groups = Vec::new();
         let mut families = Vec::new();
 
@@ -54,17 +54,17 @@ impl ComponentStorages {
                     let type_id = component.type_id();
                     let group_mask = components::new_group_mask(groups.len(), arity, family_arity);
 
-                    component_info.insert(
+                    component_meta.insert(
                         type_id,
-                        ComponentInfo {
+                        ComponentMeta {
                             storage_index: storages.len(),
-                            group_info_index: group_info.len(),
+                            group_meta_index: group_meta.len(),
                             group_mask,
                             family_mask: 1 << family_index,
                         },
                     );
 
-                    group_info.push(ComponentGroupInfo {
+                    group_meta.push(ComponentGroupMeta {
                         family_index,
                         group_offset,
                         storage_mask: 1 << (prev_arity + component_offset),
@@ -90,11 +90,11 @@ impl ComponentStorages {
         }
 
         for (type_id, storage) in spare_storages.drain() {
-            component_info.insert(
+            component_meta.insert(
                 type_id,
-                ComponentInfo {
+                ComponentMeta {
                     storage_index: storages.len(),
-                    group_info_index: usize::MAX,
+                    group_meta_index: usize::MAX,
                     family_mask: 0,
                     group_mask: 0,
                 },
@@ -104,9 +104,9 @@ impl ComponentStorages {
         }
 
         Self {
-            component_info,
+            component_meta,
             storages,
-            group_info,
+            group_meta,
             families,
             groups,
         }
@@ -115,9 +115,9 @@ impl ComponentStorages {
     pub(crate) fn into_storages(mut self) -> FxHashMap<TypeId, ComponentStorage> {
         let mut storages = FxHashMap::default();
 
-        for (type_id, info) in self.component_info {
+        for (type_id, meta) in self.component_meta {
             let storage = mem::replace(
-                self.storages[info.storage_index].get_mut(),
+                self.storages[meta.storage_index].get_mut(),
                 ComponentStorage::new::<()>(),
             );
             storages.insert(type_id, storage);
@@ -139,10 +139,10 @@ impl ComponentStorages {
     where
         F: FnOnce() -> ComponentStorage,
     {
-        if let Entry::Vacant(entry) = self.component_info.entry(type_id) {
-            entry.insert(ComponentInfo {
+        if let Entry::Vacant(entry) = self.component_meta.entry(type_id) {
+            entry.insert(ComponentMeta {
                 storage_index: self.storages.len(),
-                group_info_index: usize::MAX,
+                group_meta_index: usize::MAX,
                 group_mask: 0,
                 family_mask: 0,
             });
@@ -152,7 +152,7 @@ impl ComponentStorages {
     }
 
     pub(crate) fn is_registered(&self, type_id: &TypeId) -> bool {
-        self.component_info.contains_key(type_id)
+        self.component_meta.contains_key(type_id)
     }
 
     pub(crate) unsafe fn group_components<'a, E>(&mut self, family_index: usize, entities: E)
@@ -280,13 +280,13 @@ impl ComponentStorages {
         &self,
         type_id: &TypeId,
     ) -> Option<(AtomicRef<ComponentStorage>, Option<GroupInfo>)> {
-        self.component_info.get(type_id).map(|info| unsafe {
+        self.component_meta.get(type_id).map(|meta| unsafe {
             (
-                self.storages.get_unchecked(info.storage_index).borrow(),
-                self.group_info.get(info.group_info_index).map(|info| {
-                    let group_index = self.families.get_unchecked(info.family_index).start;
+                self.storages.get_unchecked(meta.storage_index).borrow(),
+                self.group_meta.get(meta.group_meta_index).map(|meta| {
+                    let group_index = self.families.get_unchecked(meta.family_index).start;
                     let group = NonNull::from(self.groups.get_unchecked(group_index));
-                    GroupInfo::new(group, info.group_offset, info.storage_mask)
+                    GroupInfo::new(group, meta.group_offset, meta.storage_mask)
                 }),
             )
         })
@@ -296,13 +296,13 @@ impl ComponentStorages {
         &self,
         type_id: &TypeId,
     ) -> Option<(AtomicRefMut<ComponentStorage>, Option<GroupInfo>)> {
-        self.component_info.get(type_id).map(|info| unsafe {
+        self.component_meta.get(type_id).map(|meta| unsafe {
             (
-                self.storages.get_unchecked(info.storage_index).borrow_mut(),
-                self.group_info.get(info.group_info_index).map(|info| {
-                    let group_index = self.families.get_unchecked(info.family_index).start;
+                self.storages.get_unchecked(meta.storage_index).borrow_mut(),
+                self.group_meta.get(meta.group_meta_index).map(|meta| {
+                    let group_index = self.families.get_unchecked(meta.family_index).start;
                     let group = NonNull::from(self.groups.get_unchecked(group_index));
-                    GroupInfo::new(group, info.group_offset, info.storage_mask)
+                    GroupInfo::new(group, meta.group_offset, meta.storage_mask)
                 }),
             )
         })
@@ -312,10 +312,10 @@ impl ComponentStorages {
         &self,
         type_id: &TypeId,
     ) -> Option<(AtomicRefMut<ComponentStorage>, FamilyMask)> {
-        self.component_info.get(type_id).map(|info| unsafe {
+        self.component_meta.get(type_id).map(|meta| unsafe {
             (
-                self.storages.get_unchecked(info.storage_index).borrow_mut(),
-                info.family_mask,
+                self.storages.get_unchecked(meta.storage_index).borrow_mut(),
+                meta.family_mask,
             )
         })
     }
@@ -324,14 +324,14 @@ impl ComponentStorages {
         &mut self,
         type_id: &TypeId,
     ) -> Option<(&mut ComponentStorage, FamilyMask)> {
-        let info = self.component_info.get(type_id)?;
+        let meta = self.component_meta.get(type_id)?;
 
         unsafe {
             Some((
                 self.storages
-                    .get_unchecked_mut(info.storage_index)
+                    .get_unchecked_mut(meta.storage_index)
                     .get_mut(),
-                info.family_mask,
+                meta.family_mask,
             ))
         }
     }
@@ -340,13 +340,13 @@ impl ComponentStorages {
         &self,
         type_id: &TypeId,
     ) -> (*mut ComponentStorage, FamilyMask, GroupMask) {
-        self.component_info
+        self.component_meta
             .get(type_id)
-            .map(|info| unsafe {
+            .map(|meta| unsafe {
                 (
-                    self.storages.get_unchecked(info.storage_index).as_ptr(),
-                    info.family_mask,
-                    info.group_mask,
+                    self.storages.get_unchecked(meta.storage_index).as_ptr(),
+                    meta.family_mask,
+                    meta.group_mask,
                 )
             })
             .unwrap_or((ptr::null_mut(), 0, 0))
@@ -358,15 +358,15 @@ impl ComponentStorages {
 }
 
 #[derive(Clone, Copy)]
-struct ComponentInfo {
+struct ComponentMeta {
     storage_index: usize,
-    group_info_index: usize,
+    group_meta_index: usize,
     family_mask: FamilyMask,
     group_mask: GroupMask,
 }
 
 #[derive(Clone, Copy)]
-struct ComponentGroupInfo {
+struct ComponentGroupMeta {
     family_index: usize,
     group_offset: usize,
     storage_mask: StorageMask,
