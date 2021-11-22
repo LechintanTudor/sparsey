@@ -77,9 +77,9 @@ pub trait GetComponentSet<'a> {
     where
         F: ChangeTicksFilter;
 
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data);
+    fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data);
 
-    fn split_dense(self) -> (IterData<'a>, Self::Data);
+    fn split_dense(self) -> (&'a [Entity], Self::Data);
 
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index>;
 
@@ -130,25 +130,14 @@ where
         GetComponent::get_unchecked::<F>(self, index)
     }
 
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-        let (world_tick, change_tick) = GetComponent::change_detection_ticks(&self);
+    fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
         let (entities, sparse, components, ticks) = GetComponent::split(self);
-
-        (
-            IterData::new(entities, world_tick, change_tick),
-            sparse,
-            ComponentViewData::new(components, ticks),
-        )
+        (entities, sparse, ComponentViewData::new(components, ticks))
     }
 
-    fn split_dense(self) -> (IterData<'a>, Self::Data) {
-        let (world_tick, change_tick) = GetComponent::change_detection_ticks(&self);
+    fn split_dense(self) -> (&'a [Entity], Self::Data) {
         let (entities, _, components, ticks) = GetComponent::split(self);
-
-        (
-            IterData::new(entities, world_tick, change_tick),
-            ComponentViewData::new(components, ticks),
-        )
+        (entities, ComponentViewData::new(components, ticks))
     }
 
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index> {
@@ -207,9 +196,9 @@ pub trait GetComponentSetFiltered<'a> {
 
     unsafe fn get_unchecked(self, index: Self::Index) -> Option<Self::Item>;
 
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data);
+    fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data);
 
-    fn split_dense(self) -> (IterData<'a>, Self::Data);
+    fn split_dense(self) -> (&'a [Entity], Self::Data);
 
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index>;
 
@@ -254,11 +243,11 @@ where
         GetComponentSet::get_unchecked::<Self::Filter>(self, index)
     }
 
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
+    fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
         GetComponentSet::split_sparse(self)
     }
 
-    fn split_dense(self) -> (IterData<'a>, Self::Data) {
+    fn split_dense(self) -> (&'a [Entity], Self::Data) {
         GetComponentSet::split_dense(self)
     }
 
@@ -338,11 +327,21 @@ where
     }
 
     fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-        GetComponentSetFiltered::split_sparse(self)
+        let (world_tick, change_tick) = GetComponentSetFiltered::change_detection_ticks(&self);
+        let (entities, sparse, data) = GetComponentSetFiltered::split_sparse(self);
+
+        (
+            IterData::new(entities, world_tick, change_tick),
+            sparse,
+            data,
+        )
     }
 
     fn split_dense(self) -> (IterData<'a>, Self::Data) {
-        GetComponentSetFiltered::split_dense(self)
+        let (world_tick, change_tick) = GetComponentSetFiltered::change_detection_ticks(&self);
+        let (entities, _, data) = GetComponentSetFiltered::split_sparse(self);
+
+        (IterData::new(entities, world_tick, change_tick), data)
     }
 
     unsafe fn get_sparse_unchecked(
