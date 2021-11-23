@@ -205,7 +205,7 @@ impl World {
     }
 
     /// Removes a component set from `entity` and returns them if they all
-    /// existed in the `World` before the call.
+    /// exist in the `World` before the call.
     #[must_use = "use `delete_components` to discard the components"]
     pub fn remove_components<C>(&mut self, entity: Entity) -> Option<C>
     where
