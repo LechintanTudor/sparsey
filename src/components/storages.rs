@@ -204,7 +204,7 @@ impl ComponentStorages {
             let mut ungroup_start = 0_usize;
             let mut ungroup_len = 0_usize;
 
-            for (i, group) in groups.iter_mut().enumerate() {
+            for (i, group) in groups.iter().enumerate() {
                 let status = components::get_group_status(
                     storages.get_unchecked_mut(group.new_storage_range()),
                     group.len,
