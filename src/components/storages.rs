@@ -372,11 +372,28 @@ struct ComponentGroupInfo {
     storage_mask: StorageMask,
 }
 
+/// Example:
+///
+/// Say we have a family made of two groups:
+/// - Group 0: (A, B)
+/// - Group 1: (A, B, C, D)
+///
+/// For the group 1, we get such a `Group` struct:
+///
+/// ```text
+/// storages: A B C D
+///           ^   ^   ^
+///           |   |   +-- end = begin + 4
+///           |   +------ new_begin = begin + 2
+///           +---------- begin
+/// ```
 #[derive(Clone, Copy)]
 pub(crate) struct Group {
     begin: usize,
     new_begin: usize,
     end: usize,
+    /// Number of entities grouped by this group. Components of grouped entities
+    /// are aligned to the left in the storage.
     len: usize,
 }
 
