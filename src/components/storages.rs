@@ -390,11 +390,11 @@ impl Group {
     }
 
     pub fn include_mask(&self) -> QueryMask {
-        QueryMask::include(self.end - self.begin)
+        QueryMask::new_include_group(self.end - self.begin)
     }
 
     pub fn exclude_mask(&self) -> QueryMask {
-        QueryMask::exclude(self.new_begin - self.begin, self.end - self.begin)
+        QueryMask::new_exclude_group(self.new_begin - self.begin, self.end - self.begin)
     }
 
     pub fn len(&self) -> usize {

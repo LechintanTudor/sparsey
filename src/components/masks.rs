@@ -21,14 +21,14 @@ impl QueryMask {
         Self { include, exclude }
     }
 
-    pub const fn include(arity: usize) -> Self {
+    pub const fn new_include_group(arity: usize) -> Self {
         Self {
             include: (1 << arity) - 1,
             exclude: 0,
         }
     }
 
-    pub const fn exclude(prev_arity: usize, arity: usize) -> Self {
+    pub const fn new_exclude_group(prev_arity: usize, arity: usize) -> Self {
         if prev_arity != 0 {
             let exclude_count = arity - prev_arity;
 
@@ -38,6 +38,20 @@ impl QueryMask {
             }
         } else {
             Self::new(0, 0)
+        }
+    }
+
+    pub const fn include(self, include: StorageMask) -> Self {
+        Self {
+            include: self.include | include,
+            ..self
+        }
+    }
+
+    pub const fn exclude(self, exclude: StorageMask) -> Self {
+        Self {
+            exclude: self.exclude | exclude,
+            ..self
         }
     }
 }
