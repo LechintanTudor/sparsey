@@ -10,7 +10,7 @@ pub(crate) fn iter_bit_indexes(mask: u32) -> BitIndexIter {
     BitIndexIter::new(mask)
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Default, Debug)]
 pub(crate) struct QueryMask {
     include: StorageMask,
     exclude: StorageMask,
