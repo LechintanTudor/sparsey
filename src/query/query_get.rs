@@ -1,4 +1,4 @@
-use crate::components::{CombinedGroupInfo, Component, GroupInfo};
+use crate::components::{Component, QueryGroupInfo};
 use crate::query::{IterData, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::{ChangeTicks, Ticks};
@@ -29,11 +29,11 @@ impl<T> ComponentViewData<T> {
     }
 }
 
-pub trait GetComponent<'a> {
+pub unsafe trait GetComponent<'a> {
     type Item: 'a;
     type Component: Component;
 
-    fn group_info(&self) -> Option<GroupInfo<'a>>;
+    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
@@ -61,13 +61,13 @@ pub trait GetComponent<'a> {
         F: ChangeTicksFilter;
 }
 
-pub trait GetComponentSet<'a> {
+pub unsafe trait GetComponentSet<'a> {
     type Item: 'a;
     type Index: Copy;
     type Sparse: 'a;
     type Data;
 
-    fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
+    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
@@ -102,7 +102,7 @@ pub trait GetComponentSet<'a> {
         F: ChangeTicksFilter;
 }
 
-impl<'a, G> GetComponentSet<'a> for G
+unsafe impl<'a, G> GetComponentSet<'a> for G
 where
     G: GetComponent<'a>,
 {
@@ -111,8 +111,8 @@ where
     type Sparse = &'a EntitySparseArray;
     type Data = ComponentViewData<G::Component>;
 
-    fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
-        CombinedGroupInfo::default().combine(GetComponent::group_info(self)?)
+    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo> {
+        GetComponent::include_group_info(self, info)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
@@ -181,14 +181,14 @@ where
     }
 }
 
-pub trait GetComponentSetFiltered<'a> {
+pub unsafe trait GetComponentSetFiltered<'a> {
     type Item: 'a;
     type Filter: ChangeTicksFilter;
     type Index: Copy;
     type Sparse;
     type Data;
 
-    fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
+    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
@@ -217,7 +217,7 @@ pub trait GetComponentSetFiltered<'a> {
     ) -> Option<Self::Item>;
 }
 
-impl<'a, G> GetComponentSetFiltered<'a> for G
+unsafe impl<'a, G> GetComponentSetFiltered<'a> for G
 where
     G: GetComponentSet<'a>,
 {
@@ -227,8 +227,8 @@ where
     type Sparse = G::Sparse;
     type Data = G::Data;
 
-    fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
-        GetComponentSet::group_info(self)
+    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo> {
+        GetComponentSet::include_group_info(self, info)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
@@ -274,12 +274,12 @@ where
     }
 }
 
-pub trait QueryGet<'a> {
+pub unsafe trait QueryGet<'a> {
     type Item;
     type Sparse;
     type Data;
 
-    fn group_info(&self) -> Option<CombinedGroupInfo<'a>>;
+    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
@@ -305,7 +305,7 @@ pub trait QueryGet<'a> {
     ) -> Option<Self::Item>;
 }
 
-impl<'a, G> QueryGet<'a> for G
+unsafe impl<'a, G> QueryGet<'a> for G
 where
     G: GetComponentSetFiltered<'a>,
 {
@@ -313,8 +313,8 @@ where
     type Sparse = G::Sparse;
     type Data = G::Data;
 
-    fn group_info(&self) -> Option<CombinedGroupInfo<'a>> {
-        GetComponentSetFiltered::group_info(self)
+    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo> {
+        GetComponentSetFiltered::include_group_info(self, info)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {

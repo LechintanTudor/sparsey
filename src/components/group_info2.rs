@@ -66,7 +66,7 @@ impl<'a> QueryGroupInfo<'a> {
     }
 
     pub fn group_range(self) -> Option<Range<usize>> {
-        let group_family = self.group_family?.as_ptr(); 
+        let group_family = self.group_family?.as_ptr();
         let group = unsafe { *group_family.add(self.group_offset as usize) };
 
         if self.query_mask == group.include_mask() {
