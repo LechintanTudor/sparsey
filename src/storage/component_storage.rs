@@ -234,19 +234,12 @@ impl ComponentStorage {
         unsafe { slice::from_raw_parts(self.ticks.as_ptr(), self.len) }
     }
 
-    pub(crate) fn split<T>(
-        &self,
-    ) -> (
-        &[Entity],
-        &EntitySparseArray,
-        NonNull<T>,
-        NonNull<ChangeTicks>,
-    ) {
+    pub(crate) fn split<T>(&self) -> (&[Entity], &EntitySparseArray, *mut T, *mut ChangeTicks) {
         (
             unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
             &self.sparse,
-            self.components.cast::<T>(),
-            self.ticks,
+            self.components.cast::<T>().as_ptr(),
+            self.ticks.as_ptr(),
         )
     }
 

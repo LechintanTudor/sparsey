@@ -1,4 +1,4 @@
-use crate::query::{GetComponent, GetComponentSet};
+use crate::query::{GetComponent, GetComponentSetUnfiltered};
 use crate::storage::Entity;
 
 pub trait SliceComponent<'a>
@@ -12,7 +12,7 @@ where
 
 pub trait SliceComponentSet<'a>
 where
-    Self: GetComponentSet<'a>,
+    Self: GetComponentSetUnfiltered<'a>,
 {
     type Slices;
 }

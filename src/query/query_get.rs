@@ -1,21 +1,7 @@
 use crate::components::{Component, QueryGroupInfo};
-use crate::query::{IterData, Passthrough};
+use crate::query::{ChangeTicksFilter, IterData, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::{ChangeTicks, Ticks};
-
-pub trait ChangeTicksFilter
-where
-    Self: 'static,
-{
-    fn matches(ticks: &ChangeTicks, world_tick: Ticks, change_tick: Ticks) -> bool;
-}
-
-impl ChangeTicksFilter for Passthrough {
-    #[inline(always)]
-    fn matches(_: &ChangeTicks, _: Ticks, _: Ticks) -> bool {
-        true
-    }
-}
 
 #[derive(Clone, Copy)]
 pub struct ComponentViewData<T> {
@@ -33,13 +19,15 @@ pub unsafe trait GetComponent<'a> {
     type Item: 'a;
     type Component: Component;
 
-    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo>;
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
     fn get_index(&self, entity: Entity) -> Option<usize>;
 
-    unsafe fn get_unchecked<F>(self, index: usize) -> Option<Self::Item>;
+    unsafe fn get_unchecked<F>(self, index: usize) -> Option<Self::Item>
+    where
+        F: ChangeTicksFilter;
 
     fn split(
         self,
@@ -61,13 +49,13 @@ pub unsafe trait GetComponent<'a> {
         F: ChangeTicksFilter;
 }
 
-pub unsafe trait GetComponentSet<'a> {
+pub unsafe trait GetComponentSetUnfiltered<'a> {
     type Item: 'a;
     type Index: Copy;
     type Sparse: 'a;
     type Data;
 
-    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo>;
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
@@ -102,7 +90,7 @@ pub unsafe trait GetComponentSet<'a> {
         F: ChangeTicksFilter;
 }
 
-unsafe impl<'a, G> GetComponentSet<'a> for G
+unsafe impl<'a, G> GetComponentSetUnfiltered<'a> for G
 where
     G: GetComponent<'a>,
 {
@@ -111,7 +99,7 @@ where
     type Sparse = &'a EntitySparseArray;
     type Data = ComponentViewData<G::Component>;
 
-    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo> {
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
         GetComponent::include_group_info(self, info)
     }
 
@@ -181,14 +169,14 @@ where
     }
 }
 
-pub unsafe trait GetComponentSetFiltered<'a> {
+pub unsafe trait GetComponentSet<'a> {
     type Item: 'a;
     type Filter: ChangeTicksFilter;
     type Index: Copy;
     type Sparse;
     type Data;
 
-    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo>;
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
@@ -217,9 +205,9 @@ pub unsafe trait GetComponentSetFiltered<'a> {
     ) -> Option<Self::Item>;
 }
 
-unsafe impl<'a, G> GetComponentSetFiltered<'a> for G
+unsafe impl<'a, G> GetComponentSet<'a> for G
 where
-    G: GetComponentSet<'a>,
+    G: GetComponentSetUnfiltered<'a>,
 {
     type Item = G::Item;
     type Filter = Passthrough;
@@ -227,28 +215,28 @@ where
     type Sparse = G::Sparse;
     type Data = G::Data;
 
-    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo> {
-        GetComponentSet::include_group_info(self, info)
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        GetComponentSetUnfiltered::include_group_info(self, info)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
-        GetComponentSet::change_detection_ticks(self)
+        GetComponentSetUnfiltered::change_detection_ticks(self)
     }
 
     fn get_index(&self, entity: Entity) -> Option<Self::Index> {
-        GetComponentSet::get_index(self, entity)
+        GetComponentSetUnfiltered::get_index(self, entity)
     }
 
     unsafe fn get_unchecked(self, index: Self::Index) -> Option<Self::Item> {
-        GetComponentSet::get_unchecked::<Self::Filter>(self, index)
+        GetComponentSetUnfiltered::get_unchecked::<Self::Filter>(self, index)
     }
 
     fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
-        GetComponentSet::split_sparse(self)
+        GetComponentSetUnfiltered::split_sparse(self)
     }
 
     fn split_dense(self) -> (&'a [Entity], Self::Data) {
-        GetComponentSet::split_dense(self)
+        GetComponentSetUnfiltered::split_dense(self)
     }
 
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index> {
@@ -279,7 +267,7 @@ pub unsafe trait QueryGet<'a> {
     type Sparse;
     type Data;
 
-    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo>;
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
@@ -307,28 +295,28 @@ pub unsafe trait QueryGet<'a> {
 
 unsafe impl<'a, G> QueryGet<'a> for G
 where
-    G: GetComponentSetFiltered<'a>,
+    G: GetComponentSet<'a>,
 {
     type Item = G::Item;
     type Sparse = G::Sparse;
     type Data = G::Data;
 
-    fn include_group_info(&self, info: QueryGroupInfo) -> Option<QueryGroupInfo> {
-        GetComponentSetFiltered::include_group_info(self, info)
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        GetComponentSet::include_group_info(self, info)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
-        GetComponentSetFiltered::change_detection_ticks(self)
+        GetComponentSet::change_detection_ticks(self)
     }
 
     fn get(self, entity: Entity) -> Option<Self::Item> {
-        let index = GetComponentSetFiltered::get_index(&self, entity)?;
-        unsafe { GetComponentSetFiltered::get_unchecked(self, index) }
+        let index = GetComponentSet::get_index(&self, entity)?;
+        unsafe { GetComponentSet::get_unchecked(self, index) }
     }
 
     fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-        let (world_tick, change_tick) = GetComponentSetFiltered::change_detection_ticks(&self);
-        let (entities, sparse, data) = GetComponentSetFiltered::split_sparse(self);
+        let (world_tick, change_tick) = GetComponentSet::change_detection_ticks(&self);
+        let (entities, sparse, data) = GetComponentSet::split_sparse(self);
 
         (
             IterData::new(entities, world_tick, change_tick),
@@ -338,8 +326,8 @@ where
     }
 
     fn split_dense(self) -> (IterData<'a>, Self::Data) {
-        let (world_tick, change_tick) = GetComponentSetFiltered::change_detection_ticks(&self);
-        let (entities, _, data) = GetComponentSetFiltered::split_sparse(self);
+        let (world_tick, change_tick) = GetComponentSet::change_detection_ticks(&self);
+        let (entities, _, data) = GetComponentSet::split_sparse(self);
 
         (IterData::new(entities, world_tick, change_tick), data)
     }

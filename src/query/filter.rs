@@ -1,156 +1,81 @@
-use crate::components::GroupInfo;
-use crate::query::{
-    And, ImmutableUnfilteredQueryElement, Not, Or, QueryElement, QueryElementData,
-    QueryElementFilter, QueryFilter, UnfilteredQueryElement, Xor,
-};
-use crate::storage::{Entity, EntitySparseArray, IndexEntity};
-use crate::utils::{ChangeTicks, Ticks};
-use std::ops;
-use std::ptr::NonNull;
+use crate::components::QueryGroupInfo;
+use crate::query::{ChangeTicksFilter, GetComponentSet, GetComponentSetUnfiltered};
+use crate::storage::Entity;
+use crate::utils::Ticks;
+use std::marker::PhantomData;
 
-/// Wrapper around a `QueryElement`. Used for applying filters.
-pub struct Filter<F, E> {
-    filter: F,
-    element: E,
+pub struct Filter<F, G> {
+    get: G,
+    _phantom: PhantomData<F>,
 }
 
-impl<'a, F, E> Filter<F, E>
+impl<'a, F, G> Filter<F, G>
 where
-    F: QueryElementFilter<E::Component>,
-    E: UnfilteredQueryElement<'a>,
+    F: ChangeTicksFilter,
+    G: GetComponentSetUnfiltered<'a>,
 {
-    /// Applies a filter to the given `QueryElement`.
-    pub fn new(element: E, filter: F) -> Self {
-        Self { element, filter }
+    pub fn new(get: G) -> Self {
+        Self {
+            get,
+            _phantom: PhantomData,
+        }
     }
 }
 
-impl<'a, F, E> QueryFilter for Filter<F, E>
+unsafe impl<'a, F, G> GetComponentSet<'a> for Filter<F, G>
 where
-    F: QueryElementFilter<E::Component>,
-    E: ImmutableUnfilteredQueryElement<'a>,
+    F: ChangeTicksFilter,
+    G: GetComponentSetUnfiltered<'a>,
 {
-    #[inline]
-    fn matches(&self, entity: Entity) -> bool {
-        <Self as QueryElement<'a>>::contains(self, entity)
-    }
-}
-
-unsafe impl<'a, F, E> QueryElement<'a> for Filter<F, E>
-where
-    F: QueryElementFilter<E::Component>,
-    E: UnfilteredQueryElement<'a>,
-{
-    type Item = E::Item;
-    type Component = E::Component;
+    type Item = G::Item;
     type Filter = F;
+    type Index = G::Index;
+    type Sparse = G::Sparse;
+    type Data = G::Data;
 
-    #[inline]
-    fn group_info(&self) -> Option<GroupInfo<'a>> {
-        self.element.group_info()
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        self.get.include_group_info(info)
     }
 
-    #[inline]
-    fn world_tick(&self) -> Ticks {
-        self.element.world_tick()
+    fn change_detection_ticks(&self) -> (Ticks, Ticks) {
+        self.get.change_detection_ticks()
     }
 
-    #[inline]
-    fn change_tick(&self) -> Ticks {
-        self.element.change_tick()
+    fn get_index(&self, entity: Entity) -> Option<Self::Index> {
+        self.get.get_index(entity)
     }
 
-    #[inline]
-    fn contains(&self, entity: Entity) -> bool {
-        self.element.contains(entity, &self.filter)
+    unsafe fn get_unchecked(self, index: Self::Index) -> Option<Self::Item> {
+        self.get.get_unchecked::<F>(index)
     }
 
-    #[inline]
-    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.element.get_index_entity(entity)
+    fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
+        self.get.split_sparse()
     }
 
-    #[inline]
-    unsafe fn get_unchecked(self, index: usize) -> Option<Self::Item> {
-        self.element.get_unchecked(index, &self.filter)
+    fn split_dense(self) -> (&'a [Entity], Self::Data) {
+        self.get.split_dense()
     }
 
-    #[inline]
-    fn split(
-        self,
-    ) -> (
-        &'a [Entity],
-        &'a EntitySparseArray,
-        QueryElementData<'a, Self::Component, Self::Filter>,
-    ) {
-        let (entities, sparse, components, ticks) = E::split(self.element);
-        (
-            entities,
-            sparse,
-            QueryElementData::new(components, ticks, self.filter),
-        )
+    fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index> {
+        G::get_index_from_sparse(sparse, entity)
     }
 
-    #[inline]
-    unsafe fn get_from_parts_unchecked(
-        components: NonNull<Self::Component>,
-        ticks: NonNull<ChangeTicks>,
-        index: usize,
-        filter: &Self::Filter,
+    unsafe fn get_sparse_unchecked(
+        data: &Self::Data,
+        index: Self::Index,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        E::get_from_parts_unchecked(components, ticks, index, filter, world_tick, change_tick)
+        G::get_sparse_unchecked::<F>(data, index, world_tick, change_tick)
     }
-}
 
-impl<'a, F, E> ops::Not for Filter<F, E>
-where
-    F: QueryElementFilter<E::Component>,
-    E: UnfilteredQueryElement<'a>,
-{
-    type Output = Filter<Not<F>, E>;
-
-    fn not(self) -> Self::Output {
-        Filter::new(self.element, Not(self.filter))
-    }
-}
-
-impl<'a, F1, E, F2> ops::BitAnd<F2> for Filter<F1, E>
-where
-    F1: QueryElementFilter<E::Component>,
-    E: ImmutableUnfilteredQueryElement<'a>,
-    F2: QueryFilter,
-{
-    type Output = And<Self, F2>;
-
-    fn bitand(self, filter: F2) -> Self::Output {
-        And(self, filter)
-    }
-}
-
-impl<'a, F1, E, F2> ops::BitOr<F2> for Filter<F1, E>
-where
-    F1: QueryElementFilter<E::Component>,
-    E: ImmutableUnfilteredQueryElement<'a>,
-    F2: QueryFilter,
-{
-    type Output = Or<Self, F2>;
-
-    fn bitor(self, filter: F2) -> Self::Output {
-        Or(self, filter)
-    }
-}
-
-impl<'a, F1, E, F2> ops::BitXor<F2> for Filter<F1, E>
-where
-    F1: QueryElementFilter<E::Component>,
-    E: ImmutableUnfilteredQueryElement<'a>,
-    F2: QueryFilter,
-{
-    type Output = Xor<Self, F2>;
-
-    fn bitxor(self, filter: F2) -> Self::Output {
-        Xor(self, filter)
+    unsafe fn get_dense_unchecked(
+        data: &Self::Data,
+        index: usize,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item> {
+        G::get_dense_unchecked::<F>(data, index, world_tick, change_tick)
     }
 }
