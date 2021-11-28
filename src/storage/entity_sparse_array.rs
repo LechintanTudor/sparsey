@@ -12,6 +12,24 @@ pub struct EntitySparseArray {
 }
 
 impl EntitySparseArray {
+    pub fn get(&self, entity: Entity) -> Option<usize> {
+        self.pages
+            .get(page_index(entity))
+            .and_then(Option::as_ref)
+            .and_then(|p| p[local_index(entity)].as_ref())
+            .filter(|e| e.version() == entity.version())
+            .map(|e| e.dense())
+    }
+
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.pages
+            .get(page_index(entity))
+            .and_then(Option::as_ref)
+            .and_then(|p| p[local_index(entity)].as_ref())
+            .filter(|e| e.version() == entity.version())
+            .is_some()
+    }
+
     /// Returns the `IndexEntity` at the given `Entity`.
     pub fn get_entity(&self, entity: Entity) -> Option<&IndexEntity> {
         self.pages

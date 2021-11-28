@@ -1,3 +1,4 @@
+pub use self::change_ticks_filter::*;
 pub use self::component_ref_mut::*;
 pub use self::component_view::*;
 pub use self::filter::*;
@@ -9,9 +10,9 @@ pub use self::modifiers::*;
 pub use self::query::*;
 pub use self::query_filter::*;
 pub use self::query_get::*;
+pub use self::query_modifier::*;
 pub use self::query_slice::*;
 pub use self::slice::*;
-pub use change_ticks_filter::*;
 
 pub(crate) use self::query_split::*;
 
@@ -30,5 +31,6 @@ mod modifiers;
 mod query;
 mod query_filter;
 mod query_get;
+mod query_modifier;
 mod query_slice;
 mod slice;

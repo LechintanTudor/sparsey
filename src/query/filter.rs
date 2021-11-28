@@ -41,6 +41,13 @@ where
         self.get.change_detection_ticks()
     }
 
+    fn contains(&self, entity: Entity) -> bool
+    where
+        F: ChangeTicksFilter,
+    {
+        self.get.contains::<F>(entity)
+    }
+
     fn get_index(&self, entity: Entity) -> Option<Self::Index> {
         self.get.get_index(entity)
     }

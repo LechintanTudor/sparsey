@@ -23,6 +23,10 @@ pub unsafe trait GetComponent<'a> {
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
+    fn contains<F>(&self, entity: Entity) -> bool
+    where
+        F: ChangeTicksFilter;
+
     fn get_index(&self, entity: Entity) -> Option<usize>;
 
     unsafe fn get_unchecked<F>(self, index: usize) -> Option<Self::Item>
@@ -49,15 +53,30 @@ pub unsafe trait GetComponent<'a> {
         F: ChangeTicksFilter;
 }
 
+pub unsafe trait GetImmutableComponent<'a>
+where
+    Self: GetComponent<'a>,
+{
+    fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
+
+    fn entities(&self) -> &'a [Entity];
+
+    fn components(&self) -> &'a [Self::Component];
+}
+
 pub unsafe trait GetComponentSetUnfiltered<'a> {
     type Item: 'a;
     type Index: Copy;
     type Sparse: 'a;
-    type Data;
+    type Data: 'a;
 
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
+
+    fn contains<F>(&self, entity: Entity) -> bool
+    where
+        F: ChangeTicksFilter;
 
     fn get_index(&self, entity: Entity) -> Option<Self::Index>;
 
@@ -105,6 +124,13 @@ where
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         GetComponent::change_detection_ticks(self)
+    }
+
+    fn contains<F>(&self, entity: Entity) -> bool
+    where
+        F: ChangeTicksFilter,
+    {
+        GetComponent::contains::<F>(self, entity)
     }
 
     fn get_index(&self, entity: Entity) -> Option<Self::Index> {
@@ -173,12 +199,14 @@ pub unsafe trait GetComponentSet<'a> {
     type Item: 'a;
     type Filter: ChangeTicksFilter;
     type Index: Copy;
-    type Sparse;
-    type Data;
+    type Sparse: 'a;
+    type Data: 'a;
 
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
+
+    fn contains(&self, entity: Entity) -> bool;
 
     fn get_index(&self, entity: Entity) -> Option<Self::Index>;
 
@@ -223,6 +251,10 @@ where
         GetComponentSetUnfiltered::change_detection_ticks(self)
     }
 
+    fn contains(&self, entity: Entity) -> bool {
+        GetComponentSetUnfiltered::contains::<Self::Filter>(self, entity)
+    }
+
     fn get_index(&self, entity: Entity) -> Option<Self::Index> {
         GetComponentSetUnfiltered::get_index(self, entity)
     }
@@ -263,13 +295,15 @@ where
 }
 
 pub unsafe trait QueryGet<'a> {
-    type Item;
-    type Sparse;
-    type Data;
+    type Item: 'a;
+    type Sparse: 'a;
+    type Data: 'a;
 
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
+
+    fn contains(&self, entity: Entity) -> bool;
 
     fn get(self, entity: Entity) -> Option<Self::Item>;
 
@@ -307,6 +341,10 @@ where
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         GetComponentSet::change_detection_ticks(self)
+    }
+
+    fn contains(&self, entity: Entity) -> bool {
+        GetComponentSet::contains(self, entity)
     }
 
     fn get(self, entity: Entity) -> Option<Self::Item> {

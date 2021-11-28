@@ -1,5 +1,5 @@
 use crate::components::{Component, ComponentGroupInfo, QueryGroupInfo};
-use crate::query::{ChangeTicksFilter, ComponentRefMut, GetComponent};
+use crate::query::{ChangeTicksFilter, ComponentRefMut, GetComponent, GetImmutableComponent};
 use crate::storage::{ComponentStorage, Entity, EntitySparseArray};
 use crate::utils::{ChangeTicks, Ticks};
 use std::fmt;
@@ -105,6 +105,22 @@ where
         (self.world_tick, self.change_tick)
     }
 
+    fn contains<F>(&self, entity: Entity) -> bool
+    where
+        F: ChangeTicksFilter,
+    {
+        if F::IS_PASSTHROUGH {
+            self.storage.contains(entity)
+        } else {
+            let ticks = match self.storage.get_ticks(entity) {
+                Some(ticks) => ticks,
+                None => return false,
+            };
+
+            F::matches(ticks, self.world_tick, self.change_tick)
+        }
+    }
+
     fn get_index(&self, entity: Entity) -> Option<usize> {
         self.storage.get_index_entity(entity).map(|e| e.dense())
     }
@@ -161,6 +177,24 @@ where
     }
 }
 
+unsafe impl<'a, T, S> GetImmutableComponent<'a> for &'a ComponentView<'a, T, S>
+where
+    T: Component,
+    S: Deref<Target = ComponentStorage>,
+{
+    fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        info.exclude(self.group_info?)
+    }
+
+    fn entities(&self) -> &'a [Entity] {
+        self.storage.entities()
+    }
+
+    fn components(&self) -> &'a [Self::Component] {
+        unsafe { self.storage.components::<T>() }
+    }
+}
+
 unsafe impl<'a, 'b, T, S> GetComponent<'a> for &'a mut ComponentView<'b, T, S>
 where
     T: Component,
@@ -175,6 +209,22 @@ where
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         (self.world_tick, self.change_tick)
+    }
+
+    fn contains<F>(&self, entity: Entity) -> bool
+    where
+        F: ChangeTicksFilter,
+    {
+        if F::IS_PASSTHROUGH {
+            self.storage.contains(entity)
+        } else {
+            let ticks = match self.storage.get_ticks(entity) {
+                Some(ticks) => ticks,
+                None => return false,
+            };
+
+            F::matches(ticks, self.world_tick, self.change_tick)
+        }
     }
 
     fn get_index(&self, entity: Entity) -> Option<usize> {
