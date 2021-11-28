@@ -71,7 +71,7 @@ pub unsafe trait GetComponentSetUnfiltered<'a> {
 
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index>;
 
-    unsafe fn get_sparse_unchecked<F>(
+    unsafe fn get_from_sparse_unchecked<F>(
         data: &Self::Data,
         index: Self::Index,
         world_tick: Ticks,
@@ -80,7 +80,7 @@ pub unsafe trait GetComponentSetUnfiltered<'a> {
     where
         F: ChangeTicksFilter;
 
-    unsafe fn get_dense_unchecked<F>(
+    unsafe fn get_from_dense_unchecked<F>(
         data: &Self::Data,
         index: usize,
         world_tick: Ticks,
@@ -132,7 +132,7 @@ where
         sparse.get_entity(entity).map(|e| e.dense())
     }
 
-    unsafe fn get_sparse_unchecked<F>(
+    unsafe fn get_from_sparse_unchecked<F>(
         data: &Self::Data,
         index: Self::Index,
         world_tick: Ticks,
@@ -150,7 +150,7 @@ where
         )
     }
 
-    unsafe fn get_dense_unchecked<F>(
+    unsafe fn get_from_dense_unchecked<F>(
         data: &Self::Data,
         index: usize,
         world_tick: Ticks,
@@ -190,14 +190,14 @@ pub unsafe trait GetComponentSet<'a> {
 
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index>;
 
-    unsafe fn get_sparse_unchecked(
+    unsafe fn get_from_sparse_unchecked(
         data: &Self::Data,
         index: Self::Index,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item>;
 
-    unsafe fn get_dense_unchecked(
+    unsafe fn get_from_dense_unchecked(
         data: &Self::Data,
         index: usize,
         world_tick: Ticks,
@@ -243,22 +243,22 @@ where
         G::get_index_from_sparse(sparse, entity)
     }
 
-    unsafe fn get_sparse_unchecked(
+    unsafe fn get_from_sparse_unchecked(
         data: &Self::Data,
         index: Self::Index,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        G::get_sparse_unchecked::<Self::Filter>(data, index, world_tick, change_tick)
+        G::get_from_sparse_unchecked::<Self::Filter>(data, index, world_tick, change_tick)
     }
 
-    unsafe fn get_dense_unchecked(
+    unsafe fn get_from_dense_unchecked(
         data: &Self::Data,
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        G::get_dense_unchecked::<Self::Filter>(data, index, world_tick, change_tick)
+        G::get_from_dense_unchecked::<Self::Filter>(data, index, world_tick, change_tick)
     }
 }
 
@@ -277,7 +277,7 @@ pub unsafe trait QueryGet<'a> {
 
     fn split_dense(self) -> (IterData<'a>, Self::Data);
 
-    unsafe fn get_sparse_unchecked(
+    unsafe fn get_from_sparse_unchecked(
         sparse: &'a Self::Sparse,
         entity: Entity,
         data: &Self::Data,
@@ -285,7 +285,7 @@ pub unsafe trait QueryGet<'a> {
         change_tick: Ticks,
     ) -> Option<Self::Item>;
 
-    unsafe fn get_dense_unchecked(
+    unsafe fn get_from_dense_unchecked(
         data: &Self::Data,
         index: usize,
         world_tick: Ticks,
@@ -332,7 +332,7 @@ where
         (IterData::new(entities, world_tick, change_tick), data)
     }
 
-    unsafe fn get_sparse_unchecked(
+    unsafe fn get_from_sparse_unchecked(
         sparse: &'a Self::Sparse,
         entity: Entity,
         data: &Self::Data,
@@ -340,15 +340,15 @@ where
         change_tick: Ticks,
     ) -> Option<Self::Item> {
         let index = G::get_index_from_sparse(sparse, entity)?;
-        G::get_sparse_unchecked(data, index, world_tick, change_tick)
+        G::get_from_sparse_unchecked(data, index, world_tick, change_tick)
     }
 
-    unsafe fn get_dense_unchecked(
+    unsafe fn get_from_dense_unchecked(
         data: &Self::Data,
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        G::get_dense_unchecked(data, index, world_tick, change_tick)
+        G::get_from_dense_unchecked(data, index, world_tick, change_tick)
     }
 }

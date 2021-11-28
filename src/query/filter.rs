@@ -61,21 +61,21 @@ where
         G::get_index_from_sparse(sparse, entity)
     }
 
-    unsafe fn get_sparse_unchecked(
+    unsafe fn get_from_sparse_unchecked(
         data: &Self::Data,
         index: Self::Index,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        G::get_sparse_unchecked::<F>(data, index, world_tick, change_tick)
+        G::get_from_sparse_unchecked::<F>(data, index, world_tick, change_tick)
     }
 
-    unsafe fn get_dense_unchecked(
+    unsafe fn get_from_dense_unchecked(
         data: &Self::Data,
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Option<Self::Item> {
-        G::get_dense_unchecked::<F>(data, index, world_tick, change_tick)
+        G::get_from_dense_unchecked::<F>(data, index, world_tick, change_tick)
     }
 }
