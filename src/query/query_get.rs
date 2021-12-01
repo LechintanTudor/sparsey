@@ -1,5 +1,5 @@
 use crate::components::{Component, QueryGroupInfo};
-use crate::query::{ChangeTicksFilter, IterData, Passthrough};
+use crate::query::{ChangeTicksFilter, IntoQueryParts, IterData, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::{ChangeTicks, Ticks};
 
@@ -388,5 +388,19 @@ where
         change_tick: Ticks,
     ) -> Option<Self::Item> {
         G::get_from_dense_unchecked(data, index, world_tick, change_tick)
+    }
+}
+
+impl<'a, G> IntoQueryParts<'a> for G
+where
+    G: QueryGet<'a>,
+{
+    type Get = G;
+    type Include = Passthrough;
+    type Exclude = Passthrough;
+    type Filter = Passthrough;
+
+    fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude, Self::Filter) {
+        (self, Passthrough, Passthrough, Passthrough)
     }
 }

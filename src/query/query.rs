@@ -27,17 +27,21 @@ where
     fn contains(self, entity: Entity) -> bool {
         let (get, include, exclude, filter) = self.into_query_parts();
 
-        filter.matches(entity)
-            && exclude.excludes(entity)
-            && include.includes(entity)
-            && get.contains(entity)
+        QueryFilter::matches(&filter, entity)
+            && QueryModifier::excludes(&exclude, entity)
+            && QueryModifier::includes(&include, entity)
+            && QueryGet::contains(&get, entity)
     }
 
     fn get(self, entity: Entity) -> Option<Self::Item> {
         let (get, include, exclude, filter) = self.into_query_parts();
 
-        if filter.matches(entity) && exclude.excludes(entity) && include.includes(entity) {
-            get.get(entity)
+        let matches = QueryFilter::matches(&filter, entity)
+            && QueryModifier::excludes(&exclude, entity)
+            && QueryModifier::includes(&include, entity);
+
+        if matches {
+            QueryGet::get(get, entity)
         } else {
             None
         }

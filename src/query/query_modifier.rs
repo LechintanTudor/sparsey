@@ -1,5 +1,5 @@
 use crate::components::QueryGroupInfo;
-use crate::query::{GetComponent, GetImmutableComponent};
+use crate::query::{GetComponent, GetImmutableComponent, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 
 pub unsafe trait QueryModifier<'a> {
@@ -13,11 +13,50 @@ pub unsafe trait QueryModifier<'a> {
 
     fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
-    fn split(self) -> (&'a [Entity], Self::Sparse);
+    fn split(self) -> (Option<&'a [Entity]>, Self::Sparse);
 
     fn includes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool;
 
     fn excludes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool;
+}
+
+unsafe impl<'a> QueryModifier<'a> for Passthrough {
+    type Sparse = ();
+
+    #[inline(always)]
+    fn includes(&self, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline(always)]
+    fn excludes(&self, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline(always)]
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        Some(info)
+    }
+
+    #[inline(always)]
+    fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        Some(info)
+    }
+
+    #[inline(always)]
+    fn split(self) -> (Option<&'a [Entity]>, Self::Sparse) {
+        (None, ())
+    }
+
+    #[inline(always)]
+    fn includes_sparse(_sparse: &Self::Sparse, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline(always)]
+    fn excludes_sparse(_sparse: &Self::Sparse, _entity: Entity) -> bool {
+        true
+    }
 }
 
 unsafe impl<'a, G> QueryModifier<'a> for G
@@ -42,9 +81,9 @@ where
         GetImmutableComponent::exclude_group_info(self, info)
     }
 
-    fn split(self) -> (&'a [Entity], Self::Sparse) {
+    fn split(self) -> (Option<&'a [Entity]>, Self::Sparse) {
         let (entities, sparse, _, _) = GetComponent::split(self);
-        (entities, sparse)
+        (Some(entities), sparse)
     }
 
     fn includes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool {
