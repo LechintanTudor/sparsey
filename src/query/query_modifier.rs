@@ -74,11 +74,11 @@ where
     }
 
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        GetComponent::include_group_info(self, info)
+        info.include(GetComponent::group_info(self)?)
     }
 
     fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        GetImmutableComponent::exclude_group_info(self, info)
+        info.exclude(GetComponent::group_info(self)?)
     }
 
     fn split(self) -> (Option<&'a [Entity]>, Self::Sparse) {

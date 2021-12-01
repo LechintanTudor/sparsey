@@ -1,4 +1,4 @@
-use crate::components::{Component, ComponentGroupInfo, QueryGroupInfo};
+use crate::components::{Component, ComponentGroupInfo};
 use crate::query::{ChangeTicksFilter, ComponentRefMut, GetComponent, GetImmutableComponent};
 use crate::storage::{ComponentStorage, Entity, EntitySparseArray};
 use crate::utils::{ChangeTicks, Ticks};
@@ -97,48 +97,42 @@ where
     type Item = &'a T;
     type Component = T;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        info.include(self.group_info?)
+    fn group_info(&self) -> Option<ComponentGroupInfo<'a>> {
+        self.group_info
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         (self.world_tick, self.change_tick)
     }
 
-    fn contains<F>(&self, entity: Entity) -> bool
-    where
-        F: ChangeTicksFilter,
-    {
-        if F::IS_PASSTHROUGH {
-            self.storage.contains(entity)
-        } else {
-            let ticks = match self.storage.get_ticks(entity) {
-                Some(ticks) => ticks,
-                None => return false,
-            };
-
-            F::matches(ticks, self.world_tick, self.change_tick)
-        }
-    }
-
     fn get_index(&self, entity: Entity) -> Option<usize> {
         self.storage.get_index_entity(entity).map(|e| e.dense())
     }
 
-    unsafe fn get_unchecked<F>(self, index: usize) -> Option<Self::Item>
+    unsafe fn matches_unchecked<F>(&self, index: usize) -> bool
     where
         F: ChangeTicksFilter,
     {
         if F::IS_PASSTHROUGH {
-            Some(self.storage.get_unchecked(index))
+            true
+        } else {
+            let ticks = self.storage.get_ticks_unchecked(index);
+            F::matches(ticks, self.world_tick, self.change_tick)
+        }
+    }
+
+    unsafe fn get_unchecked<F>(self, index: usize) -> (Self::Item, bool)
+    where
+        F: ChangeTicksFilter,
+    {
+        if F::IS_PASSTHROUGH {
+            (self.storage.get_unchecked(index), true)
         } else {
             let (component, ticks) = self.storage.get_with_ticks_unchecked::<T>(index);
-
-            if F::matches(ticks, self.world_tick, self.change_tick) {
-                Some(component)
-            } else {
-                None
-            }
+            (
+                component,
+                F::matches(ticks, self.world_tick, self.change_tick),
+            )
         }
     }
 
@@ -159,20 +153,16 @@ where
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Option<Self::Item>
+    ) -> (Self::Item, bool)
     where
         F: ChangeTicksFilter,
     {
         if F::IS_PASSTHROUGH {
-            Some(&*components.add(index))
+            (&*components.add(index), true)
         } else {
+            let component = &*components.add(index);
             let ticks = &*ticks.add(index);
-
-            if F::matches(ticks, world_tick, change_tick) {
-                Some(&*components.add(index))
-            } else {
-                None
-            }
+            (component, F::matches(ticks, world_tick, change_tick))
         }
     }
 }
@@ -182,10 +172,6 @@ where
     T: Component,
     S: Deref<Target = ComponentStorage>,
 {
-    fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        info.exclude(self.group_info?)
-    }
-
     fn entities(&self) -> &'a [Entity] {
         self.storage.entities()
     }
@@ -203,48 +189,47 @@ where
     type Item = ComponentRefMut<'a, T>;
     type Component = T;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        info.include(self.group_info?)
+    fn group_info(&self) -> Option<ComponentGroupInfo<'a>> {
+        self.group_info
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         (self.world_tick, self.change_tick)
     }
 
-    fn contains<F>(&self, entity: Entity) -> bool
-    where
-        F: ChangeTicksFilter,
-    {
-        if F::IS_PASSTHROUGH {
-            self.storage.contains(entity)
-        } else {
-            let ticks = match self.storage.get_ticks(entity) {
-                Some(ticks) => ticks,
-                None => return false,
-            };
-
-            F::matches(ticks, self.world_tick, self.change_tick)
-        }
-    }
-
     fn get_index(&self, entity: Entity) -> Option<usize> {
         self.storage.get_index_entity(entity).map(|e| e.dense())
     }
 
-    unsafe fn get_unchecked<F>(self, index: usize) -> Option<Self::Item>
+    unsafe fn matches_unchecked<F>(&self, index: usize) -> bool
+    where
+        F: ChangeTicksFilter,
+    {
+        if F::IS_PASSTHROUGH {
+            true
+        } else {
+            let ticks = self.storage.get_ticks_unchecked(index);
+            F::matches(ticks, self.world_tick, self.change_tick)
+        }
+    }
+
+    unsafe fn get_unchecked<F>(self, index: usize) -> (Self::Item, bool)
     where
         F: ChangeTicksFilter,
     {
         let (component, ticks) = self.storage.get_with_ticks_unchecked_mut::<T>(index);
 
         if F::IS_PASSTHROUGH {
-            Some(ComponentRefMut::new(component, ticks, self.world_tick))
+            (
+                ComponentRefMut::new(component, ticks, self.world_tick),
+                true,
+            )
         } else {
-            if F::matches(ticks, self.world_tick, self.change_tick) {
-                Some(ComponentRefMut::new(component, ticks, self.world_tick))
-            } else {
-                None
-            }
+            let matches = F::matches(ticks, self.world_tick, self.change_tick);
+            (
+                ComponentRefMut::new(component, ticks, self.world_tick),
+                matches,
+            )
         }
     }
 
@@ -265,7 +250,7 @@ where
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Option<Self::Item>
+    ) -> (Self::Item, bool)
     where
         F: ChangeTicksFilter,
     {
@@ -273,13 +258,10 @@ where
         let ticks = &mut *ticks.add(index);
 
         if F::IS_PASSTHROUGH {
-            Some(ComponentRefMut::new(component, ticks, world_tick))
+            (ComponentRefMut::new(component, ticks, world_tick), true)
         } else {
-            if F::matches(ticks, world_tick, change_tick) {
-                Some(ComponentRefMut::new(component, ticks, world_tick))
-            } else {
-                None
-            }
+            let matches = F::matches(ticks, world_tick, change_tick);
+            (ComponentRefMut::new(component, ticks, world_tick), matches)
         }
     }
 }

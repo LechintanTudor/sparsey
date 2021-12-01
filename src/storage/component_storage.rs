@@ -170,6 +170,11 @@ impl ComponentStorage {
     }
 
     #[inline]
+    pub(crate) unsafe fn get_ticks_unchecked(&self, index: usize) -> &ChangeTicks {
+        &*self.ticks.as_ptr().add(index)
+    }
+
+    #[inline]
     pub(crate) unsafe fn get_with_ticks_unchecked<T>(&self, index: usize) -> (&T, &ChangeTicks) {
         (
             &*self.components.cast::<T>().as_ptr().add(index),

@@ -1,4 +1,4 @@
-use crate::components::{Component, QueryGroupInfo};
+use crate::components::{Component, ComponentGroupInfo, QueryGroupInfo};
 use crate::query::{ChangeTicksFilter, IntoQueryParts, IterData, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::{ChangeTicks, Ticks};
@@ -19,17 +19,17 @@ pub unsafe trait GetComponent<'a> {
     type Item: 'a;
     type Component: Component;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
+    fn group_info(&self) -> Option<ComponentGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
-    fn contains<F>(&self, entity: Entity) -> bool
+    fn get_index(&self, entity: Entity) -> Option<usize>;
+
+    unsafe fn matches_unchecked<F>(&self, index: usize) -> bool
     where
         F: ChangeTicksFilter;
 
-    fn get_index(&self, entity: Entity) -> Option<usize>;
-
-    unsafe fn get_unchecked<F>(self, index: usize) -> Option<Self::Item>
+    unsafe fn get_unchecked<F>(self, index: usize) -> (Self::Item, bool)
     where
         F: ChangeTicksFilter;
 
@@ -48,7 +48,7 @@ pub unsafe trait GetComponent<'a> {
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Option<Self::Item>
+    ) -> (Self::Item, bool)
     where
         F: ChangeTicksFilter;
 }
@@ -57,8 +57,6 @@ pub unsafe trait GetImmutableComponent<'a>
 where
     Self: GetComponent<'a>,
 {
-    fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
-
     fn entities(&self) -> &'a [Entity];
 
     fn components(&self) -> &'a [Self::Component];
@@ -70,15 +68,15 @@ pub unsafe trait GetComponentSetUnfiltered<'a> {
     type Sparse: 'a;
     type Data: 'a;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
-    fn contains<F>(&self, entity: Entity) -> bool
+    fn get_index(&self, entity: Entity) -> Option<Self::Index>;
+
+    unsafe fn matches_unchecked<F>(&self, index: Self::Index) -> bool
     where
         F: ChangeTicksFilter;
-
-    fn get_index(&self, entity: Entity) -> Option<Self::Index>;
 
     unsafe fn get_unchecked<F>(self, index: Self::Index) -> Option<Self::Item>
     where
@@ -118,30 +116,31 @@ where
     type Sparse = &'a EntitySparseArray;
     type Data = ComponentViewData<G::Component>;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        GetComponent::include_group_info(self, info)
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+        QueryGroupInfo::new(GetComponent::group_info(self)?)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         GetComponent::change_detection_ticks(self)
     }
 
-    fn contains<F>(&self, entity: Entity) -> bool
+    fn get_index(&self, entity: Entity) -> Option<Self::Index> {
+        GetComponent::get_index(self, entity)
+    }
+
+    unsafe fn matches_unchecked<F>(&self, index: Self::Index) -> bool
     where
         F: ChangeTicksFilter,
     {
-        GetComponent::contains::<F>(self, entity)
-    }
-
-    fn get_index(&self, entity: Entity) -> Option<Self::Index> {
-        GetComponent::get_index(self, entity)
+        GetComponent::matches_unchecked::<F>(self, index)
     }
 
     unsafe fn get_unchecked<F>(self, index: Self::Index) -> Option<Self::Item>
     where
         F: ChangeTicksFilter,
     {
-        GetComponent::get_unchecked::<F>(self, index)
+        let (item, matches) = GetComponent::get_unchecked::<F>(self, index);
+        matches.then(|| item)
     }
 
     fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
@@ -167,13 +166,15 @@ where
     where
         F: ChangeTicksFilter,
     {
-        G::get_from_parts_unchecked::<F>(
+        let (item, matches) = G::get_from_parts_unchecked::<F>(
             data.components,
             data.ticks,
             index,
             world_tick,
             change_tick,
-        )
+        );
+
+        matches.then(|| item)
     }
 
     unsafe fn get_from_dense_unchecked<F>(
@@ -185,13 +186,15 @@ where
     where
         F: ChangeTicksFilter,
     {
-        G::get_from_parts_unchecked::<F>(
+        let (item, matches) = G::get_from_parts_unchecked::<F>(
             data.components,
             data.ticks,
             index,
             world_tick,
             change_tick,
-        )
+        );
+
+        matches.then(|| item)
     }
 }
 
@@ -202,13 +205,13 @@ pub unsafe trait GetComponentSet<'a> {
     type Sparse: 'a;
     type Data: 'a;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
-    fn contains(&self, entity: Entity) -> bool;
-
     fn get_index(&self, entity: Entity) -> Option<Self::Index>;
+
+    unsafe fn matches_unchecked(&self, index: Self::Index) -> bool;
 
     unsafe fn get_unchecked(self, index: Self::Index) -> Option<Self::Item>;
 
@@ -243,20 +246,20 @@ where
     type Sparse = G::Sparse;
     type Data = G::Data;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        GetComponentSetUnfiltered::include_group_info(self, info)
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+        GetComponentSetUnfiltered::group_info(self)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         GetComponentSetUnfiltered::change_detection_ticks(self)
     }
 
-    fn contains(&self, entity: Entity) -> bool {
-        GetComponentSetUnfiltered::contains::<Self::Filter>(self, entity)
-    }
-
     fn get_index(&self, entity: Entity) -> Option<Self::Index> {
         GetComponentSetUnfiltered::get_index(self, entity)
+    }
+
+    unsafe fn matches_unchecked(&self, index: Self::Index) -> bool {
+        GetComponentSetUnfiltered::matches_unchecked::<Self::Filter>(self, index)
     }
 
     unsafe fn get_unchecked(self, index: Self::Index) -> Option<Self::Item> {
@@ -299,7 +302,7 @@ pub unsafe trait QueryGet<'a> {
     type Sparse: 'a;
     type Data: 'a;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
@@ -335,8 +338,8 @@ where
     type Sparse = G::Sparse;
     type Data = G::Data;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        GetComponentSet::include_group_info(self, info)
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+        GetComponentSet::group_info(self)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
@@ -344,7 +347,12 @@ where
     }
 
     fn contains(&self, entity: Entity) -> bool {
-        GetComponentSet::contains(self, entity)
+        let index = match GetComponentSet::get_index(self, entity) {
+            Some(index) => index,
+            None => return false,
+        };
+
+        unsafe { GetComponentSet::matches_unchecked(self, index) }
     }
 
     fn get(self, entity: Entity) -> Option<Self::Item> {
@@ -403,4 +411,93 @@ where
     fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude, Self::Filter) {
         (self, Passthrough, Passthrough, Passthrough)
     }
+}
+
+macro_rules! replace {
+    ($from:tt, $to:tt) => {
+        $to
+    };
+}
+
+macro_rules! new_query_group_info {
+    ($first:expr) => {
+        Some(QueryGroupInfo::new($first))
+    };
+    ($first:expr $(, $other:expr)+) => {
+        QueryGroupInfo::new($first) $(.and_then(|i| i.include($other)))+
+    };
+}
+
+macro_rules! impl_query_get {
+    ($($elem:ident, $idx:tt),+) => {
+        unsafe impl<'a, $($elem),+> GetComponentSetUnfiltered<'a> for ($($elem,)+)
+        where
+            $($elem: GetComponent<'a>,)+
+        {
+            type Item = ($($elem::Item,)+);
+            type Index = ($(replace!($elem, usize),)+);
+            type Sparse = ($(&'a EntitySparseArray,)+);
+            type Data = ($(ComponentViewData<$elem::Component>,)+);
+
+            fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+                new_query_group_info!(self.$idx)
+            }
+
+            fn change_detection_ticks(&self) -> (Ticks, Ticks) {
+                self.0.change_detection_ticks()
+            }
+
+            fn get_index(&self, entity: Entity) -> Option<Self::Index> {
+                Some((
+                    $(self.$idx.get_index(entity)?,)+
+                ))
+            }
+
+            fn contains<F>(&self, entity: Entity) -> bool
+            where
+                F: ChangeTicksFilter,
+            {
+                let index = match self.get_index(entity) {
+                    Some(index) => index,
+                    None => return false,
+                };
+
+                if F::IS_PASSTHROUGH {
+                    true
+                } else {
+                    unsafe {
+                        $(self.$idx.matches_unchecked::<F>(index.$idx))||+
+                    }
+                }
+            }
+
+            unsafe fn get_unchecked<F>(self, index: Self::Index) -> Option<Self::Item>
+            where
+                F: ChangeTicksFilter;
+
+            fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data);
+
+            fn split_dense(self) -> (&'a [Entity], Self::Data);
+
+            fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index>;
+
+            unsafe fn get_from_sparse_unchecked<F>(
+                data: &Self::Data,
+                index: Self::Index,
+                world_tick: Ticks,
+                change_tick: Ticks,
+            ) -> Option<Self::Item>
+            where
+                F: ChangeTicksFilter;
+
+            unsafe fn get_from_dense_unchecked<F>(
+                data: &Self::Data,
+                index: usize,
+                world_tick: Ticks,
+                change_tick: Ticks,
+            ) -> Option<Self::Item>
+            where
+                F: ChangeTicksFilter;
+                }
+    };
 }

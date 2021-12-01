@@ -26,20 +26,26 @@ impl<'a> ComponentGroupInfo<'a> {
     }
 }
 
-#[derive(Default)]
 pub struct QueryGroupInfo<'a> {
-    group_family: Option<NonNull<Group>>,
+    group_family: NonNull<Group>,
     group_offset: u32,
     query_mask: QueryMask,
     _phantom: PhantomData<&'a [Group]>,
 }
 
 impl<'a> QueryGroupInfo<'a> {
+    pub fn new(info: ComponentGroupInfo<'a>) -> Option<Self> {
+        Some(Self {
+            group_family: info.group_family,
+            group_offset: info.group_offset,
+            query_mask: QueryMask::new(info.storage_mask, 0),
+            _phantom: PhantomData,
+        })
+    }
+
     pub fn include(self, info: ComponentGroupInfo<'a>) -> Option<Self> {
-        if let Some(group_family) = self.group_family {
-            if group_family != info.group_family {
-                return None;
-            }
+        if self.group_family != info.group_family {
+            return None;
         }
 
         Some(Self {
@@ -51,10 +57,8 @@ impl<'a> QueryGroupInfo<'a> {
     }
 
     pub fn exclude(self, info: ComponentGroupInfo<'a>) -> Option<Self> {
-        if let Some(group_family) = self.group_family {
-            if group_family != info.group_family {
-                return None;
-            }
+        if self.group_family != info.group_family {
+            return None;
         }
 
         Some(Self {
@@ -66,7 +70,7 @@ impl<'a> QueryGroupInfo<'a> {
     }
 
     pub fn group_range(self) -> Option<Range<usize>> {
-        let group_family = self.group_family?.as_ptr();
+        let group_family = self.group_family.as_ptr();
         let group = unsafe { *group_family.add(self.group_offset as usize) };
 
         if self.query_mask == group.include_mask() {

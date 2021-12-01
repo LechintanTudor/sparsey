@@ -33,23 +33,20 @@ where
     type Sparse = G::Sparse;
     type Data = G::Data;
 
-    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        self.get.include_group_info(info)
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+        self.get.group_info()
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         self.get.change_detection_ticks()
     }
 
-    fn contains(&self, entity: Entity) -> bool
-    where
-        F: ChangeTicksFilter,
-    {
-        self.get.contains::<F>(entity)
-    }
-
     fn get_index(&self, entity: Entity) -> Option<Self::Index> {
         self.get.get_index(entity)
+    }
+
+    unsafe fn matches_unchecked(&self, index: Self::Index) -> bool {
+        self.get.matches_unchecked::<F>(index)
     }
 
     unsafe fn get_unchecked(self, index: Self::Index) -> Option<Self::Item> {
