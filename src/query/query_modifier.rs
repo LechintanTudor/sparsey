@@ -94,3 +94,70 @@ where
         !sparse.contains_entity(entity)
     }
 }
+
+macro_rules! entity_sparse_array {
+    ($elem:ident) => {
+        &'a EntitySparseArray
+    };
+}
+
+macro_rules! impl_query_modifier {
+    ($(($elem:ident, $idx:tt)),+) => {
+        unsafe impl<'a, $($elem),+> QueryModifier<'a> for ($($elem,)+)
+        where
+            $($elem: GetImmutableComponent<'a>,)+
+        {
+            type Sparse = ($(entity_sparse_array!($elem),)+);
+
+            fn includes(&self, entity: Entity) -> bool {
+                $(self.$idx.get_index(entity).is_some())&&+
+            }
+
+            fn excludes(&self, entity: Entity) -> bool {
+                $(self.$idx.get_index(entity).is_none())&&+
+            }
+
+            fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+                Some(info $(.include(self.$idx.group_info()?)?)+)
+            }
+
+            fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+                Some(info $(.exclude(self.$idx.group_info()?)?)+)
+            }
+
+            fn split(self) -> (Option<&'a [Entity]>, Self::Sparse) {
+                split_modifier!($((self.$idx, $idx)),+)
+            }
+
+            fn includes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool {
+                $(sparse.$idx.contains(entity))&&+
+            }
+
+            fn excludes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool {
+                $(!sparse.$idx.contains(entity))&&+
+            }
+        }
+    };
+}
+
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_query_modifier!((A, 0));
+    impl_query_modifier!((A, 0), (B, 1));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
+    impl_query_modifier!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
+}

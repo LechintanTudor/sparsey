@@ -24,6 +24,18 @@ macro_rules! split_dense {
 	};
 }
 
+macro_rules! split_modifier {
+	($(($elem:expr, $idx:tt)),+) => {
+		{
+			let splits = ($({ let (entities, sparse, _) = $elem.split(); (entities, sparse) },)+);
+			let entities = crate::query::split::shortest_entity_slice(&[$(splits.$idx.0),+]).unwrap();
+			let sparse = ($(splits.$idx.1,)+);
+
+			(Some(entities), sparse)
+		}
+	};
+}
+
 pub(crate) fn shortest_entity_slice<'a>(slices: &[&'a [Entity]]) -> Option<&'a [Entity]> {
     slices.iter().min_by_key(|e| e.len()).copied()
 }
