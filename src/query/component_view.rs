@@ -6,11 +6,18 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Clone, Copy)]
 pub struct ComponentViewData<T> {
     pub components: *mut T,
     pub ticks: *mut ChangeTicks,
 }
+
+impl<T> Clone for ComponentViewData<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for ComponentViewData<T> {}
 
 impl<T> ComponentViewData<T> {
     pub const fn new(components: *mut T, ticks: *mut ChangeTicks) -> Self {
@@ -160,8 +167,7 @@ where
     }
 
     unsafe fn get_from_parts_unchecked<F>(
-        components: *mut Self::Component,
-        ticks: *mut ChangeTicks,
+        data: ComponentViewData<Self::Component>,
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
@@ -170,10 +176,10 @@ where
         F: ChangeTicksFilter,
     {
         if F::IS_PASSTHROUGH {
-            (&*components.add(index), true)
+            (&*data.components.add(index), true)
         } else {
-            let component = &*components.add(index);
-            let ticks = &*ticks.add(index);
+            let component = &*data.components.add(index);
+            let ticks = &*data.ticks.add(index);
             (component, F::matches(ticks, world_tick, change_tick))
         }
     }
@@ -257,8 +263,7 @@ where
     }
 
     unsafe fn get_from_parts_unchecked<F>(
-        components: *mut Self::Component,
-        ticks: *mut ChangeTicks,
+        data: ComponentViewData<Self::Component>,
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,
@@ -266,8 +271,8 @@ where
     where
         F: ChangeTicksFilter,
     {
-        let component = &mut *components.add(index);
-        let ticks = &mut *ticks.add(index);
+        let component = &mut *data.components.add(index);
+        let ticks = &mut *data.ticks.add(index);
 
         if F::IS_PASSTHROUGH {
             (ComponentRefMut::new(component, ticks, world_tick), true)

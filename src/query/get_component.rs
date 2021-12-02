@@ -1,7 +1,7 @@
 use crate::components::{Component, ComponentGroupInfo};
 use crate::query::{ChangeTicksFilter, ComponentViewData};
 use crate::storage::{Entity, EntitySparseArray};
-use crate::utils::{ChangeTicks, Ticks};
+use crate::utils::Ticks;
 
 pub unsafe trait GetComponent<'a> {
     type Item: 'a;
@@ -30,8 +30,7 @@ pub unsafe trait GetComponent<'a> {
     );
 
     unsafe fn get_from_parts_unchecked<F>(
-        components: *mut Self::Component,
-        ticks: *mut ChangeTicks,
+        data: ComponentViewData<Self::Component>,
         index: usize,
         world_tick: Ticks,
         change_tick: Ticks,

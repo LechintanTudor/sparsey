@@ -16,8 +16,6 @@ pub use self::query_modifier::*;
 pub use self::query_slice::*;
 pub use self::slice::*;
 
-pub(crate) use self::split::*;
-
 #[macro_use]
 mod split;
 

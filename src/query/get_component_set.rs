@@ -106,13 +106,8 @@ where
     where
         F: ChangeTicksFilter,
     {
-        let (item, matches) = G::get_from_parts_unchecked::<F>(
-            data.components,
-            data.ticks,
-            index,
-            world_tick,
-            change_tick,
-        );
+        let (item, matches) =
+            G::get_from_parts_unchecked::<F>(*data, index, world_tick, change_tick);
 
         matches.then(|| item)
     }
@@ -126,13 +121,8 @@ where
     where
         F: ChangeTicksFilter,
     {
-        let (item, matches) = G::get_from_parts_unchecked::<F>(
-            data.components,
-            data.ticks,
-            index,
-            world_tick,
-            change_tick,
-        );
+        let (item, matches) =
+            G::get_from_parts_unchecked::<F>(*data, index, world_tick, change_tick);
 
         matches.then(|| item)
     }
@@ -309,11 +299,11 @@ macro_rules! impl_get_component_set {
             }
 
             fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
-                todo!()
+                split_sparse!($((self.$idx, $idx)),+)
             }
 
             fn split_dense(self) -> (&'a [Entity], Self::Data) {
-                todo!()
+                split_dense!($((self.$idx, $idx)),+)
             }
 
             fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index> {
@@ -321,27 +311,95 @@ macro_rules! impl_get_component_set {
             }
 
             unsafe fn get_from_sparse_unchecked<Filter>(
-                _data: &Self::Data,
-                _index: Self::Index,
-                _world_tick: Ticks,
-                _change_tick: Ticks,
+                data: &Self::Data,
+                index: Self::Index,
+                world_tick: Ticks,
+                change_tick: Ticks,
             ) -> Option<Self::Item>
             where
                 Filter: ChangeTicksFilter,
             {
-                todo!()
+                if Filter::IS_PASSTHROUGH {
+                    Some(($(
+                        $elem::get_from_parts_unchecked::<Passthrough>(
+                            data.$idx,
+                            index.$idx,
+                            world_tick,
+                            change_tick,
+                        ).0,
+                    )+))
+                } else {
+                    let mut matches = false;
+
+                    let item = ($(
+                        if !matches {
+                            let (item, matched) = $elem::get_from_parts_unchecked::<Passthrough>(
+                                data.$idx,
+                                index.$idx,
+                                world_tick,
+                                change_tick,
+                            );
+
+                            matches |= matched;
+                            item
+                        } else {
+                            $elem::get_from_parts_unchecked::<Passthrough>(
+                                data.$idx,
+                                index.$idx,
+                                world_tick,
+                                change_tick,
+                            ).0
+                        },
+                    )+);
+
+                    matches.then(|| item)
+                }
             }
 
             unsafe fn get_from_dense_unchecked<Filter>(
-                _data: &Self::Data,
-                _index: usize,
-                _world_tick: Ticks,
-                _change_tick: Ticks,
+                data: &Self::Data,
+                index: usize,
+                world_tick: Ticks,
+                change_tick: Ticks,
             ) -> Option<Self::Item>
             where
                 Filter: ChangeTicksFilter,
             {
-                todo!()
+                if Filter::IS_PASSTHROUGH {
+                    Some(($(
+                        $elem::get_from_parts_unchecked::<Passthrough>(
+                            data.$idx,
+                            index,
+                            world_tick,
+                            change_tick,
+                        ).0,
+                    )+))
+                } else {
+                    let mut matches = false;
+
+                    let item = ($(
+                        if !matches {
+                            let (item, matched) = $elem::get_from_parts_unchecked::<Filter>(
+                                data.$idx,
+                                index,
+                                world_tick,
+                                change_tick,
+                            );
+
+                            matches |= matched;
+                            item
+                        } else {
+                            $elem::get_from_parts_unchecked::<Passthrough>(
+                                data.$idx,
+                                index,
+                                world_tick,
+                                change_tick,
+                            ).0
+                        },
+                    )+);
+
+                    matches.then(|| item)
+                }
             }
         }
     };

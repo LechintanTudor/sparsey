@@ -79,7 +79,7 @@ where
 
     fn split_dense(self) -> (IterData<'a>, Self::Data) {
         let (world_tick, change_tick) = GetComponentSet::change_detection_ticks(&self);
-        let (entities, _, data) = GetComponentSet::split_sparse(self);
+        let (entities, data) = GetComponentSet::split_dense(self);
 
         (IterData::new(entities, world_tick, change_tick), data)
     }
