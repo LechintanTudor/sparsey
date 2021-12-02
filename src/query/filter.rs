@@ -1,7 +1,7 @@
 use crate::components::QueryGroupInfo;
 use crate::query::{
-    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered, Mutated,
-    Not, Or, Passthrough, QueryFilter, Xor,
+    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered, IterData,
+    Mutated, Not, Or, Passthrough, QueryFilter, QueryGet, Xor,
 };
 use crate::storage::Entity;
 use crate::utils::Ticks;
@@ -15,7 +15,6 @@ pub struct Filter<F, G> {
 impl<'a, F, G> Filter<F, G>
 where
     F: ChangeTicksFilter,
-    G: GetComponentSetUnfiltered<'a>,
 {
     pub fn new(get: G) -> Self {
         Self {
@@ -91,6 +90,76 @@ where
     }
 }
 
+unsafe impl<'a, F, G> QueryGet<'a> for Filter<F, G>
+where
+    F: ChangeTicksFilter,
+    G: GetComponentSetUnfiltered<'a>,
+{
+    type Item = G::Item;
+    type Sparse = G::Sparse;
+    type Data = G::Data;
+
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+        self.get.group_info()
+    }
+
+    fn change_detection_ticks(&self) -> (Ticks, Ticks) {
+        self.get.change_detection_ticks()
+    }
+
+    fn contains(&self, entity: Entity) -> bool {
+        let index = match self.get.get_index(entity) {
+            Some(index) => index,
+            None => return false,
+        };
+
+        unsafe { self.get.matches_unchecked::<F>(index) }
+    }
+
+    fn get(self, entity: Entity) -> Option<Self::Item> {
+        let index = self.get.get_index(entity)?;
+        unsafe { self.get.get_unchecked::<F>(index) }
+    }
+
+    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
+        let (world_tick, change_tick) = self.get.change_detection_ticks();
+        let (entities, sparse, data) = self.get.split_sparse();
+
+        (
+            IterData::new(entities, world_tick, change_tick),
+            sparse,
+            data,
+        )
+    }
+
+    fn split_dense(self) -> (IterData<'a>, Self::Data) {
+        let (world_tick, change_tick) = self.get.change_detection_ticks();
+        let (entities, data) = self.get.split_dense();
+
+        (IterData::new(entities, world_tick, change_tick), data)
+    }
+
+    unsafe fn get_from_sparse_unchecked(
+        sparse: &'a Self::Sparse,
+        entity: Entity,
+        data: &Self::Data,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item> {
+        let index = G::get_index_from_sparse(sparse, entity)?;
+        G::get_from_sparse_unchecked::<F>(data, index, world_tick, change_tick)
+    }
+
+    unsafe fn get_from_dense_unchecked(
+        data: &Self::Data,
+        index: usize,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item> {
+        G::get_from_dense_unchecked::<F>(data, index, world_tick, change_tick)
+    }
+}
+
 pub fn contains<'a, G>(get: G) -> Filter<Passthrough, G>
 where
     G: GetComponentSetUnfiltered<'a>,
@@ -122,7 +191,6 @@ where
 impl<'a, F, E> std::ops::Not for Filter<F, E>
 where
     F: ChangeTicksFilter,
-    E: GetComponentSetUnfiltered<'a>,
 {
     type Output = Filter<Not<F>, E>;
 
@@ -134,7 +202,6 @@ where
 impl<'a, F1, E, F2> std::ops::BitAnd<F2> for Filter<F1, E>
 where
     F1: ChangeTicksFilter,
-    E: GetComponentSetUnfiltered<'a>,
     F2: QueryFilter,
 {
     type Output = And<Self, F2>;
@@ -147,7 +214,6 @@ where
 impl<'a, F1, E, F2> std::ops::BitOr<F2> for Filter<F1, E>
 where
     F1: ChangeTicksFilter,
-    E: GetComponentSetUnfiltered<'a>,
     F2: QueryFilter,
 {
     type Output = Or<Self, F2>;
@@ -160,7 +226,6 @@ where
 impl<'a, F1, E, F2> std::ops::BitXor<F2> for Filter<F1, E>
 where
     F1: ChangeTicksFilter,
-    E: GetComponentSetUnfiltered<'a>,
     F2: QueryFilter,
 {
     type Output = Xor<Self, F2>;

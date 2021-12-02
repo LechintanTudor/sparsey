@@ -1,5 +1,5 @@
 use crate::components::QueryGroupInfo;
-use crate::query::{GetComponent, GetImmutableComponent, Passthrough};
+use crate::query::{GetComponentUnfiltered, GetImmutableComponentUnfiltered, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 
 pub unsafe trait QueryModifier<'a> {
@@ -61,28 +61,28 @@ unsafe impl<'a> QueryModifier<'a> for Passthrough {
 
 unsafe impl<'a, G> QueryModifier<'a> for G
 where
-    G: GetImmutableComponent<'a>,
+    G: GetImmutableComponentUnfiltered<'a>,
 {
     type Sparse = &'a EntitySparseArray;
 
     fn includes(&self, entity: Entity) -> bool {
-        GetComponent::get_index(self, entity).is_some()
+        GetComponentUnfiltered::get_index(self, entity).is_some()
     }
 
     fn excludes(&self, entity: Entity) -> bool {
-        GetComponent::get_index(self, entity).is_none()
+        GetComponentUnfiltered::get_index(self, entity).is_none()
     }
 
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        info.include(GetComponent::group_info(self)?)
+        info.include(GetComponentUnfiltered::group_info(self)?)
     }
 
     fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        info.exclude(GetComponent::group_info(self)?)
+        info.exclude(GetComponentUnfiltered::group_info(self)?)
     }
 
     fn split(self) -> (Option<&'a [Entity]>, Self::Sparse) {
-        let (entities, sparse, _) = GetComponent::split(self);
+        let (entities, sparse, _) = GetComponentUnfiltered::split(self);
         (Some(entities), sparse)
     }
 
@@ -105,7 +105,7 @@ macro_rules! impl_query_modifier {
     ($(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> QueryModifier<'a> for ($($elem,)+)
         where
-            $($elem: GetImmutableComponent<'a>,)+
+            $($elem: GetImmutableComponentUnfiltered<'a>,)+
         {
             type Sparse = ($(entity_sparse_array!($elem),)+);
 

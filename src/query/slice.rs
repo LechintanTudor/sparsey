@@ -1,9 +1,9 @@
-use crate::query::{GetComponent, GetComponentSetUnfiltered};
+use crate::query::{GetComponentSetUnfiltered, GetComponentUnfiltered};
 use crate::storage::Entity;
 
 pub trait SliceComponent<'a>
 where
-    Self: GetComponent<'a>,
+    Self: GetComponentUnfiltered<'a>,
 {
     fn entities(&self) -> &[Entity];
 

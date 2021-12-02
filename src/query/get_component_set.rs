@@ -1,5 +1,5 @@
 use crate::components::QueryGroupInfo;
-use crate::query::{ChangeTicksFilter, ComponentViewData, GetComponent, Passthrough};
+use crate::query::{ChangeTicksFilter, ComponentViewData, GetComponentUnfiltered, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
@@ -52,7 +52,7 @@ pub unsafe trait GetComponentSetUnfiltered<'a> {
 
 unsafe impl<'a, G> GetComponentSetUnfiltered<'a> for G
 where
-    G: GetComponent<'a>,
+    G: GetComponentUnfiltered<'a>,
 {
     type Item = G::Item;
     type Index = usize;
@@ -60,42 +60,42 @@ where
     type Data = ComponentViewData<G::Component>;
 
     fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
-        GetComponent::group_info(self).map(QueryGroupInfo::new)
+        GetComponentUnfiltered::group_info(self).map(QueryGroupInfo::new)
     }
 
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
-        info.include(GetComponent::group_info(self)?)
+        info.include(GetComponentUnfiltered::group_info(self)?)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
-        GetComponent::change_detection_ticks(self)
+        GetComponentUnfiltered::change_detection_ticks(self)
     }
 
     fn get_index(&self, entity: Entity) -> Option<Self::Index> {
-        GetComponent::get_index(self, entity)
+        GetComponentUnfiltered::get_index(self, entity)
     }
 
     unsafe fn matches_unchecked<F>(&self, index: Self::Index) -> bool
     where
         F: ChangeTicksFilter,
     {
-        GetComponent::matches_unchecked::<F>(self, index)
+        GetComponentUnfiltered::matches_unchecked::<F>(self, index)
     }
 
     unsafe fn get_unchecked<F>(self, index: Self::Index) -> Option<Self::Item>
     where
         F: ChangeTicksFilter,
     {
-        let (item, matches) = GetComponent::get_unchecked::<F>(self, index);
+        let (item, matches) = GetComponentUnfiltered::get_unchecked::<F>(self, index);
         matches.then(|| item)
     }
 
     fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
-        GetComponent::split(self)
+        GetComponentUnfiltered::split(self)
     }
 
     fn split_dense(self) -> (&'a [Entity], Self::Data) {
-        let (entities, _, data) = GetComponent::split(self);
+        let (entities, _, data) = GetComponentUnfiltered::split(self);
         (entities, data)
     }
 
@@ -255,7 +255,7 @@ macro_rules! impl_get_component_set {
     ($(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> GetComponentSetUnfiltered<'a> for ($($elem,)+)
         where
-            $($elem: GetComponent<'a>,)+
+            $($elem: GetComponentUnfiltered<'a>,)+
         {
             type Item = ($($elem::Item,)+);
             type Index = ($(replace!($elem, usize),)+);

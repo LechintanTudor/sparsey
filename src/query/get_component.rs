@@ -3,7 +3,7 @@ use crate::query::{ChangeTicksFilter, ComponentViewData};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
-pub unsafe trait GetComponent<'a> {
+pub unsafe trait GetComponentUnfiltered<'a> {
     type Item: 'a;
     type Component: Component;
 
@@ -39,9 +39,9 @@ pub unsafe trait GetComponent<'a> {
         F: ChangeTicksFilter;
 }
 
-pub unsafe trait GetImmutableComponent<'a>
+pub unsafe trait GetImmutableComponentUnfiltered<'a>
 where
-    Self: GetComponent<'a>,
+    Self: GetComponentUnfiltered<'a>,
 {
     fn entities(&self) -> &'a [Entity];
 

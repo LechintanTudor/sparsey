@@ -1,5 +1,7 @@
 use crate::components::{Component, ComponentGroupInfo};
-use crate::query::{ChangeTicksFilter, ComponentRefMut, GetComponent, GetImmutableComponent};
+use crate::query::{
+    ChangeTicksFilter, ComponentRefMut, GetComponentUnfiltered, GetImmutableComponentUnfiltered,
+};
 use crate::storage::{ComponentStorage, Entity, EntitySparseArray};
 use crate::utils::{ChangeTicks, Ticks};
 use std::fmt;
@@ -108,7 +110,7 @@ where
     }
 }
 
-unsafe impl<'a, T, S> GetComponent<'a> for &'a ComponentView<'a, T, S>
+unsafe impl<'a, T, S> GetComponentUnfiltered<'a> for &'a ComponentView<'a, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage>,
@@ -185,7 +187,7 @@ where
     }
 }
 
-unsafe impl<'a, T, S> GetImmutableComponent<'a> for &'a ComponentView<'a, T, S>
+unsafe impl<'a, T, S> GetImmutableComponentUnfiltered<'a> for &'a ComponentView<'a, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage>,
@@ -199,7 +201,7 @@ where
     }
 }
 
-unsafe impl<'a, 'b, T, S> GetComponent<'a> for &'a mut ComponentView<'b, T, S>
+unsafe impl<'a, 'b, T, S> GetComponentUnfiltered<'a> for &'a mut ComponentView<'b, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage> + DerefMut,

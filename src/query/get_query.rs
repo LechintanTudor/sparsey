@@ -1,6 +1,9 @@
 use crate::components::QueryGroupInfo;
-use crate::query::{GetComponentSet, IntoQueryParts, IterData, Passthrough};
-use crate::storage::Entity;
+use crate::query::{
+    ComponentViewData, GetComponentSet, GetComponentUnfiltered, IntoQueryParts, IterData,
+    Passthrough,
+};
+use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
 pub unsafe trait QueryGet<'a> {
@@ -47,6 +50,84 @@ where
 
     fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude, Self::Filter) {
         (self, Passthrough, Passthrough, Passthrough)
+    }
+}
+
+unsafe impl<'a, G> QueryGet<'a> for G
+where
+    G: GetComponentUnfiltered<'a>,
+{
+    type Item = G::Item;
+    type Sparse = &'a EntitySparseArray;
+    type Data = ComponentViewData<G::Component>;
+
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+        GetComponentUnfiltered::group_info(self).map(QueryGroupInfo::new)
+    }
+
+    fn change_detection_ticks(&self) -> (Ticks, Ticks) {
+        GetComponentUnfiltered::change_detection_ticks(self)
+    }
+
+    fn contains(&self, entity: Entity) -> bool {
+        let index = match GetComponentUnfiltered::get_index(self, entity) {
+            Some(index) => index,
+            None => return false,
+        };
+
+        unsafe { GetComponentUnfiltered::matches_unchecked::<Passthrough>(self, index) }
+    }
+
+    fn get(self, entity: Entity) -> Option<Self::Item> {
+        let index = GetComponentUnfiltered::get_index(&self, entity)?;
+        let (item, matches) =
+            unsafe { GetComponentUnfiltered::get_unchecked::<Passthrough>(self, index) };
+
+        matches.then(|| item)
+    }
+
+    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
+        let (world_tick, change_tick) = GetComponentUnfiltered::change_detection_ticks(&self);
+        let (entities, sparse, data) = GetComponentUnfiltered::split(self);
+
+        (
+            IterData::new(entities, world_tick, change_tick),
+            sparse,
+            data,
+        )
+    }
+
+    fn split_dense(self) -> (IterData<'a>, Self::Data) {
+        let (world_tick, change_tick) = GetComponentUnfiltered::change_detection_ticks(&self);
+        let (entities, _, data) = GetComponentUnfiltered::split(self);
+
+        (IterData::new(entities, world_tick, change_tick), data)
+    }
+
+    unsafe fn get_from_sparse_unchecked(
+        sparse: &'a Self::Sparse,
+        entity: Entity,
+        data: &Self::Data,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item> {
+        let index = sparse.get(entity)?;
+        let (item, matches) =
+            G::get_from_parts_unchecked::<Passthrough>(*data, index, world_tick, change_tick);
+
+        matches.then(|| item)
+    }
+
+    unsafe fn get_from_dense_unchecked(
+        data: &Self::Data,
+        index: usize,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Option<Self::Item> {
+        let (item, matches) =
+            G::get_from_parts_unchecked::<Passthrough>(*data, index, world_tick, change_tick);
+
+        matches.then(|| item)
     }
 }
 
