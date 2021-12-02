@@ -11,6 +11,8 @@ pub unsafe trait GetComponentSetUnfiltered<'a> {
 
     fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
+
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
     fn get_index(&self, entity: Entity) -> Option<Self::Index>;
@@ -59,6 +61,10 @@ where
 
     fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
         GetComponent::group_info(self).map(QueryGroupInfo::new)
+    }
+
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        info.include(GetComponent::group_info(self)?)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
@@ -137,6 +143,8 @@ pub unsafe trait GetComponentSet<'a> {
 
     fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
+
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
     fn get_index(&self, entity: Entity) -> Option<Self::Index>;
@@ -178,6 +186,10 @@ where
 
     fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
         GetComponentSetUnfiltered::group_info(self)
+    }
+
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        GetComponentSetUnfiltered::include_group_info(self, info)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
@@ -252,6 +264,10 @@ macro_rules! impl_get_component_set {
 
             fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
                 new_query_group_info!($(self.$idx.group_info()),+)
+            }
+
+            fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+                Some(info $(.include(self.$idx.group_info()?)?)+)
             }
 
             fn change_detection_ticks(&self) -> (Ticks, Ticks) {

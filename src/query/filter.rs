@@ -37,6 +37,10 @@ where
         self.get.group_info()
     }
 
+    fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
+        self.get.include_group_info(info)
+    }
+
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
         self.get.change_detection_ticks()
     }
