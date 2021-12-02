@@ -153,10 +153,10 @@ where
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        *mut Self::Component,
-        *mut ChangeTicks,
+        ComponentViewData<Self::Component>,
     ) {
-        self.storage.split()
+        let (entities, sparse, components, ticks) = self.storage.split();
+        (entities, sparse, ComponentViewData::new(components, ticks))
     }
 
     unsafe fn get_from_parts_unchecked<F>(
@@ -250,10 +250,10 @@ where
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        *mut Self::Component,
-        *mut ChangeTicks,
+        ComponentViewData<Self::Component>,
     ) {
-        self.storage.split()
+        let (entities, sparse, components, ticks) = self.storage.split();
+        (entities, sparse, ComponentViewData::new(components, ticks))
     }
 
     unsafe fn get_from_parts_unchecked<F>(

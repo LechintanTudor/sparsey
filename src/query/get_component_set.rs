@@ -85,13 +85,12 @@ where
     }
 
     fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
-        let (entities, sparse, components, ticks) = GetComponent::split(self);
-        (entities, sparse, ComponentViewData::new(components, ticks))
+        GetComponent::split(self)
     }
 
     fn split_dense(self) -> (&'a [Entity], Self::Data) {
-        let (entities, _, components, ticks) = GetComponent::split(self);
-        (entities, ComponentViewData::new(components, ticks))
+        let (entities, _, data) = GetComponent::split(self);
+        (entities, data)
     }
 
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index> {

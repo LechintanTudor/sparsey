@@ -1,5 +1,5 @@
 use crate::components::{Component, ComponentGroupInfo};
-use crate::query::ChangeTicksFilter;
+use crate::query::{ChangeTicksFilter, ComponentViewData};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::{ChangeTicks, Ticks};
 
@@ -26,8 +26,7 @@ pub unsafe trait GetComponent<'a> {
     ) -> (
         &'a [Entity],
         &'a EntitySparseArray,
-        *mut Self::Component,
-        *mut ChangeTicks,
+        ComponentViewData<Self::Component>,
     );
 
     unsafe fn get_from_parts_unchecked<F>(

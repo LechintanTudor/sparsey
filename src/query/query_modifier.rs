@@ -82,7 +82,7 @@ where
     }
 
     fn split(self) -> (Option<&'a [Entity]>, Self::Sparse) {
-        let (entities, sparse, _, _) = GetComponent::split(self);
+        let (entities, sparse, _) = GetComponent::split(self);
         (Some(entities), sparse)
     }
 
