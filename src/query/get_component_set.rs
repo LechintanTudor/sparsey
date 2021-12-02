@@ -1,66 +1,7 @@
-use crate::components::{Component, ComponentGroupInfo, QueryGroupInfo};
-use crate::query::{ChangeTicksFilter, IntoQueryParts, IterData, Passthrough};
+use crate::components::QueryGroupInfo;
+use crate::query::{ChangeTicksFilter, ComponentViewData, GetComponent, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
-use crate::utils::{ChangeTicks, Ticks};
-
-#[derive(Clone, Copy)]
-pub struct ComponentViewData<T> {
-    pub components: *mut T,
-    pub ticks: *mut ChangeTicks,
-}
-
-impl<T> ComponentViewData<T> {
-    pub const fn new(components: *mut T, ticks: *mut ChangeTicks) -> Self {
-        Self { components, ticks }
-    }
-}
-
-pub unsafe trait GetComponent<'a> {
-    type Item: 'a;
-    type Component: Component;
-
-    fn group_info(&self) -> Option<ComponentGroupInfo<'a>>;
-
-    fn change_detection_ticks(&self) -> (Ticks, Ticks);
-
-    fn get_index(&self, entity: Entity) -> Option<usize>;
-
-    unsafe fn matches_unchecked<F>(&self, index: usize) -> bool
-    where
-        F: ChangeTicksFilter;
-
-    unsafe fn get_unchecked<F>(self, index: usize) -> (Self::Item, bool)
-    where
-        F: ChangeTicksFilter;
-
-    fn split(
-        self,
-    ) -> (
-        &'a [Entity],
-        &'a EntitySparseArray,
-        *mut Self::Component,
-        *mut ChangeTicks,
-    );
-
-    unsafe fn get_from_parts_unchecked<F>(
-        components: *mut Self::Component,
-        ticks: *mut ChangeTicks,
-        index: usize,
-        world_tick: Ticks,
-        change_tick: Ticks,
-    ) -> (Self::Item, bool)
-    where
-        F: ChangeTicksFilter;
-}
-
-pub unsafe trait GetImmutableComponent<'a>
-where
-    Self: GetComponent<'a>,
-{
-    fn entities(&self) -> &'a [Entity];
-
-    fn components(&self) -> &'a [Self::Component];
-}
+use crate::utils::Ticks;
 
 pub unsafe trait GetComponentSetUnfiltered<'a> {
     type Item: 'a;
@@ -117,7 +58,7 @@ where
     type Data = ComponentViewData<G::Component>;
 
     fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
-        QueryGroupInfo::new(GetComponent::group_info(self)?)
+        GetComponent::group_info(self).map(QueryGroupInfo::new)
     }
 
     fn change_detection_ticks(&self) -> (Ticks, Ticks) {
@@ -297,150 +238,31 @@ where
     }
 }
 
-pub unsafe trait QueryGet<'a> {
-    type Item: 'a;
-    type Sparse: 'a;
-    type Data: 'a;
-
-    fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
-
-    fn change_detection_ticks(&self) -> (Ticks, Ticks);
-
-    fn contains(&self, entity: Entity) -> bool;
-
-    fn get(self, entity: Entity) -> Option<Self::Item>;
-
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data);
-
-    fn split_dense(self) -> (IterData<'a>, Self::Data);
-
-    unsafe fn get_from_sparse_unchecked(
-        sparse: &'a Self::Sparse,
-        entity: Entity,
-        data: &Self::Data,
-        world_tick: Ticks,
-        change_tick: Ticks,
-    ) -> Option<Self::Item>;
-
-    unsafe fn get_from_dense_unchecked(
-        data: &Self::Data,
-        index: usize,
-        world_tick: Ticks,
-        change_tick: Ticks,
-    ) -> Option<Self::Item>;
-}
-
-unsafe impl<'a, G> QueryGet<'a> for G
-where
-    G: GetComponentSet<'a>,
-{
-    type Item = G::Item;
-    type Sparse = G::Sparse;
-    type Data = G::Data;
-
-    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
-        GetComponentSet::group_info(self)
-    }
-
-    fn change_detection_ticks(&self) -> (Ticks, Ticks) {
-        GetComponentSet::change_detection_ticks(self)
-    }
-
-    fn contains(&self, entity: Entity) -> bool {
-        let index = match GetComponentSet::get_index(self, entity) {
-            Some(index) => index,
-            None => return false,
-        };
-
-        unsafe { GetComponentSet::matches_unchecked(self, index) }
-    }
-
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        let index = GetComponentSet::get_index(&self, entity)?;
-        unsafe { GetComponentSet::get_unchecked(self, index) }
-    }
-
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-        let (world_tick, change_tick) = GetComponentSet::change_detection_ticks(&self);
-        let (entities, sparse, data) = GetComponentSet::split_sparse(self);
-
-        (
-            IterData::new(entities, world_tick, change_tick),
-            sparse,
-            data,
-        )
-    }
-
-    fn split_dense(self) -> (IterData<'a>, Self::Data) {
-        let (world_tick, change_tick) = GetComponentSet::change_detection_ticks(&self);
-        let (entities, _, data) = GetComponentSet::split_sparse(self);
-
-        (IterData::new(entities, world_tick, change_tick), data)
-    }
-
-    unsafe fn get_from_sparse_unchecked(
-        sparse: &'a Self::Sparse,
-        entity: Entity,
-        data: &Self::Data,
-        world_tick: Ticks,
-        change_tick: Ticks,
-    ) -> Option<Self::Item> {
-        let index = G::get_index_from_sparse(sparse, entity)?;
-        G::get_from_sparse_unchecked(data, index, world_tick, change_tick)
-    }
-
-    unsafe fn get_from_dense_unchecked(
-        data: &Self::Data,
-        index: usize,
-        world_tick: Ticks,
-        change_tick: Ticks,
-    ) -> Option<Self::Item> {
-        G::get_from_dense_unchecked(data, index, world_tick, change_tick)
-    }
-}
-
-impl<'a, G> IntoQueryParts<'a> for G
-where
-    G: QueryGet<'a>,
-{
-    type Get = G;
-    type Include = Passthrough;
-    type Exclude = Passthrough;
-    type Filter = Passthrough;
-
-    fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude, Self::Filter) {
-        (self, Passthrough, Passthrough, Passthrough)
-    }
-}
-
 macro_rules! replace {
-    ($from:tt, $to:tt) => {
-        $to
+    ($from:tt, $($to:tt) +) => {
+        $($to) +
     };
 }
 
 macro_rules! new_query_group_info {
-    ($first:expr) => {
-        Some(QueryGroupInfo::new($first))
-    };
-    ($first:expr $(, $other:expr)+) => {
-        QueryGroupInfo::new($first) $(.and_then(|i| i.include($other)))+
+    ($first:expr $(, $other:expr)*) => {
+        $first.map(QueryGroupInfo::new) $(.and_then(|i| i.include($other?)))*
     };
 }
 
-macro_rules! impl_query_get {
-    ($($elem:ident, $idx:tt),+) => {
+macro_rules! impl_get_component_set {
+    ($(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> GetComponentSetUnfiltered<'a> for ($($elem,)+)
         where
             $($elem: GetComponent<'a>,)+
         {
             type Item = ($($elem::Item,)+);
             type Index = ($(replace!($elem, usize),)+);
-            type Sparse = ($(&'a EntitySparseArray,)+);
+            type Sparse = ($(replace!($elem, &'a EntitySparseArray),)+);
             type Data = ($(ComponentViewData<$elem::Component>,)+);
 
             fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
-                new_query_group_info!(self.$idx)
+                new_query_group_info!($(self.$idx.group_info()),+)
             }
 
             fn change_detection_ticks(&self) -> (Ticks, Ticks) {
@@ -453,51 +275,97 @@ macro_rules! impl_query_get {
                 ))
             }
 
-            fn contains<F>(&self, entity: Entity) -> bool
+            unsafe fn matches_unchecked<Filter>(&self, index: Self::Index) -> bool
             where
-                F: ChangeTicksFilter,
+                Filter: ChangeTicksFilter,
             {
-                let index = match self.get_index(entity) {
-                    Some(index) => index,
-                    None => return false,
-                };
-
-                if F::IS_PASSTHROUGH {
+                if Filter::IS_PASSTHROUGH {
                     true
                 } else {
-                    unsafe {
-                        $(self.$idx.matches_unchecked::<F>(index.$idx))||+
-                    }
+                    $(self.$idx.matches_unchecked::<Filter>(index.$idx))||+
                 }
             }
 
-            unsafe fn get_unchecked<F>(self, index: Self::Index) -> Option<Self::Item>
+            unsafe fn get_unchecked<Filter>(self, index: Self::Index) -> Option<Self::Item>
             where
-                F: ChangeTicksFilter;
+                Filter: ChangeTicksFilter,
+            {
+                if Filter::IS_PASSTHROUGH {
+                    Some(($(self.$idx.get_unchecked::<Passthrough>(index.$idx).0,)+))
+                } else {
+                    let mut matches = false;
 
-            fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data);
+                    let item = ($(
+                        if !matches {
+                            let (item, matched) = self.$idx.get_unchecked::<Filter>(index.$idx);
+                            matches |= matched;
+                            item
+                        } else {
+                            self.$idx.get_unchecked::<Passthrough>(index.$idx).0
+                        },
+                    )+);
 
-            fn split_dense(self) -> (&'a [Entity], Self::Data);
-
-            fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index>;
-
-            unsafe fn get_from_sparse_unchecked<F>(
-                data: &Self::Data,
-                index: Self::Index,
-                world_tick: Ticks,
-                change_tick: Ticks,
-            ) -> Option<Self::Item>
-            where
-                F: ChangeTicksFilter;
-
-            unsafe fn get_from_dense_unchecked<F>(
-                data: &Self::Data,
-                index: usize,
-                world_tick: Ticks,
-                change_tick: Ticks,
-            ) -> Option<Self::Item>
-            where
-                F: ChangeTicksFilter;
+                    matches.then(|| item)
                 }
+            }
+
+            fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
+                todo!()
+            }
+
+            fn split_dense(self) -> (&'a [Entity], Self::Data) {
+                todo!()
+            }
+
+            fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index> {
+                Some(($(sparse.$idx.get(entity)?,)+))
+            }
+
+            unsafe fn get_from_sparse_unchecked<Filter>(
+                _data: &Self::Data,
+                _index: Self::Index,
+                _world_tick: Ticks,
+                _change_tick: Ticks,
+            ) -> Option<Self::Item>
+            where
+                Filter: ChangeTicksFilter,
+            {
+                todo!()
+            }
+
+            unsafe fn get_from_dense_unchecked<Filter>(
+                _data: &Self::Data,
+                _index: usize,
+                _world_tick: Ticks,
+                _change_tick: Ticks,
+            ) -> Option<Self::Item>
+            where
+                Filter: ChangeTicksFilter,
+            {
+                todo!()
+            }
+        }
     };
+}
+
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_get_component_set!((A, 0));
+    impl_get_component_set!((A, 0), (B, 1));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
+    impl_get_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
 }

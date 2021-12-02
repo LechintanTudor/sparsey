@@ -6,6 +6,18 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
+#[derive(Clone, Copy)]
+pub struct ComponentViewData<T> {
+    pub components: *mut T,
+    pub ticks: *mut ChangeTicks,
+}
+
+impl<T> ComponentViewData<T> {
+    pub const fn new(components: *mut T, ticks: *mut ChangeTicks) -> Self {
+        Self { components, ticks }
+    }
+}
+
 /// View over a `ComponentStorage` of type `T`.
 pub struct ComponentView<'a, T, S> {
     storage: S,

@@ -34,13 +34,13 @@ pub struct QueryGroupInfo<'a> {
 }
 
 impl<'a> QueryGroupInfo<'a> {
-    pub fn new(info: ComponentGroupInfo<'a>) -> Option<Self> {
-        Some(Self {
+    pub fn new(info: ComponentGroupInfo<'a>) -> Self {
+        Self {
             group_family: info.group_family,
             group_offset: info.group_offset,
             query_mask: QueryMask::new(info.storage_mask, 0),
             _phantom: PhantomData,
-        })
+        }
     }
 
     pub fn include(self, info: ComponentGroupInfo<'a>) -> Option<Self> {
