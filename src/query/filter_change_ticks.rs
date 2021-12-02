@@ -1,4 +1,4 @@
-use crate::query::{Not, Passthrough};
+use crate::query::{Added, Changed, Mutated, Not, Passthrough};
 use crate::utils::{ChangeTicks, Ticks};
 
 pub trait ChangeTicksFilter
@@ -19,9 +19,6 @@ impl ChangeTicksFilter for Passthrough {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug)]
-pub struct Added;
-
 impl ChangeTicksFilter for Added {
     #[inline(always)]
     fn matches(ticks: &ChangeTicks, world_tick: Ticks, _change_tick: Ticks) -> bool {
@@ -29,18 +26,12 @@ impl ChangeTicksFilter for Added {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug)]
-pub struct Mutated;
-
 impl ChangeTicksFilter for Mutated {
     #[inline(always)]
     fn matches(ticks: &ChangeTicks, _world_tick: Ticks, change_tick: Ticks) -> bool {
         ticks.tick_mutated > change_tick
     }
 }
-
-#[derive(Clone, Copy, Default, Debug)]
-pub struct Changed;
 
 impl ChangeTicksFilter for Changed {
     #[inline(always)]

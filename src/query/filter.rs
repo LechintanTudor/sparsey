@@ -1,5 +1,8 @@
 use crate::components::QueryGroupInfo;
-use crate::query::{ChangeTicksFilter, GetComponentSet, GetComponentSetUnfiltered};
+use crate::query::{
+    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered, Mutated,
+    Not, Or, Passthrough, QueryFilter, Xor,
+};
 use crate::storage::Entity;
 use crate::utils::Ticks;
 use std::marker::PhantomData;
@@ -85,5 +88,84 @@ where
         change_tick: Ticks,
     ) -> Option<Self::Item> {
         G::get_from_dense_unchecked::<F>(data, index, world_tick, change_tick)
+    }
+}
+
+pub fn contains<'a, G>(get: G) -> Filter<Passthrough, G>
+where
+    G: GetComponentSetUnfiltered<'a>,
+{
+    Filter::new(get)
+}
+
+pub fn added<'a, G>(get: G) -> Filter<Added, G>
+where
+    G: GetComponentSetUnfiltered<'a>,
+{
+    Filter::new(get)
+}
+
+pub fn mutated<'a, G>(get: G) -> Filter<Mutated, G>
+where
+    G: GetComponentSetUnfiltered<'a>,
+{
+    Filter::new(get)
+}
+
+pub fn changed<'a, G>(get: G) -> Filter<Changed, G>
+where
+    G: GetComponentSetUnfiltered<'a>,
+{
+    Filter::new(get)
+}
+
+impl<'a, F, E> std::ops::Not for Filter<F, E>
+where
+    F: ChangeTicksFilter,
+    E: GetComponentSetUnfiltered<'a>,
+{
+    type Output = Filter<Not<F>, E>;
+
+    fn not(self) -> Self::Output {
+        Filter::new(self.get)
+    }
+}
+
+impl<'a, F1, E, F2> std::ops::BitAnd<F2> for Filter<F1, E>
+where
+    F1: ChangeTicksFilter,
+    E: GetComponentSetUnfiltered<'a>,
+    F2: QueryFilter,
+{
+    type Output = And<Self, F2>;
+
+    fn bitand(self, filter: F2) -> Self::Output {
+        And(self, filter)
+    }
+}
+
+impl<'a, F1, E, F2> std::ops::BitOr<F2> for Filter<F1, E>
+where
+    F1: ChangeTicksFilter,
+    E: GetComponentSetUnfiltered<'a>,
+    F2: QueryFilter,
+{
+    type Output = Or<Self, F2>;
+
+    fn bitor(self, filter: F2) -> Self::Output {
+        Or(self, filter)
+    }
+}
+
+impl<'a, F1, E, F2> std::ops::BitXor<F2> for Filter<F1, E>
+where
+    F1: ChangeTicksFilter,
+    E: GetComponentSetUnfiltered<'a>,
+    F2: QueryFilter,
+{
+    type Output = Xor<Self, F2>;
+
+    fn bitxor(self, filter: F2) -> Self::Output {
+        Xor(self, filter)
     }
 }

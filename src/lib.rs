@@ -28,12 +28,12 @@
 //! ```
 
 /// Exports functions for filtering component and resource views.
-// pub mod filters {
-//     pub use crate::query::{added, changed, contains, maybe, mutated};
-//     pub use crate::resources::{res_added, res_changed, res_mutated};
-// }
+pub mod filters {
+    pub use crate::query::{added, changed, contains, mutated};
+    pub use crate::resources::{res_added, res_changed, res_mutated};
+}
 
-// Exports most commonly used items.
+/// Exports most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
     pub use crate::query::Query;
