@@ -36,7 +36,7 @@ pub mod filters {
 /// Exports most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
-    pub use crate::query::Query;
+    pub use crate::query::{Query, QueryGetModifier};
     pub use crate::storage::Entity;
     pub use crate::systems::{
         Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,
