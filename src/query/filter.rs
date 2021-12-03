@@ -1,7 +1,7 @@
 use crate::components::QueryGroupInfo;
 use crate::query::{
-    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered, IterData,
-    Mutated, Not, Or, Passthrough, QueryFilter, QueryGet, Xor,
+    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered, Mutated,
+    Not, Or, Passthrough, QueryFilter, QueryGet, Xor,
 };
 use crate::storage::Entity;
 use crate::utils::Ticks;
@@ -121,22 +121,12 @@ where
         unsafe { self.get.get_unchecked::<F>(index) }
     }
 
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-        let (world_tick, change_tick) = self.get.change_detection_ticks();
-        let (entities, sparse, data) = self.get.split_sparse();
-
-        (
-            IterData::new(entities, world_tick, change_tick),
-            sparse,
-            data,
-        )
+    fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
+        self.get.split_sparse()
     }
 
-    fn split_dense(self) -> (IterData<'a>, Self::Data) {
-        let (world_tick, change_tick) = self.get.change_detection_ticks();
-        let (entities, data) = self.get.split_dense();
-
-        (IterData::new(entities, world_tick, change_tick), data)
+    fn split_dense(self) -> (&'a [Entity], Self::Data) {
+        self.get.split_dense()
     }
 
     unsafe fn get_from_sparse_unchecked(

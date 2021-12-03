@@ -1,7 +1,6 @@
 use crate::components::QueryGroupInfo;
 use crate::query::{
-    ComponentViewData, GetComponentSet, GetComponentUnfiltered, IntoQueryParts, IterData,
-    Passthrough,
+    ComponentViewData, GetComponentSet, GetComponentUnfiltered, IntoQueryParts, Passthrough,
 };
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
@@ -19,9 +18,9 @@ pub unsafe trait QueryGet<'a> {
 
     fn get(self, entity: Entity) -> Option<Self::Item>;
 
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data);
+    fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data);
 
-    fn split_dense(self) -> (IterData<'a>, Self::Data);
+    fn split_dense(self) -> (&'a [Entity], Self::Data);
 
     unsafe fn get_from_sparse_unchecked(
         sparse: &'a Self::Sparse,
@@ -86,22 +85,13 @@ where
         matches.then(|| item)
     }
 
-    fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-        let (world_tick, change_tick) = GetComponentUnfiltered::change_detection_ticks(&self);
-        let (entities, sparse, data) = GetComponentUnfiltered::split(self);
-
-        (
-            IterData::new(entities, world_tick, change_tick),
-            sparse,
-            data,
-        )
+    fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
+        GetComponentUnfiltered::split(self)
     }
 
-    fn split_dense(self) -> (IterData<'a>, Self::Data) {
-        let (world_tick, change_tick) = GetComponentUnfiltered::change_detection_ticks(&self);
+    fn split_dense(self) -> (&'a [Entity], Self::Data) {
         let (entities, _, data) = GetComponentUnfiltered::split(self);
-
-        (IterData::new(entities, world_tick, change_tick), data)
+        (entities, data)
     }
 
     unsafe fn get_from_sparse_unchecked(
@@ -176,18 +166,12 @@ macro_rules! impl_query_get {
                 }
             }
 
-            fn split_sparse(self) -> (IterData<'a>, Self::Sparse, Self::Data) {
-                let (world_tick, change_tick) = self.0.change_detection_ticks();
-                let (entities, sparse, data) = query_split_sparse!($((self.$idx, $idx)),+);
-
-                (IterData::new(entities, world_tick, change_tick), sparse, data)
+            fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data) {
+                query_split_sparse!($((self.$idx, $idx)),+)
             }
 
-            fn split_dense(self) -> (IterData<'a>, Self::Data) {
-                let (world_tick, change_tick) = self.0.change_detection_ticks();
-                let (entities, data) = query_split_dense!($((self.$idx, $idx)),+);
-
-                (IterData::new(entities, world_tick, change_tick), data)
+            fn split_dense(self) -> (&'a [Entity], Self::Data) {
+                query_split_dense!($((self.$idx, $idx)),+)
             }
 
             unsafe fn get_from_sparse_unchecked(
