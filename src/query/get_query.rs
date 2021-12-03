@@ -6,6 +6,8 @@ use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
 pub unsafe trait QueryGet<'a> {
+    const GETS_ONE: bool;
+
     type Item: 'a;
     type Sparse: 'a;
     type Data: 'a;
@@ -23,7 +25,7 @@ pub unsafe trait QueryGet<'a> {
     fn split_dense(self) -> (&'a [Entity], Self::Data);
 
     unsafe fn get_from_sparse_unchecked(
-        sparse: &'a Self::Sparse,
+        sparse: &Self::Sparse,
         entity: Entity,
         data: &Self::Data,
         world_tick: Ticks,
@@ -56,6 +58,8 @@ unsafe impl<'a, G> QueryGet<'a> for G
 where
     G: GetComponentUnfiltered<'a>,
 {
+    const GETS_ONE: bool = true;
+
     type Item = G::Item;
     type Sparse = &'a EntitySparseArray;
     type Data = ComponentViewData<G::Component>;
@@ -95,7 +99,7 @@ where
     }
 
     unsafe fn get_from_sparse_unchecked(
-        sparse: &'a Self::Sparse,
+        sparse: &Self::Sparse,
         entity: Entity,
         data: &Self::Data,
         world_tick: Ticks,
@@ -121,6 +125,15 @@ where
     }
 }
 
+macro_rules! gets_one {
+    ($first:ident) => {
+        $first::GETS_ONE
+    };
+    ($first:ident $(, $other:ident)+) => {
+        false
+    };
+}
+
 macro_rules! new_group_info {
     ($first:expr $(, $other:expr)*) => {
         $first.group_info() $(.and_then(|i| $other.include_group_info(i)))*
@@ -133,6 +146,8 @@ macro_rules! impl_query_get {
         where
             $($elem: GetComponentSet<'a>,)+
         {
+            const GETS_ONE: bool = gets_one!($($elem),+);
+
             type Item = ($($elem::Item,)+);
             type Sparse = ($($elem::Sparse,)+);
             type Data = ($($elem::Data,)+);
@@ -175,7 +190,7 @@ macro_rules! impl_query_get {
             }
 
             unsafe fn get_from_sparse_unchecked(
-                sparse: &'a Self::Sparse,
+                sparse: &Self::Sparse,
                 entity: Entity,
                 data: &Self::Data,
                 world_tick: Ticks,

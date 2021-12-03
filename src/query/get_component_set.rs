@@ -4,6 +4,8 @@ use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
 pub unsafe trait GetComponentSetUnfiltered<'a> {
+    const GETS_ONE: bool;
+
     type Item: 'a;
     type Index: Copy;
     type Sparse: 'a;
@@ -54,6 +56,8 @@ unsafe impl<'a, G> GetComponentSetUnfiltered<'a> for G
 where
     G: GetComponentUnfiltered<'a>,
 {
+    const GETS_ONE: bool = true;
+
     type Item = G::Item;
     type Index = usize;
     type Sparse = &'a EntitySparseArray;
@@ -135,6 +139,8 @@ where
 }
 
 pub unsafe trait GetComponentSet<'a> {
+    const GETS_ONE: bool;
+
     type Item: 'a;
     type Filter: ChangeTicksFilter;
     type Index: Copy;
@@ -178,6 +184,8 @@ unsafe impl<'a, G> GetComponentSet<'a> for G
 where
     G: GetComponentSetUnfiltered<'a>,
 {
+    const GETS_ONE: bool = G::GETS_ONE;
+
     type Item = G::Item;
     type Filter = Passthrough;
     type Index = G::Index;
@@ -239,6 +247,15 @@ where
     }
 }
 
+macro_rules! gets_one {
+    ($first:ident) => {
+        true
+    };
+    ($first:ident $(, $other:ident)+) => {
+        false
+    };
+}
+
 macro_rules! replace {
     ($from:tt, $($to:tt) +) => {
         $($to) +
@@ -257,6 +274,8 @@ macro_rules! impl_get_component_set {
         where
             $($elem: GetComponentUnfiltered<'a>,)+
         {
+            const GETS_ONE: bool = gets_one!($($elem),+);
+
             type Item = ($($elem::Item,)+);
             type Index = ($(replace!($elem, usize),)+);
             type Sparse = ($(replace!($elem, &'a EntitySparseArray),)+);

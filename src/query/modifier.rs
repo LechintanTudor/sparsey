@@ -3,6 +3,8 @@ use crate::query::{GetComponentUnfiltered, GetImmutableComponentUnfiltered, Pass
 use crate::storage::{Entity, EntitySparseArray};
 
 pub unsafe trait QueryModifier<'a> {
+    const IS_PASSTHROUGH: bool = false;
+
     type Sparse: 'a;
 
     fn includes(&self, entity: Entity) -> bool;
@@ -21,6 +23,8 @@ pub unsafe trait QueryModifier<'a> {
 }
 
 unsafe impl<'a> QueryModifier<'a> for Passthrough {
+    const IS_PASSTHROUGH: bool = true;
+
     type Sparse = ();
 
     #[inline(always)]

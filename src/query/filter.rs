@@ -29,6 +29,8 @@ where
     F: ChangeTicksFilter,
     G: GetComponentSetUnfiltered<'a>,
 {
+    const GETS_ONE: bool = G::GETS_ONE;
+
     type Item = G::Item;
     type Filter = F;
     type Index = G::Index;
@@ -95,6 +97,8 @@ where
     F: ChangeTicksFilter,
     G: GetComponentSetUnfiltered<'a>,
 {
+    const GETS_ONE: bool = G::GETS_ONE;
+
     type Item = G::Item;
     type Sparse = G::Sparse;
     type Data = G::Data;
@@ -130,7 +134,7 @@ where
     }
 
     unsafe fn get_from_sparse_unchecked(
-        sparse: &'a Self::Sparse,
+        sparse: &Self::Sparse,
         entity: Entity,
         data: &Self::Data,
         world_tick: Ticks,
