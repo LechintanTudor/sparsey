@@ -121,10 +121,12 @@ macro_rules! impl_query_modifier {
                 $(self.$idx.get_index(entity).is_none())&&+
             }
 
+            #[allow(clippy::needless_question_mark)]
             fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
                 Some(info $(.include(self.$idx.group_info()?)?)+)
             }
 
+            #[allow(clippy::needless_question_mark)]
             fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
                 Some(info $(.exclude(self.$idx.group_info()?)?)+)
             }

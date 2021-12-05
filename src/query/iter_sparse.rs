@@ -28,6 +28,7 @@ where
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         entities: &'a [Entity],
         sparse: G::Sparse,

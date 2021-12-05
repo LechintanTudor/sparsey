@@ -285,6 +285,7 @@ macro_rules! impl_get_component_set {
                 new_query_group_info!($(self.$idx.group_info()),+)
             }
 
+            #[allow(clippy::needless_question_mark)]
             fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>> {
                 Some(info $(.include(self.$idx.group_info()?)?)+)
             }
@@ -310,6 +311,7 @@ macro_rules! impl_get_component_set {
                 }
             }
 
+            #[allow(clippy::eval_order_dependence)]
             unsafe fn get_unchecked<Filter>(self, index: Self::Index) -> Option<Self::Item>
             where
                 Filter: ChangeTicksFilter,
@@ -345,6 +347,7 @@ macro_rules! impl_get_component_set {
                 Some(($(sparse.$idx.get(entity)?,)+))
             }
 
+            #[allow(clippy::eval_order_dependence)]
             unsafe fn get_from_sparse_unchecked<Filter>(
                 data: &Self::Data,
                 index: Self::Index,
@@ -391,6 +394,7 @@ macro_rules! impl_get_component_set {
                 }
             }
 
+            #[allow(clippy::eval_order_dependence)]
             unsafe fn get_from_dense_unchecked<Filter>(
                 data: &Self::Data,
                 index: usize,

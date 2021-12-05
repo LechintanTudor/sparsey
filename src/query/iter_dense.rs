@@ -16,6 +16,29 @@ where
     index: usize,
 }
 
+impl<'a, G, F> DenseIter<'a, G, F>
+where
+    G: QueryGet<'a>,
+    F: QueryFilter,
+{
+    pub(crate) unsafe fn new_unchecked(
+        entities: &'a [Entity],
+        data: G::Data,
+        filter: F,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Self {
+        Self {
+            entities,
+            data,
+            filter,
+            world_tick,
+            change_tick,
+            index: 0,
+        }
+    }
+}
+
 impl<'a, G, F> Iterator for DenseIter<'a, G, F>
 where
     G: QueryGet<'a>,

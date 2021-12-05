@@ -1,6 +1,9 @@
-use crate::query::{is_trivial_group, DenseIter, QueryFilter, QueryGet, QueryModifier, SparseIter};
+use crate::query::{
+    group_range, is_trivial_group, DenseIter, QueryFilter, QueryGet, QueryModifier, SparseIter,
+};
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
+use std::cmp;
 
 /// Iterator over grouped or ungrouped queries.
 pub enum Iter<'a, G, I, E, F>
@@ -27,38 +30,58 @@ where
     pub(crate) fn new(get: G, include: I, exclude: E, filter: F) -> Self {
         let (world_tick, change_tick) = get.change_detection_ticks();
 
-        // if query::is_trivial_group::<G, I, E>() {
-        //     let (iter_data, data) = base.split_dense();
+        if is_trivial_group::<G, I, E>() {
+            let (entities, data) = get.split_dense();
 
-        //     unsafe { Self::Dense(DenseIter::new_unchecked(iter_data, data, filter)) }
-        // } else {
-        //     match query::group_range(&base, &include, &exclude) {
-        //         Ok(range) => {
-        //             let (mut iter_data, data) = base.split_dense();
+            unsafe {
+                Self::Dense(DenseIter::new_unchecked(
+                    entities,
+                    data,
+                    filter,
+                    world_tick,
+                    change_tick,
+                ))
+            }
+        } else {
+            match group_range(&get, &include, &exclude) {
+                Some(range) => {
+                    let (entities, data) = get.split_dense();
+                    let entities = &entities[range];
 
-        //             unsafe {
-        //                 iter_data.entities = iter_data.entities.get_unchecked(range);
-        //                 Self::Dense(DenseIter::new_unchecked(iter_data, data,
-        // filter))             }
-        //         }
-        //         Err(_) => {
-        //             let (mut iter_data, sparse, data) = base.split_sparse();
-        //             let (include_entities, include) = include.split_modifier();
-        //             let (_, exclude) = exclude.split_modifier();
+                    unsafe {
+                        Self::Dense(DenseIter::new_unchecked(
+                            entities,
+                            data,
+                            filter,
+                            world_tick,
+                            change_tick,
+                        ))
+                    }
+                }
+                None => {
+                    let (entities, sparse, data) = get.split_sparse();
+                    let (include_entities, include) = include.split();
+                    let (_, exclude) = exclude.split();
 
-        //             if let Some(entities) = include_entities {
-        //                 if entities.len() < iter_data.entities.len() {
-        //                     iter_data.entities = entities;
-        //                 }
-        //             }
+                    let entities = if let Some(include_entities) = include_entities {
+                        cmp::min_by_key(entities, include_entities, |e| e.len())
+                    } else {
+                        entities
+                    };
 
-        //             Self::Sparse(SparseIter::new(
-        //                 iter_data, sparse, data, include, exclude, filter,
-        //             ))
-        //         }
-        //     }
-        // }
-        todo!()
+                    Self::Sparse(SparseIter::new(
+                        entities,
+                        sparse,
+                        data,
+                        include,
+                        exclude,
+                        filter,
+                        world_tick,
+                        change_tick,
+                    ))
+                }
+            }
+        }
     }
 
     /// Returns `true` if the iterator is dense.

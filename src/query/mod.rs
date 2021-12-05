@@ -7,7 +7,6 @@ pub use self::filter_types::*;
 pub use self::get_component::*;
 pub use self::get_component_set::*;
 pub use self::get_query::*;
-pub use self::group::*;
 pub use self::iter::*;
 pub use self::iter_dense::*;
 pub use self::iter_sparse::*;
@@ -38,3 +37,5 @@ mod modifier_types;
 mod query;
 mod query_slice;
 mod slice;
+
+pub(crate) use self::group::*;
