@@ -262,6 +262,8 @@ impl ComponentStorage {
     }
 
     pub(crate) fn clear(&mut self) {
+        self.sparse.clear();
+
         if self.needs_drop {
             let len = self.len;
             self.len = 0;
