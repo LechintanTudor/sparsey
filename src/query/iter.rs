@@ -1,5 +1,5 @@
 use crate::query::{
-    group_range, is_trivial_group, DenseIter, QueryFilter, QueryGet, QueryModifier, SparseIter,
+    get_group_range, is_trivial_group, DenseIter, QueryFilter, QueryGet, QueryModifier, SparseIter,
 };
 use crate::storage::Entity;
 use crate::utils::EntityIterator;
@@ -43,8 +43,8 @@ where
                 ))
             }
         } else {
-            match group_range(&get, &include, &exclude) {
-                Some(range) => {
+            match get_group_range(&get, &include, &exclude) {
+                Ok(range) => {
                     let (entities, data) = get.split_dense();
                     let entities = &entities[range];
 
@@ -58,7 +58,7 @@ where
                         ))
                     }
                 }
-                None => {
+                Err(_) => {
                     let (entities, sparse, data) = get.split_sparse();
                     let (include_entities, include) = include.split();
                     let (_, exclude) = exclude.split();

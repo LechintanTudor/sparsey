@@ -1,7 +1,7 @@
 use crate::components::QueryGroupInfo;
 use crate::query::{
-    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered, Mutated,
-    Not, Or, Passthrough, QueryFilter, QueryGet, Xor,
+    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered,
+    GetComponentUnfiltered, Mutated, Not, Or, Passthrough, QueryFilter, QueryGet, Xor,
 };
 use crate::storage::Entity;
 use crate::utils::Ticks;
@@ -151,6 +151,21 @@ where
         change_tick: Ticks,
     ) -> Option<Self::Item> {
         G::get_from_dense_unchecked::<F>(data, index, world_tick, change_tick)
+    }
+}
+
+impl<'a, F, G> QueryFilter for Filter<F, G>
+where
+    F: ChangeTicksFilter,
+    G: GetComponentUnfiltered<'a>,
+{
+    fn matches(&self, entity: Entity) -> bool {
+        let index = match self.get.get_index(entity) {
+            Some(index) => index,
+            None => return false,
+        };
+
+        unsafe { self.get.matches_unchecked::<F>(index) }
     }
 }
 

@@ -77,7 +77,7 @@ impl<'a> QueryGroupInfo<'a> {
             Some(0..group.len())
         } else if self.query_mask == group.exclude_mask() {
             let prev_group = unsafe { *group_family.add((self.group_offset - 1) as usize) };
-            Some(prev_group.len()..group.len())
+            Some(group.len()..prev_group.len())
         } else {
             None
         }

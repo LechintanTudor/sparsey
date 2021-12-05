@@ -13,8 +13,8 @@ pub use self::iter_sparse::*;
 pub use self::modifier::*;
 pub use self::modifier_types::*;
 pub use self::query::*;
-pub use self::query_slice::*;
-pub use self::slice::*;
+pub use self::slice_query::*;
+pub use self::slice_query_get::*;
 
 #[macro_use]
 mod split;
@@ -35,7 +35,7 @@ mod iter_sparse;
 mod modifier;
 mod modifier_types;
 mod query;
-mod query_slice;
-mod slice;
+mod slice_query;
+mod slice_query_get;
 
 pub(crate) use self::group::*;
