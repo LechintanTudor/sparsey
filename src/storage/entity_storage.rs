@@ -99,8 +99,8 @@ impl EntitySparseSet {
     }
 
     fn remove(&mut self, entity: Entity) -> bool {
-        let dense_index = match self.sparse.remove_entity(entity) {
-            Some(entity) => entity.dense(),
+        let dense_index = match self.sparse.remove(entity) {
+            Some(index) => index,
             None => return false,
         };
 
@@ -118,7 +118,7 @@ impl EntitySparseSet {
     }
 
     fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains_entity(entity)
+        self.sparse.contains(entity)
     }
 
     fn clear(&mut self) {

@@ -91,11 +91,11 @@ where
     }
 
     fn includes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool {
-        sparse.contains_entity(entity)
+        sparse.contains(entity)
     }
 
     fn excludes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool {
-        !sparse.contains_entity(entity)
+        !sparse.contains(entity)
     }
 }
 

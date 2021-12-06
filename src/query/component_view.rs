@@ -127,7 +127,7 @@ where
     }
 
     fn get_index(&self, entity: Entity) -> Option<usize> {
-        self.storage.get_index_entity(entity).map(|e| e.dense())
+        self.storage.get_index(entity)
     }
 
     unsafe fn matches_unchecked<F>(&self, index: usize) -> bool
@@ -218,7 +218,7 @@ where
     }
 
     fn get_index(&self, entity: Entity) -> Option<usize> {
-        self.storage.get_index_entity(entity).map(|e| e.dense())
+        self.storage.get_index(entity)
     }
 
     unsafe fn matches_unchecked<F>(&self, index: usize) -> bool

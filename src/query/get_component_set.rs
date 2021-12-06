@@ -104,7 +104,7 @@ where
     }
 
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index> {
-        sparse.get_entity(entity).map(|e| e.dense())
+        sparse.get(entity)
     }
 
     unsafe fn get_from_sparse_unchecked<F>(

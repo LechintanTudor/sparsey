@@ -18,7 +18,7 @@ impl EntitySparseArray {
             .and_then(Option::as_ref)
             .and_then(|p| p[local_index(entity)].as_ref())
             .filter(|e| e.version() == entity.version())
-            .map(|e| e.dense())
+            .map(IndexEntity::dense)
     }
 
     pub fn contains(&self, entity: Entity) -> bool {
@@ -30,28 +30,14 @@ impl EntitySparseArray {
             .is_some()
     }
 
-    /// Returns the `IndexEntity` at the given `Entity`.
-    pub fn get_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.pages
-            .get(page_index(entity))
-            .and_then(Option::as_ref)
-            .and_then(|p| p[local_index(entity)].as_ref())
-            .filter(|e| e.version() == entity.version())
-    }
-
-    /// Returns `true` if the array contains `entity`.
-    pub fn contains_entity(&self, entity: Entity) -> bool {
-        self.get_entity(entity).is_some()
-    }
-
-    /// Removes `entity` from the array and returns the `index` mapped to it.
-    pub(crate) fn remove_entity(&mut self, entity: Entity) -> Option<IndexEntity> {
+    pub(crate) fn remove(&mut self, entity: Entity) -> Option<usize> {
         self.pages
             .get_mut(page_index(entity))
             .and_then(Option::as_mut)
-            .map(|page| &mut page[local_index(entity)])
-            .filter(|e| e.map(|e| e.version()) == Some(entity.version()))?
+            .map(|p| &mut p[local_index(entity)])
+            .filter(|e| e.map(|e| e.version() == entity.version()).unwrap_or(false))?
             .take()
+            .map(|e| e.dense())
     }
 
     /// Returns the `IndexEntity` slot at `index` without checking if the

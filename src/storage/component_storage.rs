@@ -92,7 +92,7 @@ impl ComponentStorage {
     where
         T: 'static,
     {
-        let index = self.sparse.remove_entity(entity)?.dense();
+        let index = self.sparse.remove(entity)?;
 
         self.len -= 1;
 
@@ -113,8 +113,8 @@ impl ComponentStorage {
     }
 
     pub(crate) fn remove_and_drop(&mut self, entity: Entity) {
-        let index = match self.sparse.remove_entity(entity) {
-            Some(entity) => entity.dense(),
+        let index = match self.sparse.remove(entity) {
+            Some(index) => index,
             None => return,
         };
 
@@ -194,24 +194,24 @@ impl ComponentStorage {
     }
     #[inline]
     pub(crate) fn get_ticks(&self, entity: Entity) -> Option<&ChangeTicks> {
-        let index = self.sparse.get_entity(entity)?.dense();
+        let index = self.sparse.get(entity)?;
         unsafe { Some(&*self.ticks.as_ptr().add(index)) }
     }
 
     #[inline]
     pub(crate) unsafe fn get_with_ticks<T>(&self, entity: Entity) -> Option<(&T, &ChangeTicks)> {
-        let index = self.sparse.get_entity(entity)?.dense();
+        let index = self.sparse.get(entity)?;
         Some(self.get_with_ticks_unchecked(index))
     }
 
     #[inline]
-    pub(crate) fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.sparse.get_entity(entity)
+    pub(crate) fn get_index(&self, entity: Entity) -> Option<usize> {
+        self.sparse.get(entity)
     }
 
     #[inline]
     pub(crate) fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains_entity(entity)
+        self.sparse.contains(entity)
     }
 
     #[inline]
