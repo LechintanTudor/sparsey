@@ -28,14 +28,7 @@ where
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Self {
-        Self {
-            entities,
-            data,
-            filter,
-            world_tick,
-            change_tick,
-            index: 0,
-        }
+        Self { entities, data, filter, world_tick, change_tick, index: 0 }
     }
 }
 

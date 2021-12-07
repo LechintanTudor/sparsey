@@ -42,10 +42,7 @@ fn main() {
     let num_threads = dispatcher.max_concurrecy();
     println!("Create thread pool with {} threads", num_threads);
 
-    let thread_pool = ThreadPoolBuilder::new()
-        .num_threads(num_threads)
-        .build()
-        .unwrap();
+    let thread_pool = ThreadPoolBuilder::new().num_threads(num_threads).build().unwrap();
 
     for _ in 0..3 {
         dispatcher.run_par(&mut world, &thread_pool).unwrap();

@@ -87,11 +87,7 @@ where
     E: QueryModifier<'a>,
 {
     pub fn new(get: G, include: I, exclude: E) -> Self {
-        Self {
-            get,
-            include,
-            exclude,
-        }
+        Self { get, include, exclude }
     }
 
     pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<G, I, E, F>
@@ -133,12 +129,7 @@ where
     F: QueryFilter,
 {
     pub fn new(get: G, include: I, exclude: E, filter: F) -> Self {
-        Self {
-            get,
-            include,
-            exclude,
-            filter,
-        }
+        Self { get, include, exclude, filter }
     }
 }
 

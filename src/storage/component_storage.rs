@@ -63,13 +63,7 @@ impl ComponentStorage {
                 let index = index_entity.dense();
                 *self.entities.as_ptr().add(index) = entity;
                 *self.ticks.as_ptr().add(index) = ticks;
-                Some(
-                    self.components
-                        .cast::<T>()
-                        .as_ptr()
-                        .add(index)
-                        .replace(component),
-                )
+                Some(self.components.cast::<T>().as_ptr().add(index).replace(component))
             }
             None => {
                 *index_entity = Some(IndexEntity::new(self.len as u32, entity.version()));
@@ -176,10 +170,7 @@ impl ComponentStorage {
 
     #[inline]
     pub(crate) unsafe fn get_with_ticks_unchecked<T>(&self, index: usize) -> (&T, &ChangeTicks) {
-        (
-            &*self.components.cast::<T>().as_ptr().add(index),
-            &*self.ticks.as_ptr().add(index),
-        )
+        (&*self.components.cast::<T>().as_ptr().add(index), &*self.ticks.as_ptr().add(index))
     }
 
     #[inline]
@@ -253,11 +244,7 @@ impl ComponentStorage {
         T: 'static,
     {
         self.entities().iter().enumerate().map(|(i, entity)| {
-            (
-                entity,
-                &*self.components.cast::<T>().as_ptr().add(i),
-                &*self.ticks.as_ptr().add(i),
-            )
+            (entity, &*self.components.cast::<T>().as_ptr().add(i), &*self.ticks.as_ptr().add(i))
         })
     }
 
@@ -302,12 +289,8 @@ impl ComponentStorage {
                     let old_layout = array_layout::<Entity>(self.cap);
                     let layout = array_layout::<Entity>(cap);
 
-                    NonNull::new(realloc(
-                        self.entities.as_ptr().cast(),
-                        old_layout,
-                        layout.size(),
-                    ))
-                    .unwrap_or_else(|| handle_alloc_error(layout))
+                    NonNull::new(realloc(self.entities.as_ptr().cast(), old_layout, layout.size()))
+                        .unwrap_or_else(|| handle_alloc_error(layout))
                 };
 
                 let components = if self.layout.size() != 0 {
@@ -324,12 +307,8 @@ impl ComponentStorage {
                     let old_layout = array_layout::<ChangeTicks>(self.cap);
                     let layout = array_layout::<ChangeTicks>(cap);
 
-                    NonNull::new(realloc(
-                        self.ticks.as_ptr().cast(),
-                        old_layout,
-                        layout.size(),
-                    ))
-                    .unwrap_or_else(|| handle_alloc_error(layout))
+                    NonNull::new(realloc(self.ticks.as_ptr().cast(), old_layout, layout.size()))
+                        .unwrap_or_else(|| handle_alloc_error(layout))
                 };
 
                 (entities, components, ticks, cap)
@@ -355,22 +334,13 @@ impl Drop for ComponentStorage {
             self.clear();
 
             unsafe {
-                dealloc(
-                    self.entities.as_ptr().cast(),
-                    array_layout::<Entity>(self.cap),
-                );
+                dealloc(self.entities.as_ptr().cast(), array_layout::<Entity>(self.cap));
 
                 if self.layout.size() != 0 {
-                    dealloc(
-                        self.components.as_ptr(),
-                        repeat_layout(&self.layout, self.cap),
-                    );
+                    dealloc(self.components.as_ptr(), repeat_layout(&self.layout, self.cap));
                 }
 
-                dealloc(
-                    self.ticks.as_ptr().cast(),
-                    array_layout::<ChangeTicks>(self.cap),
-                );
+                dealloc(self.ticks.as_ptr().cast(), array_layout::<ChangeTicks>(self.cap));
             }
         }
     }

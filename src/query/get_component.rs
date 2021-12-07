@@ -21,13 +21,7 @@ pub unsafe trait GetComponentUnfiltered<'a> {
     where
         F: ChangeTicksFilter;
 
-    fn split(
-        self,
-    ) -> (
-        &'a [Entity],
-        &'a EntitySparseArray,
-        ComponentViewData<Self::Component>,
-    );
+    fn split(self) -> (&'a [Entity], &'a EntitySparseArray, ComponentViewData<Self::Component>);
 
     unsafe fn get_from_parts_unchecked<F>(
         data: ComponentViewData<Self::Component>,

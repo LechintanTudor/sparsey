@@ -28,10 +28,7 @@ pub(crate) unsafe fn get_group_status(
         None => return GroupStatus::MissingComponents,
     };
 
-    if others
-        .iter_mut()
-        .all(|storage| storage.get_mut().contains(entity))
-    {
+    if others.iter_mut().all(|storage| storage.get_mut().contains(entity)) {
         status
     } else {
         GroupStatus::MissingComponents

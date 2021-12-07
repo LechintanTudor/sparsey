@@ -17,10 +17,7 @@ where
     F: ChangeTicksFilter,
 {
     pub fn new(get: G) -> Self {
-        Self {
-            get,
-            _phantom: PhantomData,
-        }
+        Self { get, _phantom: PhantomData }
     }
 }
 

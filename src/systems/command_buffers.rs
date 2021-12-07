@@ -17,10 +17,7 @@ impl CommandBuffers {
         let mut buffers = Vec::new();
         buffers.resize_with(buffer_count, || UnsafeCell::new(Vec::new()));
 
-        Self {
-            buffers,
-            index: AtomicUsize::new(0),
-        }
+        Self { buffers, index: AtomicUsize::new(0) }
     }
 
     pub fn next(&self) -> Option<&mut CommandBuffer> {
@@ -45,9 +42,6 @@ impl CommandBuffers {
         let used_buffers = *self.index.get_mut();
         *self.index.get_mut() = 0;
 
-        self.buffers
-            .iter_mut()
-            .take(used_buffers)
-            .flat_map(|buffer| buffer.get_mut().drain(..))
+        self.buffers.iter_mut().take(used_buffers).flat_map(|buffer| buffer.get_mut().drain(..))
     }
 }

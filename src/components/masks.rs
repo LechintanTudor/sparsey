@@ -22,10 +22,7 @@ impl QueryMask {
     }
 
     pub const fn new_include_group(arity: usize) -> Self {
-        Self {
-            include: (1 << arity) - 1,
-            exclude: 0,
-        }
+        Self { include: (1 << arity) - 1, exclude: 0 }
     }
 
     pub const fn new_exclude_group(prev_arity: usize, arity: usize) -> Self {
@@ -42,17 +39,11 @@ impl QueryMask {
     }
 
     pub const fn include(self, include: StorageMask) -> Self {
-        Self {
-            include: self.include | include,
-            ..self
-        }
+        Self { include: self.include | include, ..self }
     }
 
     pub const fn exclude(self, exclude: StorageMask) -> Self {
-        Self {
-            exclude: self.exclude | exclude,
-            ..self
-        }
+        Self { exclude: self.exclude | exclude, ..self }
     }
 }
 

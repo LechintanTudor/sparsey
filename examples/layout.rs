@@ -12,9 +12,8 @@ struct Sprite {
 pub struct Transparent;
 
 fn print_sprites(pos: Comp<Position>, sprites: Comp<Sprite>, transparencies: Comp<Transparent>) {
-    let (pos_slice, sprite_slice) = (&pos, &sprites)
-        .components()
-        .expect("Ungrouped component storages");
+    let (pos_slice, sprite_slice) =
+        (&pos, &sprites).components().expect("Ungrouped component storages");
 
     println!("[All sprites]");
     println!("Positions: {:?}", pos_slice);
@@ -40,9 +39,7 @@ fn print_sprites(pos: Comp<Position>, sprites: Comp<Sprite>, transparencies: Com
 }
 
 fn main() {
-    let mut dispatcher = Dispatcher::builder()
-        .add_system(print_sprites.system())
-        .build();
+    let mut dispatcher = Dispatcher::builder().add_system(print_sprites.system()).build();
 
     let layout = Layout::builder()
         .add_group(<(Position, Sprite)>::group())

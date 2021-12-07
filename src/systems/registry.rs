@@ -52,11 +52,7 @@ impl<'a> Registry<'a> {
         command_buffers: &'a CommandBuffers,
         change_tick: Ticks,
     ) -> Self {
-        Self {
-            world,
-            command_buffers,
-            change_tick,
-        }
+        Self { world, command_buffers, change_tick }
     }
 }
 
@@ -84,10 +80,7 @@ unsafe impl<'a, 'b> BorrowRegistry<'a> for Commands<'b> {
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        Commands::new(
-            registry.command_buffers.next().unwrap(),
-            registry.world.entity_storage(),
-        )
+        Commands::new(registry.command_buffers.next().unwrap(), registry.world.entity_storage())
     }
 }
 

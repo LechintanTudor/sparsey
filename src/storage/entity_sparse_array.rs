@@ -64,8 +64,7 @@ impl EntitySparseArray {
         } else {
             let extra_uninit_pages = page_index - self.pages.len();
             self.pages.reserve(extra_uninit_pages + 1);
-            self.pages
-                .extend(iter::repeat(uninit_page()).take(extra_uninit_pages));
+            self.pages.extend(iter::repeat(uninit_page()).take(extra_uninit_pages));
             self.pages.push(empty_page())
         }
 

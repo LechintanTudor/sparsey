@@ -17,9 +17,7 @@ impl ComponentInfo {
     where
         T: Component,
     {
-        Self {
-            component: Box::new(Type::<T>(PhantomData)),
-        }
+        Self { component: Box::new(Type::<T>(PhantomData)) }
     }
 
     /// Returns the `TypeId` of the `Component`.
@@ -40,9 +38,7 @@ impl ComponentInfo {
 
 impl Clone for ComponentInfo {
     fn clone(&self) -> Self {
-        Self {
-            component: self.component.clone(),
-        }
+        Self { component: self.component.clone() }
     }
 }
 

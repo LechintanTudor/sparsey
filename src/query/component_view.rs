@@ -47,13 +47,7 @@ where
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Self {
-        Self {
-            storage,
-            group_info,
-            world_tick,
-            change_tick,
-            _phantom: PhantomData,
-        }
+        Self { storage, group_info, world_tick, change_tick, _phantom: PhantomData }
     }
 
     /// Returns the `ChangeTicks` of `entity`'s component.
@@ -150,20 +144,11 @@ where
             (self.storage.get_unchecked(index), true)
         } else {
             let (component, ticks) = self.storage.get_with_ticks_unchecked::<T>(index);
-            (
-                component,
-                F::matches(ticks, self.world_tick, self.change_tick),
-            )
+            (component, F::matches(ticks, self.world_tick, self.change_tick))
         }
     }
 
-    fn split(
-        self,
-    ) -> (
-        &'a [Entity],
-        &'a EntitySparseArray,
-        ComponentViewData<Self::Component>,
-    ) {
+    fn split(self) -> (&'a [Entity], &'a EntitySparseArray, ComponentViewData<Self::Component>) {
         let (entities, sparse, components, ticks) = self.storage.split();
         (entities, sparse, ComponentViewData::new(components, ticks))
     }
@@ -240,26 +225,14 @@ where
         let (component, ticks) = self.storage.get_with_ticks_unchecked_mut::<T>(index);
 
         if F::IS_PASSTHROUGH {
-            (
-                ComponentRefMut::new(component, ticks, self.world_tick),
-                true,
-            )
+            (ComponentRefMut::new(component, ticks, self.world_tick), true)
         } else {
             let matches = F::matches(ticks, self.world_tick, self.change_tick);
-            (
-                ComponentRefMut::new(component, ticks, self.world_tick),
-                matches,
-            )
+            (ComponentRefMut::new(component, ticks, self.world_tick), matches)
         }
     }
 
-    fn split(
-        self,
-    ) -> (
-        &'a [Entity],
-        &'a EntitySparseArray,
-        ComponentViewData<Self::Component>,
-    ) {
+    fn split(self) -> (&'a [Entity], &'a EntitySparseArray, ComponentViewData<Self::Component>) {
         let (entities, sparse, components, ticks) = self.storage.split();
         (entities, sparse, ComponentViewData::new(components, ticks))
     }

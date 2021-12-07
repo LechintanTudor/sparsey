@@ -17,12 +17,7 @@ impl<'a> ComponentGroupInfo<'a> {
         group_offset: u32,
         storage_mask: StorageMask,
     ) -> Self {
-        Self {
-            group_family,
-            group_offset,
-            storage_mask,
-            _phantom: PhantomData,
-        }
+        Self { group_family, group_offset, storage_mask, _phantom: PhantomData }
     }
 }
 

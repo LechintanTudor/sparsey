@@ -73,14 +73,10 @@ impl ResourceStorage {
     }
 
     pub fn borrow(&self, resource_type_id: &TypeId) -> Option<AtomicRef<ResourceCell>> {
-        self.resources
-            .get(resource_type_id)
-            .map(AtomicRefCell::borrow)
+        self.resources.get(resource_type_id).map(AtomicRefCell::borrow)
     }
 
     pub fn borrow_mut(&self, resource_type_id: &TypeId) -> Option<AtomicRefMut<ResourceCell>> {
-        self.resources
-            .get(resource_type_id)
-            .map(AtomicRefCell::borrow_mut)
+        self.resources.get(resource_type_id).map(AtomicRefCell::borrow_mut)
     }
 }

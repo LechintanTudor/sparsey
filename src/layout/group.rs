@@ -56,10 +56,7 @@ impl LayoutGroupFamily {
             }
         }
 
-        Self {
-            components,
-            group_arities,
-        }
+        Self { components, group_arities }
     }
 
     pub fn components(&self) -> &[ComponentInfo] {

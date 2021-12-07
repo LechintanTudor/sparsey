@@ -17,18 +17,12 @@ pub struct ChangeTicks {
 impl ChangeTicks {
     /// Creates a new `ChangeTicks` object with the given ticks.
     pub const fn new(tick_added: Ticks, tick_mutated: Ticks) -> Self {
-        Self {
-            tick_added,
-            tick_mutated,
-        }
+        Self { tick_added, tick_mutated }
     }
 
     /// Creates a new `ChangeTicks` object for components which were just
     /// added.
     pub const fn just_added(tick_added: Ticks) -> Self {
-        Self {
-            tick_added,
-            tick_mutated: 0,
-        }
+        Self { tick_added, tick_mutated: 0 }
     }
 }

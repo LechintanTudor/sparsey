@@ -1,3 +1,6 @@
+comment_width = 100
 imports_granularity = "Module"
+max_width = 100
 newline_style = "Unix"
+use_small_heuristics = "Max"
 wrap_comments = true

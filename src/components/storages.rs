@@ -103,13 +103,7 @@ impl ComponentStorages {
             storages.push(AtomicRefCell::new(storage));
         }
 
-        Self {
-            component_info,
-            storages,
-            group_info,
-            families,
-            groups,
-        }
+        Self { component_info, storages, group_info, families, groups }
     }
 
     pub(crate) fn into_storages(mut self) -> FxHashMap<TypeId, ComponentStorage> {
@@ -159,9 +153,8 @@ impl ComponentStorages {
     where
         E: IntoIterator<Item = &'a Entity>,
     {
-        let groups = self
-            .groups
-            .get_unchecked_mut(self.families.get_unchecked(family_index).clone());
+        let groups =
+            self.groups.get_unchecked_mut(self.families.get_unchecked(family_index).clone());
         let storages = &mut self.storages;
 
         entities.into_iter().for_each(|&entity| {
@@ -195,9 +188,8 @@ impl ComponentStorages {
     ) where
         E: IntoIterator<Item = &'a Entity>,
     {
-        let groups = self
-            .groups
-            .get_unchecked_mut(self.families.get_unchecked(family_index).clone());
+        let groups =
+            self.groups.get_unchecked_mut(self.families.get_unchecked(family_index).clone());
         let storages = &mut self.storages;
 
         entities.into_iter().for_each(|&entity| {
@@ -226,10 +218,7 @@ impl ComponentStorages {
 
             let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
-            for i in ungroup_range
-                .rev()
-                .take_while(|i| (group_mask & (1 << i)) != 0)
-            {
+            for i in ungroup_range.rev().take_while(|i| (group_mask & (1 << i)) != 0) {
                 let group = groups.get_unchecked_mut(i);
                 let storages = storages.get_unchecked_mut(group.storage_range());
                 components::ungroup_components(storages, &mut group.len, entity);
@@ -313,10 +302,7 @@ impl ComponentStorages {
         type_id: &TypeId,
     ) -> Option<(AtomicRefMut<ComponentStorage>, FamilyMask)> {
         self.component_info.get(type_id).map(|info| unsafe {
-            (
-                self.storages.get_unchecked(info.storage_index).borrow_mut(),
-                info.family_mask,
-            )
+            (self.storages.get_unchecked(info.storage_index).borrow_mut(), info.family_mask)
         })
     }
 
@@ -327,12 +313,7 @@ impl ComponentStorages {
         let info = self.component_info.get(type_id)?;
 
         unsafe {
-            Some((
-                self.storages
-                    .get_unchecked_mut(info.storage_index)
-                    .get_mut(),
-                info.family_mask,
-            ))
+            Some((self.storages.get_unchecked_mut(info.storage_index).get_mut(), info.family_mask))
         }
     }
 

@@ -125,12 +125,7 @@ impl World {
         C: ComponentSet,
         I: IntoIterator<Item = C>,
     {
-        C::extend(
-            &mut self.entities,
-            &mut self.storages,
-            components_iter,
-            ticks,
-        )
+        C::extend(&mut self.entities, &mut self.storages, components_iter, ticks)
     }
 
     /// Removes `entity` and all of its components from the `World`.
@@ -166,10 +161,7 @@ impl World {
             });
         }
 
-        entities
-            .into_iter()
-            .map(|&entity| self.entities.destroy(entity) as usize)
-            .sum()
+        entities.into_iter().map(|&entity| self.entities.destroy(entity) as usize).sum()
     }
 
     /// Appends the given `components` to `entity` if `entity` exists in the

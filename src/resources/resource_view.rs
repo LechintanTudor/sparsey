@@ -18,12 +18,7 @@ where
     C: Deref<Target = ResourceCell>,
 {
     pub(crate) unsafe fn new(cell: C, world_tick: Ticks, change_tick: Ticks) -> Self {
-        Self {
-            cell,
-            world_tick,
-            change_tick,
-            _phantom: PhantomData,
-        }
+        Self { cell, world_tick, change_tick, _phantom: PhantomData }
     }
 }
 

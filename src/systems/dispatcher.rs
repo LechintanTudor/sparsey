@@ -57,11 +57,7 @@ impl DispatcherBuilder {
         let steps = merge_and_optimize_steps(mem::take(&mut self.simple_steps));
         let command_buffers = CommandBuffers::new(required_command_buffers(&steps));
 
-        Dispatcher {
-            command_buffers,
-            steps,
-            change_ticks: Default::default(),
-        }
+        Dispatcher { command_buffers, steps, change_ticks: Default::default() }
     }
 }
 
@@ -148,9 +144,7 @@ impl Dispatcher {
                 Step::FlushCommands => {
                     world.maintain();
 
-                    self.command_buffers
-                        .drain()
-                        .for_each(|command| command(world));
+                    self.command_buffers.drain().for_each(|command| command(world));
                 }
             }
         }
@@ -209,9 +203,7 @@ impl Dispatcher {
                 Step::FlushCommands => {
                     world.maintain();
 
-                    self.command_buffers
-                        .drain()
-                        .for_each(|command| command(world));
+                    self.command_buffers.drain().for_each(|command| command(world));
                 }
             }
         }
@@ -291,19 +283,13 @@ fn required_command_buffers(steps: &[Step]) -> usize {
 fn merge_and_optimize_steps(mut simple_steps: Vec<SimpleStep>) -> Vec<Step> {
     let mut steps = Vec::<Step>::new();
 
-    for simple_step in simple_steps
-        .drain(..)
-        .chain(Some(SimpleStep::FlushCommands))
-    {
+    for simple_step in simple_steps.drain(..).chain(Some(SimpleStep::FlushCommands)) {
         match simple_step {
             SimpleStep::RunSystem(system) => match steps.last_mut() {
                 Some(Step::RunSystems(systems)) => {
                     let systems_conflict =
                         systems.iter().flat_map(System::accesses).any(|access1| {
-                            system
-                                .accesses()
-                                .iter()
-                                .any(|access2| access1.conflicts(access2))
+                            system.accesses().iter().any(|access2| access1.conflicts(access2))
                         });
 
                     if systems_conflict {

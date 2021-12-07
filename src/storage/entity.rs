@@ -39,10 +39,7 @@ pub struct Entity {
 
 impl fmt::Debug for Entity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Entity")
-            .field("id", &self.id)
-            .field("version", &self.version.0)
-            .finish()
+        f.debug_struct("Entity").field("id", &self.id).field("version", &self.version.0).finish()
     }
 }
 
@@ -56,10 +53,7 @@ impl Entity {
     /// Creates a new entity with the given id and default `Version`.
     #[inline]
     pub const fn with_id(id: u32) -> Self {
-        Self {
-            id,
-            version: Version::DEFAULT,
-        }
+        Self { id, version: Version::DEFAULT }
     }
 
     /// Returns the id of the entity.

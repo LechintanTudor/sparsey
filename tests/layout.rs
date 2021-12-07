@@ -7,10 +7,8 @@ use std::iter::FromIterator;
 
 #[test]
 fn test_iterators() {
-    let layout = Layout::builder()
-        .add_group(<(A, B)>::group())
-        .add_group(<(A, B, C, D)>::group())
-        .build();
+    let layout =
+        Layout::builder().add_group(<(A, B)>::group()).add_group(<(A, B, C, D)>::group()).build();
 
     let mut world = World::with_layout(&layout);
     let e0 = world.create_entity((A(0), B(0)));
@@ -59,10 +57,8 @@ fn test_iterators() {
 
 #[test]
 fn test_slicing() {
-    let layout = Layout::builder()
-        .add_group(<(A, B)>::group())
-        .add_group(<(A, B, C, D)>::group())
-        .build();
+    let layout =
+        Layout::builder().add_group(<(A, B)>::group()).add_group(<(A, B, C, D)>::group()).build();
 
     let mut world = World::with_layout(&layout);
     let e0 = world.create_entity((A(0), B(0)));
@@ -89,18 +85,12 @@ fn test_slicing() {
             .zip(c)
             .zip(d)
             .all(|(((a, b), c), d)| a.0 == b.0 && b.0 == c.0 && c.0 == d.0));
-        assert_eq!(
-            HashSet::<Entity>::from_iter(e.iter().copied()),
-            HashSet::from_iter([e2, e3])
-        );
+        assert_eq!(HashSet::<Entity>::from_iter(e.iter().copied()), HashSet::from_iter([e2, e3]));
     }
 
     {
         let (e, (a, b)) = (&a, &b).exclude((&c, &d)).entities_components().unwrap();
         assert!(a.iter().zip(b).all(|(a, b)| a.0 == b.0));
-        assert_eq!(
-            HashSet::<Entity>::from_iter(e.iter().copied()),
-            HashSet::from_iter([e0, e1])
-        );
+        assert_eq!(HashSet::<Entity>::from_iter(e.iter().copied()), HashSet::from_iter([e0, e1]));
     }
 }
