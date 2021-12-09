@@ -5,25 +5,38 @@ use crate::query::{
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
+/// Trait used to fetch filtered component sets from component views. Used internally by queries.
 pub unsafe trait QueryGet<'a> {
+    /// Whether or not a single component is fetched. Used internally by queries for optimization
+    /// purposes.
     const GETS_ONE: bool;
 
+    /// Fetched item.
     type Item: 'a;
+    /// `EntitySparseArray`s returned when splitting the views.
     type Sparse: 'a;
+    /// `ComponentStorageData` returned when splitting the views.
     type Data: 'a;
 
+    /// Returns the group to which the storages belong, if any.
     fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
+    /// Returns the world tick and change tick used for change detection.
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
+    /// Returns `true` if `entity` matches the filters.
     fn contains(&self, entity: Entity) -> bool;
 
+    /// Returns the item if `entity` matches the filters.
     fn get(self, entity: Entity) -> Option<Self::Item>;
 
+    /// Splits the views for sparse iteration.
     fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data);
 
+    /// Splits the views for dense iteration.
     fn split_dense(self) -> (&'a [Entity], Self::Data);
 
+    /// Returns the item if `entity` matches the filters. Used internally by `SparseIter`.
     unsafe fn get_from_sparse_unchecked(
         sparse: &Self::Sparse,
         entity: Entity,
@@ -32,6 +45,7 @@ pub unsafe trait QueryGet<'a> {
         change_tick: Ticks,
     ) -> Option<Self::Item>;
 
+    /// Returns the item if the data at `index` matches the filters. Used internally by `DenseIter`.
     unsafe fn get_from_dense_unchecked(
         data: &Self::Data,
         index: usize,

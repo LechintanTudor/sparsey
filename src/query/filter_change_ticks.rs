@@ -1,12 +1,17 @@
 use crate::query::{Added, Changed, Mutated, Not, Passthrough};
 use crate::utils::{ChangeTicks, Ticks};
 
+/// Trait that enables filtering a component's `ChangeTicks`. Used internally by queries.
 pub trait ChangeTicksFilter
 where
     Self: 'static,
 {
+    /// Whether or not the filer matches all inputs. Used internally by queries for optimization
+    /// purposes.
     const IS_PASSTHROUGH: bool = false;
 
+    /// Returns `true` if the `ticks` match the filter considering the provided `world_tick` and
+    /// `change_tick`.
     fn matches(ticks: &ChangeTicks, world_tick: Ticks, change_tick: Ticks) -> bool;
 }
 

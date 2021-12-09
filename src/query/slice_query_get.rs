@@ -3,7 +3,9 @@ use crate::storage::Entity;
 use crate::utils::range_to_bounds;
 use std::ops::RangeBounds;
 
+/// Trait used for getting `Component` and `Entity` slices from grouped components.
 pub unsafe trait SliceQueryGet<'a>: QueryGet<'a> {
+    /// Component slices returned by slicing the `Query`.
     type Slices;
 
     /// # Safety

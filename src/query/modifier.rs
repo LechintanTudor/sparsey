@@ -2,23 +2,34 @@ use crate::components::QueryGroupInfo;
 use crate::query::{GetComponentUnfiltered, GetImmutableComponentUnfiltered, Passthrough};
 use crate::storage::{Entity, EntitySparseArray};
 
+/// Trait used to include/exclude components from a `Query`.
 pub unsafe trait QueryModifier<'a> {
+    /// Whether or not the `Query` matches all inputs. Used internally by queries for optimization
+    /// purposes.
     const IS_PASSTHROUGH: bool = false;
 
+    /// `EntitySparseArray`s returned when splitting the views.
     type Sparse: 'a;
 
+    /// Returns `true` if all views include `entity`.
     fn includes(&self, entity: Entity) -> bool;
 
+    /// Returns `true` if all views exclude `entity`.
     fn excludes(&self, entity: Entity) -> bool;
 
+    /// Includes the views' `QueryGroupInfo` in the provided `info`, if possible.
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
+    /// Includes the views' `QueryGroupInfo` from the provided `info`, if possible.
     fn exclude_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
+    /// Splits the modifier into the shortest `Entity` slice and the views' `EntitySparseArray`s.
     fn split(self) -> (Option<&'a [Entity]>, Self::Sparse);
 
+    /// Returns `true` if all views include `entity`.
     fn includes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool;
 
+    /// Returns `true` if all views exclude `entity`.
     fn excludes_sparse(sparse: &Self::Sparse, entity: Entity) -> bool;
 }
 

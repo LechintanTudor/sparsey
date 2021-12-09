@@ -3,36 +3,54 @@ use crate::query::{ChangeTicksFilter, ComponentViewData, GetComponentUnfiltered,
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::Ticks;
 
+/// Trait used to fetch a set of components from component views. Used internally by queries.
 pub unsafe trait GetComponentSetUnfiltered<'a> {
+    /// Whether or not a single component is fetched. Used internally by queries for optimization
+    /// purposes.
     const GETS_ONE: bool;
 
+    /// Fetched item.
     type Item: 'a;
+    /// Dense indexes returned from the `EntitySparseArray`s.
     type Index: Copy;
+    /// `EntitySparseArray`s returned when splitting the views.
     type Sparse: 'a;
+    /// `ComponentStorageData` returned when splitting the views.
     type Data: 'a;
 
+    /// Returns the group to which the storages belong, if any.
     fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
+    /// Includes the views' `QueryGroupInfo` in the provided `info`, if possible.
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
+    /// Returns the world tick and change tick used for change detection.
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
+    /// Returns the dense indexes mapped to `entity`.
     fn get_index(&self, entity: Entity) -> Option<Self::Index>;
 
+    /// Returns `true` if the data at the given `index` matches the filter.
     unsafe fn matches_unchecked<F>(&self, index: Self::Index) -> bool
     where
         F: ChangeTicksFilter;
 
+    /// Returns the item at the given `index` if it matches the filter.
     unsafe fn get_unchecked<F>(self, index: Self::Index) -> Option<Self::Item>
     where
         F: ChangeTicksFilter;
 
+    /// Splits the views for sparse iteration.
     fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data);
 
+    /// Splits the views for dense iteration.
     fn split_dense(self) -> (&'a [Entity], Self::Data);
 
+    /// Returns the dense indexes from `sparse`, mapped to `entity`.
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index>;
 
+    /// Returns the item at the given `index` if it matches the filter. Used internally by
+    /// SparseIter`.
     unsafe fn get_from_sparse_unchecked<F>(
         data: &Self::Data,
         index: Self::Index,
@@ -42,6 +60,8 @@ pub unsafe trait GetComponentSetUnfiltered<'a> {
     where
         F: ChangeTicksFilter;
 
+    /// Returns the item at the given `index` if it matches the filter. Used internally by
+    /// DenseIter`.
     unsafe fn get_from_dense_unchecked<F>(
         data: &Self::Data,
         index: usize,
@@ -138,33 +158,53 @@ where
     }
 }
 
+/// Trait used to fetch a filtered set of components from component views. Used internally by
+/// queries.
 pub unsafe trait GetComponentSet<'a> {
+    /// Whether or not a single component is fetched. Used internally by queries for optimization
+    /// purposes.
     const GETS_ONE: bool;
 
+    /// Fetched item.
     type Item: 'a;
+    /// Filter to apply to each operation.
     type Filter: ChangeTicksFilter;
+    /// Dense indexes returned from the `EntitySparseArray`s.
     type Index: Copy;
+    /// `EntitySparseArray`s returned when splitting the views.
     type Sparse: 'a;
+    /// `ComponentStorageData` returned when splitting the views.
     type Data: 'a;
 
+    /// Returns the group to which the storages belong, if any.
     fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
+    /// Includes the views' `QueryGroupInfo` in the provided `info`, if possible.
     fn include_group_info(&self, info: QueryGroupInfo<'a>) -> Option<QueryGroupInfo<'a>>;
 
+    /// Returns the world tick and change tick used for change detection.
     fn change_detection_ticks(&self) -> (Ticks, Ticks);
 
+    /// Returns the dense indexes mapped to `entity`.
     fn get_index(&self, entity: Entity) -> Option<Self::Index>;
 
+    /// Returns `true` if the data at the given `index` matches the filter.
     unsafe fn matches_unchecked(&self, index: Self::Index) -> bool;
 
+    /// Returns the item at the given `index` if it matches the filter.
     unsafe fn get_unchecked(self, index: Self::Index) -> Option<Self::Item>;
 
+    /// Splits the views for sparse iteration.
     fn split_sparse(self) -> (&'a [Entity], Self::Sparse, Self::Data);
 
+    /// Splits the views for dense iteration.
     fn split_dense(self) -> (&'a [Entity], Self::Data);
 
+    /// Returns the dense indexes from `sparse`, mapped to `entity`.
     fn get_index_from_sparse(sparse: &Self::Sparse, entity: Entity) -> Option<Self::Index>;
 
+    /// Returns the item at the given `index` if it matches the filter. Used internally by
+    /// SparseIter`.
     unsafe fn get_from_sparse_unchecked(
         data: &Self::Data,
         index: Self::Index,
@@ -172,6 +212,8 @@ pub unsafe trait GetComponentSet<'a> {
         change_tick: Ticks,
     ) -> Option<Self::Item>;
 
+    /// Returns the item at the given `index` if it matches the filter. Used internally by
+    /// DenseIter`.
     unsafe fn get_from_dense_unchecked(
         data: &Self::Data,
         index: usize,

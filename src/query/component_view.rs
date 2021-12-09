@@ -8,8 +8,11 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
+/// Container for the data of a `ComponentStorage`. Used internally by queries.
 pub struct ComponentViewData<T> {
+    /// Pointer to the packed array of components.
     pub components: *mut T,
+    /// Pointer to the `ChangeTicks` associated with the components.
     pub ticks: *mut ChangeTicks,
 }
 
@@ -22,12 +25,13 @@ impl<T> Clone for ComponentViewData<T> {
 impl<T> Copy for ComponentViewData<T> {}
 
 impl<T> ComponentViewData<T> {
+    /// Creates a new `ComponentViewData` from the given `components` and `ticks` pointers.
     pub const fn new(components: *mut T, ticks: *mut ChangeTicks) -> Self {
         Self { components, ticks }
     }
 }
 
-/// View over a `ComponentStorage` of type `T`.
+/// Strongly-typed view over a `ComponentStorage`.
 pub struct ComponentView<'a, T, S> {
     storage: S,
     group_info: Option<ComponentGroupInfo<'a>>,

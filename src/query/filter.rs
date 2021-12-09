@@ -7,6 +7,7 @@ use crate::storage::Entity;
 use crate::utils::Ticks;
 use std::marker::PhantomData;
 
+/// Type that a filter to the contained components.
 pub struct Filter<F, G> {
     get: G,
     _phantom: PhantomData<F>,
@@ -16,6 +17,7 @@ impl<'a, F, G> Filter<F, G>
 where
     F: ChangeTicksFilter,
 {
+    /// Applies a filter to the given components.
     pub fn new(get: G) -> Self {
         Self { get, _phantom: PhantomData }
     }
@@ -166,6 +168,7 @@ where
     }
 }
 
+/// Applies a filter that matches all components.
 pub fn contains<'a, G>(get: G) -> Filter<Passthrough, G>
 where
     G: GetComponentSetUnfiltered<'a>,
@@ -173,6 +176,7 @@ where
     Filter::new(get)
 }
 
+/// Applies a filter that matches if any component was added.
 pub fn added<'a, G>(get: G) -> Filter<Added, G>
 where
     G: GetComponentSetUnfiltered<'a>,
@@ -180,6 +184,7 @@ where
     Filter::new(get)
 }
 
+/// Applies a filter that matches if any component was mutated.
 pub fn mutated<'a, G>(get: G) -> Filter<Mutated, G>
 where
     G: GetComponentSetUnfiltered<'a>,
@@ -187,6 +192,7 @@ where
     Filter::new(get)
 }
 
+/// Applies a filter that matches if any component was added or mutated.
 pub fn changed<'a, G>(get: G) -> Filter<Changed, G>
 where
     G: GetComponentSetUnfiltered<'a>,

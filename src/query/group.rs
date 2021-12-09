@@ -4,6 +4,7 @@ use std::error::Error;
 use std::fmt;
 use std::ops::Range;
 
+/// Error returned when trying to slice ungrouped components.
 #[derive(Clone, Debug)]
 pub struct InvalidGroup;
 
@@ -15,6 +16,7 @@ impl fmt::Display for InvalidGroup {
     }
 }
 
+/// Returns `true` if the query only fetches one element and has no modifiers.
 pub(crate) fn is_trivial_group<'a, G, I, E>() -> bool
 where
     G: QueryGet<'a>,
@@ -24,6 +26,7 @@ where
     G::GETS_ONE && I::IS_PASSTHROUGH && E::IS_PASSTHROUGH
 }
 
+/// For non-trivial groups, returns the range of grouped components.
 pub(crate) fn get_group_range<'a, G, I, E>(
     get: &G,
     include: &I,

@@ -1,6 +1,8 @@
 use crate::query::{IntoQueryParts, Passthrough, QueryFilter, QueryGet, QueryModifier};
 
+/// Trait used to apply modifiers to the base part of a `Query`.
 pub trait QueryGetModifier<'a>: QueryGet<'a> + Sized {
+    /// Applies an include modifier to the `Query`.
     fn include<I>(self, include: I) -> Include<Self, I>
     where
         I: QueryModifier<'a>,
@@ -8,6 +10,7 @@ pub trait QueryGetModifier<'a>: QueryGet<'a> + Sized {
         Include::new(self, include)
     }
 
+    /// Applies an exclude modifier to the `Query`.
     fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, Passthrough, E>
     where
         E: QueryModifier<'a>,
@@ -15,6 +18,7 @@ pub trait QueryGetModifier<'a>: QueryGet<'a> + Sized {
         IncludeExclude::new(self, Passthrough, exclude)
     }
 
+    /// Applies a filter to the `Query`.
     fn filter<F>(self, filter: F) -> IncludeExcludeFilter<Self, Passthrough, Passthrough, F>
     where
         F: QueryFilter,
@@ -30,6 +34,7 @@ where
     // Empty
 }
 
+/// Wrapper that applies an include modifier to a `Query`.
 pub struct Include<G, I> {
     get: G,
     include: I,
@@ -40,10 +45,12 @@ where
     G: QueryGet<'a>,
     I: QueryModifier<'a>,
 {
+    /// Applies an include modifier to the `Query`.
     pub fn new(get: G, include: I) -> Self {
         Self { get, include }
     }
 
+    /// Applies an exclude modifier to the `Query`.
     pub fn exclude<E>(self, exclude: E) -> IncludeExclude<G, I, E>
     where
         E: QueryModifier<'a>,
@@ -51,6 +58,7 @@ where
         IncludeExclude::new(self.get, self.include, exclude)
     }
 
+    /// Applies a filter to the `Query`.
     pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<G, I, Passthrough, F>
     where
         F: QueryFilter,
@@ -86,10 +94,12 @@ where
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
 {
+    /// Applies include and exclude modifiers to the `Query`.
     pub fn new(get: G, include: I, exclude: E) -> Self {
         Self { get, include, exclude }
     }
 
+    /// Applies a filter to the `Query`.
     pub fn filter<F>(self, filter: F) -> IncludeExcludeFilter<G, I, E, F>
     where
         F: QueryFilter,
@@ -128,6 +138,7 @@ where
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
+    /// Applies include/exclude modifiers and a filter to the `Query`.
     pub fn new(get: G, include: I, exclude: E, filter: F) -> Self {
         Self { get, include, exclude, filter }
     }

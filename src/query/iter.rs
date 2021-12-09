@@ -5,7 +5,7 @@ use crate::storage::Entity;
 use crate::utils::EntityIterator;
 use std::cmp;
 
-/// Iterator over grouped or ungrouped queries.
+/// Iterator over grouped or ungrouped components.
 pub enum Iter<'a, G, I, E, F>
 where
     G: QueryGet<'a>,
@@ -13,9 +13,9 @@ where
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    /// Iterator over ungrouped queries.
+    /// Iterator over ungrouped components.
     Sparse(SparseIter<'a, G, I, E, F>),
-    /// Iterator over grouped queries. Extremely fast.
+    /// Iterator over grouped components. Extremely fast.
     Dense(DenseIter<'a, G, F>),
 }
 

@@ -2,7 +2,7 @@ use crate::query::{QueryFilter, QueryGet};
 use crate::storage::Entity;
 use crate::utils::{EntityIterator, Ticks};
 
-/// Iterator over grouped queries. Extremely fast.
+/// Iterator over grouped components. Extremely fast.
 pub struct DenseIter<'a, G, F>
 where
     G: QueryGet<'a>,
@@ -21,6 +21,7 @@ where
     G: QueryGet<'a>,
     F: QueryFilter,
 {
+    /// Creates a new dense iterator without checking if the components are grouped.
     pub(crate) unsafe fn new_unchecked(
         entities: &'a [Entity],
         data: G::Data,

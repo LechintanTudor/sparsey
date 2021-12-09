@@ -2,7 +2,7 @@ use crate::query::{QueryFilter, QueryGet, QueryModifier};
 use crate::storage::Entity;
 use crate::utils::{EntityIterator, Ticks};
 
-/// Iterator over ungrouped queries.
+/// Iterator over ungrouped components.
 pub struct SparseIter<'a, G, I, E, F>
 where
     G: QueryGet<'a>,
@@ -28,6 +28,7 @@ where
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
+    /// Creates a new sparse iterator.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         entities: &'a [Entity],

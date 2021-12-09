@@ -1,9 +1,9 @@
 use crate::query::{And, Not, Or, Passthrough, Xor};
 use crate::storage::Entity;
 
-/// Trait implemented by the part of the `Query` that filters the results.
+/// Trait that filters the result of a query.
 pub trait QueryFilter {
-    /// Returns `true` if the `Entity` macthes the filter.
+    /// Returns `true` if the `entity` matches the filter.
     fn matches(&self, entity: Entity) -> bool;
 }
 
