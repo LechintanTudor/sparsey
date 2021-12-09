@@ -114,18 +114,18 @@ where
 }
 
 macro_rules! impl_borrow_world {
-	($($ty:ident),+) => {
-		impl<'a, $($ty),+> BorrowWorld<'a> for ($($ty,)+)
-		where
-			$($ty: BorrowWorld<'a>,)+
-		{
-			type Item = ($($ty::Item,)+);
+    ($($ty:ident),+) => {
+        impl<'a, $($ty),+> BorrowWorld<'a> for ($($ty,)+)
+        where
+            $($ty: BorrowWorld<'a>,)+
+        {
+            type Item = ($($ty::Item,)+);
 
-			fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
-				($($ty::borrow(world, change_tick),)+)
-			}
-		}
-	};
+            fn borrow(world: &'a World, change_tick: Ticks) -> Self::Item {
+                ($($ty::borrow(world, change_tick),)+)
+            }
+        }
+    };
 }
 
 impl_borrow_world!(A);
