@@ -54,10 +54,6 @@ fn main() {
     for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
         world.insert_resource(difficulty);
 
-        //world.clear_entities();
-        // println!("{:?}", world.create_entity((Hp(10),)));
-        // println!("{:?}", world.create_entity((Hp(100),)));
-
         world.clear_entities();
         world.create_entity((Hp(10),));
         world.create_entity((Hp(100),));
