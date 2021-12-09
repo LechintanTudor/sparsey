@@ -1,6 +1,6 @@
 use crate::components;
 use crate::components::{
-    Component, FamilyMask, GroupInfo, GroupMask, GroupStatus, QueryMask, StorageMask,
+    Component, ComponentGroupInfo, FamilyMask, GroupMask, GroupStatus, QueryMask, StorageMask,
 };
 use crate::layout::Layout;
 use crate::storage::{ComponentStorage, Entity};
@@ -17,7 +17,7 @@ use std::{mem, ptr};
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
     component_info: FxHashMap<TypeId, ComponentInfo>,
-    group_info: Vec<ComponentGroupInfo>,
+    group_info: Vec<GroupInfo>,
     groups: Vec<Group>,
     families: Vec<Range<usize>>,
 }
@@ -64,7 +64,7 @@ impl ComponentStorages {
                         },
                     );
 
-                    group_info.push(ComponentGroupInfo {
+                    group_info.push(GroupInfo {
                         family_index,
                         group_offset,
                         storage_mask: 1 << (prev_arity + component_offset),
@@ -103,13 +103,7 @@ impl ComponentStorages {
             storages.push(AtomicRefCell::new(storage));
         }
 
-        Self {
-            component_info,
-            storages,
-            group_info,
-            families,
-            groups,
-        }
+        Self { component_info, storages, group_info, families, groups }
     }
 
     pub(crate) fn into_storages(mut self) -> FxHashMap<TypeId, ComponentStorage> {
@@ -159,9 +153,8 @@ impl ComponentStorages {
     where
         E: IntoIterator<Item = &'a Entity>,
     {
-        let groups = self
-            .groups
-            .get_unchecked_mut(self.families.get_unchecked(family_index).clone());
+        let groups =
+            self.groups.get_unchecked_mut(self.families.get_unchecked(family_index).clone());
         let storages = &mut self.storages;
 
         entities.into_iter().for_each(|&entity| {
@@ -195,9 +188,8 @@ impl ComponentStorages {
     ) where
         E: IntoIterator<Item = &'a Entity>,
     {
-        let groups = self
-            .groups
-            .get_unchecked_mut(self.families.get_unchecked(family_index).clone());
+        let groups =
+            self.groups.get_unchecked_mut(self.families.get_unchecked(family_index).clone());
         let storages = &mut self.storages;
 
         entities.into_iter().for_each(|&entity| {
@@ -226,10 +218,7 @@ impl ComponentStorages {
 
             let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
 
-            for i in ungroup_range
-                .rev()
-                .take_while(|i| (group_mask & (1 << i)) != 0)
-            {
+            for i in ungroup_range.rev().take_while(|i| (group_mask & (1 << i)) != 0) {
                 let group = groups.get_unchecked_mut(i);
                 let storages = storages.get_unchecked_mut(group.storage_range());
                 components::ungroup_components(storages, &mut group.len, entity);
@@ -279,14 +268,14 @@ impl ComponentStorages {
     pub(crate) fn borrow_with_info(
         &self,
         type_id: &TypeId,
-    ) -> Option<(AtomicRef<ComponentStorage>, Option<GroupInfo>)> {
+    ) -> Option<(AtomicRef<ComponentStorage>, Option<ComponentGroupInfo>)> {
         self.component_info.get(type_id).map(|info| unsafe {
             (
                 self.storages.get_unchecked(info.storage_index).borrow(),
                 self.group_info.get(info.group_info_index).map(|info| {
                     let group_index = self.families.get_unchecked(info.family_index).start;
                     let group = NonNull::from(self.groups.get_unchecked(group_index));
-                    GroupInfo::new(group, info.group_offset, info.storage_mask)
+                    ComponentGroupInfo::new(group, info.group_offset as u32, info.storage_mask)
                 }),
             )
         })
@@ -295,14 +284,14 @@ impl ComponentStorages {
     pub(crate) fn borrow_with_info_mut(
         &self,
         type_id: &TypeId,
-    ) -> Option<(AtomicRefMut<ComponentStorage>, Option<GroupInfo>)> {
+    ) -> Option<(AtomicRefMut<ComponentStorage>, Option<ComponentGroupInfo>)> {
         self.component_info.get(type_id).map(|info| unsafe {
             (
                 self.storages.get_unchecked(info.storage_index).borrow_mut(),
                 self.group_info.get(info.group_info_index).map(|info| {
                     let group_index = self.families.get_unchecked(info.family_index).start;
                     let group = NonNull::from(self.groups.get_unchecked(group_index));
-                    GroupInfo::new(group, info.group_offset, info.storage_mask)
+                    ComponentGroupInfo::new(group, info.group_offset as u32, info.storage_mask)
                 }),
             )
         })
@@ -313,10 +302,7 @@ impl ComponentStorages {
         type_id: &TypeId,
     ) -> Option<(AtomicRefMut<ComponentStorage>, FamilyMask)> {
         self.component_info.get(type_id).map(|info| unsafe {
-            (
-                self.storages.get_unchecked(info.storage_index).borrow_mut(),
-                info.family_mask,
-            )
+            (self.storages.get_unchecked(info.storage_index).borrow_mut(), info.family_mask)
         })
     }
 
@@ -327,12 +313,7 @@ impl ComponentStorages {
         let info = self.component_info.get(type_id)?;
 
         unsafe {
-            Some((
-                self.storages
-                    .get_unchecked_mut(info.storage_index)
-                    .get_mut(),
-                info.family_mask,
-            ))
+            Some((self.storages.get_unchecked_mut(info.storage_index).get_mut(), info.family_mask))
         }
     }
 
@@ -366,7 +347,7 @@ struct ComponentInfo {
 }
 
 #[derive(Clone, Copy)]
-struct ComponentGroupInfo {
+struct GroupInfo {
     family_index: usize,
     group_offset: usize,
     storage_mask: StorageMask,
@@ -407,11 +388,11 @@ impl Group {
     }
 
     pub fn include_mask(&self) -> QueryMask {
-        QueryMask::include(self.end - self.begin)
+        QueryMask::new_include_group(self.end - self.begin)
     }
 
     pub fn exclude_mask(&self) -> QueryMask {
-        QueryMask::exclude(self.new_begin - self.begin, self.end - self.begin)
+        QueryMask::new_exclude_group(self.new_begin - self.begin, self.end - self.begin)
     }
 
     pub fn len(&self) -> usize {

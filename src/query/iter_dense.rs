@@ -1,55 +1,58 @@
-use crate::query::{IterData, QueryBase, QueryFilter};
-use crate::storage::Entity;
-use crate::utils::EntityIterator;
+use crate::query::{EntityIterator, QueryFilter, QueryGet};
+use crate::storage::{Entity, Ticks};
 
-/// Iterator over grouped queries. Extremely fast.
-pub struct DenseIter<'a, B, F>
+/// Iterator over grouped components. Extremely fast.
+pub struct DenseIter<'a, G, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     F: QueryFilter,
 {
-    iter_data: IterData<'a>,
-    data: B::Data,
+    entities: &'a [Entity],
+    data: G::Data,
     filter: F,
+    world_tick: Ticks,
+    change_tick: Ticks,
     index: usize,
 }
 
-impl<'a, B, F> DenseIter<'a, B, F>
+impl<'a, G, F> DenseIter<'a, G, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     F: QueryFilter,
 {
-    pub(crate) unsafe fn new_unchecked(iter_data: IterData<'a>, data: B::Data, filter: F) -> Self {
-        Self {
-            iter_data,
-            data,
-            filter,
-            index: 0,
-        }
+    /// Creates a new dense iterator without checking if the components are grouped.
+    pub(crate) unsafe fn new_unchecked(
+        entities: &'a [Entity],
+        data: G::Data,
+        filter: F,
+        world_tick: Ticks,
+        change_tick: Ticks,
+    ) -> Self {
+        Self { entities, data, filter, world_tick, change_tick, index: 0 }
     }
 }
 
-impl<'a, B, F> Iterator for DenseIter<'a, B, F>
+impl<'a, G, F> Iterator for DenseIter<'a, G, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     F: QueryFilter,
 {
-    type Item = B::Item;
+    type Item = G::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let entity = self.iter_data.entities.get(self.index)?;
+            let entity = self.entities.get(self.index)?;
 
             let index = self.index;
             self.index += 1;
 
             if self.filter.matches(*entity) {
                 let item = unsafe {
-                    B::get_from_dense_parts_unchecked(
+                    G::get_from_dense_unchecked(
                         &self.data,
                         index,
-                        self.iter_data.world_tick,
-                        self.iter_data.change_tick,
+                        self.world_tick,
+                        self.change_tick,
                     )
                 };
 
@@ -61,25 +64,25 @@ where
     }
 }
 
-unsafe impl<'a, B, F> EntityIterator for DenseIter<'a, B, F>
+unsafe impl<'a, G, F> EntityIterator for DenseIter<'a, G, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     F: QueryFilter,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         loop {
-            let entity = *self.iter_data.entities.get(self.index)?;
+            let entity = *self.entities.get(self.index)?;
 
             let index = self.index;
             self.index += 1;
 
             if self.filter.matches(entity) {
                 let item = unsafe {
-                    B::get_from_dense_parts_unchecked(
+                    G::get_from_dense_unchecked(
                         &self.data,
                         index,
-                        self.iter_data.world_tick,
-                        self.iter_data.change_tick,
+                        self.world_tick,
+                        self.change_tick,
                     )
                 };
 

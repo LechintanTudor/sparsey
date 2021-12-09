@@ -1,34 +1,35 @@
-use crate::query::{Iter, QueryBase, QueryFilter, QueryModifier};
+use crate::query::{Iter, QueryFilter, QueryGet, QueryModifier};
 use crate::storage::Entity;
 
-/// Trait used for splitting a `Query` into its parts.
+/// Trait used for implementing a `Query`.
 pub trait IntoQueryParts<'a> {
-    type Base: QueryBase<'a>;
+    /// Part of the `Query` that fetches components.
+    type Get: QueryGet<'a>;
+    /// Part of the `Query` that includes components.
     type Include: QueryModifier<'a>;
+    /// Part of the `Query` that excludes components.
     type Exclude: QueryModifier<'a>;
+    /// Part of the `Query` that filters entities.
     type Filter: QueryFilter;
 
-    /// Splits a `Query` into its parts.
-    fn into_query_parts(self) -> (Self::Base, Self::Include, Self::Exclude, Self::Filter);
+    /// Splits the `Query` into its parts.
+    fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude, Self::Filter);
 }
 
-/// Trait implemented by queries.
-pub trait Query<'a>
-where
-    Self: IntoQueryParts<'a>,
-{
-    /// Item returned by the query.
-    type Item;
-    /// Iterator over all items which match the query.
+/// Trait that enables fetching and iterating component views.
+pub trait Query<'a>: IntoQueryParts<'a> {
+    /// Item fetched by the `Query`.
+    type Item: 'a;
+    /// Iterator returned by the `Query`.
     type Iterator: Iterator<Item = Self::Item>;
 
-    /// Returns the item at `entity` if it matches the query.
-    fn get(self, entity: Entity) -> Option<Self::Item>;
-
-    /// Returns `true` if `entity` matches the query.
+    /// Returns `true` if `entity` matches the `Query`.
     fn contains(self, entity: Entity) -> bool;
 
-    /// Returns an iterator over all items which match the query.
+    /// Returns the item mapped to `entity`, if any.
+    fn get(self, entity: Entity) -> Option<Self::Item>;
+
+    /// Returns an iterator over all items that match the `Query`.
     fn iter(self) -> Self::Iterator;
 }
 
@@ -36,33 +37,34 @@ impl<'a, Q> Query<'a> for Q
 where
     Q: IntoQueryParts<'a>,
 {
-    type Item = <Q::Base as QueryBase<'a>>::Item;
-    type Iterator = Iter<'a, Q::Base, Q::Include, Q::Exclude, Q::Filter>;
+    type Item = <Q::Get as QueryGet<'a>>::Item;
+    type Iterator = Iter<'a, Q::Get, Q::Include, Q::Exclude, Q::Filter>;
 
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        let (base, include, exclude, filter) = self.into_query_parts();
+    fn contains(self, entity: Entity) -> bool {
+        let (get, include, exclude, filter) = self.into_query_parts();
 
-        if QueryFilter::matches(&filter, entity)
+        QueryFilter::matches(&filter, entity)
             && QueryModifier::excludes(&exclude, entity)
             && QueryModifier::includes(&include, entity)
-        {
-            QueryBase::get(base, entity)
+            && QueryGet::contains(&get, entity)
+    }
+
+    fn get(self, entity: Entity) -> Option<Self::Item> {
+        let (get, include, exclude, filter) = self.into_query_parts();
+
+        let matches = QueryFilter::matches(&filter, entity)
+            && QueryModifier::excludes(&exclude, entity)
+            && QueryModifier::includes(&include, entity);
+
+        if matches {
+            QueryGet::get(get, entity)
         } else {
             None
         }
     }
 
-    fn contains(self, entity: Entity) -> bool {
-        let (base, include, exclude, filter) = self.into_query_parts();
-
-        QueryFilter::matches(&filter, entity)
-            && QueryModifier::excludes(&exclude, entity)
-            && QueryModifier::includes(&include, entity)
-            && QueryBase::contains(&base, entity)
-    }
-
     fn iter(self) -> Self::Iterator {
-        let (base, include, exclude, filter) = self.into_query_parts();
-        Iter::new(base, include, exclude, filter)
+        let (get, include, exclude, filter) = self.into_query_parts();
+        Iter::new(get, include, exclude, filter)
     }
 }

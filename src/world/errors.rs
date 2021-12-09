@@ -23,9 +23,6 @@ impl Error for CannotIncrementWorldTick {}
 
 impl Display for CannotIncrementWorldTick {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Cannot increment the world tick without overflowing the counter"
-        )
+        write!(f, "Cannot increment the world tick without overflowing the counter")
     }
 }

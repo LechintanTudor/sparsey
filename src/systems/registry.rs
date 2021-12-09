@@ -1,8 +1,8 @@
 use crate::components::Component;
 use crate::layout::ComponentInfo;
 use crate::resources::Resource;
+use crate::storage::Ticks;
 use crate::systems::{CommandBuffers, Commands};
-use crate::utils::Ticks;
 use crate::world::{BorrowWorld, Comp, CompMut, Res, ResMut, World};
 use std::any::TypeId;
 
@@ -52,11 +52,7 @@ impl<'a> Registry<'a> {
         command_buffers: &'a CommandBuffers,
         change_tick: Ticks,
     ) -> Self {
-        Self {
-            world,
-            command_buffers,
-            change_tick,
-        }
+        Self { world, command_buffers, change_tick }
     }
 }
 
@@ -84,10 +80,7 @@ unsafe impl<'a, 'b> BorrowRegistry<'a> for Commands<'b> {
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        Commands::new(
-            registry.command_buffers.next().unwrap(),
-            registry.world.entity_storage(),
-        )
+        Commands::new(registry.command_buffers.next().unwrap(), registry.world.entity_storage())
     }
 }
 

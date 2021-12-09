@@ -17,9 +17,9 @@ pub(crate) unsafe fn get_group_status(
 ) -> GroupStatus {
     let (first, others) = storages.split_first_mut().unsafe_unwrap();
 
-    let status = match first.get_mut().get_index_entity(entity) {
-        Some(index_entity) => {
-            if index_entity.dense() < group_len {
+    let status = match first.get_mut().get_index(entity) {
+        Some(index) => {
+            if index < group_len {
                 GroupStatus::Grouped
             } else {
                 GroupStatus::Ungrouped
@@ -28,10 +28,7 @@ pub(crate) unsafe fn get_group_status(
         None => return GroupStatus::MissingComponents,
     };
 
-    if others
-        .iter_mut()
-        .all(|storage| storage.get_mut().contains(entity))
-    {
+    if others.iter_mut().all(|storage| storage.get_mut().contains(entity)) {
         status
     } else {
         GroupStatus::MissingComponents
@@ -47,7 +44,7 @@ pub(crate) unsafe fn group_components(
     let swap_index = *group_len;
 
     for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
-        let index = storage.get_index_entity(entity).unsafe_unwrap().dense();
+        let index = storage.get_index(entity).unsafe_unwrap();
         storage.swap_unchecked(index, swap_index);
     }
 
@@ -64,7 +61,7 @@ pub(crate) unsafe fn ungroup_components(
         let swap_index = *group_len - 1;
 
         for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
-            let index = storage.get_index_entity(entity).unsafe_unwrap().dense();
+            let index = storage.get_index(entity).unsafe_unwrap();
             storage.swap_unchecked(index, swap_index);
         }
 

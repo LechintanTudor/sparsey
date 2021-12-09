@@ -1,18 +1,39 @@
-use crate::components::{Component, GroupInfo};
+use crate::components::{Component, ComponentGroupInfo};
 use crate::query::{
-    ComponentRefMut, ImmutableUnfilteredQueryElement, QueryElementFilter, UnfilteredQueryElement,
+    ChangeTicksFilter, ComponentRefMut, GetComponentUnfiltered, GetImmutableComponentUnfiltered,
 };
-use crate::storage::{ComponentStorage, Entity, EntitySparseArray, IndexEntity};
-use crate::utils::{ChangeTicks, Ticks};
+use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntitySparseArray, Ticks};
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
-use std::ptr::NonNull;
 
-/// View over a `ComponentStorage` of type `T`.
+/// Container for the data of a `ComponentStorage`. Used internally by queries.
+pub struct ComponentViewData<T> {
+    /// Pointer to the packed array of components.
+    pub components: *mut T,
+    /// Pointer to the `ChangeTicks` associated with the components.
+    pub ticks: *mut ChangeTicks,
+}
+
+impl<T> Clone for ComponentViewData<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for ComponentViewData<T> {}
+
+impl<T> ComponentViewData<T> {
+    /// Creates a new `ComponentViewData` from the given `components` and `ticks` pointers.
+    pub const fn new(components: *mut T, ticks: *mut ChangeTicks) -> Self {
+        Self { components, ticks }
+    }
+}
+
+/// Strongly-typed view over a `ComponentStorage`.
 pub struct ComponentView<'a, T, S> {
     storage: S,
-    group_info: Option<GroupInfo<'a>>,
+    group_info: Option<ComponentGroupInfo<'a>>,
     world_tick: Ticks,
     change_tick: Ticks,
     _phantom: PhantomData<*const T>,
@@ -25,17 +46,11 @@ where
 {
     pub(crate) unsafe fn new(
         storage: S,
-        group_info: Option<GroupInfo<'a>>,
+        group_info: Option<ComponentGroupInfo<'a>>,
         world_tick: Ticks,
         change_tick: Ticks,
     ) -> Self {
-        Self {
-            storage,
-            group_info,
-            world_tick,
-            change_tick,
-            _phantom: PhantomData,
-        }
+        Self { storage, group_info, world_tick, change_tick, _phantom: PhantomData }
     }
 
     /// Returns the `ChangeTicks` of `entity`'s component.
@@ -92,7 +107,7 @@ where
     }
 }
 
-unsafe impl<'a, T, S> UnfilteredQueryElement<'a> for &'a ComponentView<'a, T, S>
+unsafe impl<'a, T, S> GetComponentUnfiltered<'a> for &'a ComponentView<'a, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage>,
@@ -100,119 +115,81 @@ where
     type Item = &'a T;
     type Component = T;
 
-    #[inline]
-    fn group_info(&self) -> Option<GroupInfo<'a>> {
+    fn group_info(&self) -> Option<ComponentGroupInfo<'a>> {
         self.group_info
     }
 
-    #[inline]
-    fn world_tick(&self) -> Ticks {
-        self.world_tick
+    fn change_detection_ticks(&self) -> (Ticks, Ticks) {
+        (self.world_tick, self.change_tick)
     }
 
-    #[inline]
-    fn change_tick(&self) -> Ticks {
-        self.change_tick
+    fn get_index(&self, entity: Entity) -> Option<usize> {
+        self.storage.get_index(entity)
     }
 
-    #[inline]
-    fn contains<F>(&self, entity: Entity, filter: &F) -> bool
+    unsafe fn matches_unchecked<F>(&self, index: usize) -> bool
     where
-        F: QueryElementFilter<Self::Component>,
+        F: ChangeTicksFilter,
     {
         if F::IS_PASSTHROUGH {
-            return self.storage.contains(entity);
-        }
-
-        let (component, ticks) = unsafe {
-            match self.storage.get_with_ticks::<T>(entity) {
-                Some(data) => data,
-                None => return false,
-            }
-        };
-
-        F::matches(filter, component, ticks, self.world_tick, self.change_tick)
-    }
-
-    #[inline]
-    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.storage.get_index_entity(entity)
-    }
-
-    #[inline]
-    unsafe fn get_unchecked<F>(self, index: usize, filter: &F) -> Option<Self::Item>
-    where
-        F: QueryElementFilter<Self::Component>,
-    {
-        if F::IS_PASSTHROUGH {
-            return Some(self.storage.get_unchecked::<T>(index));
-        }
-
-        let (component, ticks) = self.storage.get_with_ticks_unchecked(index);
-
-        if filter.matches(component, ticks, self.world_tick, self.change_tick) {
-            Some(component)
+            true
         } else {
-            None
+            let ticks = self.storage.get_ticks_unchecked(index);
+            F::matches(ticks, self.world_tick, self.change_tick)
         }
     }
 
-    #[inline]
-    fn split(
-        self,
-    ) -> (
-        &'a [Entity],
-        &'a EntitySparseArray,
-        NonNull<Self::Component>,
-        NonNull<ChangeTicks>,
-    ) {
-        self.storage.split()
+    unsafe fn get_unchecked<F>(self, index: usize) -> (Self::Item, bool)
+    where
+        F: ChangeTicksFilter,
+    {
+        if F::IS_PASSTHROUGH {
+            (self.storage.get_unchecked(index), true)
+        } else {
+            let (component, ticks) = self.storage.get_with_ticks_unchecked::<T>(index);
+            (component, F::matches(ticks, self.world_tick, self.change_tick))
+        }
     }
 
-    #[inline]
+    fn split(self) -> (&'a [Entity], &'a EntitySparseArray, ComponentViewData<Self::Component>) {
+        let (entities, sparse, components, ticks) = self.storage.split();
+        (entities, sparse, ComponentViewData::new(components, ticks))
+    }
+
     unsafe fn get_from_parts_unchecked<F>(
-        components: NonNull<Self::Component>,
-        ticks: NonNull<ChangeTicks>,
+        data: ComponentViewData<Self::Component>,
         index: usize,
-        filter: &F,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Option<Self::Item>
+    ) -> (Self::Item, bool)
     where
-        F: QueryElementFilter<Self::Component>,
+        F: ChangeTicksFilter,
     {
         if F::IS_PASSTHROUGH {
-            return Some(&*components.cast::<T>().as_ptr().add(index));
-        }
-
-        let component = &*components.cast::<T>().as_ptr().add(index);
-        let ticks = &*ticks.as_ptr().add(index);
-
-        if F::matches(filter, component, ticks, world_tick, change_tick) {
-            Some(component)
+            (&*data.components.add(index), true)
         } else {
-            None
+            let component = &*data.components.add(index);
+            let ticks = &*data.ticks.add(index);
+            (component, F::matches(ticks, world_tick, change_tick))
         }
     }
 }
 
-unsafe impl<'a, T, S> ImmutableUnfilteredQueryElement<'a> for &'a ComponentView<'a, T, S>
+unsafe impl<'a, T, S> GetImmutableComponentUnfiltered<'a> for &'a ComponentView<'a, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage>,
 {
-    #[inline]
     fn entities(&self) -> &'a [Entity] {
         self.storage.entities()
     }
 
-    #[inline]
     fn components(&self) -> &'a [Self::Component] {
         unsafe { self.storage.components::<T>() }
     }
 }
 
-unsafe impl<'a, 'b, T, S> UnfilteredQueryElement<'a> for &'a mut ComponentView<'b, T, S>
+unsafe impl<'a, 'b, T, S> GetComponentUnfiltered<'a> for &'a mut ComponentView<'b, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage> + DerefMut,
@@ -220,98 +197,66 @@ where
     type Item = ComponentRefMut<'a, T>;
     type Component = T;
 
-    #[inline]
-    fn group_info(&self) -> Option<GroupInfo<'a>> {
+    fn group_info(&self) -> Option<ComponentGroupInfo<'a>> {
         self.group_info
     }
 
-    #[inline]
-    fn world_tick(&self) -> Ticks {
-        self.world_tick
+    fn change_detection_ticks(&self) -> (Ticks, Ticks) {
+        (self.world_tick, self.change_tick)
     }
 
-    #[inline]
-    fn change_tick(&self) -> Ticks {
-        self.change_tick
+    fn get_index(&self, entity: Entity) -> Option<usize> {
+        self.storage.get_index(entity)
     }
 
-    #[inline]
-    fn contains<F>(&self, entity: Entity, filter: &F) -> bool
+    unsafe fn matches_unchecked<F>(&self, index: usize) -> bool
     where
-        F: QueryElementFilter<Self::Component>,
+        F: ChangeTicksFilter,
     {
         if F::IS_PASSTHROUGH {
-            return self.storage.contains(entity);
-        }
-
-        let (component, ticks) = unsafe {
-            match self.storage.get_with_ticks(entity) {
-                Some(data) => data,
-                None => return false,
-            }
-        };
-
-        filter.matches(component, ticks, self.world_tick, self.change_tick)
-    }
-
-    #[inline]
-    fn get_index_entity(&self, entity: Entity) -> Option<&IndexEntity> {
-        self.storage.get_index_entity(entity)
-    }
-
-    #[inline]
-    unsafe fn get_unchecked<F>(self, index: usize, filter: &F) -> Option<Self::Item>
-    where
-        F: QueryElementFilter<Self::Component>,
-    {
-        let (component, ticks) = self.storage.get_with_ticks_unchecked_mut(index);
-
-        if F::IS_PASSTHROUGH {
-            return Some(ComponentRefMut::new(component, ticks, self.world_tick));
-        }
-
-        if filter.matches(component, ticks, self.world_tick, self.change_tick) {
-            Some(ComponentRefMut::new(component, ticks, self.world_tick))
+            true
         } else {
-            None
+            let ticks = self.storage.get_ticks_unchecked(index);
+            F::matches(ticks, self.world_tick, self.change_tick)
         }
     }
 
-    #[inline]
-    fn split(
-        self,
-    ) -> (
-        &'a [Entity],
-        &'a EntitySparseArray,
-        NonNull<Self::Component>,
-        NonNull<ChangeTicks>,
-    ) {
-        self.storage.split()
+    unsafe fn get_unchecked<F>(self, index: usize) -> (Self::Item, bool)
+    where
+        F: ChangeTicksFilter,
+    {
+        let (component, ticks) = self.storage.get_with_ticks_unchecked_mut::<T>(index);
+
+        if F::IS_PASSTHROUGH {
+            (ComponentRefMut::new(component, ticks, self.world_tick), true)
+        } else {
+            let matches = F::matches(ticks, self.world_tick, self.change_tick);
+            (ComponentRefMut::new(component, ticks, self.world_tick), matches)
+        }
     }
 
-    #[inline]
+    fn split(self) -> (&'a [Entity], &'a EntitySparseArray, ComponentViewData<Self::Component>) {
+        let (entities, sparse, components, ticks) = self.storage.split();
+        (entities, sparse, ComponentViewData::new(components, ticks))
+    }
+
     unsafe fn get_from_parts_unchecked<F>(
-        components: NonNull<Self::Component>,
-        ticks: NonNull<ChangeTicks>,
+        data: ComponentViewData<Self::Component>,
         index: usize,
-        filter: &F,
         world_tick: Ticks,
         change_tick: Ticks,
-    ) -> Option<Self::Item>
+    ) -> (Self::Item, bool)
     where
-        F: QueryElementFilter<Self::Component>,
+        F: ChangeTicksFilter,
     {
-        let component = &mut *components.cast::<T>().as_ptr().add(index);
-        let ticks = &mut *ticks.as_ptr().add(index);
+        let component = &mut *data.components.add(index);
+        let ticks = &mut *data.ticks.add(index);
 
         if F::IS_PASSTHROUGH {
-            return Some(ComponentRefMut::new(component, ticks, world_tick));
-        }
-
-        if filter.matches(component, ticks, world_tick, change_tick) {
-            Some(ComponentRefMut::new(component, ticks, world_tick))
+            (ComponentRefMut::new(component, ticks, world_tick), true)
         } else {
-            None
+            let matches = F::matches(ticks, world_tick, change_tick);
+            (ComponentRefMut::new(component, ticks, world_tick), matches)
         }
     }
 }

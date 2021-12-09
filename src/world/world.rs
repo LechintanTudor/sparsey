@@ -1,8 +1,7 @@
 use crate::components::{Component, ComponentSet, ComponentStorages};
 use crate::layout::Layout;
 use crate::resources::{Resource, ResourceStorage};
-use crate::storage::{ComponentStorage, Entity, EntityStorage};
-use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
+use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntityStorage, NonZeroTicks, Ticks};
 use crate::world::{BorrowWorld, CannotIncrementWorldTick, NoSuchEntity};
 use std::any::TypeId;
 use std::mem;
@@ -125,12 +124,7 @@ impl World {
         C: ComponentSet,
         I: IntoIterator<Item = C>,
     {
-        C::extend(
-            &mut self.entities,
-            &mut self.storages,
-            components_iter,
-            ticks,
-        )
+        C::extend(&mut self.entities, &mut self.storages, components_iter, ticks)
     }
 
     /// Removes `entity` and all of its components from the `World`.
@@ -166,10 +160,7 @@ impl World {
             });
         }
 
-        entities
-            .into_iter()
-            .map(|&entity| self.entities.destroy(entity) as usize)
-            .sum()
+        entities.into_iter().map(|&entity| self.entities.destroy(entity) as usize).sum()
     }
 
     /// Appends the given `components` to `entity` if `entity` exists in the

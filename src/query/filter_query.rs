@@ -1,14 +1,11 @@
+use crate::query::{And, Not, Or, Passthrough, Xor};
 use crate::storage::Entity;
 
-/// Trait implemented by the part of the `Query` that filters the results.
+/// Trait that filters the result of a query.
 pub trait QueryFilter {
-    /// Returns `true` if the `Entity` macthes the filter.
+    /// Returns `true` if the `entity` matches the filter.
     fn matches(&self, entity: Entity) -> bool;
 }
-
-/// Filter that matches all entities.
-#[derive(Clone, Copy, Debug)]
-pub struct Passthrough;
 
 impl QueryFilter for Passthrough {
     #[inline(always)]
@@ -16,9 +13,6 @@ impl QueryFilter for Passthrough {
         true
     }
 }
-
-/// Wrapper around a `QueryFilter` which negates its result.
-pub struct Not<F>(pub(crate) F);
 
 impl<F> QueryFilter for Not<F>
 where
@@ -29,10 +23,6 @@ where
         !self.0.matches(entity)
     }
 }
-
-/// `QueryFilter` that only matches entities which match both the filters
-/// contained inside.
-pub struct And<F1, F2>(pub(crate) F1, pub(crate) F2);
 
 impl<F1, F2> QueryFilter for And<F1, F2>
 where
@@ -45,10 +35,6 @@ where
     }
 }
 
-/// `QueryFilter` that only matches entities which match either of the filters
-/// contained inside.
-pub struct Or<F1, F2>(pub(crate) F1, pub(crate) F2);
-
 impl<F1, F2> QueryFilter for Or<F1, F2>
 where
     F1: QueryFilter,
@@ -59,10 +45,6 @@ where
         self.0.matches(entity) || self.1.matches(entity)
     }
 }
-
-/// `QueryFilter` that only matches entities which match only one of the filters
-/// contained inside.
-pub struct Xor<F1, F2>(pub(crate) F1, pub(crate) F2);
 
 impl<F1, F2> QueryFilter for Xor<F1, F2>
 where

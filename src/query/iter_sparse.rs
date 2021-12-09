@@ -1,76 +1,73 @@
-use crate::query::{IterData, QueryBase, QueryFilter, QueryModifier};
-use crate::storage::Entity;
-use crate::utils::EntityIterator;
+use crate::query::{EntityIterator, QueryFilter, QueryGet, QueryModifier};
+use crate::storage::{Entity, Ticks};
 
-/// Iterator over ungrouped queries.
-pub struct SparseIter<'a, B, I, E, F>
+/// Iterator over ungrouped components.
+pub struct SparseIter<'a, G, I, E, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    iter_data: IterData<'a>,
-    sparse: B::Sparse,
-    data: B::Data,
-    include: I::Split,
-    exclude: E::Split,
+    entities: &'a [Entity],
+    sparse: G::Sparse,
+    data: G::Data,
+    include: I::Sparse,
+    exclude: E::Sparse,
     filter: F,
+    world_tick: Ticks,
+    change_tick: Ticks,
     index: usize,
 }
 
-impl<'a, B, I, E, F> SparseIter<'a, B, I, E, F>
+impl<'a, G, I, E, F> SparseIter<'a, G, I, E, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
+    /// Creates a new sparse iterator.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        iter_data: IterData<'a>,
-        sparse: B::Sparse,
-        data: B::Data,
-        include: I::Split,
-        exclude: E::Split,
+        entities: &'a [Entity],
+        sparse: G::Sparse,
+        data: G::Data,
+        include: I::Sparse,
+        exclude: E::Sparse,
         filter: F,
+        world_tick: Ticks,
+        change_tick: Ticks,
     ) -> Self {
-        Self {
-            iter_data,
-            sparse,
-            data,
-            include,
-            exclude,
-            filter,
-            index: 0,
-        }
+        Self { entities, sparse, data, include, exclude, filter, world_tick, change_tick, index: 0 }
     }
 }
 
-impl<'a, B, I, E, F> Iterator for SparseIter<'a, B, I, E, F>
+impl<'a, G, I, E, F> Iterator for SparseIter<'a, G, I, E, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    type Item = B::Item;
+    type Item = G::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let entity = *self.iter_data.entities.get(self.index)?;
+            let entity = *self.entities.get(self.index)?;
             self.index += 1;
 
             if self.filter.matches(entity)
-                && E::excludes_split(&self.exclude, entity)
-                && I::includes_split(&self.include, entity)
+                && E::excludes_sparse(&self.exclude, entity)
+                && I::includes_sparse(&self.include, entity)
             {
                 let item = unsafe {
-                    B::get_from_sparse_parts(
+                    G::get_from_sparse_unchecked(
                         &self.sparse,
                         entity,
                         &self.data,
-                        self.iter_data.world_tick,
-                        self.iter_data.change_tick,
+                        self.world_tick,
+                        self.change_tick,
                     )
                 };
 
@@ -82,29 +79,29 @@ where
     }
 }
 
-unsafe impl<'a, B, I, E, F> EntityIterator for SparseIter<'a, B, I, E, F>
+unsafe impl<'a, G, I, E, F> EntityIterator for SparseIter<'a, G, I, E, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         loop {
-            let entity = *self.iter_data.entities.get(self.index)?;
+            let entity = *self.entities.get(self.index)?;
             self.index += 1;
 
             if self.filter.matches(entity)
-                && E::excludes_split(&self.exclude, entity)
-                && I::includes_split(&self.include, entity)
+                && E::excludes_sparse(&self.exclude, entity)
+                && I::includes_sparse(&self.include, entity)
             {
                 let item = unsafe {
-                    B::get_from_sparse_parts(
+                    G::get_from_sparse_unchecked(
                         &self.sparse,
                         entity,
                         &self.data,
-                        self.iter_data.world_tick,
-                        self.iter_data.change_tick,
+                        self.world_tick,
+                        self.change_tick,
                     )
                 };
 

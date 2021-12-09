@@ -1,58 +1,83 @@
-use crate::query;
-use crate::query::{DenseIter, QueryBase, QueryFilter, QueryModifier, SparseIter};
+use crate::query::{
+    get_group_range, is_trivial_group, DenseIter, EntityIterator, QueryFilter, QueryGet,
+    QueryModifier, SparseIter,
+};
 use crate::storage::Entity;
-use crate::utils::EntityIterator;
+use std::cmp;
 
-/// Iterator over grouped or ungrouped queries.
-pub enum Iter<'a, B, I, E, F>
+/// Iterator over grouped or ungrouped components.
+pub enum Iter<'a, G, I, E, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    /// Iterator over ungrouped queries.
-    Sparse(SparseIter<'a, B, I, E, F>),
-    /// Iterator over grouped queries. Extremely fast.
-    Dense(DenseIter<'a, B, F>),
+    /// Iterator over ungrouped components.
+    Sparse(SparseIter<'a, G, I, E, F>),
+    /// Iterator over grouped components. Extremely fast.
+    Dense(DenseIter<'a, G, F>),
 }
 
-impl<'a, B, I, E, F> Iter<'a, B, I, E, F>
+impl<'a, G, I, E, F> Iter<'a, G, I, E, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
     /// Creates a new iterator from the given `Query` parts.
-    pub(crate) fn new(base: B, include: I, exclude: E, filter: F) -> Self {
-        if query::is_trivial_group::<B, I, E>() {
-            let (iter_data, data) = base.split_dense();
+    pub(crate) fn new(get: G, include: I, exclude: E, filter: F) -> Self {
+        let (world_tick, change_tick) = get.change_detection_ticks();
 
-            unsafe { Self::Dense(DenseIter::new_unchecked(iter_data, data, filter)) }
+        if is_trivial_group::<G, I, E>() {
+            let (entities, data) = get.split_dense();
+
+            unsafe {
+                Self::Dense(DenseIter::new_unchecked(
+                    entities,
+                    data,
+                    filter,
+                    world_tick,
+                    change_tick,
+                ))
+            }
         } else {
-            match query::group_range(&base, &include, &exclude) {
+            match get_group_range(&get, &include, &exclude) {
                 Ok(range) => {
-                    let (mut iter_data, data) = base.split_dense();
+                    let (entities, data) = get.split_dense();
+                    let entities = &entities[range];
 
                     unsafe {
-                        iter_data.entities = iter_data.entities.get_unchecked(range);
-                        Self::Dense(DenseIter::new_unchecked(iter_data, data, filter))
+                        Self::Dense(DenseIter::new_unchecked(
+                            entities,
+                            data,
+                            filter,
+                            world_tick,
+                            change_tick,
+                        ))
                     }
                 }
                 Err(_) => {
-                    let (mut iter_data, sparse, data) = base.split_sparse();
-                    let (include_entities, include) = include.split_modifier();
-                    let (_, exclude) = exclude.split_modifier();
+                    let (entities, sparse, data) = get.split_sparse();
+                    let (include_entities, include) = include.split();
+                    let (_, exclude) = exclude.split();
 
-                    if let Some(entities) = include_entities {
-                        if entities.len() < iter_data.entities.len() {
-                            iter_data.entities = entities;
-                        }
-                    }
+                    let entities = if let Some(include_entities) = include_entities {
+                        cmp::min_by_key(entities, include_entities, |e| e.len())
+                    } else {
+                        entities
+                    };
 
                     Self::Sparse(SparseIter::new(
-                        iter_data, sparse, data, include, exclude, filter,
+                        entities,
+                        sparse,
+                        data,
+                        include,
+                        exclude,
+                        filter,
+                        world_tick,
+                        change_tick,
                     ))
                 }
             }
@@ -65,14 +90,14 @@ where
     }
 }
 
-impl<'a, B, I, E, F> Iterator for Iter<'a, B, I, E, F>
+impl<'a, G, I, E, F> Iterator for Iter<'a, G, I, E, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,
 {
-    type Item = B::Item;
+    type Item = G::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -93,9 +118,9 @@ where
     }
 }
 
-unsafe impl<'a, B, I, E, F> EntityIterator for Iter<'a, B, I, E, F>
+unsafe impl<'a, G, I, E, F> EntityIterator for Iter<'a, G, I, E, F>
 where
-    B: QueryBase<'a>,
+    G: QueryGet<'a>,
     I: QueryModifier<'a>,
     E: QueryModifier<'a>,
     F: QueryFilter,

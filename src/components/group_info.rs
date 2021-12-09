@@ -1,114 +1,86 @@
 use crate::components::{Group, QueryMask, StorageMask};
 use std::marker::PhantomData;
 use std::ops::Range;
-use std::ptr;
 use std::ptr::NonNull;
 
-/// Tracks the group to which a `ComponentStorage` belongs.
+/// Holds grouping information about a `Component` type in a `World`.
 #[derive(Clone, Copy)]
-pub struct GroupInfo<'a> {
-    family: NonNull<Group>,
-    offset: usize,
+pub struct ComponentGroupInfo<'a> {
+    group_family: NonNull<Group>,
+    group_offset: u32,
     storage_mask: StorageMask,
     _phantom: PhantomData<&'a [Group]>,
 }
 
-impl<'a> GroupInfo<'a> {
-    /// # Safety
-    /// `family` must point to a slice with lifetime `'a`, indexable by
-    /// `offset`.
+impl<'a> ComponentGroupInfo<'a> {
     pub(crate) unsafe fn new(
-        family: NonNull<Group>,
-        offset: usize,
+        group_family: NonNull<Group>,
+        group_offset: u32,
         storage_mask: StorageMask,
     ) -> Self {
+        Self { group_family, group_offset, storage_mask, _phantom: PhantomData }
+    }
+}
+
+/// Holds grouping information about a multiple components in a `World`.
+pub struct QueryGroupInfo<'a> {
+    group_family: NonNull<Group>,
+    group_offset: u32,
+    query_mask: QueryMask,
+    _phantom: PhantomData<&'a [Group]>,
+}
+
+impl<'a> QueryGroupInfo<'a> {
+    /// Creates a new `QueryGroupInfo`.
+    pub fn new(info: ComponentGroupInfo<'a>) -> Self {
         Self {
-            family,
-            offset,
-            storage_mask,
+            group_family: info.group_family,
+            group_offset: info.group_offset,
+            query_mask: QueryMask::new(info.storage_mask, 0),
             _phantom: PhantomData,
         }
     }
-}
 
-/// Tracks the group to which multiple `ComponentStorage`s belong.
-#[derive(Copy, Clone, Default)]
-pub struct CombinedGroupInfo<'a> {
-    family: Option<NonNull<Group>>,
-    max_offset: usize,
-    storage_mask: StorageMask,
-    _phantom: PhantomData<&'a [Group]>,
-}
-
-impl<'a> CombinedGroupInfo<'a> {
-    pub(crate) fn combine(self, info: GroupInfo<'a>) -> Option<Self> {
-        match self.family {
-            Some(group_family) => {
-                ptr::eq(group_family.as_ptr(), info.family.as_ptr()).then(|| CombinedGroupInfo {
-                    family: Some(group_family),
-                    max_offset: self.max_offset.max(info.offset),
-                    storage_mask: self.storage_mask | info.storage_mask,
-                    _phantom: PhantomData,
-                })
-            }
-            None => Some(CombinedGroupInfo {
-                family: Some(info.family),
-                max_offset: info.offset,
-                storage_mask: info.storage_mask,
-                _phantom: PhantomData,
-            }),
+    /// Tries to include the given `ComponentInfo`.
+    pub fn include(self, info: ComponentGroupInfo<'a>) -> Option<Self> {
+        if self.group_family != info.group_family {
+            return None;
         }
-    }
-}
 
-fn common_family(
-    base_family: Option<NonNull<Group>>,
-    include_family: Option<NonNull<Group>>,
-    exclude_family: Option<NonNull<Group>>,
-) -> Option<NonNull<Group>> {
-    let mut common_family = base_family;
-
-    for family in [include_family, exclude_family].iter().flatten() {
-        match common_family {
-            Some(common_family) => {
-                if !ptr::eq(family.as_ptr(), common_family.as_ptr()) {
-                    return None;
-                }
-            }
-            None => common_family = Some(*family),
-        }
+        Some(Self {
+            group_family: self.group_family,
+            group_offset: self.group_offset.max(info.group_offset),
+            query_mask: self.query_mask.include(info.storage_mask),
+            _phantom: PhantomData,
+        })
     }
 
-    common_family
-}
+    /// Tries to exclude the given `ComponentInfo`.
+    pub fn exclude(self, info: ComponentGroupInfo<'a>) -> Option<Self> {
+        if self.group_family != info.group_family {
+            return None;
+        }
 
-/// Returns the range of elements the storages have in common if the
-/// `CombinedGroupInfo`s form a group.
-pub(crate) fn group_range(
-    base: CombinedGroupInfo,
-    include: CombinedGroupInfo,
-    exclude: CombinedGroupInfo,
-) -> Option<Range<usize>> {
-    let family = common_family(base.family, include.family, exclude.family)?;
+        Some(Self {
+            group_family: self.group_family,
+            group_offset: self.group_offset.max(info.group_offset),
+            query_mask: self.query_mask.exclude(info.storage_mask),
+            _phantom: PhantomData,
+        })
+    }
 
-    let max_offset = base
-        .max_offset
-        .max(include.max_offset)
-        .max(exclude.max_offset);
+    /// Returns the range of grouped components, if any.
+    pub fn group_range(self) -> Option<Range<usize>> {
+        let group_family = self.group_family.as_ptr();
+        let group = unsafe { *group_family.add(self.group_offset as usize) };
 
-    let query_mask = QueryMask::new(
-        base.storage_mask | include.storage_mask,
-        exclude.storage_mask,
-    );
-
-    let group = unsafe { &*family.as_ptr().add(max_offset) };
-
-    if query_mask == group.include_mask() {
-        Some(0..group.len())
-    } else if query_mask == group.exclude_mask() {
-        let prev_group = unsafe { &*family.as_ptr().add(max_offset - 1) };
-        Some(group.len()..prev_group.len())
-    } else {
-        None
+        if self.query_mask == group.include_mask() {
+            Some(0..group.len())
+        } else if self.query_mask == group.exclude_mask() {
+            let prev_group = unsafe { *group_family.add((self.group_offset - 1) as usize) };
+            Some(group.len()..prev_group.len())
+        } else {
+            None
+        }
     }
 }

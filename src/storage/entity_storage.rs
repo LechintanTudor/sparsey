@@ -15,10 +15,7 @@ impl EntityStorage {
     pub(crate) fn create(&mut self) -> Entity {
         self.maintain();
 
-        let entity = self
-            .allocator
-            .allocate()
-            .expect("No entities left to allocate");
+        let entity = self.allocator.allocate().expect("No entities left to allocate");
 
         self.storage.insert(entity);
         entity
@@ -26,9 +23,7 @@ impl EntityStorage {
 
     /// Atomically creates a new `Entity` and returns it.
     pub(crate) fn create_atomic(&self) -> Entity {
-        self.allocator
-            .allocate_atomic()
-            .expect("No entities left to allocate")
+        self.allocator.allocate_atomic().expect("No entities left to allocate")
     }
 
     /// Removes `entity` from the storage if it exits. Returns whether or not
@@ -60,9 +55,7 @@ impl EntityStorage {
         let allocator = &mut self.allocator;
         let storage = &mut self.storage;
 
-        allocator
-            .maintain()
-            .for_each(|entity| storage.insert(entity));
+        allocator.maintain().for_each(|entity| storage.insert(entity));
     }
 }
 
@@ -89,18 +82,16 @@ impl EntitySparseSet {
                 *self.entities.get_unchecked_mut(index_entity.dense()) = entity;
             },
             None => {
-                *index_entity = Some(IndexEntity::new(
-                    self.entities.len() as u32,
-                    entity.version(),
-                ));
+                *index_entity =
+                    Some(IndexEntity::new(self.entities.len() as u32, entity.version()));
                 self.entities.push(entity);
             }
         }
     }
 
     fn remove(&mut self, entity: Entity) -> bool {
-        let dense_index = match self.sparse.remove_entity(entity) {
-            Some(entity) => entity.dense(),
+        let dense_index = match self.sparse.remove(entity) {
+            Some(index) => index,
             None => return false,
         };
 
@@ -118,7 +109,7 @@ impl EntitySparseSet {
     }
 
     fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains_entity(entity)
+        self.sparse.contains(entity)
     }
 
     fn clear(&mut self) {
@@ -160,8 +151,7 @@ impl EntityAllocator {
     fn deallocate(&mut self, entity: Entity) {
         if entity.version().id() != u32::MAX {
             let next_version_id = unsafe { NonZeroU32::new_unchecked(entity.version().id() + 1) };
-            self.recycled
-                .push(Entity::new(entity.id(), Version::new(next_version_id)));
+            self.recycled.push(Entity::new(entity.id(), Version::new(next_version_id)));
             *self.recycled_len.get_mut() += 1;
         }
     }
@@ -180,9 +170,7 @@ impl EntityAllocator {
         let new_id_range = self.last_id..*self.current_id.get_mut();
         self.last_id = *self.current_id.get_mut();
 
-        self.recycled
-            .drain(remaining..)
-            .chain(new_id_range.into_iter().map(Entity::with_id))
+        self.recycled.drain(remaining..).chain(new_id_range.into_iter().map(Entity::with_id))
     }
 }
 

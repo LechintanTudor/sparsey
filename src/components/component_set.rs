@@ -1,6 +1,6 @@
 use crate::components::{iter_bit_indexes, Component, ComponentStorages, FamilyMask, GroupMask};
-use crate::storage::{ComponentStorage, Entity, EntityStorage};
-use crate::utils::{panic_missing_comp, ChangeTicks};
+use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntityStorage};
+use crate::utils::panic_missing_comp;
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 

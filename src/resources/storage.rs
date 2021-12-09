@@ -1,5 +1,6 @@
 use crate::resources::Resource;
-use crate::utils::{ChangeTicks, UnsafeUnwrap};
+use crate::storage::ChangeTicks;
+use crate::utils::UnsafeUnwrap;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
@@ -73,14 +74,10 @@ impl ResourceStorage {
     }
 
     pub fn borrow(&self, resource_type_id: &TypeId) -> Option<AtomicRef<ResourceCell>> {
-        self.resources
-            .get(resource_type_id)
-            .map(AtomicRefCell::borrow)
+        self.resources.get(resource_type_id).map(AtomicRefCell::borrow)
     }
 
     pub fn borrow_mut(&self, resource_type_id: &TypeId) -> Option<AtomicRefMut<ResourceCell>> {
-        self.resources
-            .get(resource_type_id)
-            .map(AtomicRefCell::borrow_mut)
+        self.resources.get(resource_type_id).map(AtomicRefCell::borrow_mut)
     }
 }

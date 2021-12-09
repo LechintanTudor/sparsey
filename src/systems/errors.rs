@@ -29,9 +29,7 @@ impl RunError {
 
 impl From<SystemError> for RunError {
     fn from(error: SystemError) -> Self {
-        Self {
-            errors: vec![error],
-        }
+        Self { errors: vec![error] }
     }
 }
 

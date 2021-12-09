@@ -31,11 +31,8 @@ impl LayoutBuilder {
     pub fn add_group(&mut self, group: LayoutGroup) -> &mut Self {
         let mut family_index = Option::<usize>::None;
 
-        for (i, first_group) in self
-            .families
-            .iter()
-            .flat_map(|group_set| group_set.first())
-            .enumerate()
+        for (i, first_group) in
+            self.families.iter().flat_map(|group_set| group_set.first()).enumerate()
         {
             if !group.components().is_disjoint(first_group.components()) {
                 family_index = Some(i);
@@ -84,10 +81,7 @@ impl LayoutBuilder {
             .map(|groups| unsafe { LayoutGroupFamily::new_unchecked(groups) })
             .collect::<Vec<_>>();
 
-        let group_count = families
-            .iter()
-            .map(|family| family.group_count())
-            .sum::<usize>();
+        let group_count = families.iter().map(|family| family.group_count()).sum::<usize>();
 
         assert!(
             group_count <= MAX_GROUP_COUNT,

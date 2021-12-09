@@ -21,31 +21,16 @@ fn test_modifiers() {
     let (a, b, c) = world.borrow::<(Comp<A>, Comp<B>, Comp<C>)>();
 
     // Include
-    let entities = (&a,)
-        .include(&b)
-        .iter()
-        .entities()
-        .map(|(e, _)| e)
-        .collect::<HashSet<_>>();
+    let entities = (&a,).include(&b).iter().entities().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(entities, HashSet::from_iter([e1, e2]));
 
     // Exclude
-    let entities = (&a,)
-        .exclude(&c)
-        .iter()
-        .entities()
-        .map(|(e, _)| e)
-        .collect::<HashSet<_>>();
+    let entities = (&a,).exclude(&c).iter().entities().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(entities, HashSet::from_iter([e0, e1]));
 
     // Include + Exclude
-    let entities = (&a,)
-        .include(&c)
-        .exclude(&b)
-        .iter()
-        .entities()
-        .map(|(e, _)| e)
-        .collect::<HashSet<_>>();
+    let entities =
+        (&a,).include(&c).exclude(&b).iter().entities().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(entities, HashSet::from_iter([e3]));
 }
 

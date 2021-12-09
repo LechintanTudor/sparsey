@@ -59,10 +59,7 @@ unsafe impl Runnable for System {
 
 unsafe impl IntoLocalSystem<(), ()> for System {
     fn local_system(self) -> LocalSystem {
-        LocalSystem {
-            function: self.function,
-            accesses: self.accesses,
-        }
+        LocalSystem { function: self.function, accesses: self.accesses }
     }
 }
 
@@ -112,9 +109,7 @@ where
     F: FnMut(&mut World) -> SystemResult + 'static,
 {
     fn local_fn(self) -> LocalFn {
-        LocalFn {
-            function: Box::new(self),
-        }
+        LocalFn { function: Box::new(self) }
     }
 }
 

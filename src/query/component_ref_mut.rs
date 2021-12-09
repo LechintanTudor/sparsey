@@ -1,9 +1,9 @@
 use crate::components::Component;
-use crate::utils::{ChangeTicks, Ticks};
+use crate::storage::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut};
 
-/// Type returned by iterators over `CompMut`s. Updates the component's
-/// `ChangeTicks` when the component is mutated.
+/// Type returned by queries over `&mut CompMut<T>`. Updates the component's `ChangeTicks` when the
+/// component is mutated.
 pub struct ComponentRefMut<'a, T>
 where
     T: Component,
@@ -19,11 +19,7 @@ where
 {
     #[inline]
     pub(crate) fn new(component: &'a mut T, ticks: &'a mut ChangeTicks, world_tick: Ticks) -> Self {
-        Self {
-            component,
-            ticks,
-            world_tick,
-        }
+        Self { component, ticks, world_tick }
     }
 }
 
