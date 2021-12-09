@@ -1,3 +1,14 @@
+# Unreleased
+## Added
+- Allow using change detection on multiple `ComponentView`s at the same time.
+
+## Changed
+- Move items from crate root into separate modules.
+
+## Fixed
+- Fixed `ComponentStorage::clear` not removing the entities from its `EntitySparseArray`.
+- Filtered queries are no longer sliceable.
+
 # 0.5.0 (2021-11-09)
 ## Added
 - Implemented `fold` for `EntityIter`, greatly improving the performance of `for_each`.
