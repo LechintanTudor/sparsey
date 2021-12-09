@@ -89,10 +89,7 @@ impl<T> Default for Type<T> {
     }
 }
 
-unsafe trait AbstractType
-where
-    Self: Send + Sync + 'static,
-{
+unsafe trait AbstractType: Send + Sync + 'static {
     fn type_id(&self) -> TypeId;
 
     fn type_name(&self) -> &'static str;

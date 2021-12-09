@@ -2,10 +2,7 @@ use crate::query::{Added, Changed, Mutated, Not, Passthrough};
 use crate::storage::{ChangeTicks, Ticks};
 
 /// Trait that enables filtering a component's `ChangeTicks`. Used internally by queries.
-pub trait ChangeTicksFilter
-where
-    Self: 'static,
-{
+pub trait ChangeTicksFilter: 'static {
     /// Whether or not the filer matches all inputs. Used internally by queries for optimization
     /// purposes.
     const IS_PASSTHROUGH: bool = false;

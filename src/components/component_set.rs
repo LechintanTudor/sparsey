@@ -9,10 +9,7 @@ use std::any::TypeId;
 ///
 /// # Safety
 /// All operations must preserve component grouping.
-pub unsafe trait ComponentSet
-where
-    Self: Sized + Send + Sync + 'static,
-{
+pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
     /// Inserts the `entity` and its `components` into the `storages`.
     fn insert(
         storages: &mut ComponentStorages,
@@ -43,7 +40,7 @@ where
 }
 
 unsafe impl ComponentSet for () {
-    #[inline]
+    #[inline(always)]
     fn insert(_: &mut ComponentStorages, _: Entity, _: Self, _: ChangeTicks) {
         // Empty
     }
@@ -64,12 +61,12 @@ unsafe impl ComponentSet for () {
         unsafe { entities.get_unchecked(initial_entity_count..) }
     }
 
-    #[inline]
+    #[inline(always)]
     fn remove(_: &mut ComponentStorages, _: Entity) -> Option<Self> {
         Some(())
     }
 
-    #[inline]
+    #[inline(always)]
     fn delete(_: &mut ComponentStorages, _: Entity) {
         // Empty
     }

@@ -1,9 +1,6 @@
 /// Marker trait for types that can be stored in `ComponentStorage`s.
 /// Automatically implemented for all `Send + Sync + 'static` types.
-pub trait Component
-where
-    Self: Send + Sync + 'static,
-{
+pub trait Component: Send + Sync + 'static {
     // Empty
 }
 

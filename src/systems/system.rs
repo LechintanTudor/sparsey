@@ -64,10 +64,7 @@ unsafe impl IntoLocalSystem<(), ()> for System {
 }
 
 /// Helper trait for creating a `System` from a system function.
-pub unsafe trait IntoSystem<Params, Return>
-where
-    Self: IntoLocalSystem<Params, Return>,
-{
+pub unsafe trait IntoSystem<Params, Return>: IntoLocalSystem<Params, Return> {
     /// Creates a `System` with the system function.
     fn system(self) -> System;
 }

@@ -2,10 +2,7 @@ use crate::storage::Entity;
 
 /// Trait implemented by iterators over entities. Used internally by
 /// `EntityIter`.
-pub unsafe trait EntityIterator
-where
-    Self: Iterator,
-{
+pub unsafe trait EntityIterator: Iterator {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)>;
 
     fn fold_with_entity<B, F>(mut self, init: B, mut f: F) -> B
