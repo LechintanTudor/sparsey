@@ -1,8 +1,8 @@
 use crate::query::{
-    get_group_range, is_trivial_group, DenseIter, QueryFilter, QueryGet, QueryModifier, SparseIter,
+    get_group_range, is_trivial_group, DenseIter, EntityIterator, QueryFilter, QueryGet,
+    QueryModifier, SparseIter,
 };
 use crate::storage::Entity;
-use crate::utils::EntityIterator;
 use std::cmp;
 
 /// Iterator over grouped or ungrouped components.

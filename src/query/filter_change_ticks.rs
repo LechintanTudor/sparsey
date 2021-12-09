@@ -1,5 +1,5 @@
 use crate::query::{Added, Changed, Mutated, Not, Passthrough};
-use crate::utils::{ChangeTicks, Ticks};
+use crate::storage::{ChangeTicks, Ticks};
 
 /// Trait that enables filtering a component's `ChangeTicks`. Used internally by queries.
 pub trait ChangeTicksFilter

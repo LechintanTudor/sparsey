@@ -1,5 +1,6 @@
 use crate::resources::Resource;
-use crate::utils::{ChangeTicks, UnsafeUnwrap};
+use crate::storage::ChangeTicks;
+use crate::utils::UnsafeUnwrap;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;

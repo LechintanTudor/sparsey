@@ -1,6 +1,5 @@
-use crate::query::{QueryFilter, QueryGet};
-use crate::storage::Entity;
-use crate::utils::{EntityIterator, Ticks};
+use crate::query::{EntityIterator, QueryFilter, QueryGet};
+use crate::storage::{Entity, Ticks};
 
 /// Iterator over grouped components. Extremely fast.
 pub struct DenseIter<'a, G, F>

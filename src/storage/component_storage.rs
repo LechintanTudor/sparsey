@@ -1,5 +1,4 @@
-use crate::storage::{Entity, EntitySparseArray, IndexEntity};
-use crate::utils::ChangeTicks;
+use crate::storage::{ChangeTicks, Entity, EntitySparseArray, IndexEntity};
 use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr::NonNull;
 use std::{mem, ptr, slice};

@@ -1,8 +1,7 @@
 use crate::components::{Component, ComponentSet, ComponentStorages};
 use crate::layout::Layout;
 use crate::resources::{Resource, ResourceStorage};
-use crate::storage::{ComponentStorage, Entity, EntityStorage};
-use crate::utils::{ChangeTicks, NonZeroTicks, Ticks};
+use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntityStorage, NonZeroTicks, Ticks};
 use crate::world::{BorrowWorld, CannotIncrementWorldTick, NoSuchEntity};
 use std::any::TypeId;
 use std::mem;

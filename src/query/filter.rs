@@ -3,8 +3,7 @@ use crate::query::{
     Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered,
     GetComponentUnfiltered, Mutated, Not, Or, Passthrough, QueryFilter, QueryGet, Xor,
 };
-use crate::storage::Entity;
-use crate::utils::Ticks;
+use crate::storage::{Entity, Ticks};
 use std::marker::PhantomData;
 
 /// Type that a filter to the contained components.

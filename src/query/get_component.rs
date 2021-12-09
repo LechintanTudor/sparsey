@@ -1,7 +1,6 @@
 use crate::components::{Component, ComponentGroupInfo};
 use crate::query::{ChangeTicksFilter, ComponentViewData};
-use crate::storage::{Entity, EntitySparseArray};
-use crate::utils::Ticks;
+use crate::storage::{Entity, EntitySparseArray, Ticks};
 
 /// Trait used to fetch a component from a component view.
 pub unsafe trait GetComponentUnfiltered<'a> {

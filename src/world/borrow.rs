@@ -1,8 +1,8 @@
 use crate::components::Component;
 use crate::query::ComponentView;
 use crate::resources::{Resource, ResourceCell, ResourceView};
-use crate::storage::ComponentStorage;
-use crate::utils::{panic_missing_comp, panic_missing_res, Ticks};
+use crate::storage::{ComponentStorage, Ticks};
+use crate::utils::{panic_missing_comp, panic_missing_res};
 use crate::world::World;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;

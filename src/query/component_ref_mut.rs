@@ -1,5 +1,5 @@
 use crate::components::Component;
-use crate::utils::{ChangeTicks, Ticks};
+use crate::storage::{ChangeTicks, Ticks};
 use std::ops::{Deref, DerefMut};
 
 /// Type returned by queries over `&mut CompMut<T>`. Updates the component's `ChangeTicks` when the

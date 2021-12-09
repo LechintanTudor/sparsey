@@ -1,7 +1,6 @@
 use crate::components::QueryGroupInfo;
 use crate::query::{ChangeTicksFilter, ComponentViewData, GetComponentUnfiltered, Passthrough};
-use crate::storage::{Entity, EntitySparseArray};
-use crate::utils::Ticks;
+use crate::storage::{Entity, EntitySparseArray, Ticks};
 
 /// Trait used to fetch a set of components from component views. Used internally by queries.
 pub unsafe trait GetComponentSetUnfiltered<'a> {

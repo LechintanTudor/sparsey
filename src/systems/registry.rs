@@ -1,8 +1,8 @@
 use crate::components::Component;
 use crate::layout::ComponentInfo;
 use crate::resources::Resource;
+use crate::storage::Ticks;
 use crate::systems::{CommandBuffers, Commands};
-use crate::utils::Ticks;
 use crate::world::{BorrowWorld, Comp, CompMut, Res, ResMut, World};
 use std::any::TypeId;
 

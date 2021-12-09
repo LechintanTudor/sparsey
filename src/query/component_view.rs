@@ -2,8 +2,7 @@ use crate::components::{Component, ComponentGroupInfo};
 use crate::query::{
     ChangeTicksFilter, ComponentRefMut, GetComponentUnfiltered, GetImmutableComponentUnfiltered,
 };
-use crate::storage::{ComponentStorage, Entity, EntitySparseArray};
-use crate::utils::{ChangeTicks, Ticks};
+use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntitySparseArray, Ticks};
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};

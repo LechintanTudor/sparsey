@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use std::ops::Range;
 use std::ptr::NonNull;
 
+/// Holds grouping information about a `Component` type in a `World`.
 #[derive(Clone, Copy)]
 pub struct ComponentGroupInfo<'a> {
     group_family: NonNull<Group>,
@@ -21,6 +22,7 @@ impl<'a> ComponentGroupInfo<'a> {
     }
 }
 
+/// Holds grouping information about a multiple components in a `World`.
 pub struct QueryGroupInfo<'a> {
     group_family: NonNull<Group>,
     group_offset: u32,
@@ -29,6 +31,7 @@ pub struct QueryGroupInfo<'a> {
 }
 
 impl<'a> QueryGroupInfo<'a> {
+    /// Creates a new `QueryGroupInfo`.
     pub fn new(info: ComponentGroupInfo<'a>) -> Self {
         Self {
             group_family: info.group_family,
@@ -38,6 +41,7 @@ impl<'a> QueryGroupInfo<'a> {
         }
     }
 
+    /// Tries to include the given `ComponentInfo`.
     pub fn include(self, info: ComponentGroupInfo<'a>) -> Option<Self> {
         if self.group_family != info.group_family {
             return None;
@@ -51,6 +55,7 @@ impl<'a> QueryGroupInfo<'a> {
         })
     }
 
+    /// Tries to exclude the given `ComponentInfo`.
     pub fn exclude(self, info: ComponentGroupInfo<'a>) -> Option<Self> {
         if self.group_family != info.group_family {
             return None;
@@ -64,6 +69,7 @@ impl<'a> QueryGroupInfo<'a> {
         })
     }
 
+    /// Returns the range of grouped components, if any.
     pub fn group_range(self) -> Option<Range<usize>> {
         let group_family = self.group_family.as_ptr();
         let group = unsafe { *group_family.add(self.group_offset as usize) };

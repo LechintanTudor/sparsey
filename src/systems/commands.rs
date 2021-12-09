@@ -1,7 +1,6 @@
 use crate::components::ComponentSet;
-use crate::storage::{Entity, EntityStorage};
+use crate::storage::{ChangeTicks, Entity, EntityStorage};
 use crate::systems::CommandBuffer;
-use crate::utils::ChangeTicks;
 use crate::world::World;
 
 /// Command buffer used for queueing commands that require exclusive access to

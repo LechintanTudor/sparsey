@@ -36,28 +36,27 @@ pub mod filters {
 /// Exports most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
-    pub use crate::query::{Query, QueryGetModifier, SliceQuery};
-    pub use crate::storage::Entity;
+    pub use crate::query::{IntoEntityIterator, Query, QueryGetModifier, SliceQuery};
+    pub use crate::storage::{ChangeTicks, Entity};
     pub use crate::systems::{
         Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,
     };
-    pub use crate::utils::{ChangeTicks, IntoEntityIterator};
     pub use crate::world::{Comp, CompMut, Res, ResMut, World};
 }
 
-// pub use self::components::*;
-// pub use self::layout::*;
-// pub use self::query::*;
-// pub use self::resources::*;
-// pub use self::storage::*;
-// pub use self::systems::*;
-// pub use self::utils::*;
-// pub use self::world::*;
+/// Manages `ComponentStorage`s and `Component` grouping within a `World`.
 pub mod components;
+/// Describes the layout of component groups within a `World`.
 pub mod layout;
+/// Enables fetching and iterating components from component views.
 pub mod query;
+/// Enables creating and managing data which is unique within a `World`.
 pub mod resources;
+/// Exports functionality for managing `ComponentStorage`s.
 pub mod storage;
+/// Exports functionality for creating `System`s and dispatching them sequentially or in parallel.
 pub mod systems;
-pub mod utils;
+/// Exports functionality for creating and managing `World`s.
 pub mod world;
+
+pub(crate) mod utils;

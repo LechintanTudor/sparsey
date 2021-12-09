@@ -82,6 +82,7 @@ where
     }
 }
 
+/// Wrapper that applies include and exclude modifiers to a `Query`.
 pub struct IncludeExclude<G, I, E> {
     get: G,
     include: I,
@@ -124,6 +125,7 @@ where
     }
 }
 
+/// Wrapper that applies include/exclude modifiers and a filter to a `Query`.
 pub struct IncludeExcludeFilter<G, I, E, F> {
     get: G,
     include: I,

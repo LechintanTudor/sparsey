@@ -1,5 +1,6 @@
 use crate::resources::{Resource, ResourceCell};
-use crate::utils::{Ticks, UnsafeUnwrap};
+use crate::storage::Ticks;
+use crate::utils::UnsafeUnwrap;
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
