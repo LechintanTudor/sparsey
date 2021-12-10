@@ -1,5 +1,7 @@
 use crate::components::QueryGroupInfo;
-use crate::query::{GetComponentUnfiltered, GetImmutableComponentUnfiltered, Passthrough};
+use crate::query::{
+    split_modifier, GetComponentUnfiltered, GetImmutableComponentUnfiltered, Passthrough,
+};
 use crate::storage::{Entity, EntitySparseArray};
 use crate::utils::impl_generic_tuple_1_16;
 

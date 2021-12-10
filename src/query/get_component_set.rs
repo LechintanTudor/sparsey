@@ -1,5 +1,8 @@
 use crate::components::QueryGroupInfo;
-use crate::query::{ChangeTicksFilter, ComponentViewData, GetComponentUnfiltered, Passthrough};
+use crate::query::{
+    split_dense, split_sparse, ChangeTicksFilter, ComponentViewData, GetComponentUnfiltered,
+    Passthrough,
+};
 use crate::storage::{Entity, EntitySparseArray, Ticks};
 use crate::utils::impl_generic_tuple_1_16;
 

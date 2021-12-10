@@ -17,9 +17,6 @@ pub use self::query::*;
 pub use self::slice_query::*;
 pub use self::slice_query_get::*;
 
-#[macro_use]
-mod split;
-
 mod component_ref_mut;
 mod component_view;
 mod filter;
@@ -39,5 +36,7 @@ mod modifier_types;
 mod query;
 mod slice_query;
 mod slice_query_get;
+mod split;
 
 pub(crate) use self::group::*;
+pub(crate) use self::split::*;

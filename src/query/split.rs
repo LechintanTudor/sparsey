@@ -63,3 +63,5 @@ macro_rules! query_split_dense {
 pub(crate) fn shortest_entity_slice<'a>(slices: &[&'a [Entity]]) -> Option<&'a [Entity]> {
     slices.iter().min_by_key(|e| e.len()).copied()
 }
+
+pub(crate) use {query_split_dense, query_split_sparse, split_dense, split_modifier, split_sparse};
