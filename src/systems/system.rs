@@ -1,6 +1,7 @@
 use crate::systems::{
     BorrowRegistry, LocalSystemParam, Registry, RegistryAccess, SystemParam, SystemResult,
 };
+use crate::utils::impl_generic_0_16;
 use crate::world::World;
 
 /// Trait implemented by systems..
@@ -200,20 +201,4 @@ macro_rules! impl_into_system {
     };
 }
 
-impl_into_system!();
-impl_into_system!(A);
-impl_into_system!(A, B);
-impl_into_system!(A, B, C);
-impl_into_system!(A, B, C, D);
-impl_into_system!(A, B, C, D, E);
-impl_into_system!(A, B, C, D, E, F);
-impl_into_system!(A, B, C, D, E, F, G);
-impl_into_system!(A, B, C, D, E, F, G, H);
-impl_into_system!(A, B, C, D, E, F, G, H, I);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+impl_generic_0_16!(impl_into_system);

@@ -1,6 +1,6 @@
 use crate::components::{iter_bit_indexes, Component, ComponentStorages, FamilyMask, GroupMask};
 use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntityStorage};
-use crate::utils::panic_missing_comp;
+use crate::utils::{impl_generic_tuple_1_16, panic_missing_comp};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
 
@@ -231,24 +231,4 @@ where
         .unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
-#[rustfmt::skip]
-mod impls {
-    use super::*;
-
-    impl_component_set!((A, 0));
-    impl_component_set!((A, 0), (B, 1));
-    impl_component_set!((A, 0), (B, 1), (C, 2));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
-    impl_component_set!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
-}
+impl_generic_tuple_1_16!(impl_component_set);

@@ -44,6 +44,9 @@ pub mod prelude {
     pub use crate::world::{Comp, CompMut, Res, ResMut, World};
 }
 
+#[macro_use]
+pub(crate) mod utils;
+
 /// Manages `ComponentStorage`s and `Component` grouping within a `World`.
 pub mod components;
 /// Describes the layout of component groups within a `World`.
@@ -58,5 +61,3 @@ pub mod storage;
 pub mod systems;
 /// Exports functionality for creating and managing `World`s.
 pub mod world;
-
-pub(crate) mod utils;

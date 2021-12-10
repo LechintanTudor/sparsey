@@ -1,5 +1,6 @@
 use crate::components::Component;
 use crate::layout::ComponentInfo;
+use crate::utils::impl_generic_2_16;
 use rustc_hash::FxHashSet;
 use std::iter::FromIterator;
 
@@ -97,18 +98,4 @@ macro_rules! impl_layout_group_descriptor {
     };
 }
 
-impl_layout_group_descriptor!(A, B);
-impl_layout_group_descriptor!(A, B, C);
-impl_layout_group_descriptor!(A, B, C, D);
-impl_layout_group_descriptor!(A, B, C, D, E);
-impl_layout_group_descriptor!(A, B, C, D, E, F);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H, I);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H, I, J);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H, I, J, K);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-impl_layout_group_descriptor!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+impl_generic_2_16!(impl_layout_group_descriptor);

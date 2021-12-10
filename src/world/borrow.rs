@@ -2,7 +2,7 @@ use crate::components::Component;
 use crate::query::ComponentView;
 use crate::resources::{Resource, ResourceCell, ResourceView};
 use crate::storage::{ComponentStorage, Ticks};
-use crate::utils::{panic_missing_comp, panic_missing_res};
+use crate::utils::{impl_generic_1_16, panic_missing_comp, panic_missing_res};
 use crate::world::World;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::any::TypeId;
@@ -128,19 +128,4 @@ macro_rules! impl_borrow_world {
     };
 }
 
-impl_borrow_world!(A);
-impl_borrow_world!(A, B);
-impl_borrow_world!(A, B, C);
-impl_borrow_world!(A, B, C, D);
-impl_borrow_world!(A, B, C, D, E);
-impl_borrow_world!(A, B, C, D, E, F);
-impl_borrow_world!(A, B, C, D, E, F, G);
-impl_borrow_world!(A, B, C, D, E, F, G, H);
-impl_borrow_world!(A, B, C, D, E, F, G, H, I);
-impl_borrow_world!(A, B, C, D, E, F, G, H, I, J);
-impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K);
-impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-impl_borrow_world!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+impl_generic_1_16!(impl_borrow_world);
