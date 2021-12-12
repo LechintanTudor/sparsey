@@ -416,7 +416,7 @@ macro_rules! impl_get_component_set {
 
                     let item = ($(
                         if !matches {
-                            let (item, matched) = $elem::get_from_parts_unchecked::<Passthrough>(
+                            let (item, matched) = $elem::get_from_parts_unchecked::<Filter>(
                                 data.$idx,
                                 index.$idx,
                                 world_tick,
