@@ -27,7 +27,7 @@
 //! }
 //! ```
 
-/// Exports functions for filtering component and resource views.
+/// Exports functions for filtering `ComponentView`s and `ResourceView`s.
 pub mod filters {
     pub use crate::query::{added, changed, contains, mutated};
     pub use crate::resources::{res_added, res_changed, res_mutated};
@@ -49,11 +49,11 @@ pub(crate) mod utils;
 
 /// Manages `ComponentStorage`s and `Component` grouping within a `World`.
 pub mod components;
-/// Describes the layout of component groups within a `World`.
+/// Exports functionality for describing the layout of `ComponentStorages` within a `World`.
 pub mod layout;
-/// Enables fetching and iterating components from component views.
+/// Exports functionality for fetching and iterating `Component`s from `ComponentView`s.
 pub mod query;
-/// Enables creating and managing data which is unique within a `World`.
+/// Exports functionality for managing data which is unique within a `World`.
 pub mod resources;
 /// Exports functionality for managing `ComponentStorage`s.
 pub mod storage;
