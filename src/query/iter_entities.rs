@@ -19,7 +19,7 @@ pub unsafe trait EntityIterator: Iterator {
 }
 
 /// Trait used for creating an `EntityIter`.
-pub trait IntoEntityIterator
+pub trait IntoEntityIter
 where
     Self: EntityIterator + Sized,
 {
@@ -27,7 +27,7 @@ where
     fn entities(self) -> EntityIter<Self>;
 }
 
-impl<I> IntoEntityIterator for I
+impl<I> IntoEntityIter for I
 where
     I: EntityIterator + Sized,
 {
