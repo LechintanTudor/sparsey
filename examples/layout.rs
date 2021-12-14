@@ -5,6 +5,7 @@ struct Position(i32, i32);
 
 #[derive(Clone, Copy, Debug)]
 struct Sprite {
+    #[allow(dead_code)]
     id: u32,
 }
 
