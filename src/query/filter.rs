@@ -1,7 +1,7 @@
 use crate::components::QueryGroupInfo;
 use crate::query::{
-    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered,
-    GetComponentUnfiltered, Mutated, Not, Or, Passthrough, QueryFilter, QueryGet, Xor,
+    Added, And, ChangeTicksFilter, Changed, GetComponentSet, GetComponentSetUnfiltered, Mutated,
+    Not, Or, Passthrough, QueryFilter, QueryGet, Xor,
 };
 use crate::storage::{Entity, Ticks};
 use std::marker::PhantomData;
@@ -155,7 +155,7 @@ where
 impl<'a, F, G> QueryFilter for Filter<F, G>
 where
     F: ChangeTicksFilter,
-    G: GetComponentUnfiltered<'a>,
+    G: GetComponentSetUnfiltered<'a>,
 {
     fn matches(&self, entity: Entity) -> bool {
         let index = match self.get.get_index(entity) {
