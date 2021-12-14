@@ -1,5 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::module_inception)]
+#![allow(clippy::needless_doctest_main)]
 
 //! Sparsey is a sparse set-based Entity Component System with lots of features
 //! and nice syntax \~( ˘▾˘\~)
@@ -44,7 +45,6 @@ pub mod prelude {
     pub use crate::world::{Comp, CompMut, Res, ResMut, World};
 }
 
-#[macro_use]
 pub(crate) mod utils;
 
 /// Manages `ComponentStorage`s and `Component` grouping within a `World`.
