@@ -31,6 +31,14 @@ struct Position {
 struct Hp(u32);
 ```
 
+Before we use a Component type, we must `register` it on the `World`.
+
+```rust, ignore
+let mut world = World::default();
+world.register::<Position>();
+world.register::<Hp>();
+```
+
 ## Creating Entities
 To create a new `Entity`, use `create_entity` and provide a tuple containing the components of the
 entity. To create an `Entity` with no components use an empty tuple.
