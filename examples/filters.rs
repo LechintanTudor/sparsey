@@ -59,6 +59,6 @@ fn main() {
         world.create_entity((Hp(100),));
 
         dispatcher.run_seq(&mut world).unwrap();
-        world.increment_tick().unwrap();
+        world.increment_tick();
     }
 }

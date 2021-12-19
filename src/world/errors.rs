@@ -14,15 +14,3 @@ impl Display for NoSuchEntity {
         write!(f, "No such entity was found in the World")
     }
 }
-
-/// Error returned when the `World` tick cannot be incremented.
-#[derive(Debug)]
-pub struct CannotIncrementWorldTick;
-
-impl Error for CannotIncrementWorldTick {}
-
-impl Display for CannotIncrementWorldTick {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "Cannot increment the world tick without overflowing the counter")
-    }
-}

@@ -2,7 +2,7 @@ use crate::components::{Component, ComponentSet, ComponentStorages};
 use crate::layout::Layout;
 use crate::resources::{Resource, ResourceStorage};
 use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntityStorage, NonZeroTicks, Ticks};
-use crate::world::{BorrowWorld, CannotIncrementWorldTick, NoSuchEntity};
+use crate::world::{BorrowWorld, NoSuchEntity};
 use std::any::TypeId;
 use std::mem;
 use std::num::NonZeroU64;
@@ -297,17 +297,15 @@ impl World {
         self.tick = tick;
     }
 
-    /// Increments the world tick. Should be called after each game update for
-    /// proper change detection. Returns an error if the world tick is equal to
-    /// `Ticks::MAX`.
-    pub fn increment_tick(&mut self) -> Result<(), CannotIncrementWorldTick> {
-        if self.tick.get() == Ticks::MAX {
-            return Err(CannotIncrementWorldTick);
-        }
-
-        let new_tick = self.tick.get() + 1;
-        self.tick = NonZeroTicks::new(new_tick).unwrap();
-        Ok(())
+    /// Increments the world tick. Should be called after each game update for proper change
+    /// detection.
+    pub fn increment_tick(&mut self) {
+        self.tick = self
+            .tick
+            .get()
+            .checked_add(1)
+            .and_then(NonZeroTicks::new)
+            .expect("World tick overflow");
     }
 
     /// Returns the world tick used for change detection.

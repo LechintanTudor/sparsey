@@ -56,5 +56,5 @@ fn main() {
     world.create_entity((Position(3, 3), Sprite { id: 3 }, Transparent));
 
     dispatcher.run_seq(&mut world).unwrap();
-    world.increment_tick().unwrap();
+    world.increment_tick();
 }

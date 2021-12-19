@@ -44,6 +44,6 @@ fn main() {
 
     for _ in 0..3 {
         dispatcher.run_seq(&mut world).unwrap();
-        world.increment_tick().unwrap();
+        world.increment_tick();
     }
 }
