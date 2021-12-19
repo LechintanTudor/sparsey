@@ -59,7 +59,7 @@ fn test_components_crud() {
     }
 
     // Append
-    assert!(world.append_components(e0, (C(0),)).is_ok());
+    assert!(world.insert_components(e0, (C(0),)).is_ok());
 
     {
         let (a, b, c) = world.borrow::<(Comp<A>, Comp<B>, Comp<C>)>();

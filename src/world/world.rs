@@ -99,7 +99,7 @@ impl World {
         C: ComponentSet,
     {
         let entity = self.entities.create();
-        let _ = self.append_components_with_ticks(entity, components, ticks);
+        let _ = self.insert_components_with_ticks(entity, components, ticks);
         entity
     }
 
@@ -165,7 +165,7 @@ impl World {
 
     /// Appends the given `components` to `entity` if `entity` exists in the
     /// `World`.
-    pub fn append_components<C>(
+    pub fn insert_components<C>(
         &mut self,
         entity: Entity,
         components: C,
@@ -174,11 +174,11 @@ impl World {
         C: ComponentSet,
     {
         let ticks = ChangeTicks::just_added(self.tick.get());
-        self.append_components_with_ticks(entity, components, ticks)
+        self.insert_components_with_ticks(entity, components, ticks)
     }
 
     /// Same as `append`, but the `ChangeTicks` are provided by the caller.
-    pub fn append_components_with_ticks<C>(
+    pub fn insert_components_with_ticks<C>(
         &mut self,
         entity: Entity,
         components: C,

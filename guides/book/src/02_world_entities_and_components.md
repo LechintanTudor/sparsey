@@ -80,12 +80,12 @@ assert_eq!(world.entities(), &[]);
 ```
 
 ## Adding Components to an Existing Entity
-Use `append_components` to add a set of components to an existing `Entity`. The function returns an
+Use `insert_components` to add a set of components to an existing `Entity`. The function returns an
 error if the provided `Entity` was not found in the `World`.
 
 ```rust, ignore
 let enemy = world.create_entity(());
-world.append_components(enemy, ((Position { x: 0.0, y: 0.0 }, Hp(200)))).unwrap();
+world.insert_components(enemy, ((Position { x: 0.0, y: 0.0 }, Hp(200)))).unwrap();
 ```
 
 ## Removing Components from an Existing Entity

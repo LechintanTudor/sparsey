@@ -58,7 +58,7 @@ let entity = world.create_entity((A, B));
 
 Append a `C` component to an existing `Entity`.
 ```rust
-world.append_components(entity, (C,)).unwrap();
+world.insert_components(entity, (C,)).unwrap();
 ```
 
 Remove components `A` and `B` from an existing `Entity`.

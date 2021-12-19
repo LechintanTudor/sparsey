@@ -33,7 +33,7 @@ impl<'a> Commands<'a> {
         let entity = self.entities.create_atomic();
 
         self.queue(move |world| {
-            let _ = world.append_components(entity, components);
+            let _ = world.insert_components(entity, components);
         });
 
         entity
@@ -48,7 +48,7 @@ impl<'a> Commands<'a> {
         let entity = self.entities.create_atomic();
 
         self.queue(move |world| {
-            let _ = world.append_components_with_ticks(entity, components, ticks);
+            let _ = world.insert_components_with_ticks(entity, components, ticks);
         });
 
         entity
@@ -86,18 +86,18 @@ impl<'a> Commands<'a> {
     }
 
     /// Queues the appending of `components` to `entity`.
-    pub fn append_components<C>(&mut self, entity: Entity, components: C)
+    pub fn insert_components<C>(&mut self, entity: Entity, components: C)
     where
         C: ComponentSet,
     {
         self.queue(move |world| {
-            let _ = world.append_components(entity, components);
+            let _ = world.insert_components(entity, components);
         });
     }
 
-    /// Same as `append_components`, but the `ChangeTicks` are provided by the
+    /// Same as `insert_components`, but the `ChangeTicks` are provided by the
     /// caller.
-    pub fn append_components_with_ticks<C>(
+    pub fn insert_components_with_ticks<C>(
         &mut self,
         entity: Entity,
         components: C,
@@ -106,7 +106,7 @@ impl<'a> Commands<'a> {
         C: ComponentSet,
     {
         self.queue(move |world| {
-            let _ = world.append_components_with_ticks(entity, components, ticks);
+            let _ = world.insert_components_with_ticks(entity, components, ticks);
         });
     }
 
