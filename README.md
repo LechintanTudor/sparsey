@@ -2,9 +2,11 @@
 [![Crates.io](https://img.shields.io/crates/v/sparsey)](https://crates.io/crates/sparsey)
 [![Documentation](https://docs.rs/sparsey/badge.svg)](https://docs.rs/sparsey)
 
-Sparsey is a sparse set-based Entity Component System with lots of features and nice syntax \~( ˘▾˘\~)
+Sparsey is a sparse set-based Entity Component System with lots of features and nice syntax
+\~( ˘▾˘\~)
 <br />
-Check out the [Sparsey Cheat Sheet](/guides/cheat_sheet.md) and [examples](/examples/) to get started!
+Check out the [Sparsey Cheat Sheet](/guides/cheat_sheet.md) and [examples](/examples/) to get
+started!
 
 # Example 
 ```rust
@@ -30,15 +32,8 @@ fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
 } 
 
 fn main() {
-    // Create a World and register the components we want to use.
+    // Create a World to store out game data.
     let mut world = World::default();
-    world.register::<Position>();
-    world.register::<Velocity>();
-
-    // Create some entities.
-    world.create_entity((Position(0.0), Velocity(1.0)));
-    world.create_entity((Position(0.0), Velocity(2.0)));
-    world.create_entity((Position(0.0), Velocity(3.0), Immovable));
 
     // Create a Dispatcher to run our systems.
     let mut dispatcher = Dispatcher::builder()
@@ -46,137 +41,116 @@ fn main() {
         .add_system(update_position.system())
         .build();
 
+    // Register all component types we want to use.
+    dispatcher.register_storages(&mut world);
+
+    // Create some entities.
+    world.create_entity((Position(0.0), Velocity(1.0)));
+    world.create_entity((Position(0.0), Velocity(2.0)));
+    world.create_entity((Position(0.0), Velocity(3.0), Immovable));
+
     // Run the systems 3 times.
     for _ in 0..3 {
         dispatcher.run_seq(&mut world).unwrap();
-        world.increment_tick().unwrap();
+        world.increment_tick();
     }
 }
 ```
 
 # Features
-## Systems
-Systems are functions that have Component views and Resource views as parameters.
+## Easy to Write Systems
+Systems are plain functions that may return a `SystemResult` to signal errors.
+
 ```rust
-fn movement(mut pos: CompMut<Position>, vel: Comp<Velocity>, time: Res<Time>) {
-    for (mut pos, vel) in (&mut pos, &vel).iter() {
-        pos.x += vel.x * time.delta();
-        pos.y += vel.y * time.delta();
+fn print_alive_entities(hp: Comp<Hp>) {
+    for (entity, hp) in (&hp).iter().entities() {
+        if hp.0 > 0 {
+            println!("{:?} - {:?}", entity, hp);
+        }
     }
 }
-```
 
-Fallible systems may return a SystemResult to signal failure.
-```rust
-fn save_entities(a: Comp<A>, b: Comp<B>, c: Comp<C>) -> SystemResult {
-    for (entity, (a, b, c)) in (&a, &b, &c).iter().entities() {
-        try_save_entity(entity, a, b, c)?;
+fn save_entities(save_file: ResMut<SaveFile>, position: Comp<Position>) -> SystemResult {
+    for (entity, position) in (&position).iter().entities() {
+        save_file.save_entity_with_position(entity, position)?
     }
+
     Ok(())
 }
 ```
 
-Systems are executed using a Dispatcher. Errors can be retrieved after the systems finish executing.
-```rust
-let mut dispatcher = Dispatcher::builder()
-    .add_system(movement.system())
-    .add_system(save_entities.system())
-    .build();
-
-if let Err(run_error) = dispatcher.run_seq(&mut world) {
-    for error in run_error.errors() {
-        println!("{}", error);
-    }
-}
-```
-
 ## Expressive Queries
-Queries can be used to iterate entities and components.
+Get, include, exclude and filter components using Sparsey's query API.
+
 ```rust
-fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
-    // Fetch A, B and C from all entities which have A, B and C.
-    for (a, b, c) in (&a, &b, &c).iter() {}
+fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
+    // Iter components A and B from entities with A and B.
+    for (a, b) in (&a, &b).iter() {}
 
-    // Use `entities` to get the entity to which the components belong.
-    for (entity, (a, b, c)) in (&a, &b, &c).iter().entities() {}
+    // Iter components A from entities with A and B.
+    for a in (&a).include(&b).iter() {}
 
-    // Fetch A from all entities which have A, B and C.
-    for a in (&a).include((&b, &c)).iter() {}
+    // Iter components A from entities with A and without B.
+    for a in (&a).exclude(&b).iter() {}
 
-    // Fetch A from all entities which have A and B, but not C.
+    // Iter components A from entities with A and B, without C.
     for a in (&a).include(&b).exclude(&c).iter() {}
+
+    // Iter components A from entities with A and B, without C and with D xor E.
+    for a in (&a).include(&b).exclude(&c).filter(contains(&d) ^ contains(&e)).iter() {}
 }
 ```
 
 ## Granular Change Detection
-Sparsey supports change detection at a component level.
+Filter queries based on whether or not a component or component set was changed.
+
 ```rust
-fn example(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
-    use sparsey::filters::{added, mutated, changed};
+fn change_detection(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
+    // Iter changed A components.
+    for a in changed(&a).iter() {}
 
-    // Restrict query to match only entities to which A was just added.
-    for (a, b, c) in (added(&a), &b, &c).iter() {}
+    // Iter A, B component sets where A or B was changed. 
+    for (a, b) in changed((&a, &b)).iter() {}
 
-    // Restrict query to match only entities to which A was mutated.
-    for (a, b, c) in (mutated(&a), &b, &c).iter() {}
-
-    // Restrict query to match only entities to which A was just added or mutated.
-    for (a, b, c) in (changed(&a), &b, &c).iter() {}
-
-    // The opposite effect can be achieved by using the `Not` operator.
-    // Restrict query to match only entities to which A was not just added.
-    for (a, b, c) in (!added(&a), &b, &c).iter() {}
+    // Iter A, B, C component sets where A or B was changed and C was changed. 
+    for ((a, b), c) in (changed((&a, &b)), changed(&c)).iter() {}
 }
 ```
 
-## Groups and Layouts
-Layouts can be used to group component storages within a World. Grouped storages are much faster to iterate over and allow accessing their components and entities as ordered slices, with a small performance penalty when adding or removing components.
+## Great Performance with Grouped Storages
+Sparsey allows the user to "group" component storages to greatly optimize iteration performance.
+<br />
+
+Groups are created by setting a `Layout` on the `World`.
 ```rust
 let layout = Layout::builder()
     .add_group(<(A, B)>::group())
-    .add_group(<(A, B, C)>::group())
+    .add_group(<(A, B, C, D>)>::group())
     .build();
 
-let mut world = World::default();
-world.set_layout(&layout);
+let world = World::with_layout(&layout);
 ```
 
-All iterations bellow get a significant performance boost without having to change the code at all.
+After the layout is set, iterators over the grouped storages become "dense", greatly improving their
+performance. Additionally, grouped storages allow access to their components and entities as slices.
+
 ```rust
-fn iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
-    for (a, b) in (&a, &b).iter() {}
+fn dense_iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>) {
+    assert!((&a, &b).iter().is_dense());
+    assert!((&a, &b, &c, &d).iter().is_dense());
+    assert!((&a, &b).exclude((&c, &d)).iter().is_dense());
 
-    for a in (&a).include(&b).iter() {}
-
-    for (a, b, c) in (&a, &b, &c).iter() {}
-
-    for a in (&a).include((&b, &c)).iter() {}
-
-    for (a, b) in (&a, &b).exclude(&c).iter() {}
-
-    for a in (&a).include(&b).exclude(&c).iter() {}
-}
-```
-
-Groups allow accessing their components and entities as ordered slices.
-```rust
-fn slices(a: Comp<A>, b: Comp<B>, c: Comp<C>) {
-    // Get all entities with A and B as a slice.
-    let _: &[Entity] = (&a, &b).entities().unwrap();
-
-    // Get A, B and C from all entities with A, B and C as slices.
-    let _: (&[A], &[B], &[C]) = (&a, &b, &c).components().unwrap();
-
-    // Get all entities with A and B, but not C, and their components, as slices.
-    let _: (&[Entity], (&[A], &[B])) = (&a, &b)
-        .exclude(&c)
-        .entities_components()
-        .unwrap();
+    let _: &[Entity] = (&a, &b).entities();
+    let _: (&[A], &[B]) = (&a, &b).components();
+    let _: (&[Entity], (&[A], &[B])) = (&a, &b).entities_components();
 }
 ```
 
 # Thanks
-Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely [Bevy](https://github.com/bevyengine/bevy), [EnTT](https://github.com/skypjack/entt), [Legion](https://github.com/amethyst/legion), [Shipyard](https://github.com/leudz/shipyard) and [Specs](https://github.com/amethyst/specs). Make sure you check them out!
+Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely 
+[Bevy](https://github.com/bevyengine/bevy), [EnTT](https://github.com/skypjack/entt),
+[Legion](https://github.com/amethyst/legion), [Shipyard](https://github.com/leudz/shipyard) and 
+[Specs](https://github.com/amethyst/specs). Make sure you check them out!
 
 # License
 Sparsey is dual-licensed under either
@@ -185,4 +159,6 @@ Sparsey is dual-licensed under either
 
 at your option.
 <br />
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the
+work by you, as defined in the Apache-2.0 license, shall be dual licensed as above without any 
+additional terms or conditions.

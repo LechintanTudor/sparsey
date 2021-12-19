@@ -56,7 +56,7 @@ Create an `Entity` with `A` and `B`,
 let entity = world.create_entity((A, B));
 ```
 
-Append a `C` component to an existing `Entity`.
+Add a `C` component to an existing `Entity`.
 ```rust
 world.insert_components(entity, (C,)).unwrap();
 ```
