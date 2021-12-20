@@ -72,7 +72,7 @@ fn print_alive_entities(hp: Comp<Hp>) {
 
 fn save_entities(save_file: ResMut<SaveFile>, position: Comp<Position>) -> SystemResult {
     for (entity, position) in (&position).iter().entities() {
-        save_file.save_entity_with_position(entity, position)?
+        save_file.save_entity_with_position(entity, position)?;
     }
 
     Ok(())
@@ -140,9 +140,10 @@ fn dense_iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>) {
     assert!((&a, &b, &c, &d).iter().is_dense());
     assert!((&a, &b).exclude((&c, &d)).iter().is_dense());
 
-    let _: &[Entity] = (&a, &b).entities();
-    let _: (&[A], &[B]) = (&a, &b).components();
-    let _: (&[Entity], (&[A], &[B])) = (&a, &b).entities_components();
+    // These would panic if the storages weren't grouped.
+    let _: &[Entity] = (&a, &b).entities().unwrap();
+    let _: (&[A], &[B]) = (&a, &b).components().unwrap();
+    let _: (&[Entity], (&[A], &[B])) = (&a, &b).entities_components().unwrap();
 }
 ```
 
