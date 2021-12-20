@@ -32,7 +32,7 @@ fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
 } 
 
 fn main() {
-    // Create a World to store out game data.
+    // Create a World to store our game data.
     let mut world = World::default();
 
     // Create a Dispatcher to run our systems.
