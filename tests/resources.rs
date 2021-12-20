@@ -49,7 +49,7 @@ fn test_filters() {
         assert!(res_mutated(&a));
     }
 
-    world.increment_tick().unwrap();
+    world.increment_tick();
 
     {
         let mut a = world.borrow::<ResMut<A>>();
