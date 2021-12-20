@@ -46,16 +46,13 @@ impl EntityStorage {
 
     /// Removes all entities from the storage.
     pub(crate) fn clear(&mut self) {
+        self.storage.entities.iter().for_each(|&entity| self.allocator.deallocate(entity));
         self.storage.clear();
-        self.allocator.clear();
     }
 
     /// Adds the entities created atomically to the storage.
     pub(crate) fn maintain(&mut self) {
-        let allocator = &mut self.allocator;
-        let storage = &mut self.storage;
-
-        allocator.maintain().for_each(|entity| storage.insert(entity));
+        self.allocator.maintain().for_each(|entity| self.storage.insert(entity));
     }
 }
 
@@ -74,6 +71,7 @@ struct EntitySparseSet {
 }
 
 impl EntitySparseSet {
+    /// Inserts `entity` into the storage.
     fn insert(&mut self, entity: Entity) {
         let index_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
@@ -89,6 +87,7 @@ impl EntitySparseSet {
         }
     }
 
+    /// Removes `entity` from the storage and returns `true` if it was successfully removed.
     fn remove(&mut self, entity: Entity) -> bool {
         let dense_index = match self.sparse.remove(entity) {
             Some(index) => index,
@@ -108,10 +107,12 @@ impl EntitySparseSet {
         true
     }
 
+    /// Returns `true` if the storage contains `entity`.
     fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
     }
 
+    /// Removes all entities from the storage.
     fn clear(&mut self) {
         self.sparse.clear();
         self.entities.clear();
@@ -120,13 +121,14 @@ impl EntitySparseSet {
 
 #[derive(Default, Debug)]
 struct EntityAllocator {
-    current_id: AtomicU32,
-    last_id: u32,
+    next_id_to_allocate: AtomicU32,
+    last_maintained_id: u32,
     recycled: Vec<Entity>,
     recycled_len: AtomicUsize,
 }
 
 impl EntityAllocator {
+    /// Tries to allocate an `Entity` synchronously.
     fn allocate(&mut self) -> Option<Entity> {
         match self.recycled.pop() {
             Some(entity) => {
@@ -134,41 +136,40 @@ impl EntityAllocator {
                 Some(entity)
             }
             None => {
-                let current_id = *self.current_id.get_mut();
-                *self.current_id.get_mut() = self.current_id.get_mut().checked_add(1)?;
+                let current_id = *self.next_id_to_allocate.get_mut();
+                let new_next_id_to_allocate = current_id.checked_add(1)?;
+
+                *self.next_id_to_allocate.get_mut() = new_next_id_to_allocate;
                 Some(Entity::with_id(current_id))
             }
         }
     }
 
+    /// Tries to allocate an `Entity` atomically.
     fn allocate_atomic(&self) -> Option<Entity> {
         match atomic_decrement_usize(&self.recycled_len) {
             Some(recycled_len) => Some(self.recycled[recycled_len - 1]),
-            None => atomic_increment_u32(&self.current_id).map(Entity::with_id),
+            None => atomic_increment_u32(&self.next_id_to_allocate).map(Entity::with_id),
         }
     }
 
+    /// Tries to recycle the given `Entity`.
     fn deallocate(&mut self, entity: Entity) {
-        if entity.version().id() != u32::MAX {
-            let next_version_id = unsafe { NonZeroU32::new_unchecked(entity.version().id() + 1) };
+        if let Some(next_version_id) = entity.version().id().checked_add(1) {
+            let next_version_id = unsafe { NonZeroU32::new_unchecked(next_version_id) };
             self.recycled.push(Entity::new(entity.id(), Version::new(next_version_id)));
             *self.recycled_len.get_mut() += 1;
         }
     }
 
-    fn clear(&mut self) {
-        *self.current_id.get_mut() = 0;
-        self.last_id = 0;
-        self.recycled.clear();
-        *self.recycled_len.get_mut() = 0;
-    }
-
+    /// Removes all allocated entities from the `recycled` vector and returns an iterator over all
+    /// the entities allocated since the last call to `maintain`.
     fn maintain(&mut self) -> impl Iterator<Item = Entity> + '_ {
         let remaining = *self.recycled_len.get_mut();
         *self.recycled_len.get_mut() = self.recycled.len();
 
-        let new_id_range = self.last_id..*self.current_id.get_mut();
-        self.last_id = *self.current_id.get_mut();
+        let new_id_range = self.last_maintained_id..*self.next_id_to_allocate.get_mut();
+        self.last_maintained_id = *self.next_id_to_allocate.get_mut();
 
         self.recycled.drain(remaining..).chain(new_id_range.into_iter().map(Entity::with_id))
     }
