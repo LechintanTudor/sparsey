@@ -1,12 +1,15 @@
-# Unreleased
+# 0.6.0 (2021-12-20)
 ## Added
 - Allow using change detection on multiple `ComponentView`s at the same time.
 
 ## Changed
-- Move items from crate root into separate modules.
+- Moved items from crate root into separate modules.
+- Renamed `World::append_components` to `World::insert_components`.
+- `World::incrment_tick` now panics instead of returning an error on overflow.
 
 ## Fixed
 - Fixed `ComponentStorage::clear` not removing the entities from its `EntitySparseArray`.
+- `World` keeps generating unique entities after calling `World::clear_entities`.
 - Filtered queries are no longer sliceable.
 
 # 0.5.0 (2021-11-09)
