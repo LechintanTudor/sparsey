@@ -16,6 +16,7 @@ pub use self::modifier_types::*;
 pub use self::query::*;
 pub use self::slice_query::*;
 pub use self::slice_query_get::*;
+//pub use self::query2::*;
 
 mod component_ref_mut;
 mod component_view;
@@ -34,6 +35,7 @@ mod iter_sparse;
 mod modifier;
 mod modifier_types;
 mod query;
+mod query2;
 mod slice_query;
 mod slice_query_get;
 mod split;
