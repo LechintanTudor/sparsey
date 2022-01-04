@@ -62,6 +62,8 @@ pub unsafe trait SimpleQuery<'a> {
 
     fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs);
 
+    fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays);
+
     fn includes_split(sparse: Self::SparseArrays, entity: Entity) -> bool;
 
     fn excludes_split(sparse: Self::SparseArrays, entity: Entity) -> bool;
@@ -79,8 +81,12 @@ pub unsafe trait SimpleQuery<'a> {
     ) -> Self::Item;
 }
 
+pub unsafe trait NonEmptySimpleQuery<'a>: SimpleQuery<'a> {
+    // Empty
+}
+
 pub trait IntoQueryParts<'a> {
-    type Get: SimpleQuery<'a>;
+    type Get: NonEmptySimpleQuery<'a>;
     type Include: SimpleQuery<'a> + Copy;
     type Exclude: SimpleQuery<'a> + Copy;
 
@@ -119,6 +125,62 @@ macro_rules! replace {
     };
 }
 
+macro_rules! group_info {
+    ($first:expr, $($other:expr),+) => {
+        Some(Some($first? $(.combine($other?)?)+))
+    };
+}
+
+macro_rules! split_sparse {
+    (($first:expr, $_:tt), $(($other:expr, $other_idx:tt)),+) => {
+        {
+            let (mut entities, first_sparse, first_comp) = $first.split();
+
+            let splits = (
+                (first_sparse, first_comp),
+                $(
+                    {
+                        let (other_entities, other_sparse, other_comp) = $other.split();
+
+                        if other_entities.len() < entities.len() {
+                            entities = other_entities;
+                        }
+
+                        (other_sparse, other_comp)
+                    },
+                )+
+            );
+
+            let sparse = (first_sparse, $(splits.$other_idx.0),+);
+            let comp = (first_comp, $(splits.$other_idx.1),+);
+
+            (Some(entities), sparse, comp)
+        }
+    };
+}
+
+macro_rules! split_dense {
+    ($first:expr, $($other:expr),+) => {
+        {
+            let (entities, _, first_comp) = $first.split();
+            let comps = (first_comp, $($other.split().2),+);
+
+            (Some(entities), comps)
+        }
+    };
+}
+
+macro_rules! split_filter {
+    ($first:expr, $($other:expr),+) => {
+        {
+            let (entities, first_sparse, _) = $first.split();
+            let sparse = (first_sparse, $($other.split().1),+);
+
+            (Some(entities), sparse)
+        }
+    };
+}
+
 macro_rules! impl_simple_query {
     ($(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> SimpleQuery<'a> for ($($elem,)+)
@@ -131,7 +193,7 @@ macro_rules! impl_simple_query {
             type SparseArrays = ($(replace!($elem, &'a EntitySparseArray),)+);
 
             fn group_info(&self) -> Option<Option<GroupInfo<'a>>> {
-                todo!()
+                group_info!($(self.$idx.group_info()),+)
             }
 
             fn get(self, entity: Entity) -> Option<Self::Item> {
@@ -151,11 +213,15 @@ macro_rules! impl_simple_query {
             fn split_sparse(
                 self,
             ) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
-                todo!()
+                split_sparse!($((self.$idx, $idx)),+)
             }
 
             fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs) {
-                todo!()
+                split_dense!($(self.$idx),+)
+            }
+
+            fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays) {
+                split_filter!($(self.$idx),+)
             }
 
             fn includes_split(sparse: Self::SparseArrays, entity: Entity) -> bool {
@@ -192,6 +258,13 @@ macro_rules! impl_simple_query {
                     $elem::get_from_components_unchecked(components.$idx, index),
                 )+)
             }
+        }
+
+        unsafe impl<'a, $($elem),+> NonEmptySimpleQuery<'a> for ($($elem,)+) 
+        where
+            $($elem: SimpleQueryElement<'a>,)+
+        {
+            // Empty
         }
     };
 }
