@@ -29,16 +29,12 @@
 //! ```
 
 /// Exports functions for filtering `ComponentView`s and `ResourceView`s.
-pub mod filters {
-    pub use crate::query::{added, changed, contains, mutated};
-    pub use crate::resources::{res_added, res_changed, res_mutated};
-}
 
 /// Exports most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
     pub use crate::query::{IntoEntityIter, Query, QueryGetModifier, SliceQuery};
-    pub use crate::storage::{ChangeTicks, Entity};
+    pub use crate::storage::Entity;
     pub use crate::systems::{
         Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,
     };

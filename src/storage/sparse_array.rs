@@ -7,11 +7,11 @@ type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
 /// Maps sparse indexes to dense indexes. Used internally by `ComponentStorage`.
 #[derive(Clone, Debug, Default)]
-pub struct EntitySparseArray {
+pub struct SparseArray {
     pages: Vec<EntityPage>,
 }
 
-impl EntitySparseArray {
+impl SparseArray {
     pub fn get(&self, entity: Entity) -> Option<usize> {
         self.pages
             .get(page_index(entity))

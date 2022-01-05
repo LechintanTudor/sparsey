@@ -8,7 +8,7 @@
 - `World::incrment_tick` now panics instead of returning an error on overflow.
 
 ## Fixed
-- Fixed `ComponentStorage::clear` not removing the entities from its `EntitySparseArray`.
+- Fixed `ComponentStorage::clear` not removing the entities from its `SparseArray`.
 - `World` keeps generating unique entities after calling `World::clear_entities`.
 - Filtered queries are no longer sliceable.
 

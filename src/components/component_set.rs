@@ -1,5 +1,5 @@
 use crate::components::{iter_bit_indexes, Component, ComponentStorages, FamilyMask, GroupMask};
-use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntityStorage};
+use crate::storage::{ComponentStorage, Entity, EntityStorage};
 use crate::utils::{impl_generic_tuple_1_16, panic_missing_comp};
 use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
@@ -11,12 +11,7 @@ use std::any::TypeId;
 /// All operations must preserve component grouping.
 pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
     /// Inserts the `entity` and its `components` into the `storages`.
-    fn insert(
-        storages: &mut ComponentStorages,
-        entity: Entity,
-        components: Self,
-        ticks: ChangeTicks,
-    );
+    fn insert(storages: &mut ComponentStorages, entity: Entity, components: Self);
 
     /// Creates new entities with `Component`s produced by `components_iter`.
     /// Returns the newly created entities as a slice.
@@ -24,7 +19,6 @@ pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
         entities: &'a mut EntityStorage,
         storages: &mut ComponentStorages,
         components_iter: I,
-        ticks: ChangeTicks,
     ) -> &'a [Entity]
     where
         I: IntoIterator<Item = Self>;
@@ -41,7 +35,7 @@ pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
 
 unsafe impl ComponentSet for () {
     #[inline(always)]
-    fn insert(_: &mut ComponentStorages, _: Entity, _: Self, _: ChangeTicks) {
+    fn insert(_: &mut ComponentStorages, _: Entity, _: Self) {
         // Empty
     }
 
@@ -49,7 +43,6 @@ unsafe impl ComponentSet for () {
         entities: &'a mut EntityStorage,
         _: &mut ComponentStorages,
         components_iter: I,
-        _: ChangeTicks,
     ) -> &'a [Entity]
     where
         I: IntoIterator<Item = Self>,
@@ -83,14 +76,13 @@ macro_rules! impl_component_set {
                 storages: &mut ComponentStorages,
                 entity: Entity,
                 components: Self,
-                ticks: ChangeTicks,
             ) {
                 let mut family_mask = FamilyMask::default();
 
                 $(
                     {
                         let (storage, mask) = get_with_family_mask_mut::<$comp>(storages);
-                        unsafe { storage.insert::<$comp>(entity, components.$idx, ticks); }
+                        unsafe { storage.insert::<$comp>(entity, components.$idx); }
                         family_mask |= mask;
                     }
                 )+
@@ -107,7 +99,6 @@ macro_rules! impl_component_set {
                 entities: &'a mut EntityStorage,
                 storages: &mut ComponentStorages,
                 components_iter: It,
-                ticks: ChangeTicks,
             ) -> &'a [Entity]
             where
                 It: IntoIterator<Item = Self>
@@ -128,7 +119,7 @@ macro_rules! impl_component_set {
                         let entity = entities.create();
 
                         unsafe {
-                            $(borrowed_storages.$idx.insert::<$comp>(entity, components.$idx, ticks);)+
+                            $(borrowed_storages.$idx.insert::<$comp>(entity, components.$idx);)+
                         }
                     });
                 }

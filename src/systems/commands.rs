@@ -1,5 +1,5 @@
 use crate::components::ComponentSet;
-use crate::storage::{ChangeTicks, Entity, EntityStorage};
+use crate::storage::{Entity, EntityStorage};
 use crate::systems::CommandBuffer;
 use crate::world::World;
 
@@ -39,21 +39,6 @@ impl<'a> Commands<'a> {
         entity
     }
 
-    /// Same as `create_entity`, but the `ChangeTicks` are provided by the
-    /// caller.
-    pub fn create_entity_with_ticks<C>(&mut self, components: C, ticks: ChangeTicks) -> Entity
-    where
-        C: ComponentSet,
-    {
-        let entity = self.entities.create_atomic();
-
-        self.queue(move |world| {
-            let _ = world.insert_components_with_ticks(entity, components, ticks);
-        });
-
-        entity
-    }
-
     /// Queues the creation of entities with components yielded by
     /// `components_iter`.
     pub fn create_entities<C, I>(&mut self, components_iter: I)
@@ -63,18 +48,6 @@ impl<'a> Commands<'a> {
     {
         self.queue(move |world| {
             world.create_entities(components_iter);
-        });
-    }
-
-    /// Same as `create_entities`, but the `ChangeTicks` are provided by the
-    /// caller.
-    pub fn create_entities_with_ticks<C, I>(&mut self, components_iter: I, ticks: ChangeTicks)
-    where
-        C: ComponentSet,
-        I: IntoIterator<Item = C> + Send + 'static,
-    {
-        self.queue(move |world| {
-            world.create_entities_with_ticks(components_iter, ticks);
         });
     }
 
@@ -92,21 +65,6 @@ impl<'a> Commands<'a> {
     {
         self.queue(move |world| {
             let _ = world.insert_components(entity, components);
-        });
-    }
-
-    /// Same as `insert_components`, but the `ChangeTicks` are provided by the
-    /// caller.
-    pub fn insert_components_with_ticks<C>(
-        &mut self,
-        entity: Entity,
-        components: C,
-        ticks: ChangeTicks,
-    ) where
-        C: ComponentSet,
-    {
-        self.queue(move |world| {
-            let _ = world.insert_components_with_ticks(entity, components, ticks);
         });
     }
 

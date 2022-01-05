@@ -1,7 +1,6 @@
 use crate::components::Component;
 use crate::layout::ComponentInfo;
 use crate::resources::Resource;
-use crate::storage::Ticks;
 use crate::systems::{CommandBuffers, Commands};
 use crate::world::{BorrowWorld, Comp, CompMut, Res, ResMut, World};
 use std::any::TypeId;
@@ -40,19 +39,14 @@ impl RegistryAccess {
 pub struct Registry<'a> {
     world: &'a World,
     command_buffers: &'a CommandBuffers,
-    change_tick: Ticks,
 }
 
 unsafe impl Send for Registry<'_> {}
 unsafe impl Sync for Registry<'_> {}
 
 impl<'a> Registry<'a> {
-    pub(crate) unsafe fn new(
-        world: &'a World,
-        command_buffers: &'a CommandBuffers,
-        change_tick: Ticks,
-    ) -> Self {
-        Self { world, command_buffers, change_tick }
+    pub(crate) unsafe fn new(world: &'a World, command_buffers: &'a CommandBuffers) -> Self {
+        Self { world, command_buffers }
     }
 }
 
@@ -95,7 +89,7 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self as BorrowWorld>::borrow(registry.world)
     }
 }
 
@@ -110,7 +104,7 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self as BorrowWorld>::borrow(registry.world)
     }
 }
 
@@ -125,7 +119,7 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self as BorrowWorld>::borrow(registry.world)
     }
 }
 
@@ -140,7 +134,7 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self as BorrowWorld>::borrow(registry.world)
     }
 }
 
@@ -155,7 +149,7 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self as BorrowWorld>::borrow(registry.world)
     }
 }
 
@@ -170,6 +164,6 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self as BorrowWorld>::borrow(registry.world)
     }
 }

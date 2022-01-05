@@ -1,7 +1,7 @@
 use crate::components::{Component, ComponentSet, ComponentStorages};
 use crate::layout::Layout;
 use crate::resources::{Resource, ResourceStorage};
-use crate::storage::{ChangeTicks, ComponentStorage, Entity, EntityStorage, NonZeroTicks, Ticks};
+use crate::storage::{ComponentStorage, Entity, EntityStorage};
 use crate::world::{BorrowWorld, NoSuchEntity};
 use std::any::TypeId;
 use std::mem;
@@ -24,7 +24,6 @@ impl WorldId {
 /// Container for entities, components and resources.
 pub struct World {
     id: WorldId,
-    tick: NonZeroTicks,
     entities: EntityStorage,
     storages: ComponentStorages,
     resources: ResourceStorage,
@@ -34,7 +33,6 @@ impl Default for World {
     fn default() -> Self {
         Self {
             id: WorldId::new(),
-            tick: NonZeroTicks::new(1).unwrap(),
             entities: Default::default(),
             storages: Default::default(),
             resources: Default::default(),
@@ -89,17 +87,8 @@ impl World {
     where
         C: ComponentSet,
     {
-        let ticks = ChangeTicks::just_added(self.tick.get());
-        self.create_entity_with_ticks(components, ticks)
-    }
-
-    /// Same as `create`, but the `ChangeTicks` are provided by the caller.
-    pub fn create_entity_with_ticks<C>(&mut self, components: C, ticks: ChangeTicks) -> Entity
-    where
-        C: ComponentSet,
-    {
         let entity = self.entities.create();
-        let _ = self.insert_components_with_ticks(entity, components, ticks);
+        let _ = self.insert_components(entity, components);
         entity
     }
 
@@ -110,21 +99,7 @@ impl World {
         C: ComponentSet,
         I: IntoIterator<Item = C>,
     {
-        let ticks = ChangeTicks::just_added(self.tick.get());
-        self.create_entities_with_ticks(components_iter, ticks)
-    }
-
-    /// Same as `extend`, but the `ChangeTicks` are provided by the caller.
-    pub fn create_entities_with_ticks<C, I>(
-        &mut self,
-        components_iter: I,
-        ticks: ChangeTicks,
-    ) -> &[Entity]
-    where
-        C: ComponentSet,
-        I: IntoIterator<Item = C>,
-    {
-        C::extend(&mut self.entities, &mut self.storages, components_iter, ticks)
+        C::extend(&mut self.entities, &mut self.storages, components_iter)
     }
 
     /// Removes `entity` and all of its components from the `World`.
@@ -173,25 +148,11 @@ impl World {
     where
         C: ComponentSet,
     {
-        let ticks = ChangeTicks::just_added(self.tick.get());
-        self.insert_components_with_ticks(entity, components, ticks)
-    }
-
-    /// Same as `append`, but the `ChangeTicks` are provided by the caller.
-    pub fn insert_components_with_ticks<C>(
-        &mut self,
-        entity: Entity,
-        components: C,
-        ticks: ChangeTicks,
-    ) -> Result<(), NoSuchEntity>
-    where
-        C: ComponentSet,
-    {
         if !self.contains_entity(entity) {
             return Err(NoSuchEntity);
         }
 
-        C::insert(&mut self.storages, entity, components, ticks);
+        C::insert(&mut self.storages, entity, components);
         Ok(())
     }
 
@@ -237,17 +198,7 @@ impl World {
     where
         T: Resource,
     {
-        let ticks = ChangeTicks::just_added(self.tick.get());
-        self.insert_resource_with_ticks(resource, ticks)
-    }
-
-    /// Same as `insert_resource`, but the `ChangeTicks` are provided by the
-    /// caller.
-    pub fn insert_resource_with_ticks<T>(&mut self, resource: T, ticks: ChangeTicks) -> Option<T>
-    where
-        T: Resource,
-    {
-        self.resources.insert(resource, ticks)
+        self.resources.insert(resource)
     }
 
     /// Removes a resource of type `T` from the `World` and returns it if it was
@@ -289,29 +240,7 @@ impl World {
     where
         T: BorrowWorld<'a>,
     {
-        T::borrow(self, self.tick.get() - 1)
-    }
-
-    /// Sets the world tick used for change detection.
-    pub fn set_tick(&mut self, tick: NonZeroTicks) {
-        self.tick = tick;
-    }
-
-    /// Increments the world tick. Should be called after each game update for proper change
-    /// detection.
-    pub fn increment_tick(&mut self) {
-        self.tick = self
-            .tick
-            .get()
-            .checked_add(1)
-            .and_then(NonZeroTicks::new)
-            .expect("World tick overflow");
-    }
-
-    /// Returns the world tick used for change detection.
-    #[inline]
-    pub fn tick(&self) -> Ticks {
-        self.tick.get()
+        T::borrow(self)
     }
 
     /// Returns the `WorldId` which uniquely identifies this `World`.

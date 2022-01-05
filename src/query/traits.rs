@@ -1,5 +1,5 @@
 use crate::components::{Component, Group, StorageMask};
-use crate::storage::{Entity, EntitySparseArray};
+use crate::storage::{Entity, SparseArray};
 use std::marker::PhantomData;
 use std::ptr::NonNull;
 
@@ -36,7 +36,7 @@ pub unsafe trait SimpleQueryElement<'a> {
 
     fn contains(self, entity: Entity) -> bool;
 
-    fn split(self) -> (&'a [Entity], &'a EntitySparseArray, *mut Self::Component);
+    fn split(self) -> (&'a [Entity], &'a SparseArray, *mut Self::Component);
 
     unsafe fn get_from_components_unchecked(
         components: *mut Self::Component,
@@ -190,7 +190,7 @@ macro_rules! impl_simple_query {
             type Item = ($($elem::Item,)+);
             type Index = ($(replace!($elem, usize),)+);
             type ComponentPtrs = ($(*mut $elem::Component,)+);
-            type SparseArrays = ($(replace!($elem, &'a EntitySparseArray),)+);
+            type SparseArrays = ($(replace!($elem, &'a SparseArray),)+);
 
             fn group_info(&self) -> Option<Option<GroupInfo<'a>>> {
                 group_info!($(self.$idx.group_info()),+)
@@ -260,7 +260,7 @@ macro_rules! impl_simple_query {
             }
         }
 
-        unsafe impl<'a, $($elem),+> NonEmptySimpleQuery<'a> for ($($elem,)+) 
+        unsafe impl<'a, $($elem),+> NonEmptySimpleQuery<'a> for ($($elem,)+)
         where
             $($elem: SimpleQueryElement<'a>,)+
         {

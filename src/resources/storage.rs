@@ -1,55 +1,24 @@
 use crate::resources::Resource;
-use crate::storage::ChangeTicks;
 use crate::utils::UnsafeUnwrap;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
-
-/// Container for a type-erased `Resource` and its `ChangeTicks`.
-pub struct ResourceCell {
-    value: Box<dyn Resource>,
-    pub(crate) ticks: ChangeTicks,
-}
-
-impl ResourceCell {
-    pub(crate) fn new(value: Box<dyn Resource>, ticks: ChangeTicks) -> Self {
-        Self { value, ticks }
-    }
-
-    /// Returns a type-erased reference to the resource stored inside.
-    #[inline]
-    pub fn value(&self) -> &dyn Resource {
-        &*self.value
-    }
-
-    #[inline]
-    pub(crate) fn value_mut(&mut self) -> &mut dyn Resource {
-        &mut *self.value
-    }
-
-    /// Returns the resource's `ChangeTicks`.
-    #[inline]
-    pub fn ticks(&self) -> &ChangeTicks {
-        &self.ticks
-    }
-}
+use std::ops::{Deref, DerefMut};
 
 /// Maps `TypeIds` to type-erased `Resources`.
 #[derive(Default)]
 pub(crate) struct ResourceStorage {
-    resources: FxHashMap<TypeId, AtomicRefCell<ResourceCell>>,
+    resources: FxHashMap<TypeId, AtomicRefCell<Box<dyn Resource>>>,
 }
 
 impl ResourceStorage {
-    pub fn insert<T>(&mut self, resource: T, ticks: ChangeTicks) -> Option<T>
+    pub fn insert<T>(&mut self, resource: T) -> Option<T>
     where
         T: Resource,
     {
-        let cell = ResourceCell::new(Box::new(resource), ticks);
-
         self.resources
-            .insert(TypeId::of::<T>(), AtomicRefCell::new(cell))
-            .map(|c| unsafe { *c.into_inner().value.downcast().unsafe_unwrap() })
+            .insert(TypeId::of::<T>(), AtomicRefCell::new(Box::new(resource)))
+            .map(|c| unsafe { *c.into_inner().downcast().unsafe_unwrap() })
     }
 
     pub fn remove<T>(&mut self) -> Option<T>
@@ -58,7 +27,7 @@ impl ResourceStorage {
     {
         self.resources
             .remove(&TypeId::of::<T>())
-            .map(|c| unsafe { *c.into_inner().value.downcast().unsafe_unwrap() })
+            .map(|c| unsafe { *c.into_inner().downcast().unsafe_unwrap() })
     }
 
     pub fn delete(&mut self, resource_type_id: &TypeId) -> bool {
@@ -73,11 +42,25 @@ impl ResourceStorage {
         self.resources.clear();
     }
 
-    pub fn borrow(&self, resource_type_id: &TypeId) -> Option<AtomicRef<ResourceCell>> {
-        self.resources.get(resource_type_id).map(AtomicRefCell::borrow)
+    #[inline]
+    pub fn borrow<T>(&self) -> Option<AtomicRef<T>>
+    where
+        T: Resource,
+    {
+        self.resources.get(&TypeId::of::<T>()).map(|c| {
+            AtomicRef::map(c.borrow(), |c| unsafe { c.deref().downcast_ref().unsafe_unwrap() })
+        })
     }
 
-    pub fn borrow_mut(&self, resource_type_id: &TypeId) -> Option<AtomicRefMut<ResourceCell>> {
-        self.resources.get(resource_type_id).map(AtomicRefCell::borrow_mut)
+    #[inline]
+    pub fn borrow_mut<T>(&self) -> Option<AtomicRefMut<T>>
+    where
+        T: Resource,
+    {
+        self.resources.get(&TypeId::of::<T>()).map(|c| {
+            AtomicRefMut::map(c.borrow_mut(), |c| unsafe {
+                c.deref_mut().downcast_mut().unsafe_unwrap()
+            })
+        })
     }
 }

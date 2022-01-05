@@ -1,10 +1,8 @@
-use crate::storage::Ticks;
 use crate::systems::{
     CommandBuffers, LocalFn, LocalSystem, Registry, RegistryAccess, RunError, RunResult, Runnable,
     System, SystemError,
 };
-use crate::world::{World, WorldId};
-use rustc_hash::FxHashMap;
+use crate::world::World;
 use std::mem;
 
 #[cfg(feature = "parallel")]
@@ -57,7 +55,7 @@ impl DispatcherBuilder {
         let steps = merge_and_optimize_steps(mem::take(&mut self.simple_steps));
         let command_buffers = CommandBuffers::new(required_command_buffers(&steps));
 
-        Dispatcher { command_buffers, steps, change_ticks: Default::default() }
+        Dispatcher { command_buffers, steps }
     }
 }
 
@@ -65,7 +63,6 @@ impl DispatcherBuilder {
 pub struct Dispatcher {
     steps: Vec<Step>,
     command_buffers: CommandBuffers,
-    change_ticks: FxHashMap<WorldId, Ticks>,
 }
 
 impl Dispatcher {
@@ -113,30 +110,15 @@ impl Dispatcher {
 
     /// Run all systems on the current thread.
     pub fn run_seq(&mut self, world: &mut World) -> RunResult {
-        let world_tick = world.tick();
-        let change_tick = self.change_ticks.entry(world.id()).or_default();
-
         let mut errors = Vec::<SystemError>::new();
 
         for step in self.steps.iter_mut() {
             match step {
                 Step::RunSystems(systems) => {
-                    run_systems_seq(
-                        systems,
-                        world,
-                        &self.command_buffers,
-                        *change_tick,
-                        &mut errors,
-                    );
+                    run_systems_seq(systems, world, &self.command_buffers, &mut errors);
                 }
                 Step::RunLocalSystems(systems) => {
-                    run_systems_seq(
-                        systems,
-                        world,
-                        &self.command_buffers,
-                        *change_tick,
-                        &mut errors,
-                    );
+                    run_systems_seq(systems, world, &self.command_buffers, &mut errors);
                 }
                 Step::RunLocalFns(systems) => {
                     run_local_fns(systems, world, &mut errors);
@@ -148,8 +130,6 @@ impl Dispatcher {
                 }
             }
         }
-
-        *change_tick = world_tick;
 
         if !errors.is_empty() {
             Err(RunError::from(errors))
@@ -161,9 +141,6 @@ impl Dispatcher {
     /// Run all systems, potentially in parallel, on the given `ThreadPool`.
     #[cfg(feature = "parallel")]
     pub fn run_par(&mut self, world: &mut World, thread_pool: &ThreadPool) -> RunResult {
-        let world_tick = world.tick();
-        let change_tick = self.change_ticks.entry(world.id()).or_default();
-
         let mut errors = Vec::<SystemError>::new();
 
         for step in self.steps.iter_mut() {
@@ -174,28 +151,15 @@ impl Dispatcher {
                             systems,
                             world,
                             &self.command_buffers,
-                            *change_tick,
                             thread_pool,
                             &mut errors,
                         );
                     } else {
-                        run_systems_seq(
-                            systems,
-                            world,
-                            &self.command_buffers,
-                            *change_tick,
-                            &mut errors,
-                        );
+                        run_systems_seq(systems, world, &self.command_buffers, &mut errors);
                     }
                 }
                 Step::RunLocalSystems(systems) => {
-                    run_systems_seq(
-                        systems,
-                        world,
-                        &self.command_buffers,
-                        *change_tick,
-                        &mut errors,
-                    );
+                    run_systems_seq(systems, world, &self.command_buffers, &mut errors);
                 }
                 Step::RunLocalFns(systems) => {
                     run_local_fns(systems, world, &mut errors);
@@ -207,8 +171,6 @@ impl Dispatcher {
                 }
             }
         }
-
-        *change_tick = world_tick;
 
         if !errors.is_empty() {
             Err(RunError::from(errors))
@@ -328,12 +290,11 @@ fn run_systems_seq<S>(
     systems: &mut [S],
     world: &World,
     command_buffers: &CommandBuffers,
-    change_tick: Ticks,
     errors: &mut Vec<SystemError>,
 ) where
     S: Runnable,
 {
-    let registry = unsafe { Registry::new(world, command_buffers, change_tick) };
+    let registry = unsafe { Registry::new(world, command_buffers) };
     let new_errors = systems.iter_mut().flat_map(|sys| sys.run(&registry).err());
     errors.extend(new_errors);
 }
@@ -343,11 +304,10 @@ fn run_systems_par(
     systems: &mut [System],
     world: &World,
     command_buffers: &CommandBuffers,
-    change_tick: Ticks,
     thread_pool: &ThreadPool,
     errors: &mut Vec<SystemError>,
 ) {
-    let registry = unsafe { Registry::new(world, command_buffers, change_tick) };
+    let registry = unsafe { Registry::new(world, command_buffers) };
 
     thread_pool.install(|| {
         let new_errors = systems

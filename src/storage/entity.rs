@@ -63,7 +63,7 @@ impl Entity {
     }
 
     /// Returns the id of the entity extended to a usize. Used as an index into
-    /// `EntitySparseArray`s.
+    /// `SparseArray`s.
     #[inline]
     pub const fn sparse(&self) -> usize {
         self.id as _
@@ -76,7 +76,7 @@ impl Entity {
     }
 }
 
-/// Used internally by `EntitySparseArray` to map `Entity` indexes to dense
+/// Used internally by `SparseArray` to map `Entity` indexes to dense
 /// indexes.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct IndexEntity {
