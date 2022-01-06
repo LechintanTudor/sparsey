@@ -1,4 +1,5 @@
 use crate::components::Component;
+use crate::query::ComponentView;
 use crate::resources::Resource;
 use crate::storage::ComponentStorage;
 use crate::utils::{impl_generic_1_16, panic_missing_comp, panic_missing_res};

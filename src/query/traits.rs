@@ -1,30 +1,5 @@
-use crate::components::{Component, Group, StorageMask};
+use crate::components::{Component, GroupInfo};
 use crate::storage::{Entity, SparseArray};
-use std::marker::PhantomData;
-use std::ptr::NonNull;
-
-#[derive(Clone, Copy)]
-pub struct GroupInfo<'a> {
-    group: NonNull<Group>,
-    offset: u32,
-    mask: StorageMask,
-    _phantom: PhantomData<&'a [Group]>,
-}
-
-impl<'a> GroupInfo<'a> {
-    pub fn combine(self, info: Self) -> Option<Self> {
-        if self.group != info.group {
-            return None;
-        }
-
-        Some(Self {
-            group: self.group,
-            offset: self.offset.max(info.offset),
-            mask: self.mask | info.mask,
-            _phantom: PhantomData,
-        })
-    }
-}
 
 pub unsafe trait SimpleQueryElement<'a> {
     type Item: 'a;

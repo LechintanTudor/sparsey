@@ -37,14 +37,6 @@ impl QueryMask {
             Self::new(0, 0)
         }
     }
-
-    pub const fn include(self, include: StorageMask) -> Self {
-        Self { include: self.include | include, ..self }
-    }
-
-    pub const fn exclude(self, exclude: StorageMask) -> Self {
-        Self { exclude: self.exclude | exclude, ..self }
-    }
 }
 
 #[derive(Clone, Debug)]

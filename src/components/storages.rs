@@ -1,6 +1,6 @@
 use crate::components;
 use crate::components::{
-    Component, ComponentGroupInfo, FamilyMask, GroupMask, GroupStatus, QueryMask, StorageMask,
+    Component, FamilyMask, GroupInfo, GroupMask, GroupStatus, QueryMask, StorageMask,
 };
 use crate::layout::Layout;
 use crate::storage::{ComponentStorage, Entity};
@@ -17,7 +17,7 @@ use std::{mem, ptr};
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
     component_info: FxHashMap<TypeId, ComponentInfo>,
-    group_info: Vec<GroupInfo>,
+    group_info: Vec<StorageGroupInfo>,
     groups: Vec<Group>,
     families: Vec<Range<usize>>,
 }
@@ -64,7 +64,7 @@ impl ComponentStorages {
                         },
                     );
 
-                    group_info.push(GroupInfo {
+                    group_info.push(StorageGroupInfo {
                         family_index,
                         group_offset,
                         storage_mask: 1 << (prev_arity + component_offset),
@@ -268,14 +268,14 @@ impl ComponentStorages {
     pub(crate) fn borrow_with_info(
         &self,
         type_id: &TypeId,
-    ) -> Option<(AtomicRef<ComponentStorage>, Option<ComponentGroupInfo>)> {
+    ) -> Option<(AtomicRef<ComponentStorage>, Option<GroupInfo>)> {
         self.component_info.get(type_id).map(|info| unsafe {
             (
                 self.storages.get_unchecked(info.storage_index).borrow(),
                 self.group_info.get(info.group_info_index).map(|info| {
                     let group_index = self.families.get_unchecked(info.family_index).start;
                     let group = NonNull::from(self.groups.get_unchecked(group_index));
-                    ComponentGroupInfo::new(group, info.group_offset as u32, info.storage_mask)
+                    GroupInfo::new(group, info.group_offset, info.storage_mask)
                 }),
             )
         })
@@ -284,14 +284,14 @@ impl ComponentStorages {
     pub(crate) fn borrow_with_info_mut(
         &self,
         type_id: &TypeId,
-    ) -> Option<(AtomicRefMut<ComponentStorage>, Option<ComponentGroupInfo>)> {
+    ) -> Option<(AtomicRefMut<ComponentStorage>, Option<GroupInfo>)> {
         self.component_info.get(type_id).map(|info| unsafe {
             (
                 self.storages.get_unchecked(info.storage_index).borrow_mut(),
                 self.group_info.get(info.group_info_index).map(|info| {
                     let group_index = self.families.get_unchecked(info.family_index).start;
                     let group = NonNull::from(self.groups.get_unchecked(group_index));
-                    ComponentGroupInfo::new(group, info.group_offset as u32, info.storage_mask)
+                    GroupInfo::new(group, info.group_offset, info.storage_mask)
                 }),
             )
         })
@@ -347,7 +347,7 @@ struct ComponentInfo {
 }
 
 #[derive(Clone, Copy)]
-struct GroupInfo {
+struct StorageGroupInfo {
     family_index: usize,
     group_offset: usize,
     storage_mask: StorageMask,

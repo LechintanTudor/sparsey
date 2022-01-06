@@ -142,6 +142,16 @@ impl ComponentStorage {
         ptr::copy_nonoverlapping(swap_space, component_b, size);
     }
 
+    pub unsafe fn get<T>(&self, entity: Entity) -> Option<&T> {
+        let index = self.sparse.get(entity)?;
+        Some(&*self.components.cast::<T>().as_ptr().add(index))
+    }
+
+    pub unsafe fn get_mut<T>(&self, entity: Entity) -> Option<&mut T> {
+        let index = self.sparse.get(entity)?;
+        Some(&mut *self.components.cast::<T>().as_ptr().add(index))
+    }
+
     #[inline]
     pub(crate) unsafe fn get_unchecked<T>(&self, index: usize) -> &T {
         &*self.components.cast::<T>().as_ptr().add(index)
