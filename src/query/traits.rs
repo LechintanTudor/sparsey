@@ -1,7 +1,15 @@
 use crate::components::{Component, GroupInfo};
 use crate::storage::{Entity, SparseArray};
+use crate::utils::UnsafeUnwrap;
 
-pub unsafe trait SimpleQueryElement<'a> {
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum QueryType {
+    Empty,
+    Single,
+    Multiple,
+}
+
+pub unsafe trait QueryElement<'a> {
     type Item: 'a;
     type Component: Component;
 
@@ -19,7 +27,9 @@ pub unsafe trait SimpleQueryElement<'a> {
     ) -> Self::Item;
 }
 
-pub unsafe trait SimpleQuery<'a> {
+pub unsafe trait Query<'a> {
+    const TYPE: QueryType;
+
     type Item: 'a;
     type Index: Copy;
     type ComponentPtrs: Copy;
@@ -56,29 +66,49 @@ pub unsafe trait SimpleQuery<'a> {
     ) -> Self::Item;
 }
 
-pub unsafe trait NonEmptySimpleQuery<'a>: SimpleQuery<'a> {
-    // Empty
+pub unsafe trait NonEmptyQuery<'a>: Query<'a> + Sized {
+    fn non_empty_group_info(&self) -> Option<GroupInfo<'a>> {
+        unsafe { Self::group_info(self).unsafe_unwrap() }
+    }
+
+    fn non_empty_split_sparse(self) -> (&'a [Entity], Self::SparseArrays, Self::ComponentPtrs) {
+        let (entities, sparse, components) = Self::split_sparse(self);
+
+        unsafe { (entities.unsafe_unwrap(), sparse, components) }
+    }
+
+    fn non_empty_split_dense(self) -> (&'a [Entity], Self::ComponentPtrs) {
+        let (entities, components) = Self::split_dense(self);
+
+        unsafe { (entities.unsafe_unwrap(), components) }
+    }
+
+    fn non_empty_split_filter(self) -> (&'a [Entity], Self::SparseArrays) {
+        let (entities, sparse) = Self::split_filter(self);
+
+        unsafe { (entities.unsafe_unwrap(), sparse) }
+    }
 }
 
 pub trait IntoQueryParts<'a> {
-    type Get: NonEmptySimpleQuery<'a>;
-    type Include: SimpleQuery<'a> + Copy;
-    type Exclude: SimpleQuery<'a> + Copy;
+    type Get: NonEmptyQuery<'a>;
+    type Include: Query<'a> + Copy;
+    type Exclude: Query<'a> + Copy;
 
     fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude);
 }
 
-pub trait Query<'a>: IntoQueryParts<'a> {
-    fn get(self, entity: Entity) -> Option<<Self::Get as SimpleQuery<'a>>::Item>;
+pub trait CompoundQuery<'a>: IntoQueryParts<'a> {
+    fn get(self, entity: Entity) -> Option<<Self::Get as Query<'a>>::Item>;
 
     fn contains(self, entity: Entity) -> bool;
 }
 
-impl<'a, Q> Query<'a> for Q
+impl<'a, Q> CompoundQuery<'a> for Q
 where
     Q: IntoQueryParts<'a>,
 {
-    fn get(self, entity: Entity) -> Option<<Self::Get as SimpleQuery<'a>>::Item> {
+    fn get(self, entity: Entity) -> Option<<Self::Get as Query<'a>>::Item> {
         let (get, include, exclude) = self.into_query_parts();
 
         if exclude.excludes(entity) && include.includes(entity) {
@@ -158,10 +188,12 @@ macro_rules! split_filter {
 
 macro_rules! impl_simple_query {
     ($(($elem:ident, $idx:tt)),+) => {
-        unsafe impl<'a, $($elem),+> SimpleQuery<'a> for ($($elem,)+)
+        unsafe impl<'a, $($elem),+> Query<'a> for ($($elem,)+)
         where
-            $($elem: SimpleQueryElement<'a>,)+
+            $($elem: QueryElement<'a>,)+
         {
+            const TYPE: QueryType = QueryType::Multiple;
+
             type Item = ($($elem::Item,)+);
             type Index = ($(replace!($elem, usize),)+);
             type ComponentPtrs = ($(*mut $elem::Component,)+);
@@ -235,9 +267,9 @@ macro_rules! impl_simple_query {
             }
         }
 
-        unsafe impl<'a, $($elem),+> NonEmptySimpleQuery<'a> for ($($elem,)+)
+        unsafe impl<'a, $($elem),+> NonEmptyQuery<'a> for ($($elem,)+)
         where
-            $($elem: SimpleQueryElement<'a>,)+
+            $($elem: QueryElement<'a>,)+
         {
             // Empty
         }

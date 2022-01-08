@@ -1,5 +1,5 @@
 use crate::components::{Component, GroupInfo};
-use crate::query::SimpleQueryElement;
+use crate::query::QueryElement;
 use crate::storage::{ComponentStorage, Entity, SparseArray};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
@@ -20,7 +20,7 @@ where
     }
 }
 
-unsafe impl<'a, T, S> SimpleQueryElement<'a> for &'a ComponentView<'a, T, S>
+unsafe impl<'a, T, S> QueryElement<'a> for &'a ComponentView<'a, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage>,
@@ -52,7 +52,7 @@ where
     }
 }
 
-unsafe impl<'a, 'b, T, S> SimpleQueryElement<'a> for &'a mut ComponentView<'b, T, S>
+unsafe impl<'a, 'b, T, S> QueryElement<'a> for &'a mut ComponentView<'b, T, S>
 where
     T: Component,
     S: Deref<Target = ComponentStorage> + DerefMut,
