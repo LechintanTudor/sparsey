@@ -65,10 +65,22 @@ unsafe impl IntoLocalSystem<(), ()> for System {
     }
 }
 
+unsafe impl<P, R> IntoLocalSystem<P, R> for LocalSystem {
+    fn local_system(self) -> LocalSystem {
+        self
+    }
+}
+
 /// Helper trait for creating a `System` from a system function.
 pub unsafe trait IntoSystem<Params, Return>: IntoLocalSystem<Params, Return> {
     /// Creates a `System` with the system function.
     fn system(self) -> System;
+}
+
+unsafe impl IntoSystem<(), ()> for System {
+    fn system(self) -> System {
+        self
+    }
 }
 
 /// Encapsulates a system function with exclusive access to `World`.

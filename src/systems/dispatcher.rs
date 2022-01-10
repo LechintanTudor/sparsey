@@ -1,7 +1,7 @@
 use crate::storage::Ticks;
 use crate::systems::{
-    CommandBuffers, LocalFn, LocalSystem, Registry, RegistryAccess, RunError, RunResult, Runnable,
-    System, SystemError,
+    CommandBuffers, IntoLocalSystem, IntoSystem, LocalFn, LocalSystem, Registry, RegistryAccess,
+    RunError, RunResult, Runnable, System, SystemError,
 };
 use crate::world::{World, WorldId};
 use rustc_hash::FxHashMap;
@@ -21,14 +21,14 @@ pub struct DispatcherBuilder {
 
 impl DispatcherBuilder {
     /// Add a system to the `Dispatcher`.
-    pub fn add_system(&mut self, system: System) -> &mut Self {
-        self.simple_steps.push(SimpleStep::RunSystem(system));
+    pub fn add_system<P, R>(&mut self, system: impl IntoSystem<P, R>) -> &mut Self {
+        self.simple_steps.push(SimpleStep::RunSystem(system.system()));
         self
     }
 
     /// Add a local system to the `Dispatcher` which runs on the current thread.
-    pub fn add_local_system(&mut self, system: LocalSystem) -> &mut Self {
-        self.simple_steps.push(SimpleStep::RunLocalSystem(system));
+    pub fn add_local_system<P, R>(&mut self, system: impl IntoLocalSystem<P, R>) -> &mut Self {
+        self.simple_steps.push(SimpleStep::RunLocalSystem(system.local_system()));
         self
     }
 
