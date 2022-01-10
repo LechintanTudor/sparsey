@@ -56,6 +56,16 @@ impl<'a> Registry<'a> {
     }
 }
 
+pub unsafe trait IntoBorrowRegistry {
+    /// Emulates `Item<'w>` with `<IntoBorrowRegistry::Borrow as BorrowRegistry<'w>>::Item`
+    type Borrow: for<'a> BorrowRegistry<'a>;
+}
+
+// shorthands
+pub(crate) type GatBorrow<T> = <T as IntoBorrowRegistry>::Borrow;
+pub(crate) type GatBorrowItem<'w, T> =
+    <<T as IntoBorrowRegistry>::Borrow as BorrowRegistry<'w>>::Item;
+
 /// Used by systems to borrow data from registries.
 pub unsafe trait BorrowRegistry<'a> {
     /// The data resulting from the borrow.
@@ -72,7 +82,14 @@ pub unsafe trait BorrowRegistry<'a> {
     unsafe fn borrow(registry: &'a Registry) -> Self::Item;
 }
 
-unsafe impl<'a, 'b> BorrowRegistry<'a> for Commands<'b> {
+/// (Internal) Hack for emulating GAT on stable Rust
+pub struct GatHack<T>(::core::marker::PhantomData<T>);
+
+unsafe impl IntoBorrowRegistry for Commands<'_> {
+    type Borrow = GatHack<Self>;
+}
+
+unsafe impl<'a> BorrowRegistry<'a> for GatHack<Commands<'_>> {
     type Item = Commands<'a>;
 
     fn access() -> RegistryAccess {
@@ -84,7 +101,11 @@ unsafe impl<'a, 'b> BorrowRegistry<'a> for Commands<'b> {
     }
 }
 
-unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Comp<'b, T>
+unsafe impl<T: Component> IntoBorrowRegistry for Comp<'_, T> {
+    type Borrow = GatHack<Self>;
+}
+
+unsafe impl<'a, T> BorrowRegistry<'a> for GatHack<Comp<'_, T>>
 where
     T: Component,
 {
@@ -95,11 +116,15 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self::Item as BorrowWorld>::borrow(registry.world, registry.change_tick)
     }
 }
 
-unsafe impl<'a, 'b, T> BorrowRegistry<'a> for CompMut<'b, T>
+unsafe impl<T: Component> IntoBorrowRegistry for CompMut<'_, T> {
+    type Borrow = GatHack<Self>;
+}
+
+unsafe impl<'a, T> BorrowRegistry<'a> for GatHack<CompMut<'_, T>>
 where
     T: Component,
 {
@@ -110,11 +135,15 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self::Item as BorrowWorld>::borrow(registry.world, registry.change_tick)
     }
 }
 
-unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Res<'b, T>
+unsafe impl<T: Resource> IntoBorrowRegistry for Res<'_, T> {
+    type Borrow = GatHack<Self>;
+}
+
+unsafe impl<'a, T> BorrowRegistry<'a> for GatHack<Res<'_, T>>
 where
     T: Resource,
 {
@@ -125,11 +154,15 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self::Item as BorrowWorld>::borrow(registry.world, registry.change_tick)
     }
 }
 
-unsafe impl<'a, 'b, T> BorrowRegistry<'a> for ResMut<'b, T>
+unsafe impl<T: Resource> IntoBorrowRegistry for ResMut<'_, T> {
+    type Borrow = GatHack<Self>;
+}
+
+unsafe impl<'a, T> BorrowRegistry<'a> for GatHack<ResMut<'_, T>>
 where
     T: Resource,
 {
@@ -140,11 +173,15 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self::Item as BorrowWorld>::borrow(registry.world, registry.change_tick)
     }
 }
 
-unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Option<Res<'b, T>>
+unsafe impl<T: Resource> IntoBorrowRegistry for Option<Res<'_, T>> {
+    type Borrow = GatHack<Self>;
+}
+
+unsafe impl<'a, T> BorrowRegistry<'a> for GatHack<Option<Res<'_, T>>>
 where
     T: Resource,
 {
@@ -155,11 +192,15 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self::Item as BorrowWorld>::borrow(registry.world, registry.change_tick)
     }
 }
 
-unsafe impl<'a, 'b, T> BorrowRegistry<'a> for Option<ResMut<'b, T>>
+unsafe impl<T: Resource> IntoBorrowRegistry for Option<ResMut<'_, T>> {
+    type Borrow = GatHack<Self>;
+}
+
+unsafe impl<'a, T> BorrowRegistry<'a> for GatHack<Option<ResMut<'_, T>>>
 where
     T: Resource,
 {
@@ -170,6 +211,6 @@ where
     }
 
     unsafe fn borrow(registry: &'a Registry) -> Self::Item {
-        <Self as BorrowWorld>::borrow(registry.world, registry.change_tick)
+        <Self::Item as BorrowWorld>::borrow(registry.world, registry.change_tick)
     }
 }

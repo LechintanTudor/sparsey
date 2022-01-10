@@ -1,5 +1,6 @@
 use crate::systems::{
-    BorrowRegistry, LocalSystemParam, Registry, RegistryAccess, SystemParam, SystemResult,
+    BorrowRegistry, GatBorrow, GatBorrowItem, LocalSystemParam, Registry, RegistryAccess,
+    SystemParam, SystemResult,
 };
 use crate::utils::impl_generic_0_16;
 use crate::world::World;
@@ -115,21 +116,28 @@ macro_rules! impl_into_system {
     ($($param:ident),*) => {
         unsafe impl<Func, $($param),*> IntoLocalSystem<($($param,)*), ()> for Func
         where
-            Func: FnMut($($param),*)
-                + FnMut($(<$param as BorrowRegistry>::Item),*)
-                +'static,
+            Func:  'static,
+            for<'a> &'a mut Func: FnMut($($param),*)
+                + FnMut($(GatBorrowItem<$param>),*),
             $($param: LocalSystemParam,)*
         {
-            #[allow(unused_unsafe)]
-            #[allow(unused_variables)]
+            #[allow(unused_unsafe, unused_variables, non_snake_case)]
             fn local_system(mut self) -> LocalSystem {
+                fn inner<$($param),*>(
+                    mut f: impl FnMut($($param),*),
+                    $($param: $param,)*
+                ) {
+                    f($($param,)*)
+                }
+
                 LocalSystem {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param as BorrowRegistry>::borrow(registry)),*);
+                        let ($($param,)*) = ($(GatBorrow::<$param>::borrow(registry),)*);
+                        inner(&mut self, $($param),*);
                         Ok(())
                     }),
                     accesses: Box::new([
-                        $(<$param as BorrowRegistry>::access()),*
+                        $(GatBorrow::<$param>::access()),*
                     ]),
                 }
             }
@@ -137,20 +145,27 @@ macro_rules! impl_into_system {
 
         unsafe impl<Func, $($param),*> IntoLocalSystem<($($param,)*), SystemResult> for Func
         where
-            Func: FnMut($($param),*) -> SystemResult
-                + FnMut($(<$param as BorrowRegistry>::Item),*) -> SystemResult
-                + 'static,
+            Func:  'static,
+            for<'a> &'a mut Func: FnMut($($param),*) -> SystemResult
+                + FnMut($(GatBorrowItem<$param>),*) -> SystemResult,
             $($param: LocalSystemParam,)*
         {
-            #[allow(unused_unsafe)]
-            #[allow(unused_variables)]
+            #[allow(unused_unsafe, unused_variables, non_snake_case)]
             fn local_system(mut self) -> LocalSystem {
+                fn inner<$($param),*>(
+                    mut f: impl FnMut($($param),*) -> SystemResult,
+                    $($param: $param,)*
+                ) -> SystemResult {
+                    f($($param,)*)
+                }
+
                 LocalSystem {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param as BorrowRegistry>::borrow(registry)),*)
+                        let ($($param,)*) = ($(GatBorrow::<$param>::borrow(registry),)*);
+                        inner(&mut self, $($param),*)
                     }),
                     accesses: Box::new([
-                        $(<$param as BorrowRegistry>::access()),*
+                        $(GatBorrow::<$param>::access()),*
                     ]),
                 }
             }
@@ -158,21 +173,28 @@ macro_rules! impl_into_system {
 
         unsafe impl<Func, $($param),*> IntoSystem<($($param,)*), ()> for Func
         where
-            Func: FnMut($($param),*)
-                + FnMut($(<$param as BorrowRegistry>::Item),*)
-                + Send + 'static,
+            Func: Send + 'static,
+            for<'a> &'a mut Func: FnMut($($param),*)
+                + FnMut($(GatBorrowItem<$param>),*),
             $($param: SystemParam,)*
         {
-            #[allow(unused_unsafe)]
-            #[allow(unused_variables)]
+            #[allow(unused_unsafe, unused_variables, non_snake_case)]
             fn system(mut self) -> System {
+                fn inner<$($param),*>(
+                    mut f: impl FnMut($($param),*),
+                    $($param: $param,)*
+                ) {
+                    f($($param,)*)
+                }
+
                 System {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param as BorrowRegistry>::borrow(registry)),*);
+                        let ($($param,)*) = ($(GatBorrow::<$param>::borrow(registry),)*);
+                        inner(&mut self, $($param),*);
                         Ok(())
                     }),
                     accesses: Box::new([
-                        $(<$param as BorrowRegistry>::access()),*
+                        $(GatBorrow::<$param>::access()),*
                     ]),
                 }
             }
@@ -180,20 +202,27 @@ macro_rules! impl_into_system {
 
         unsafe impl<Func, $($param),*> IntoSystem<($($param,)*), SystemResult> for Func
         where
-            Func: FnMut($($param),*) -> SystemResult
-                + FnMut($(<$param as BorrowRegistry>::Item),*) -> SystemResult
-                + Send + 'static,
+            Func: Send + 'static,
+            for<'a> &'a mut Func: FnMut($($param),*) -> SystemResult
+                + FnMut($(GatBorrowItem<$param>),*) -> SystemResult,
             $($param: SystemParam,)*
         {
-            #[allow(unused_unsafe)]
-            #[allow(unused_variables)]
+            #[allow(unused_unsafe, unused_variables, non_snake_case)]
             fn system(mut self) -> System {
+                fn inner<$($param),*>(
+                    mut f: impl FnMut($($param),*) -> SystemResult,
+                    $($param: $param,)*
+                ) -> SystemResult {
+                    f($($param,)*)
+                }
+
                 System {
                     function: Box::new(move |registry| unsafe {
-                        self($(<$param as BorrowRegistry>::borrow(registry)),*)
+                        let ($($param,)*) = ($(GatBorrow::<$param>::borrow(registry),)*);
+                        inner(&mut self, $($param),*)
                     }),
                     accesses: Box::new([
-                        $(<$param as BorrowRegistry>::access()),*
+                        $(GatBorrow::<$param>::access()),*
                     ]),
                 }
             }

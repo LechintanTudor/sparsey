@@ -1,17 +1,17 @@
 use crate::components::Component;
 use crate::resources::Resource;
-use crate::systems::{BorrowRegistry, Commands};
+use crate::systems::{Commands, IntoBorrowRegistry};
 use crate::world::{Comp, CompMut, Res, ResMut};
 
 /// Trait used for marking system parameters and borrowing data from the
 /// `Registry`.
-pub trait LocalSystemParam: for<'a> BorrowRegistry<'a> {
+pub trait LocalSystemParam: IntoBorrowRegistry {
     // Empty
 }
 
 impl<T> LocalSystemParam for T
 where
-    T: for<'a> BorrowRegistry<'a>,
+    T: IntoBorrowRegistry,
 {
     // Empty
 }
