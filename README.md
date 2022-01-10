@@ -37,8 +37,8 @@ fn main() {
 
     // Create a Dispatcher to run our systems.
     let mut dispatcher = Dispatcher::builder()
-        .add_system(update_velocity.system())
-        .add_system(update_position.system())
+        .add_system(update_velocity)
+        .add_system(update_position)
         .build();
 
     // Register all component types we want to use.

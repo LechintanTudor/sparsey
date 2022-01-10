@@ -40,7 +40,7 @@ fn print_sprites(pos: Comp<Position>, sprites: Comp<Sprite>, transparencies: Com
 }
 
 fn main() {
-    let mut dispatcher = Dispatcher::builder().add_system(print_sprites.system()).build();
+    let mut dispatcher = Dispatcher::builder().add_system(print_sprites).build();
 
     let layout = Layout::builder()
         .add_group(<(Position, Sprite)>::group())

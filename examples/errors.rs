@@ -16,11 +16,7 @@ fn c() -> SystemResult {
 }
 
 fn main() {
-    let mut dispatcher = Dispatcher::builder()
-        .add_system(a.system())
-        .add_system(b.system())
-        .add_system(c.system())
-        .build();
+    let mut dispatcher = Dispatcher::builder().add_system(a).add_system(b).add_system(c).build();
 
     let mut world = World::default();
 

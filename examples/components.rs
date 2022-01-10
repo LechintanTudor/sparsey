@@ -34,10 +34,8 @@ fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
 }
 
 fn main() {
-    let mut dispatcher = Dispatcher::builder()
-        .add_system(update_velocity.system())
-        .add_system(update_position.system())
-        .build();
+    let mut dispatcher =
+        Dispatcher::builder().add_system(update_velocity).add_system(update_position).build();
 
     let mut world = World::default();
     dispatcher.register_storages(&mut world);

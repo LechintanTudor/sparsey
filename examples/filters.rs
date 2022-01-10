@@ -43,10 +43,8 @@ fn print_health(hps: Comp<Hp>) {
 }
 
 fn main() {
-    let mut dispatcher = Dispatcher::builder()
-        .add_system(apply_difficulty.system())
-        .add_system(print_health.system())
-        .build();
+    let mut dispatcher =
+        Dispatcher::builder().add_system(apply_difficulty).add_system(print_health).build();
 
     let mut world = World::default();
     dispatcher.register_storages(&mut world);
