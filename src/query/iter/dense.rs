@@ -33,8 +33,6 @@ where
         let index = self.index;
         self.index += 1;
 
-        unsafe {
-            return Some(G::get_from_dense_components_unchecked(self.components, index));
-        }
+        unsafe { Some(G::get_from_dense_components_unchecked(self.components, index)) }
     }
 }

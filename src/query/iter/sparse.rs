@@ -41,7 +41,9 @@ where
     type Item = G::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(&entity) = self.entities.next() {
+        loop {
+            let entity = *self.entities.next()?;
+
             if E::excludes_split(self.exclude, entity) && I::includes_split(self.include, entity) {
                 if let Some(index) = G::get_index_from_split(self.sparse, entity) {
                     unsafe {
@@ -53,7 +55,5 @@ where
                 }
             }
         }
-
-        None
     }
 }

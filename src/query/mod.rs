@@ -1,7 +1,7 @@
 pub use self::component_view::*;
 pub use self::iter::*;
-pub use self::traits::*;
+pub use self::query::*;
 
 mod component_view;
 mod iter;
-mod traits;
+mod query;

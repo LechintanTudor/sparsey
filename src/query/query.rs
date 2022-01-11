@@ -1,12 +1,11 @@
 use crate::components::{Component, GroupInfo};
 use crate::storage::{Entity, SparseArray};
-use crate::utils::UnsafeUnwrap;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum QueryType {
+pub enum QueryGroupInfo<'a> {
     Empty,
-    Single,
-    Multiple,
+    Single { len: usize, info: Option<GroupInfo<'a>> },
+    Grouped(GroupInfo<'a>),
+    Ungrouped,
 }
 
 pub unsafe trait QueryElement<'a> {
@@ -28,14 +27,12 @@ pub unsafe trait QueryElement<'a> {
 }
 
 pub unsafe trait Query<'a> {
-    const TYPE: QueryType;
-
     type Item: 'a;
     type Index: Copy;
     type ComponentPtrs: Copy;
     type SparseArrays: Copy + 'a;
 
-    fn group_info(&self) -> Option<Option<GroupInfo<'a>>>;
+    fn group_info(&self) -> Option<GroupInfo<'a>>;
 
     fn get(self, entity: Entity) -> Option<Self::Item>;
 
@@ -67,27 +64,7 @@ pub unsafe trait Query<'a> {
 }
 
 pub unsafe trait NonEmptyQuery<'a>: Query<'a> + Sized {
-    fn non_empty_group_info(&self) -> Option<GroupInfo<'a>> {
-        unsafe { Self::group_info(self).unsafe_unwrap() }
-    }
-
-    fn non_empty_split_sparse(self) -> (&'a [Entity], Self::SparseArrays, Self::ComponentPtrs) {
-        let (entities, sparse, components) = Self::split_sparse(self);
-
-        unsafe { (entities.unsafe_unwrap(), sparse, components) }
-    }
-
-    fn non_empty_split_dense(self) -> (&'a [Entity], Self::ComponentPtrs) {
-        let (entities, components) = Self::split_dense(self);
-
-        unsafe { (entities.unsafe_unwrap(), components) }
-    }
-
-    fn non_empty_split_filter(self) -> (&'a [Entity], Self::SparseArrays) {
-        let (entities, sparse) = Self::split_filter(self);
-
-        unsafe { (entities.unsafe_unwrap(), sparse) }
-    }
+    // Empty
 }
 
 pub trait IntoQueryParts<'a> {
@@ -132,7 +109,7 @@ macro_rules! replace {
 
 macro_rules! group_info {
     ($first:expr, $($other:expr),+) => {
-        Some(Some($first? $(.combine($other?)?)+))
+        Some($first? $(.combine($other?)?)+)
     };
 }
 
@@ -192,14 +169,12 @@ macro_rules! impl_simple_query {
         where
             $($elem: QueryElement<'a>,)+
         {
-            const TYPE: QueryType = QueryType::Multiple;
-
             type Item = ($($elem::Item,)+);
             type Index = ($(replace!($elem, usize),)+);
             type ComponentPtrs = ($(*mut $elem::Component,)+);
             type SparseArrays = ($(replace!($elem, &'a SparseArray),)+);
 
-            fn group_info(&self) -> Option<Option<GroupInfo<'a>>> {
+            fn group_info(&self) -> Option<GroupInfo<'a>> {
                 group_info!($(self.$idx.group_info()),+)
             }
 
@@ -217,9 +192,7 @@ macro_rules! impl_simple_query {
                 $(!self.$idx.contains(entity))&&+
             }
 
-            fn split_sparse(
-                self,
-            ) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
+            fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
                 split_sparse!($((self.$idx, $idx)),+)
             }
 

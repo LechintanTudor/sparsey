@@ -30,17 +30,13 @@ impl<'a> GroupInfo<'a> {
     }
 }
 
-pub fn group_range(include: GroupInfo, exclude: Option<GroupInfo>) -> Option<Range<usize>> {
-    let (mask, offset) = match exclude {
-        Some(exclude) => {
-            if include.group != exclude.group {
-                return None;
-            }
+pub fn group_range(include: GroupInfo, exclude: GroupInfo) -> Option<Range<usize>> {
+    if include.group != exclude.group {
+        return None;
+    }
 
-            (QueryMask::new(include.mask, exclude.mask), include.offset.max(exclude.offset))
-        }
-        None => (QueryMask::new(include.mask, StorageMask::default()), include.offset),
-    };
+    let mask = QueryMask::new(include.mask, exclude.mask);
+    let offset = include.offset.max(exclude.offset);
 
     unsafe {
         let group = *include.group.as_ptr().add(offset);
