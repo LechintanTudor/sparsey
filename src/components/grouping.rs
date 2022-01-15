@@ -1,5 +1,4 @@
 use crate::storage::{ComponentStorage, Entity};
-use crate::utils::UnsafeUnwrap;
 use atomic_refcell::AtomicRefCell;
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
@@ -15,7 +14,7 @@ pub(crate) unsafe fn get_group_status(
     group_len: usize,
     entity: Entity,
 ) -> GroupStatus {
-    let (first, others) = storages.split_first_mut().unsafe_unwrap();
+    let (first, others) = storages.split_first_mut().unwrap_unchecked();
 
     let status = match first.get_mut().get_index(entity) {
         Some(index) => {
@@ -44,7 +43,7 @@ pub(crate) unsafe fn group_components(
     let swap_index = *group_len;
 
     for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
-        let index = storage.get_index(entity).unsafe_unwrap();
+        let index = storage.get_index(entity).unwrap_unchecked();
         storage.swap_unchecked(index, swap_index);
     }
 
@@ -61,7 +60,7 @@ pub(crate) unsafe fn ungroup_components(
         let swap_index = *group_len - 1;
 
         for storage in storages.iter_mut().map(|storage| storage.get_mut()) {
-            let index = storage.get_index(entity).unsafe_unwrap();
+            let index = storage.get_index(entity).unwrap_unchecked();
             storage.swap_unchecked(index, swap_index);
         }
 

@@ -1,5 +1,4 @@
 use crate::storage::{Entity, IndexEntity};
-use crate::utils::UnsafeUnwrap;
 use std::{iter, ptr};
 
 const PAGE_SIZE: usize = 64;
@@ -46,7 +45,7 @@ impl SparseArray {
         self.pages
             .get_unchecked_mut(index / PAGE_SIZE)
             .as_mut()
-            .unsafe_unwrap()
+            .unwrap_unchecked()
             .get_unchecked_mut(index % PAGE_SIZE)
     }
 
@@ -72,7 +71,7 @@ impl SparseArray {
             self.pages
                 .get_unchecked_mut(page_index)
                 .as_mut()
-                .unsafe_unwrap()
+                .unwrap_unchecked()
                 .get_unchecked_mut(index % PAGE_SIZE)
         }
     }

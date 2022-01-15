@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::ops::Range;
 use std::ptr::NonNull;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct GroupInfo<'a> {
     group: NonNull<Group>,
     offset: usize,
@@ -30,7 +30,7 @@ impl<'a> GroupInfo<'a> {
     }
 }
 
-pub fn group_range(include: GroupInfo, exclude: GroupInfo) -> Option<Range<usize>> {
+pub(crate) fn group_range(include: GroupInfo, exclude: GroupInfo) -> Option<Range<usize>> {
     if include.group != exclude.group {
         return None;
     }

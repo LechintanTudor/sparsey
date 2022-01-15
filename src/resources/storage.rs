@@ -1,5 +1,4 @@
 use crate::resources::Resource;
-use crate::utils::UnsafeUnwrap;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
@@ -18,7 +17,7 @@ impl ResourceStorage {
     {
         self.resources
             .insert(TypeId::of::<T>(), AtomicRefCell::new(Box::new(resource)))
-            .map(|c| unsafe { *c.into_inner().downcast().unsafe_unwrap() })
+            .map(|c| unsafe { *c.into_inner().downcast().unwrap_unchecked() })
     }
 
     pub fn remove<T>(&mut self) -> Option<T>
@@ -27,7 +26,7 @@ impl ResourceStorage {
     {
         self.resources
             .remove(&TypeId::of::<T>())
-            .map(|c| unsafe { *c.into_inner().downcast().unsafe_unwrap() })
+            .map(|c| unsafe { *c.into_inner().downcast().unwrap_unchecked() })
     }
 
     pub fn delete(&mut self, resource_type_id: &TypeId) -> bool {
@@ -48,7 +47,7 @@ impl ResourceStorage {
         T: Resource,
     {
         self.resources.get(&TypeId::of::<T>()).map(|c| {
-            AtomicRef::map(c.borrow(), |c| unsafe { c.deref().downcast_ref().unsafe_unwrap() })
+            AtomicRef::map(c.borrow(), |c| unsafe { c.deref().downcast_ref().unwrap_unchecked() })
         })
     }
 
@@ -59,7 +58,7 @@ impl ResourceStorage {
     {
         self.resources.get(&TypeId::of::<T>()).map(|c| {
             AtomicRefMut::map(c.borrow_mut(), |c| unsafe {
-                c.deref_mut().downcast_mut().unsafe_unwrap()
+                c.deref_mut().downcast_mut().unwrap_unchecked()
             })
         })
     }

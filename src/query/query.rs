@@ -1,16 +1,12 @@
 use crate::components::{Component, GroupInfo};
+use crate::query::{Iter, QueryGroupInfo};
 use crate::storage::{Entity, SparseArray};
-
-pub enum QueryGroupInfo<'a> {
-    Empty,
-    Single { len: usize, info: Option<GroupInfo<'a>> },
-    Grouped(GroupInfo<'a>),
-    Ungrouped,
-}
 
 pub unsafe trait QueryElement<'a> {
     type Item: 'a;
     type Component: Component;
+
+    fn len(&self) -> usize;
 
     fn group_info(&self) -> Option<GroupInfo<'a>>;
 
@@ -32,7 +28,7 @@ pub unsafe trait Query<'a> {
     type ComponentPtrs: Copy;
     type SparseArrays: Copy + 'a;
 
-    fn group_info(&self) -> Option<GroupInfo<'a>>;
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
 
     fn get(self, entity: Entity) -> Option<Self::Item>;
 
@@ -68,7 +64,7 @@ pub unsafe trait NonEmptyQuery<'a>: Query<'a> + Sized {
 }
 
 pub trait IntoQueryParts<'a> {
-    type Get: NonEmptyQuery<'a>;
+    type Get: Query<'a>;
     type Include: Query<'a> + Copy;
     type Exclude: Query<'a> + Copy;
 
@@ -101,15 +97,33 @@ where
     }
 }
 
+pub trait IterableCompoundQuery<'a>: CompoundQuery<'a>
+where
+    Self::Get: NonEmptyQuery<'a>,
+{
+    fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>;
+}
+
+impl<'a, Q> IterableCompoundQuery<'a> for Q
+where
+    Q: CompoundQuery<'a>,
+    Q::Get: NonEmptyQuery<'a>,
+{
+    fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude> {
+        let (get, include, exclude) = self.into_query_parts();
+        Iter::new(get, include, exclude)
+    }
+}
+
 macro_rules! replace {
     ($from:ident, $($to:tt)+) => {
         $($to)+
     };
 }
 
-macro_rules! group_info {
+macro_rules! query_group_info {
     ($first:expr, $($other:expr),+) => {
-        Some($first? $(.combine($other?)?)+)
+        Some(QueryGroupInfo::Multiple($first? $(.combine($other?)?)+))
     };
 }
 
@@ -174,8 +188,8 @@ macro_rules! impl_simple_query {
             type ComponentPtrs = ($(*mut $elem::Component,)+);
             type SparseArrays = ($(replace!($elem, &'a SparseArray),)+);
 
-            fn group_info(&self) -> Option<GroupInfo<'a>> {
-                group_info!($(self.$idx.group_info()),+)
+            fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+                query_group_info!($(self.$idx.group_info()),+)
             }
 
             fn get(self, entity: Entity) -> Option<Self::Item> {

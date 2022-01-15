@@ -28,6 +28,10 @@ where
     type Item = &'a T;
     type Component = T;
 
+    fn len(&self) -> usize {
+        self.storage.len()
+    }
+
     fn group_info(&self) -> Option<GroupInfo<'a>> {
         self.group_info.clone()
     }
@@ -59,6 +63,10 @@ where
 {
     type Item = &'a mut T;
     type Component = T;
+
+    fn len(&self) -> usize {
+        self.storage.len()
+    }
 
     fn group_info(&self) -> Option<GroupInfo<'a>> {
         self.group_info.clone()
