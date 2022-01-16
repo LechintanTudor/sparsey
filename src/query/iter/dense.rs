@@ -1,9 +1,9 @@
-use crate::query::NonEmptyQuery;
+use crate::query::Query;
 use crate::storage::Entity;
 
 pub struct DenseIter<'a, G>
 where
-    G: NonEmptyQuery<'a>,
+    G: Query<'a>,
 {
     index: usize,
     entities: &'a [Entity],
@@ -12,7 +12,7 @@ where
 
 impl<'a, G> DenseIter<'a, G>
 where
-    G: NonEmptyQuery<'a>,
+    G: Query<'a>,
 {
     pub(crate) unsafe fn new(entities: &'a [Entity], components: G::ComponentPtrs) -> Self {
         Self { index: 0, entities, components }
@@ -21,7 +21,7 @@ where
 
 impl<'a, G> Iterator for DenseIter<'a, G>
 where
-    G: NonEmptyQuery<'a>,
+    G: Query<'a>,
 {
     type Item = G::Item;
 

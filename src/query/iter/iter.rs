@@ -1,10 +1,10 @@
 use crate::query;
 use crate::query::iter::{DenseIter, SparseIter};
-use crate::query::{NonEmptyQuery, Query};
+use crate::query::Query;
 
 pub enum Iter<'a, G, I, E>
 where
-    G: NonEmptyQuery<'a>,
+    G: Query<'a>,
     I: Query<'a>,
     E: Query<'a>,
 {
@@ -14,7 +14,7 @@ where
 
 impl<'a, G, I, E> Iter<'a, G, I, E>
 where
-    G: NonEmptyQuery<'a>,
+    G: Query<'a>,
     I: Query<'a>,
     E: Query<'a>,
 {
@@ -26,7 +26,9 @@ where
         match query::group_range(get_info, include_info, exclude_info) {
             Some(range) => {
                 let (entities, components) = get.split_dense();
-                let entities = unsafe { &entities.unwrap_unchecked().get_unchecked(range) };
+                let entities = &entities.unwrap_or_else(|| {
+                    include.into_any_entities().expect("Cannot iterate empty Query")
+                })[range];
 
                 unsafe { Self::Dense(DenseIter::new(entities, components)) }
             }
@@ -35,12 +37,17 @@ where
                 let (sparse_entities, include) = include.split_filter();
                 let (_, exclude) = exclude.split_filter();
 
-                let get_entities = unsafe { get_entities.unwrap_unchecked() };
-                let entities = match sparse_entities {
-                    Some(sparse_entities) if sparse_entities.len() < get_entities.len() => {
-                        sparse_entities
+                let entities = match (get_entities, sparse_entities) {
+                    (Some(e1), Some(e2)) => {
+                        if e1.len() <= e2.len() {
+                            e1
+                        } else {
+                            e2
+                        }
                     }
-                    _ => get_entities,
+                    (Some(e1), None) => e1,
+                    (None, Some(e2)) => e2,
+                    (None, None) => panic!("Cannot iterate empty Query"),
                 };
 
                 unsafe {

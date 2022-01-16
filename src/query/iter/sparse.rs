@@ -1,10 +1,10 @@
-use crate::query::{NonEmptyQuery, Query};
+use crate::query::Query;
 use crate::storage::Entity;
 use std::slice::Iter as SliceIter;
 
 pub struct SparseIter<'a, G, I, E>
 where
-    G: NonEmptyQuery<'a>,
+    G: Query<'a>,
     I: Query<'a>,
     E: Query<'a>,
 {
@@ -17,7 +17,7 @@ where
 
 impl<'a, G, I, E> SparseIter<'a, G, I, E>
 where
-    G: NonEmptyQuery<'a>,
+    G: Query<'a>,
     I: Query<'a>,
     E: Query<'a>,
 {
@@ -34,7 +34,7 @@ where
 
 impl<'a, G, I, E> Iterator for SparseIter<'a, G, I, E>
 where
-    G: NonEmptyQuery<'a>,
+    G: Query<'a>,
     I: Query<'a>,
     E: Query<'a>,
 {

@@ -1,4 +1,4 @@
-use crate::query::{Iter, NonEmptyQuery, Query};
+use crate::query::{Iter, Query};
 use crate::storage::Entity;
 
 pub trait IntoCompoundQueryParts<'a> {
@@ -13,6 +13,8 @@ pub trait CompoundQuery<'a>: IntoCompoundQueryParts<'a> {
     fn get(self, entity: Entity) -> Option<<Self::Get as Query<'a>>::Item>;
 
     fn contains(self, entity: Entity) -> bool;
+
+    fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>;
 }
 
 impl<'a, Q> CompoundQuery<'a> for Q
@@ -33,20 +35,7 @@ where
         let (get, include, exclude) = self.into_compound_query_parts();
         exclude.excludes(entity) && include.includes(entity) && get.includes(entity)
     }
-}
 
-pub trait IterableCompoundQuery<'a>: CompoundQuery<'a>
-where
-    Self::Get: NonEmptyQuery<'a>,
-{
-    fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>;
-}
-
-impl<'a, Q> IterableCompoundQuery<'a> for Q
-where
-    Q: CompoundQuery<'a>,
-    Q::Get: NonEmptyQuery<'a>,
-{
     fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude> {
         let (get, include, exclude) = self.into_compound_query_parts();
         Iter::new(get, include, exclude)

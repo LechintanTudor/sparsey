@@ -28,26 +28,31 @@ impl<'a> GroupInfo<'a> {
             _phantom: PhantomData,
         })
     }
-}
 
-pub(crate) fn group_range(include: GroupInfo, exclude: GroupInfo) -> Option<Range<usize>> {
-    if include.group != exclude.group {
-        return None;
+    pub(crate) fn group_len(&self) -> Option<usize> {
+        let group = unsafe { *self.group.as_ptr().add(self.offset) };
+        let mask = QueryMask::new(self.mask, 0);
+
+        (mask == group.include_mask()).then(|| group.len())
     }
 
-    let mask = QueryMask::new(include.mask, exclude.mask);
-    let offset = include.offset.max(exclude.offset);
+    pub(crate) fn exclude_group_range(&self, exclude: &GroupInfo) -> Option<Range<usize>> {
+        if self.group != exclude.group {
+            return None;
+        }
 
-    unsafe {
-        let group = *include.group.as_ptr().add(offset);
+        let mask = QueryMask::new(self.mask, exclude.mask);
+        let offset = self.offset.max(exclude.offset);
 
-        if mask == group.include_mask() {
-            Some(0..group.len())
-        } else if mask == group.exclude_mask() {
-            let prev_group = *include.group.as_ptr().add(offset - 1);
-            Some(group.len()..prev_group.len())
-        } else {
-            None
+        unsafe {
+            let group = *self.group.as_ptr().add(offset);
+
+            if mask == group.exclude_mask() {
+                let prev_group = *self.group.as_ptr().add(offset - 1);
+                Some(group.len()..prev_group.len())
+            } else {
+                None
+            }
         }
     }
 }

@@ -36,6 +36,8 @@ pub unsafe trait Query<'a> {
 
     fn excludes(self, entity: Entity) -> bool;
 
+    fn into_any_entities(self) -> Option<&'a [Entity]>;
+
     fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs);
 
     fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs);
@@ -79,6 +81,10 @@ unsafe impl<'a> Query<'a> for () {
 
     fn excludes(self, _entity: Entity) -> bool {
         true
+    }
+
+    fn into_any_entities(self) -> Option<&'a [Entity]> {
+        None
     }
 
     fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
@@ -147,6 +153,11 @@ where
         !QueryElement::contains(self, entity)
     }
 
+    fn into_any_entities(self) -> Option<&'a [Entity]> {
+        let (entities, _, _) = QueryElement::split(self);
+        Some(entities)
+    }
+
     fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
         let (entities, sparse, components) = QueryElement::split(self);
         (Some(entities), sparse, components)
@@ -187,17 +198,6 @@ where
     ) -> Self::Item {
         <E as QueryElement>::get_from_components_unchecked(components, index)
     }
-}
-
-pub unsafe trait NonEmptyQuery<'a>: Query<'a> + Sized {
-    // Empty
-}
-
-unsafe impl<'a, E> NonEmptyQuery<'a> for E
-where
-    E: QueryElement<'a>,
-{
-    // Empty
 }
 
 macro_rules! replace {
@@ -291,6 +291,11 @@ macro_rules! impl_query {
                 $(!self.$idx.contains(entity))&&+
             }
 
+            fn into_any_entities(self) -> Option<&'a [Entity]> {
+                let (entities, _, _) = QueryElement::split(self.0);
+                Some(entities)
+            }
+
             fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
                 split_sparse!($((self.$idx, $idx)),+)
             }
@@ -337,13 +342,6 @@ macro_rules! impl_query {
                     $elem::get_from_components_unchecked(components.$idx, index),
                 )+)
             }
-        }
-
-        unsafe impl<'a, $($elem),+> NonEmptyQuery<'a> for ($($elem,)+)
-        where
-            $($elem: QueryElement<'a>,)+
-        {
-            // Empty
         }
     };
 }
