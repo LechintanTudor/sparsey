@@ -1,5 +1,5 @@
 use crate::components::{Component, GroupInfo};
-use crate::query::{Iter, QueryGroupInfo};
+use crate::query::QueryGroupInfo;
 use crate::storage::{Entity, SparseArray};
 
 pub unsafe trait QueryElement<'a> {
@@ -59,60 +59,145 @@ pub unsafe trait Query<'a> {
     ) -> Self::Item;
 }
 
+unsafe impl<'a> Query<'a> for () {
+    type Item = ();
+    type Index = ();
+    type ComponentPtrs = ();
+    type SparseArrays = ();
+
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+        Some(QueryGroupInfo::Empty)
+    }
+
+    fn get(self, _entity: Entity) -> Option<Self::Item> {
+        Some(())
+    }
+
+    fn includes(self, _entity: Entity) -> bool {
+        true
+    }
+
+    fn excludes(self, _entity: Entity) -> bool {
+        true
+    }
+
+    fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
+        (None, (), ())
+    }
+
+    fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs) {
+        (None, ())
+    }
+
+    fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays) {
+        (None, ())
+    }
+
+    fn includes_split(_sparse: Self::SparseArrays, _entity: Entity) -> bool {
+        true
+    }
+
+    fn excludes_split(_sparse: Self::SparseArrays, _entity: Entity) -> bool {
+        true
+    }
+
+    fn get_index_from_split(_sparse: Self::SparseArrays, _entity: Entity) -> Option<Self::Index> {
+        Some(())
+    }
+
+    unsafe fn get_from_sparse_components_unchecked(
+        _components: Self::ComponentPtrs,
+        _index: Self::Index,
+    ) -> Self::Item {
+        ()
+    }
+
+    unsafe fn get_from_dense_components_unchecked(
+        _components: Self::ComponentPtrs,
+        _index: usize,
+    ) -> Self::Item {
+        ()
+    }
+}
+
+unsafe impl<'a, E> Query<'a> for E
+where
+    E: QueryElement<'a>,
+{
+    type Item = E::Item;
+    type Index = usize;
+    type ComponentPtrs = *mut E::Component;
+    type SparseArrays = &'a SparseArray;
+
+    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
+        let len = QueryElement::len(self);
+        let info = QueryElement::group_info(self);
+        Some(QueryGroupInfo::Single { len, info })
+    }
+
+    fn get(self, entity: Entity) -> Option<Self::Item> {
+        QueryElement::get(self, entity)
+    }
+
+    fn includes(self, entity: Entity) -> bool {
+        QueryElement::contains(self, entity)
+    }
+
+    fn excludes(self, entity: Entity) -> bool {
+        !QueryElement::contains(self, entity)
+    }
+
+    fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
+        let (entities, sparse, components) = QueryElement::split(self);
+        (Some(entities), sparse, components)
+    }
+
+    fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs) {
+        let (entities, _, components) = QueryElement::split(self);
+        (Some(entities), components)
+    }
+
+    fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays) {
+        let (entities, sparse, _) = QueryElement::split(self);
+        (Some(entities), sparse)
+    }
+
+    fn includes_split(sparse: Self::SparseArrays, entity: Entity) -> bool {
+        sparse.contains(entity)
+    }
+
+    fn excludes_split(sparse: Self::SparseArrays, entity: Entity) -> bool {
+        !sparse.contains(entity)
+    }
+
+    fn get_index_from_split(sparse: Self::SparseArrays, entity: Entity) -> Option<Self::Index> {
+        sparse.get(entity)
+    }
+
+    unsafe fn get_from_sparse_components_unchecked(
+        components: Self::ComponentPtrs,
+        index: Self::Index,
+    ) -> Self::Item {
+        <E as QueryElement>::get_from_components_unchecked(components, index)
+    }
+
+    unsafe fn get_from_dense_components_unchecked(
+        components: Self::ComponentPtrs,
+        index: usize,
+    ) -> Self::Item {
+        <E as QueryElement>::get_from_components_unchecked(components, index)
+    }
+}
+
 pub unsafe trait NonEmptyQuery<'a>: Query<'a> + Sized {
     // Empty
 }
 
-pub trait IntoQueryParts<'a> {
-    type Get: Query<'a>;
-    type Include: Query<'a> + Copy;
-    type Exclude: Query<'a> + Copy;
-
-    fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude);
-}
-
-pub trait CompoundQuery<'a>: IntoQueryParts<'a> {
-    fn get(self, entity: Entity) -> Option<<Self::Get as Query<'a>>::Item>;
-
-    fn contains(self, entity: Entity) -> bool;
-}
-
-impl<'a, Q> CompoundQuery<'a> for Q
+unsafe impl<'a, E> NonEmptyQuery<'a> for E
 where
-    Q: IntoQueryParts<'a>,
+    E: QueryElement<'a>,
 {
-    fn get(self, entity: Entity) -> Option<<Self::Get as Query<'a>>::Item> {
-        let (get, include, exclude) = self.into_query_parts();
-
-        if exclude.excludes(entity) && include.includes(entity) {
-            get.get(entity)
-        } else {
-            None
-        }
-    }
-
-    fn contains(self, entity: Entity) -> bool {
-        let (get, include, exclude) = self.into_query_parts();
-        exclude.excludes(entity) && include.includes(entity) && get.includes(entity)
-    }
-}
-
-pub trait IterableCompoundQuery<'a>: CompoundQuery<'a>
-where
-    Self::Get: NonEmptyQuery<'a>,
-{
-    fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>;
-}
-
-impl<'a, Q> IterableCompoundQuery<'a> for Q
-where
-    Q: CompoundQuery<'a>,
-    Q::Get: NonEmptyQuery<'a>,
-{
-    fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude> {
-        let (get, include, exclude) = self.into_query_parts();
-        Iter::new(get, include, exclude)
-    }
+    // Empty
 }
 
 macro_rules! replace {
@@ -177,7 +262,7 @@ macro_rules! split_filter {
     };
 }
 
-macro_rules! impl_simple_query {
+macro_rules! impl_query {
     ($(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> Query<'a> for ($($elem,)+)
         where
@@ -267,19 +352,19 @@ macro_rules! impl_simple_query {
 mod impls {
     use super::*;
 
-    impl_simple_query!((A, 0), (B, 1));
-    impl_simple_query!((A, 0), (B, 1), (C, 2));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
-    impl_simple_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
+    impl_query!((A, 0), (B, 1));
+    impl_query!((A, 0), (B, 1), (C, 2));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
+    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
 }
