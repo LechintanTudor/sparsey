@@ -48,11 +48,8 @@ where
         self.storage.split()
     }
 
-    unsafe fn get_from_components_unchecked(
-        components: *mut Self::Component,
-        index: usize,
-    ) -> Self::Item {
-        &*components.add(index)
+    unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item {
+        &*component
     }
 }
 
@@ -84,10 +81,7 @@ where
         self.storage.split()
     }
 
-    unsafe fn get_from_components_unchecked(
-        components: *mut Self::Component,
-        index: usize,
-    ) -> Self::Item {
-        &mut *components.add(index)
+    unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item {
+        &mut *component
     }
 }

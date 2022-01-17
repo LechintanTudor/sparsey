@@ -1,6 +1,6 @@
-use crate::query;
 use crate::query::iter::{DenseIter, SparseIter};
-use crate::query::Query;
+use crate::query::{self, EntityIterator, Query};
+use crate::storage::Entity;
 
 pub enum Iter<'a, G, I, E>
 where
@@ -54,6 +54,66 @@ where
                     Self::Sparse(SparseIter::new(entities, sparse, include, exclude, components))
                 }
             }
+        }
+    }
+
+    pub fn is_sparse(&self) -> bool {
+        matches!(self, Self::Sparse(_))
+    }
+
+    pub fn is_dense(&self) -> bool {
+        matches!(self, Self::Dense(_))
+    }
+}
+
+impl<'a, G, I, E> Iterator for Iter<'a, G, I, E>
+where
+    G: Query<'a>,
+    I: Query<'a>,
+    E: Query<'a>,
+{
+    type Item = G::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Sparse(sparse) => sparse.next(),
+            Self::Dense(dense) => dense.next(),
+        }
+    }
+
+    fn fold<B, F>(self, init: B, f: F) -> B
+    where
+        Self: Sized,
+        F: FnMut(B, Self::Item) -> B,
+    {
+        match self {
+            Self::Sparse(sparse) => sparse.fold(init, f),
+            Self::Dense(dense) => dense.fold(init, f),
+        }
+    }
+}
+
+impl<'a, G, I, E> EntityIterator for Iter<'a, G, I, E>
+where
+    G: Query<'a>,
+    I: Query<'a>,
+    E: Query<'a>,
+{
+    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
+        match self {
+            Self::Sparse(sparse) => sparse.next_with_entity(),
+            Self::Dense(dense) => dense.next_with_entity(),
+        }
+    }
+
+    fn fold_with_entity<B, F>(self, init: B, f: F) -> B
+    where
+        Self: Sized,
+        F: FnMut(B, (Entity, Self::Item)) -> B,
+    {
+        match self {
+            Self::Sparse(sparse) => sparse.fold_with_entity(init, f),
+            Self::Dense(dense) => dense.fold_with_entity(init, f),
         }
     }
 }

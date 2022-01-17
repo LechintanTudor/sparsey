@@ -16,10 +16,7 @@ pub unsafe trait QueryElement<'a> {
 
     fn split(self) -> (&'a [Entity], &'a SparseArray, *mut Self::Component);
 
-    unsafe fn get_from_components_unchecked(
-        components: *mut Self::Component,
-        index: usize,
-    ) -> Self::Item;
+    unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item;
 }
 
 pub unsafe trait Query<'a> {
@@ -50,15 +47,14 @@ pub unsafe trait Query<'a> {
 
     fn get_index_from_split(sparse: Self::SparseArrays, entity: Entity) -> Option<Self::Index>;
 
-    unsafe fn get_from_sparse_components_unchecked(
+    unsafe fn get_from_sparse_components(
         components: Self::ComponentPtrs,
         index: Self::Index,
     ) -> Self::Item;
 
-    unsafe fn get_from_dense_components_unchecked(
-        components: Self::ComponentPtrs,
-        index: usize,
-    ) -> Self::Item;
+    unsafe fn get_from_component_ptrs(components: Self::ComponentPtrs) -> Self::Item;
+
+    unsafe fn next_component_ptrs(components: Self::ComponentPtrs) -> Self::ComponentPtrs;
 }
 
 unsafe impl<'a> Query<'a> for () {
@@ -111,17 +107,18 @@ unsafe impl<'a> Query<'a> for () {
         Some(())
     }
 
-    unsafe fn get_from_sparse_components_unchecked(
+    unsafe fn get_from_sparse_components(
         _components: Self::ComponentPtrs,
         _index: Self::Index,
     ) -> Self::Item {
         ()
     }
 
-    unsafe fn get_from_dense_components_unchecked(
-        _components: Self::ComponentPtrs,
-        _index: usize,
-    ) -> Self::Item {
+    unsafe fn get_from_component_ptrs(components: Self::ComponentPtrs) -> Self::Item {
+        ()
+    }
+
+    unsafe fn next_component_ptrs(_components: Self::ComponentPtrs) -> Self::ComponentPtrs {
         ()
     }
 }
@@ -185,18 +182,19 @@ where
         sparse.get(entity)
     }
 
-    unsafe fn get_from_sparse_components_unchecked(
+    unsafe fn get_from_sparse_components(
         components: Self::ComponentPtrs,
         index: Self::Index,
     ) -> Self::Item {
-        <E as QueryElement>::get_from_components_unchecked(components, index)
+        <E as QueryElement>::get_from_component_ptr(components.add(index))
     }
 
-    unsafe fn get_from_dense_components_unchecked(
-        components: Self::ComponentPtrs,
-        index: usize,
-    ) -> Self::Item {
-        <E as QueryElement>::get_from_components_unchecked(components, index)
+    unsafe fn get_from_component_ptrs(components: Self::ComponentPtrs) -> Self::Item {
+        <E as QueryElement>::get_from_component_ptr(components)
+    }
+
+    unsafe fn next_component_ptrs(components: Self::ComponentPtrs) -> Self::ComponentPtrs {
+        components.add(1)
     }
 }
 
@@ -325,21 +323,24 @@ macro_rules! impl_query {
                 ))
             }
 
-            unsafe fn get_from_sparse_components_unchecked(
+            unsafe fn get_from_sparse_components(
                 components: Self::ComponentPtrs,
                 index: Self::Index,
             ) -> Self::Item {
                 ($(
-                    $elem::get_from_components_unchecked(components.$idx, index.$idx),
+                    $elem::get_from_component_ptr(components.$idx.add(index.$idx)),
                 )+)
             }
 
-            unsafe fn get_from_dense_components_unchecked(
-                components: Self::ComponentPtrs,
-                index: usize,
-            ) -> Self::Item {
+            unsafe fn get_from_component_ptrs(components: Self::ComponentPtrs) -> Self::Item {
                 ($(
-                    $elem::get_from_components_unchecked(components.$idx, index),
+                    $elem::get_from_component_ptr(components.$idx),
+                )+)
+            }
+
+            unsafe fn next_component_ptrs(components: Self::ComponentPtrs) -> Self::ComponentPtrs {
+                ($(
+                    components.$idx.add(1),
                 )+)
             }
         }

@@ -28,12 +28,10 @@
 //! }
 //! ```
 
-/// Exports functions for filtering `ComponentView`s and `ResourceView`s.
-
 /// Exports most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
-    pub use crate::query::{CompoundQuery, QueryFilters};
+    pub use crate::query::{CompoundQuery, IntoEntityIter, QueryFilters};
     pub use crate::storage::Entity;
     pub use crate::systems::{
         Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,

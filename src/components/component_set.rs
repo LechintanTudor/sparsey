@@ -142,7 +142,8 @@ macro_rules! impl_component_set {
 
                 let storage_ptrs = ($(
                     {
-                        let (storage_ptr, family, group) = storages.get_as_ptr_with_masks(&TypeId::of::<$comp>());
+                        let (storage_ptr, family, group)
+                            = storages.get_as_ptr_with_masks(&TypeId::of::<$comp>());
 
                         if storage_ptr.is_null() {
                             panic_missing_comp::<$comp>();
@@ -174,7 +175,8 @@ macro_rules! impl_component_set {
 
                 let storage_ptrs = ($(
                     {
-                        let (storage_ptr, family, group) = storages.get_as_ptr_with_masks(&TypeId::of::<$comp>());
+                        let (storage_ptr, family, group)
+                            = storages.get_as_ptr_with_masks(&TypeId::of::<$comp>());
 
                         if storage_ptr.is_null() {
                             panic_missing_comp::<$comp>();
