@@ -1,20 +1,8 @@
 use crate::components::Component;
-use crate::query::ComponentView;
 use crate::resources::Resource;
-use crate::storage::ComponentStorage;
 use crate::utils::{impl_generic_1_16, panic_missing_comp, panic_missing_res};
-use crate::world::World;
-use atomic_refcell::{AtomicRef, AtomicRefMut};
+use crate::world::{Comp, CompMut, Res, ResMut, World};
 use std::any::TypeId;
-
-/// Shared view over a component storage.
-pub type Comp<'a, T> = ComponentView<'a, T, AtomicRef<'a, ComponentStorage>>;
-/// Exclusive view over a component storage.
-pub type CompMut<'a, T> = ComponentView<'a, T, AtomicRefMut<'a, ComponentStorage>>;
-/// Shared view over a resource.
-pub type Res<'a, T> = AtomicRef<'a, T>;
-/// Exclusive view over a resource.
-pub type ResMut<'a, T> = AtomicRefMut<'a, T>;
 
 /// Trait used to borrow component storages and resources from a `World`.
 pub trait BorrowWorld<'a> {
@@ -62,7 +50,11 @@ where
     type Item = Res<'a, T>;
 
     fn borrow(world: &'a World) -> Self::Item {
-        world.resource_storage().borrow::<T>().unwrap_or_else(|| panic_missing_res::<T>())
+        world
+            .resource_storage()
+            .borrow::<T>()
+            .map(Res::new)
+            .unwrap_or_else(|| panic_missing_res::<T>())
     }
 }
 
@@ -73,7 +65,11 @@ where
     type Item = ResMut<'a, T>;
 
     fn borrow(world: &'a World) -> Self::Item {
-        world.resource_storage().borrow_mut::<T>().unwrap_or_else(|| panic_missing_res::<T>())
+        world
+            .resource_storage()
+            .borrow_mut::<T>()
+            .map(ResMut::new)
+            .unwrap_or_else(|| panic_missing_res::<T>())
     }
 }
 
@@ -84,7 +80,7 @@ where
     type Item = Option<Res<'a, T>>;
 
     fn borrow(world: &'a World) -> Self::Item {
-        world.resource_storage().borrow::<T>()
+        world.resource_storage().borrow::<T>().map(Res::new)
     }
 }
 
@@ -95,7 +91,7 @@ where
     type Item = Option<ResMut<'a, T>>;
 
     fn borrow(world: &'a World) -> Self::Item {
-        world.resource_storage().borrow_mut::<T>()
+        world.resource_storage().borrow_mut::<T>().map(ResMut::new)
     }
 }
 

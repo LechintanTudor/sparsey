@@ -8,6 +8,11 @@ use std::iter::FromIterator;
 #[test]
 fn test_sparse() {
     let mut world = World::default();
+    world.register::<A>();
+    world.register::<B>();
+    world.register::<C>();
+    world.register::<D>();
+
     let e0 = world.create_entity((A(0), B(0)));
     let e1 = world.create_entity((A(1), B(1), C(1)));
     let e2 = world.create_entity((A(2), B(2), C(2), D(2)));

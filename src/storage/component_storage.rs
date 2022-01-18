@@ -153,11 +153,6 @@ impl ComponentStorage {
     }
 
     #[inline]
-    pub(crate) unsafe fn get_unchecked<T>(&self, index: usize) -> &T {
-        &*self.components.cast::<T>().as_ptr().add(index)
-    }
-
-    #[inline]
     pub(crate) fn get_index(&self, entity: Entity) -> Option<usize> {
         self.sparse.get(entity)
     }

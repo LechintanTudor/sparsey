@@ -1,40 +1,6 @@
-use crate::components::{Component, GroupInfo};
-use crate::query::QueryGroupInfo;
+use crate::query::{ComponentView, QueryGroupInfo};
 use crate::storage::{Entity, SparseArray};
 use std::ops::RangeBounds;
-
-pub unsafe trait QueryElement<'a> {
-    type Item: 'a;
-    type Component: Component;
-    type ComponentSlice: 'a;
-
-    fn len(&self) -> usize;
-
-    fn group_info(&self) -> Option<GroupInfo<'a>>;
-
-    fn get(self, entity: Entity) -> Option<Self::Item>;
-
-    fn contains(self, entity: Entity) -> bool;
-
-    fn split(self) -> (&'a [Entity], &'a SparseArray, *mut Self::Component);
-
-    unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item;
-
-    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
-    where
-        R: RangeBounds<usize>;
-
-    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlice
-    where
-        R: RangeBounds<usize>;
-
-    unsafe fn get_entities_components_unchecked<R>(
-        self,
-        range: R,
-    ) -> (&'a [Entity], Self::ComponentSlice)
-    where
-        R: RangeBounds<usize>;
-}
 
 pub unsafe trait Query<'a> {
     type Item: 'a;
@@ -189,7 +155,7 @@ unsafe impl<'a> Query<'a> for () {
 
 unsafe impl<'a, E> Query<'a> for E
 where
-    E: QueryElement<'a>,
+    E: ComponentView<'a>,
 {
     type Item = E::Item;
     type Index = usize;
@@ -198,40 +164,40 @@ where
     type ComponentSlices = E::ComponentSlice;
 
     fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
-        let len = QueryElement::len(self);
-        let info = QueryElement::group_info(self);
+        let len = ComponentView::len(self);
+        let info = ComponentView::group_info(self);
         Some(QueryGroupInfo::Single { len, info })
     }
 
     fn get(self, entity: Entity) -> Option<Self::Item> {
-        QueryElement::get(self, entity)
+        ComponentView::get(self, entity)
     }
 
     fn includes(self, entity: Entity) -> bool {
-        QueryElement::contains(self, entity)
+        ComponentView::contains(self, entity)
     }
 
     fn excludes(self, entity: Entity) -> bool {
-        !QueryElement::contains(self, entity)
+        !ComponentView::contains(self, entity)
     }
 
     fn into_any_entities(self) -> Option<&'a [Entity]> {
-        let (entities, _, _) = QueryElement::split(self);
+        let (entities, _, _) = ComponentView::split(self);
         Some(entities)
     }
 
     fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
-        let (entities, sparse, components) = QueryElement::split(self);
+        let (entities, sparse, components) = ComponentView::split(self);
         (Some(entities), sparse, components)
     }
 
     fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs) {
-        let (entities, _, components) = QueryElement::split(self);
+        let (entities, _, components) = ComponentView::split(self);
         (Some(entities), components)
     }
 
     fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays) {
-        let (entities, sparse, _) = QueryElement::split(self);
+        let (entities, sparse, _) = ComponentView::split(self);
         (Some(entities), sparse)
     }
 
@@ -251,11 +217,11 @@ where
         components: Self::ComponentPtrs,
         index: Self::Index,
     ) -> Self::Item {
-        <E as QueryElement>::get_from_component_ptr(components.add(index))
+        <E as ComponentView>::get_from_component_ptr(components.add(index))
     }
 
     unsafe fn get_from_component_ptrs(components: Self::ComponentPtrs) -> Self::Item {
-        <E as QueryElement>::get_from_component_ptr(components)
+        <E as ComponentView>::get_from_component_ptr(components)
     }
 
     unsafe fn offset_component_ptrs(
@@ -269,14 +235,14 @@ where
     where
         R: RangeBounds<usize>,
     {
-        <E as QueryElement>::get_entities_unchecked(self, range)
+        <E as ComponentView>::get_entities_unchecked(self, range)
     }
 
     unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlices
     where
         R: RangeBounds<usize>,
     {
-        <E as QueryElement>::get_components_unchecked(self, range)
+        <E as ComponentView>::get_components_unchecked(self, range)
     }
 
     unsafe fn get_entities_components_unchecked<R>(
@@ -286,7 +252,7 @@ where
     where
         R: RangeBounds<usize>,
     {
-        <E as QueryElement>::get_entities_components_unchecked(self, range)
+        <E as ComponentView>::get_entities_components_unchecked(self, range)
     }
 }
 
@@ -366,7 +332,7 @@ macro_rules! impl_query {
     ($(($elem:ident, $idx:tt)),+) => {
         unsafe impl<'a, $($elem),+> Query<'a> for ($($elem,)+)
         where
-            $($elem: QueryElement<'a>,)+
+            $($elem: ComponentView<'a>,)+
         {
             type Item = ($($elem::Item,)+);
             type Index = ($(replace!($elem, usize),)+);
@@ -393,7 +359,7 @@ macro_rules! impl_query {
             }
 
             fn into_any_entities(self) -> Option<&'a [Entity]> {
-                let (entities, _, _) = QueryElement::split(self.0);
+                let (entities, _, _) = ComponentView::split(self.0);
                 Some(entities)
             }
 
