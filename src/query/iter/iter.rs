@@ -26,11 +26,11 @@ where
         match query::group_range(get_info, include_info, exclude_info) {
             Some(range) => {
                 let (entities, components) = get.split_dense();
-                let entities = &entities.unwrap_or_else(|| {
+                let entities = entities.unwrap_or_else(|| {
                     include.into_any_entities().expect("Cannot iterate empty Query")
-                })[range];
+                });
 
-                unsafe { Self::Dense(DenseIter::new(entities, components)) }
+                unsafe { Self::Dense(DenseIter::new(entities, components, range)) }
             }
             None => {
                 let (get_entities, sparse, components) = get.split_sparse();

@@ -187,11 +187,26 @@ impl ComponentStorage {
         slice::from_raw_parts(self.components.cast::<T>().as_ptr(), self.len)
     }
 
-    pub(crate) fn split<T>(&self) -> (&[Entity], &SparseArray, *mut T) {
+    #[inline]
+    pub(crate) unsafe fn components_mut<T>(&mut self) -> &mut [T] {
+        slice::from_raw_parts_mut(self.components.cast::<T>().as_ptr(), self.len)
+    }
+
+    #[inline]
+    pub(crate) unsafe fn split<T>(&self) -> (&[Entity], &SparseArray, &[T]) {
         (
-            unsafe { slice::from_raw_parts(self.entities.as_ptr(), self.len) },
+            slice::from_raw_parts(self.entities.as_ptr(), self.len),
             &self.sparse,
-            self.components.cast::<T>().as_ptr(),
+            slice::from_raw_parts(self.components.cast::<T>().as_ptr(), self.len),
+        )
+    }
+
+    #[inline]
+    pub(crate) unsafe fn split_mut<T>(&mut self) -> (&[Entity], &SparseArray, &mut [T]) {
+        (
+            slice::from_raw_parts(self.entities.as_ptr(), self.len),
+            &self.sparse,
+            slice::from_raw_parts_mut(self.components.cast::<T>().as_ptr(), self.len),
         )
     }
 

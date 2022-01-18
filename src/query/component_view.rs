@@ -2,7 +2,7 @@ use crate::components::{Component, GroupInfo};
 use crate::query::QueryElement;
 use crate::storage::{ComponentStorage, Entity, SparseArray};
 use std::marker::PhantomData;
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref, DerefMut, RangeBounds};
 
 pub struct ComponentView<'a, T, S> {
     storage: S,
@@ -27,6 +27,7 @@ where
 {
     type Item = &'a T;
     type Component = T;
+    type ComponentSlice = &'a [T];
 
     fn len(&self) -> usize {
         self.storage.len()
@@ -45,11 +46,43 @@ where
     }
 
     fn split(self) -> (&'a [Entity], &'a SparseArray, *mut Self::Component) {
-        self.storage.split()
+        let (entities, sparse, components) = unsafe { self.storage.split::<T>() };
+        (entities, sparse, components.as_ptr() as *mut _)
     }
 
     unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item {
         &*component
+    }
+
+    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
+    where
+        R: RangeBounds<usize>,
+    {
+        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
+        self.storage.entities().get_unchecked(bounds)
+    }
+
+    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlice
+    where
+        R: RangeBounds<usize>,
+    {
+        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
+        self.storage.components::<T>().get_unchecked(bounds)
+    }
+
+    unsafe fn get_entities_components_unchecked<R>(
+        self,
+        range: R,
+    ) -> (&'a [Entity], Self::ComponentSlice)
+    where
+        R: RangeBounds<usize>,
+    {
+        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
+
+        (
+            self.storage.entities().get_unchecked(bounds),
+            self.storage.components::<T>().get_unchecked(bounds),
+        )
     }
 }
 
@@ -60,6 +93,7 @@ where
 {
     type Item = &'a mut T;
     type Component = T;
+    type ComponentSlice = &'a mut [T];
 
     fn len(&self) -> usize {
         self.storage.len()
@@ -78,10 +112,40 @@ where
     }
 
     fn split(self) -> (&'a [Entity], &'a SparseArray, *mut Self::Component) {
-        self.storage.split()
+        let (entities, sparse, components) = unsafe { self.storage.split_mut() };
+        (entities, sparse, components.as_mut_ptr())
     }
 
     unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item {
         &mut *component
+    }
+
+    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
+    where
+        R: RangeBounds<usize>,
+    {
+        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
+        self.storage.entities().get_unchecked(bounds)
+    }
+
+    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlice
+    where
+        R: RangeBounds<usize>,
+    {
+        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
+        self.storage.components_mut::<T>().get_unchecked_mut(bounds)
+    }
+
+    unsafe fn get_entities_components_unchecked<R>(
+        self,
+        range: R,
+    ) -> (&'a [Entity], Self::ComponentSlice)
+    where
+        R: RangeBounds<usize>,
+    {
+        let (entities, _, components) = self.storage.split_mut::<T>();
+        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
+
+        (entities.get_unchecked(bounds), components.get_unchecked_mut(bounds))
     }
 }

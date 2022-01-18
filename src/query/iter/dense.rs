@@ -1,5 +1,6 @@
 use crate::query::{EntityIterator, Query};
 use crate::storage::Entity;
+use std::ops::Range;
 use std::slice::Iter as SliceIter;
 
 pub struct DenseIter<'a, G>
@@ -14,8 +15,16 @@ impl<'a, G> DenseIter<'a, G>
 where
     G: Query<'a>,
 {
-    pub(crate) unsafe fn new(entities: &'a [Entity], components: G::ComponentPtrs) -> Self {
-        Self { entities: entities.iter(), components }
+    pub(crate) unsafe fn new(
+        entities: &'a [Entity],
+        components: G::ComponentPtrs,
+        range: Range<usize>,
+    ) -> Self {
+        let offset = range.start as isize;
+        let entities = entities.get_unchecked(range).iter();
+        let components = G::offset_component_ptrs(components, offset);
+
+        Self { entities, components }
     }
 }
 
@@ -30,7 +39,7 @@ where
 
         unsafe {
             let item = G::get_from_component_ptrs(self.components);
-            self.components = G::next_component_ptrs(self.components);
+            self.components = G::offset_component_ptrs(self.components, 1);
             Some(item)
         }
     }
@@ -43,7 +52,7 @@ where
         for _ in self.entities {
             unsafe {
                 init = f(init, G::get_from_component_ptrs(self.components));
-                self.components = G::next_component_ptrs(self.components);
+                self.components = G::offset_component_ptrs(self.components, 1);
             }
         }
 
@@ -60,7 +69,7 @@ where
 
         unsafe {
             let item = G::get_from_component_ptrs(self.components);
-            self.components = G::next_component_ptrs(self.components);
+            self.components = G::offset_component_ptrs(self.components, 1);
             Some((entity, item))
         }
     }
@@ -73,7 +82,7 @@ where
         for &entity in self.entities {
             unsafe {
                 init = f(init, (entity, G::get_from_component_ptrs(self.components)));
-                self.components = G::next_component_ptrs(self.components);
+                self.components = G::offset_component_ptrs(self.components, 1);
             }
         }
 

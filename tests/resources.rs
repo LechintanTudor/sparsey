@@ -1,7 +1,6 @@
 mod common;
 
 use common::*;
-use sparsey::filters::*;
 use sparsey::prelude::*;
 use std::any::TypeId;
 
@@ -31,34 +30,4 @@ fn test_crud() {
     world.clear_resources();
     assert!(!world.contains_resource(&TypeId::of::<A>()));
     assert!(!world.contains_resource(&TypeId::of::<B>()));
-}
-
-#[test]
-fn test_filters() {
-    let mut world = World::default();
-    world.insert_resource(A(0));
-
-    {
-        let mut a = world.borrow::<ResMut<A>>();
-
-        assert!(res_added(&a));
-        assert!(!res_mutated(&a));
-        assert!(res_changed(&a));
-
-        *a = A(1);
-        assert!(res_mutated(&a));
-    }
-
-    world.increment_tick();
-
-    {
-        let mut a = world.borrow::<ResMut<A>>();
-        assert!(!res_added(&a));
-        assert!(!res_mutated(&a));
-        assert!(!res_changed(&a));
-
-        *a = A(2);
-        assert!(res_mutated(&a));
-        assert!(res_changed(&a));
-    }
 }

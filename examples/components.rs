@@ -12,7 +12,7 @@ struct Immovable;
 fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
     println!("[Update velocities]");
 
-    for (e, (mut vel,)) in (&mut vel,).include(&imv).iter().entities() {
+    for (e, vel) in (&mut vel).include(&imv).iter().entities() {
         println!("{:?} is immovable; set its velocity to (0, 0)", e);
         *vel = Velocity(0, 0);
     }
@@ -23,7 +23,7 @@ fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
 fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
     println!("[Update positions]");
 
-    for (e, (mut pos, vel)) in (&mut pos, &vel).iter().entities() {
+    for (e, (pos, vel)) in (&mut pos, &vel).iter().entities() {
         pos.0 += vel.0;
         pos.1 += vel.1;
 
@@ -48,6 +48,5 @@ fn main() {
 
     for _ in 0..3 {
         dispatcher.run_seq(&mut world).unwrap();
-        world.increment_tick();
     }
 }
