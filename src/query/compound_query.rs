@@ -1,4 +1,4 @@
-use crate::query::{self, Iter, Query};
+use crate::query::{group_range, Iter, Query};
 use crate::storage::Entity;
 
 pub trait IntoCompoundQueryParts<'a> {
@@ -51,15 +51,13 @@ where
 
     fn entities(self) -> Option<&'a [Entity]> {
         let (get, include, exclude) = self.into_compound_query_parts();
-        let range =
-            query::group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
         unsafe { Some(get.get_entities_unchecked(range)) }
     }
 
     fn components(self) -> Option<<Self::Get as Query<'a>>::ComponentSlices> {
         let (get, include, exclude) = self.into_compound_query_parts();
-        let range =
-            query::group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
         unsafe { Some(get.get_components_unchecked(range)) }
     }
 
@@ -67,8 +65,7 @@ where
         self,
     ) -> Option<(&'a [Entity], <Self::Get as Query<'a>>::ComponentSlices)> {
         let (get, include, exclude) = self.into_compound_query_parts();
-        let range =
-            query::group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
         unsafe { Some(get.get_entities_components_unchecked(range)) }
     }
 }
