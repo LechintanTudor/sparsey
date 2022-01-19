@@ -66,50 +66,62 @@ unsafe impl<'a> Query<'a> for () {
     type SparseArrays = ();
     type ComponentSlices = ();
 
+    #[inline(always)]
     fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
         Some(QueryGroupInfo::Empty)
     }
 
+    #[inline(always)]
     fn get(self, _entity: Entity) -> Option<Self::Item> {
         Some(())
     }
 
+    #[inline(always)]
     fn includes(self, _entity: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn excludes(self, _entity: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn into_any_entities(self) -> Option<&'a [Entity]> {
         None
     }
 
+    #[inline(always)]
     fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
         (None, (), ())
     }
 
+    #[inline(always)]
     fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs) {
         (None, ())
     }
 
+    #[inline(always)]
     fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays) {
         (None, ())
     }
 
+    #[inline(always)]
     fn includes_split(_sparse: Self::SparseArrays, _entity: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn excludes_split(_sparse: Self::SparseArrays, _entity: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn get_index_from_split(_sparse: Self::SparseArrays, _entity: Entity) -> Option<Self::Index> {
         Some(())
     }
 
+    #[inline(always)]
     unsafe fn get_from_sparse_components(
         _components: Self::ComponentPtrs,
         _index: Self::Index,
@@ -117,10 +129,12 @@ unsafe impl<'a> Query<'a> for () {
         ()
     }
 
+    #[inline(always)]
     unsafe fn get_from_component_ptrs(_components: Self::ComponentPtrs) -> Self::Item {
         ()
     }
 
+    #[inline(always)]
     unsafe fn offset_component_ptrs(
         _components: Self::ComponentPtrs,
         _offset: isize,
@@ -128,6 +142,7 @@ unsafe impl<'a> Query<'a> for () {
         ()
     }
 
+    #[inline(always)]
     unsafe fn get_entities_unchecked<R>(self, _range: R) -> &'a [Entity]
     where
         R: RangeBounds<usize>,
@@ -135,6 +150,7 @@ unsafe impl<'a> Query<'a> for () {
         &[]
     }
 
+    #[inline(always)]
     unsafe fn get_components_unchecked<R>(self, _range: R) -> Self::ComponentSlices
     where
         R: RangeBounds<usize>,
@@ -142,6 +158,7 @@ unsafe impl<'a> Query<'a> for () {
         ()
     }
 
+    #[inline(always)]
     unsafe fn get_entities_components_unchecked<R>(
         self,
         _range: R,
