@@ -1,5 +1,4 @@
-use crate::components::Component;
-use crate::storage::ComponentStorage;
+use crate::storage::{Component, ComponentStorage};
 use std::any::TypeId;
 use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::hash::{Hash, Hasher};

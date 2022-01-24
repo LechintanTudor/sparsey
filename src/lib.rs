@@ -33,9 +33,6 @@ pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
     pub use crate::query::{CompoundQuery, IntoEntityIter, QueryFilters};
     pub use crate::storage::Entity;
-    pub use crate::systems::{
-        Commands, Dispatcher, IntoLocalFn, IntoLocalSystem, IntoSystem, SystemResult,
-    };
     pub use crate::world::{Comp, CompMut, Res, ResMut, World};
 }
 
@@ -51,7 +48,5 @@ pub mod query;
 pub mod resources;
 /// Exports functionality for managing `ComponentStorage`s.
 pub mod storage;
-/// Exports functionality for creating `System`s and dispatching them sequentially or in parallel.
-pub mod systems;
 /// Exports functionality for creating and managing `World`s.
 pub mod world;

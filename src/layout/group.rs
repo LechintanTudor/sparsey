@@ -1,5 +1,5 @@
-use crate::components::Component;
 use crate::layout::ComponentInfo;
+use crate::storage::Component;
 use rustc_hash::FxHashSet;
 use std::iter::FromIterator;
 

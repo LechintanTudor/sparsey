@@ -1,4 +1,4 @@
-use crate::storage::{Entity, IndexEntity, SparseArray};
+use crate::storage::{Component, Entity, IndexEntity, SparseArray};
 use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr::NonNull;
 use std::{mem, ptr, slice};
@@ -16,10 +16,13 @@ pub struct ComponentStorage {
     needs_drop: bool,
 }
 
+unsafe impl Send for ComponentStorage {}
+unsafe impl Sync for ComponentStorage {}
+
 impl ComponentStorage {
     pub(crate) fn new<T>() -> Self
     where
-        T: 'static,
+        T: Component,
     {
         let layout = Layout::new::<T>();
 
@@ -44,10 +47,7 @@ impl ComponentStorage {
         }
     }
 
-    pub(crate) unsafe fn insert<T>(&mut self, entity: Entity, component: T) -> Option<T>
-    where
-        T: 'static,
-    {
+    pub(crate) unsafe fn insert<T>(&mut self, entity: Entity, component: T) -> Option<T> {
         let index_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
         match index_entity {
@@ -72,10 +72,7 @@ impl ComponentStorage {
         }
     }
 
-    pub(crate) unsafe fn remove<T>(&mut self, entity: Entity) -> Option<T>
-    where
-        T: 'static,
-    {
+    pub(crate) unsafe fn remove<T>(&mut self, entity: Entity) -> Option<T> {
         let index = self.sparse.remove(entity)?;
 
         self.len -= 1;

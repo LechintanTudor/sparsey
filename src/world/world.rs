@@ -1,40 +1,23 @@
-use crate::components::{Component, ComponentSet, ComponentStorages};
+use crate::components::{ComponentSet, ComponentStorages};
 use crate::layout::Layout;
-use crate::resources::{Resource, ResourceStorage};
-use crate::storage::{ComponentStorage, Entity, EntityStorage};
-use crate::world::{BorrowWorld, NoSuchEntity};
+use crate::resources::{Resource, Resources};
+use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
+use crate::world::{BorrowWorld, Comp, CompMut, Entities, NoSuchEntity, Res, ResMut, SyncWorld};
 use std::any::TypeId;
 use std::mem;
-use std::num::NonZeroU64;
-use std::sync::atomic::{AtomicU64, Ordering};
-
-/// Uniquely identifies a `World` during the execution of the program.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-pub struct WorldId(NonZeroU64);
-
-impl WorldId {
-    fn new() -> Self {
-        static COUNTER: AtomicU64 = AtomicU64::new(1);
-
-        let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-        NonZeroU64::new(id).map(Self).expect("Ran out of WorldIds")
-    }
-}
 
 /// Container for entities, components and resources.
 pub struct World {
-    id: WorldId,
     entities: EntityStorage,
-    storages: ComponentStorages,
-    resources: ResourceStorage,
+    components: ComponentStorages,
+    resources: Resources,
 }
 
 impl Default for World {
     fn default() -> Self {
         Self {
-            id: WorldId::new(),
             entities: Default::default(),
-            storages: Default::default(),
+            components: Default::default(),
             resources: Default::default(),
         }
     }
@@ -53,11 +36,11 @@ impl World {
     /// through all the entities to ararange their components, so it is best
     /// called right after creating the `World`.
     pub fn set_layout(&mut self, layout: &Layout) {
-        let mut storages = mem::take(&mut self.storages).into_storages();
+        let mut storages = mem::take(&mut self.components).into_storages();
 
         unsafe {
-            self.storages = ComponentStorages::new(layout, &mut storages);
-            self.storages.group_all_components(self.entities.as_ref());
+            self.components = ComponentStorages::new(layout, &mut storages);
+            self.components.group_all_components(self.entities.as_ref());
         }
     }
 
@@ -66,20 +49,20 @@ impl World {
     where
         T: Component,
     {
-        self.storages.register::<T>()
+        self.components.register::<T>()
     }
 
     pub(crate) unsafe fn register_with<F>(&mut self, type_id: TypeId, storage_builder: F)
     where
         F: FnOnce() -> ComponentStorage,
     {
-        self.storages.register_with(type_id, storage_builder);
+        self.components.register_with(type_id, storage_builder);
     }
 
     /// Check if a component type is registered.
     #[must_use]
     pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
-        self.storages.is_registered(component_type_id)
+        self.components.is_registered(component_type_id)
     }
 
     /// Creates an `Entity` with the given `components` and returns it.
@@ -99,7 +82,7 @@ impl World {
         C: ComponentSet,
         I: IntoIterator<Item = C>,
     {
-        C::extend(&mut self.entities, &mut self.storages, components_iter)
+        C::extend(&mut self.entities, &mut self.components, components_iter)
     }
 
     /// Removes `entity` and all of its components from the `World`.
@@ -109,9 +92,9 @@ impl World {
             return false;
         }
 
-        self.storages.ungroup_all_components(Some(&entity));
+        self.components.ungroup_all_components(Some(&entity));
 
-        for storage in self.storages.iter_mut() {
+        for storage in self.components.iter_mut() {
             storage.remove_and_drop(entity);
         }
 
@@ -127,9 +110,9 @@ impl World {
     {
         let entities = entities.into_iter();
 
-        self.storages.ungroup_all_components(entities.clone());
+        self.components.ungroup_all_components(entities.clone());
 
-        for storage in self.storages.iter_mut() {
+        for storage in self.components.iter_mut() {
             entities.clone().for_each(|&entity| {
                 storage.remove_and_drop(entity);
             });
@@ -152,7 +135,7 @@ impl World {
             return Err(NoSuchEntity);
         }
 
-        C::insert(&mut self.storages, entity, components);
+        C::insert(&mut self.components, entity, components);
         Ok(())
     }
 
@@ -163,7 +146,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        C::remove(&mut self.storages, entity)
+        C::remove(&mut self.components, entity)
     }
 
     /// Deletes a component set from `entity`. This is faster than removing
@@ -172,7 +155,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        C::delete(&mut self.storages, entity);
+        C::delete(&mut self.components, entity);
     }
 
     /// Returns `true` if `entity` exists in the `World`.
@@ -189,7 +172,7 @@ impl World {
     /// Removes all entities and components in the world.
     pub fn clear_entities(&mut self) {
         self.entities.clear();
-        self.storages.clear();
+        self.components.clear();
     }
 
     /// Inserts a resource of type `T` into the `World` and returns the previous
@@ -231,8 +214,12 @@ impl World {
     /// Removes all entities, components and resources from the `World`.
     pub fn clear(&mut self) {
         self.entities.clear();
-        self.storages.clear();
+        self.components.clear();
         self.resources.clear();
+    }
+
+    pub fn sync(&self) -> SyncWorld {
+        SyncWorld::new(&self.entities, &self.components, self.resources.sync())
     }
 
     /// Borrows a component view or resource view from the `World`.
@@ -243,28 +230,43 @@ impl World {
         T::borrow(self)
     }
 
-    /// Returns the `WorldId` which uniquely identifies this `World`.
-    #[inline]
-    pub fn id(&self) -> WorldId {
-        self.id
+    pub(crate) fn borrow_entities(&self) -> Entities {
+        Entities::new(&self.entities)
+    }
+
+    pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
+    where
+        T: Component,
+    {
+        self.components
+            .borrow_with_info(&TypeId::of::<T>())
+            .map(|(storage, info)| unsafe { Comp::new(storage, info) })
+    }
+
+    pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
+    where
+        T: Component,
+    {
+        self.components
+            .borrow_with_info_mut(&TypeId::of::<T>())
+            .map(|(storage, info)| unsafe { CompMut::new(storage, info) })
+    }
+
+    pub(crate) fn borrow_res<T>(&self) -> Option<Res<T>>
+    where
+        T: Resource,
+    {
+        self.resources.borrow::<T>().map(Res::new)
+    }
+
+    pub(crate) fn borrow_res_mut<T>(&self) -> Option<ResMut<T>>
+    where
+        T: Resource,
+    {
+        self.resources.borrow_mut::<T>().map(ResMut::new)
     }
 
     pub(crate) fn maintain(&mut self) {
         self.entities.maintain();
-    }
-
-    #[inline]
-    pub(crate) fn entity_storage(&self) -> &EntityStorage {
-        &self.entities
-    }
-
-    #[inline]
-    pub(crate) fn component_storages(&self) -> &ComponentStorages {
-        &self.storages
-    }
-
-    #[inline]
-    pub(crate) fn resource_storage(&self) -> &ResourceStorage {
-        &self.resources
     }
 }

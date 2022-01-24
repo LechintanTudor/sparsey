@@ -11,6 +11,9 @@ pub struct GroupInfo<'a> {
     _phantom: PhantomData<&'a [Group]>,
 }
 
+unsafe impl Send for GroupInfo<'_> {}
+unsafe impl Sync for GroupInfo<'_> {}
+
 impl<'a> GroupInfo<'a> {
     pub(crate) unsafe fn new(group: NonNull<Group>, offset: usize, mask: StorageMask) -> Self {
         Self { group, offset, mask, _phantom: PhantomData }

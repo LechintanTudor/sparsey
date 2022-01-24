@@ -1,5 +1,5 @@
-use crate::components::{Component, GroupInfo};
-use crate::storage::{Entity, SparseArray};
+use crate::components::GroupInfo;
+use crate::storage::{Component, Entity, SparseArray};
 use crate::world::{Comp, CompMut};
 use std::ops::RangeBounds;
 
