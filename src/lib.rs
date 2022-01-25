@@ -33,7 +33,7 @@ pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
     pub use crate::query::{CompoundQuery, IntoEntityIter, QueryFilters};
     pub use crate::storage::Entity;
-    pub use crate::world::{Comp, CompMut, Res, ResMut, World};
+    pub use crate::world::{Comp, CompMut, Entities, Res, ResMut, World};
 }
 
 pub(crate) mod utils;
