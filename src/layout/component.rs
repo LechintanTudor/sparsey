@@ -1,14 +1,12 @@
 use crate::storage::{Component, ComponentStorage};
 use std::any::TypeId;
 use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
+use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
-use std::{any, fmt};
 
 /// Holds information about a `Component` type.
-pub struct ComponentInfo {
-    component: Box<dyn AbstractType>,
-}
+pub struct ComponentInfo(Box<dyn AbstractType>);
 
 impl ComponentInfo {
     /// Creates a new `ComponentInfo` for the given `Component` type.
@@ -16,28 +14,23 @@ impl ComponentInfo {
     where
         T: Component,
     {
-        Self { component: Box::new(Type::<T>(PhantomData)) }
+        Self(Box::new(Type::<T>(PhantomData)))
     }
 
     /// Returns the `TypeId` of the `Component`.
     pub fn type_id(&self) -> TypeId {
-        self.component.type_id()
-    }
-
-    /// Returns the type name of the `Component`.
-    pub fn type_name(&self) -> &'static str {
-        self.component.type_name()
+        self.0.type_id()
     }
 
     /// Returns an empty `ComponentStorage` for the `Component`.
     pub(crate) fn create_storage(&self) -> ComponentStorage {
-        self.component.create_storage()
+        self.0.create_storage()
     }
 }
 
 impl Clone for ComponentInfo {
     fn clone(&self) -> Self {
-        Self { component: self.component.clone() }
+        Self(self.0.clone())
     }
 }
 
@@ -72,7 +65,7 @@ impl Hash for ComponentInfo {
 
 impl fmt::Debug for ComponentInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.component.type_name())
+        f.debug_tuple("ComponentInfo").field(&self.0.type_id()).finish()
     }
 }
 
@@ -91,8 +84,6 @@ impl<T> Default for Type<T> {
 unsafe trait AbstractType: Send + Sync + 'static {
     fn type_id(&self) -> TypeId;
 
-    fn type_name(&self) -> &'static str;
-
     fn create_storage(&self) -> ComponentStorage;
 
     fn clone(&self) -> Box<dyn AbstractType>;
@@ -104,10 +95,6 @@ where
 {
     fn type_id(&self) -> TypeId {
         TypeId::of::<T>()
-    }
-
-    fn type_name(&self) -> &'static str {
-        any::type_name::<T>()
     }
 
     fn create_storage(&self) -> ComponentStorage {

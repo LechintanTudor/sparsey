@@ -48,5 +48,6 @@ pub mod query;
 pub mod resources;
 /// Exports functionality for managing `ComponentStorage`s.
 pub mod storage;
+pub mod systems;
 /// Exports functionality for creating and managing `World`s.
 pub mod world;
