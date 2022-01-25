@@ -7,20 +7,11 @@ use std::any::TypeId;
 use std::mem;
 
 /// Container for entities, components and resources.
+#[derive(Default)]
 pub struct World {
     entities: EntityStorage,
     components: ComponentStorages,
     resources: Resources,
-}
-
-impl Default for World {
-    fn default() -> Self {
-        Self {
-            entities: Default::default(),
-            components: Default::default(),
-            resources: Default::default(),
-        }
-    }
 }
 
 impl World {
