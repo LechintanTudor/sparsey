@@ -1,5 +1,5 @@
-use crate::systems::SystemParamType;
-use crate::world::SyncWorld;
+use crate::systems::{SystemParam, SystemParamType};
+use crate::world::{BorrowWorld, SyncWorld};
 
 pub struct System {
     function: Box<dyn FnMut(&SyncWorld) + Send + 'static>,
@@ -15,3 +15,63 @@ impl System {
         (self.function)(world)
     }
 }
+
+pub trait IntoSystem<Params, Return> {
+    fn system(self) -> System;
+}
+
+impl IntoSystem<(), ()> for System {
+    fn system(self) -> System {
+        self
+    }
+}
+
+macro_rules! impl_into_system {
+    ($($param:ident),*) => {
+        impl<Func, $($param),*> IntoSystem<($($param,)*), ()> for Func
+        where
+            Func: Send + 'static,
+            for<'a> &'a mut Func: FnMut($($param),*)
+                + FnMut($(<$param as BorrowWorld<'a>>::Item),*)
+                + Send,
+            $($param: SystemParam,)*
+        {
+            fn system(mut self) -> System {
+                #[allow(non_snake_case)]
+                fn call_inner<$($param),*>(
+                    mut f: impl FnMut($($param),*) + Send,
+                    $($param: $param),*
+                ) {
+                    f($($param),*)
+                }
+
+                #[allow(unused_variables)]
+                let function = Box::new(move |world: &SyncWorld| {
+                    call_inner(&mut self, $(world.borrow::<$param>()),*)
+                });
+
+                let param_types = vec![$($param::param_type(),)*].into_boxed_slice();
+
+                System { function, param_types }
+            }
+        }
+    };
+}
+
+impl_into_system!();
+impl_into_system!(A);
+impl_into_system!(A, B);
+impl_into_system!(A, B, C);
+impl_into_system!(A, B, C, D);
+impl_into_system!(A, B, C, D, E);
+impl_into_system!(A, B, C, D, E, F);
+impl_into_system!(A, B, C, D, E, F, G);
+impl_into_system!(A, B, C, D, E, F, G, H);
+impl_into_system!(A, B, C, D, E, F, G, H, I);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
