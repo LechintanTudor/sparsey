@@ -6,6 +6,8 @@ use crate::world::{BorrowWorld, Comp, CompMut, Entities, NoSuchEntity, Res, ResM
 use std::any::TypeId;
 use std::mem;
 
+// TODO: Remove Resources from World and rename create_entity to create
+
 /// Container for entities, components and resources.
 #[derive(Default)]
 pub struct World {
