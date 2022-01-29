@@ -1,10 +1,12 @@
+pub use self::res::*;
 pub use self::resource::*;
+pub use self::resources::*;
+pub use self::sync_resources::*;
 
-pub(crate) use self::inner::*;
-pub(crate) use self::storage::*;
-pub(crate) use self::sync::*;
+pub(crate) use self::unsafe_resources::*;
 
-mod inner;
+mod res;
 mod resource;
-mod storage;
-mod sync;
+mod resources;
+mod sync_resources;
+mod unsafe_resources;

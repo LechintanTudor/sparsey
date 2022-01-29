@@ -1,8 +1,9 @@
-use crate::systems::{SystemParam, SystemParamType};
-use crate::world::{BorrowWorld, SyncWorld};
+use crate::resources::SyncResources;
+use crate::systems::{BorrowSystemData, SystemParam, SystemParamType};
+use crate::world::World;
 
 pub struct System {
-    function: Box<dyn FnMut(&SyncWorld) + Send + 'static>,
+    function: Box<dyn FnMut(&World, SyncResources) + Send + 'static>,
     param_types: Box<[SystemParamType]>,
 }
 
@@ -11,8 +12,8 @@ impl System {
         &self.param_types
     }
 
-    pub fn run(&mut self, world: &SyncWorld) {
-        (self.function)(world)
+    pub fn run(&mut self, world: &World, resources: SyncResources) {
+        (self.function)(world, resources)
     }
 }
 
@@ -32,12 +33,12 @@ macro_rules! impl_into_system {
         where
             Func: Send + 'static,
             for<'a> &'a mut Func: FnMut($($param),*)
-                + FnMut($(<$param as BorrowWorld<'a>>::Item),*)
+                + FnMut($(<$param as BorrowSystemData>::Item),*)
                 + Send,
             $($param: SystemParam,)*
         {
             fn system(mut self) -> System {
-                #[allow(non_snake_case)]
+                #[allow(clippy::too_many_arguments, non_snake_case)]
                 fn call_inner<$($param),*>(
                     mut f: impl FnMut($($param),*) + Send,
                     $($param: $param),*
@@ -46,8 +47,8 @@ macro_rules! impl_into_system {
                 }
 
                 #[allow(unused_variables)]
-                let function = Box::new(move |world: &SyncWorld| {
-                    call_inner(&mut self, $(world.borrow::<$param>()),*)
+                let function = Box::new(move |world: &World, resources: SyncResources| {
+                    call_inner(&mut self, $($param::borrow(world, resources)),*)
                 });
 
                 let param_types = vec![$($param::param_type(),)*].into_boxed_slice();

@@ -1,11 +1,10 @@
-use crate::resources::{Resource, SyncResources, UnsafeResources};
-use atomic_refcell::{AtomicRef, AtomicRefMut};
+use crate::resources::{Res, ResMut, Resource, SyncResources, UnsafeResources};
 use std::any::TypeId;
 use std::marker::PhantomData;
 
 /// Maps `TypeIds` to type-erased `Resources`.
 #[derive(Default)]
-pub(crate) struct Resources {
+pub struct Resources {
     resources: UnsafeResources,
     _non_send_sync: PhantomData<*const ()>,
 }
@@ -41,17 +40,17 @@ impl Resources {
         unsafe { self.resources.clear() }
     }
 
-    pub fn borrow<T>(&self) -> Option<AtomicRef<T>>
+    pub fn borrow<T>(&self) -> Option<Res<T>>
     where
         T: Resource,
     {
-        unsafe { self.resources.borrow::<T>() }
+        unsafe { self.resources.borrow::<T>().map(Res::new) }
     }
 
-    pub fn borrow_mut<T>(&self) -> Option<AtomicRefMut<T>>
+    pub fn borrow_mut<T>(&self) -> Option<ResMut<T>>
     where
         T: Resource,
     {
-        unsafe { self.resources.borrow_mut::<T>() }
+        unsafe { self.resources.borrow_mut::<T>().map(ResMut::new) }
     }
 }

@@ -1,19 +1,15 @@
 use crate::components::{ComponentSet, ComponentStorages};
 use crate::layout::Layout;
-use crate::resources::{Resource, Resources};
-use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
-use crate::world::{BorrowWorld, Comp, CompMut, Entities, NoSuchEntity, Res, ResMut, SyncWorld};
+use crate::storage::{Component, Entity, EntityStorage};
+use crate::world::{Comp, CompMut, Entities, NoSuchEntity};
 use std::any::TypeId;
 use std::mem;
-
-// TODO: Remove Resources from World and rename create_entity to create
 
 /// Container for entities, components and resources.
 #[derive(Default)]
 pub struct World {
     entities: EntityStorage,
     components: ComponentStorages,
-    resources: Resources,
 }
 
 impl World {
@@ -45,13 +41,6 @@ impl World {
         self.components.register::<T>()
     }
 
-    pub(crate) unsafe fn register_with<F>(&mut self, type_id: TypeId, storage_builder: F)
-    where
-        F: FnOnce() -> ComponentStorage,
-    {
-        self.components.register_with(type_id, storage_builder);
-    }
-
     /// Check if a component type is registered.
     #[must_use]
     pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
@@ -59,18 +48,18 @@ impl World {
     }
 
     /// Creates an `Entity` with the given `components` and returns it.
-    pub fn create_entity<C>(&mut self, components: C) -> Entity
+    pub fn create<C>(&mut self, components: C) -> Entity
     where
         C: ComponentSet,
     {
         let entity = self.entities.create();
-        let _ = self.insert_components(entity, components);
+        let _ = self.insert(entity, components);
         entity
     }
 
     /// Creates new entities with the components produced by
     /// `components_iter`. Returns the newly created entities as a slice.
-    pub fn create_entities<C, I>(&mut self, components_iter: I) -> &[Entity]
+    pub fn bulk_create<C, I>(&mut self, components_iter: I) -> &[Entity]
     where
         C: ComponentSet,
         I: IntoIterator<Item = C>,
@@ -80,7 +69,7 @@ impl World {
 
     /// Removes `entity` and all of its components from the `World`.
     /// Returns `true` if the `Entity` was successfully removed.
-    pub fn destroy_entity(&mut self, entity: Entity) -> bool {
+    pub fn destroy(&mut self, entity: Entity) -> bool {
         if !self.entities.destroy(entity) {
             return false;
         }
@@ -96,7 +85,7 @@ impl World {
 
     /// Removes all entities (and their components) produced by the iterator.
     /// Returns the number of entities successfully removed.
-    pub fn destroy_entities<'a, E>(&mut self, entities: E) -> usize
+    pub fn bulk_destroy<'a, E>(&mut self, entities: E) -> usize
     where
         E: IntoIterator<Item = &'a Entity>,
         E::IntoIter: Clone,
@@ -116,15 +105,11 @@ impl World {
 
     /// Appends the given `components` to `entity` if `entity` exists in the
     /// `World`.
-    pub fn insert_components<C>(
-        &mut self,
-        entity: Entity,
-        components: C,
-    ) -> Result<(), NoSuchEntity>
+    pub fn insert<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
     where
         C: ComponentSet,
     {
-        if !self.contains_entity(entity) {
+        if !self.contains(entity) {
             return Err(NoSuchEntity);
         }
 
@@ -135,7 +120,7 @@ impl World {
     /// Removes a component set from `entity` and returns them if they all
     /// exist in the `World` before the call.
     #[must_use = "use `delete_components` to discard the components"]
-    pub fn remove_components<C>(&mut self, entity: Entity) -> Option<C>
+    pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
     where
         C: ComponentSet,
     {
@@ -144,7 +129,7 @@ impl World {
 
     /// Deletes a component set from `entity`. This is faster than removing
     /// the components.
-    pub fn delete_components<C>(&mut self, entity: Entity)
+    pub fn delete<C>(&mut self, entity: Entity)
     where
         C: ComponentSet,
     {
@@ -153,7 +138,7 @@ impl World {
 
     /// Returns `true` if `entity` exists in the `World`.
     #[must_use]
-    pub fn contains_entity(&self, entity: Entity) -> bool {
+    pub fn contains(&self, entity: Entity) -> bool {
         self.entities.contains(entity)
     }
 
@@ -163,103 +148,34 @@ impl World {
     }
 
     /// Removes all entities and components in the world.
-    pub fn clear_entities(&mut self) {
-        self.entities.clear();
-        self.components.clear();
-    }
-
-    /// Inserts a resource of type `T` into the `World` and returns the previous
-    /// one, if any.
-    pub fn insert_resource<T>(&mut self, resource: T) -> Option<T>
-    where
-        T: Resource,
-    {
-        self.resources.insert(resource)
-    }
-
-    /// Removes a resource of type `T` from the `World` and returns it if it was
-    /// successfully removed.
-    pub fn remove_resource<T>(&mut self) -> Option<T>
-    where
-        T: Resource,
-    {
-        self.resources.remove::<T>()
-    }
-
-    /// Removes the resource with the given `TypeId` from the `World`. Returns
-    /// `true` if the resource was successfully removed.
-    pub fn delete_resource(&mut self, resource_type_id: &TypeId) -> bool {
-        self.resources.delete(resource_type_id)
-    }
-
-    /// Returns `true` if the `World` contains a resource with the given
-    /// `TypeId`.
-    #[must_use]
-    pub fn contains_resource(&self, resource_type_id: &TypeId) -> bool {
-        self.resources.contains(resource_type_id)
-    }
-
-    /// Removes all resources from the `World`.
-    pub fn clear_resources(&mut self) {
-        self.resources.clear();
-    }
-
-    /// Removes all entities, components and resources from the `World`.
     pub fn clear(&mut self) {
         self.entities.clear();
         self.components.clear();
-        self.resources.clear();
     }
 
-    pub fn sync(&self) -> SyncWorld {
-        SyncWorld::new(&self.entities, &self.components, self.resources.sync())
-    }
-
-    /// Borrows a component view or resource view from the `World`.
-    pub fn borrow<'a, T>(&'a self) -> T::Item
-    where
-        T: BorrowWorld<'a>,
-    {
-        T::borrow(self)
-    }
-
-    pub(crate) fn borrow_entities(&self) -> Entities {
+    pub fn borrow_entities(&self) -> Entities {
         Entities::new(&self.entities)
     }
 
-    pub(crate) fn borrow_comp<T>(&self) -> Option<Comp<T>>
+    pub fn borrow<T>(&self) -> Option<Comp<T>>
     where
         T: Component,
     {
         self.components
             .borrow_with_info(&TypeId::of::<T>())
-            .map(|(storage, info)| unsafe { Comp::new(storage, info) })
+            .map(|(storage, info)| unsafe { Comp::<T>::new(storage, info) })
     }
 
-    pub(crate) fn borrow_comp_mut<T>(&self) -> Option<CompMut<T>>
+    pub fn borrow_mut<T>(&self) -> Option<CompMut<T>>
     where
         T: Component,
     {
         self.components
             .borrow_with_info_mut(&TypeId::of::<T>())
-            .map(|(storage, info)| unsafe { CompMut::new(storage, info) })
+            .map(|(storage, info)| unsafe { CompMut::<T>::new(storage, info) })
     }
 
-    pub(crate) fn borrow_res<T>(&self) -> Option<Res<T>>
-    where
-        T: Resource,
-    {
-        self.resources.borrow::<T>().map(Res::new)
-    }
-
-    pub(crate) fn borrow_res_mut<T>(&self) -> Option<ResMut<T>>
-    where
-        T: Resource,
-    {
-        self.resources.borrow_mut::<T>().map(ResMut::new)
-    }
-
-    pub(crate) fn maintain(&mut self) {
+    pub fn maintain(&mut self) {
         self.entities.maintain();
     }
 }

@@ -32,6 +32,6 @@ impl<'a> Entities<'a> {
 
     #[inline]
     pub fn as_slice(&self) -> &[Entity] {
-        &self.storage
+        self.storage
     }
 }

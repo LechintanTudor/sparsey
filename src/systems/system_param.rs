@@ -1,7 +1,8 @@
 use crate::layout::ComponentInfo;
-use crate::resources::Resource;
+use crate::resources::{Res, ResMut, Resource};
 use crate::storage::Component;
-use crate::world::{BorrowSyncWorld, Comp, CompMut, Entities, Res, ResMut};
+use crate::systems::BorrowSystemData;
+use crate::world::{Comp, CompMut, Entities, World};
 use std::any::TypeId;
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -13,7 +14,7 @@ pub enum SystemParamType {
     ResMut(TypeId),
 }
 
-pub trait SystemParam: for<'a> BorrowSyncWorld<'a> {
+pub trait SystemParam: for<'a> BorrowSystemData<'a> {
     fn param_type() -> SystemParamType;
 }
 
