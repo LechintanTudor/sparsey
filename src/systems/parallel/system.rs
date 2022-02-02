@@ -1,5 +1,5 @@
 use crate::resources::SyncResources;
-use crate::systems::{BorrowSystemData, SystemParam, SystemParamType};
+use crate::systems::{BorrowLocalSystemData, BorrowSystemData, SystemParam, SystemParamType};
 use crate::world::World;
 
 pub struct System {
@@ -33,7 +33,7 @@ macro_rules! impl_into_system {
         where
             Func: Send + 'static,
             for<'a> &'a mut Func: FnMut($($param),*)
-                + FnMut($(<$param as BorrowSystemData>::Item),*)
+                + FnMut($(<$param as BorrowLocalSystemData>::Item),*)
                 + Send,
             $($param: SystemParam,)*
         {
@@ -48,7 +48,10 @@ macro_rules! impl_into_system {
 
                 #[allow(unused_variables)]
                 let function = Box::new(move |world: &World, resources: SyncResources| {
-                    call_inner(&mut self, $($param::borrow(world, resources)),*)
+                    call_inner(
+                        &mut self,
+                        $(<$param as BorrowSystemData>::borrow(world, resources)),*
+                    )
                 });
 
                 let param_types = vec![$($param::param_type(),)*].into_boxed_slice();

@@ -1,9 +1,5 @@
-pub use self::borrow::*;
-pub use self::schedule::*;
-pub use self::system::*;
-pub use self::system_param::*;
+pub use self::local::*;
+pub use self::parallel::*;
 
-mod borrow;
-mod schedule;
-mod system;
-mod system_param;
+mod local;
+mod parallel;
