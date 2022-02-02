@@ -1,12 +1,17 @@
 use crate::resources::Resources;
-use crate::systems::{BorrowLocalSystemData, SystemParam};
+use crate::systems::{BorrowLocalSystemData, SystemParam, SystemParamType};
 use crate::world::World;
 
 pub struct LocalSystem {
     function: Box<dyn FnMut(&World, &Resources) + 'static>,
+    params: Vec<SystemParamType>,
 }
 
 impl LocalSystem {
+    pub fn params(&self) -> &[SystemParamType] {
+        &self.params
+    }
+
     pub fn run(&mut self, world: &World, resources: &Resources) {
         (self.function)(world, resources)
     }
@@ -49,7 +54,9 @@ macro_rules! impl_into_system {
                     )
                 });
 
-                LocalSystem { function }
+                let params = vec![$($param::param_type(),)*];
+
+                LocalSystem { function, params }
             }
         }
     };

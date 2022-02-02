@@ -4,12 +4,12 @@ use crate::world::World;
 
 pub struct System {
     function: Box<dyn FnMut(&World, SyncResources) + Send + 'static>,
-    param_types: Box<[SystemParamType]>,
+    params: Vec<SystemParamType>,
 }
 
 impl System {
-    pub fn param_types(&self) -> &[SystemParamType] {
-        &self.param_types
+    pub fn params(&self) -> &[SystemParamType] {
+        &self.params
     }
 
     pub fn run(&mut self, world: &World, resources: SyncResources) {
@@ -54,9 +54,9 @@ macro_rules! impl_into_system {
                     )
                 });
 
-                let param_types = vec![$($param::param_type(),)*].into_boxed_slice();
+                let params = vec![$($param::param_type(),)*];
 
-                System { function, param_types }
+                System { function, params }
             }
         }
     };

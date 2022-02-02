@@ -1,6 +1,6 @@
 use crate::components::{ComponentSet, ComponentStorages};
 use crate::layout::Layout;
-use crate::storage::{Component, Entity, EntityStorage};
+use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
 use crate::world::{Comp, CompMut, Entities, NoSuchEntity};
 use std::any::TypeId;
 use std::mem;
@@ -39,6 +39,14 @@ impl World {
         T: Component,
     {
         self.components.register::<T>()
+    }
+
+    pub(crate) unsafe fn register_with(
+        &mut self,
+        component_type_id: TypeId,
+        storage_builder: impl FnOnce() -> ComponentStorage,
+    ) {
+        self.components.register_with(component_type_id, storage_builder)
     }
 
     /// Check if a component type is registered.

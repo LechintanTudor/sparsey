@@ -127,10 +127,11 @@ impl ComponentStorages {
         }
     }
 
-    pub(crate) unsafe fn register_with<F>(&mut self, type_id: TypeId, storage_builder: F)
-    where
-        F: FnOnce() -> ComponentStorage,
-    {
+    pub(crate) unsafe fn register_with(
+        &mut self,
+        type_id: TypeId,
+        storage_builder: impl FnOnce() -> ComponentStorage,
+    ) {
         if let Entry::Vacant(entry) = self.component_info.entry(type_id) {
             entry.insert(ComponentInfo {
                 storage_index: self.storages.len(),
