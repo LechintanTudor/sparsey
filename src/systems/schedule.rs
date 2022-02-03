@@ -1,10 +1,10 @@
-use crate::resources::Resources;
+use crate::resources::{Resources, SyncResources};
 use crate::systems::{IntoLocalSystem, IntoSystem, LocalSystem, System, SystemParamType};
 use crate::world::World;
 
-const DEFAULT_MAX_SYSTEMS_PER_STAGE: usize = 5;
+const DEFAULT_MAX_SYSTEMS_PER_STEP: usize = 5;
 
-pub enum ScheduleStage {
+pub enum ScheduleStep {
     Systems(Vec<System>),
     LocalSystems(Vec<LocalSystem>),
     LocalFns(Vec<Box<dyn FnMut(&mut World, &mut Resources)>>),
@@ -12,23 +12,23 @@ pub enum ScheduleStage {
 }
 
 pub struct ScheduleBuilder {
-    max_systems_per_stage: usize,
-    stages: Vec<ScheduleStage>,
-    final_stages: Vec<ScheduleStage>,
+    max_systems_per_step: usize,
+    steps: Vec<ScheduleStep>,
+    final_steps: Vec<ScheduleStep>,
 }
 
 impl ScheduleBuilder {
-    pub fn set_max_systems_per_stage(&mut self, max_systems_per_stage: usize) -> &mut Self {
-        self.max_systems_per_stage = max_systems_per_stage.max(1);
+    pub fn set_max_systems_per_step(&mut self, max_systems_per_step: usize) -> &mut Self {
+        self.max_systems_per_step = max_systems_per_step.max(1);
         self
     }
 
     pub fn add_system<P, R>(&mut self, system: impl IntoSystem<P, R>) -> &mut Self {
         let system = system.system();
 
-        fn stage_to_systems(stage: &mut ScheduleStage) -> Option<&mut Vec<System>> {
-            match stage {
-                ScheduleStage::Systems(systems) => Some(systems),
+        fn step_to_systems(step: &mut ScheduleStep) -> Option<&mut Vec<System>> {
+            match step {
+                ScheduleStep::Systems(systems) => Some(systems),
                 _ => None,
             }
         }
@@ -41,18 +41,18 @@ impl ScheduleBuilder {
         }
 
         let systems = self
-            .stages
+            .steps
             .iter_mut()
             .rev()
-            .flat_map(stage_to_systems)
+            .flat_map(step_to_systems)
             .take_while(|other_systems| no_params_conflict(other_systems, &system))
             .fuse()
-            .filter(|systems| systems.len() < self.max_systems_per_stage)
+            .filter(|systems| systems.len() < self.max_systems_per_step)
             .min_by_key(|systems| systems.len());
 
         match systems {
             Some(systems) => systems.push(system),
-            None => self.stages.push(ScheduleStage::Systems(vec![system])),
+            None => self.steps.push(ScheduleStep::Systems(vec![system])),
         }
 
         self
@@ -61,9 +61,9 @@ impl ScheduleBuilder {
     pub fn add_local_system<P, R>(&mut self, system: impl IntoLocalSystem<P, R>) -> &mut Self {
         let system = system.local_system();
 
-        match self.final_stages.last_mut() {
-            Some(ScheduleStage::LocalSystems(systems)) => systems.push(system),
-            _ => self.final_stages.push(ScheduleStage::LocalSystems(vec![system])),
+        match self.final_steps.last_mut() {
+            Some(ScheduleStep::LocalSystems(systems)) => systems.push(system),
+            _ => self.final_steps.push(ScheduleStep::LocalSystems(vec![system])),
         };
 
         self
@@ -75,17 +75,17 @@ impl ScheduleBuilder {
     ) -> &mut Self {
         let local_fn = Box::new(local_fn);
 
-        match self.final_stages.last_mut() {
-            Some(ScheduleStage::LocalFns(fns)) => fns.push(local_fn),
-            _ => self.final_stages.push(ScheduleStage::LocalFns(vec![local_fn])),
+        match self.final_steps.last_mut() {
+            Some(ScheduleStep::LocalFns(fns)) => fns.push(local_fn),
+            _ => self.final_steps.push(ScheduleStep::LocalFns(vec![local_fn])),
         }
 
         self
     }
 
     pub fn add_barrier(&mut self) -> &mut Self {
-        if matches!(self.stages.last(), Some(ScheduleStage::Systems(_))) {
-            self.stages.push(ScheduleStage::Barrier);
+        if matches!(self.steps.last(), Some(ScheduleStep::Systems(_))) {
+            self.steps.push(ScheduleStep::Barrier);
         }
 
         self
@@ -94,9 +94,9 @@ impl ScheduleBuilder {
     pub fn add_barrier_system<P, R>(&mut self, system: impl IntoLocalSystem<P, R>) -> &mut Self {
         let system = system.local_system();
 
-        match self.stages.last_mut() {
-            Some(ScheduleStage::LocalSystems(systems)) => systems.push(system),
-            _ => self.stages.push(ScheduleStage::LocalSystems(vec![system])),
+        match self.steps.last_mut() {
+            Some(ScheduleStep::LocalSystems(systems)) => systems.push(system),
+            _ => self.steps.push(ScheduleStep::LocalSystems(vec![system])),
         };
 
         self
@@ -108,33 +108,33 @@ impl ScheduleBuilder {
     ) -> &mut Self {
         let local_fn = Box::new(local_fn);
 
-        match self.stages.last_mut() {
-            Some(ScheduleStage::LocalFns(fns)) => fns.push(local_fn),
-            _ => self.stages.push(ScheduleStage::LocalFns(vec![local_fn])),
+        match self.steps.last_mut() {
+            Some(ScheduleStep::LocalFns(fns)) => fns.push(local_fn),
+            _ => self.steps.push(ScheduleStep::LocalFns(vec![local_fn])),
         }
 
         self
     }
 
     pub fn build(&mut self) -> Schedule {
-        let mut stages = std::mem::take(&mut self.stages);
-        let mut final_stages = std::mem::take(&mut self.final_stages);
-        stages.append(&mut final_stages);
+        let mut steps = std::mem::take(&mut self.steps);
+        let mut final_steps = std::mem::take(&mut self.final_steps);
+        steps.append(&mut final_steps);
 
-        Schedule { stages }
+        Schedule { steps }
     }
 }
 
 pub struct Schedule {
-    stages: Vec<ScheduleStage>,
+    steps: Vec<ScheduleStep>,
 }
 
 impl Schedule {
     pub fn builder() -> ScheduleBuilder {
         ScheduleBuilder {
-            max_systems_per_stage: DEFAULT_MAX_SYSTEMS_PER_STAGE,
-            stages: Default::default(),
-            final_stages: Default::default(),
+            max_systems_per_step: DEFAULT_MAX_SYSTEMS_PER_STEP,
+            steps: Default::default(),
+            final_steps: Default::default(),
         }
     }
 
@@ -153,14 +153,14 @@ impl Schedule {
             }
         }
 
-        for stage in self.stages.iter() {
-            match stage {
-                ScheduleStage::Systems(systems) => {
+        for step in self.steps.iter() {
+            match step {
+                ScheduleStep::Systems(systems) => {
                     for param in systems.iter().flat_map(|s| s.params()) {
                         register(world, param);
                     }
                 }
-                ScheduleStage::LocalSystems(systems) => {
+                ScheduleStep::LocalSystems(systems) => {
                     for param in systems.iter().flat_map(|s| s.params()) {
                         register(world, param);
                     }
@@ -170,34 +170,102 @@ impl Schedule {
         }
     }
 
+    pub fn max_threads(&self) -> usize {
+        fn step_to_system_count(step: &ScheduleStep) -> Option<usize> {
+            match step {
+                ScheduleStep::Systems(systems) => Some(systems.len()),
+                _ => None,
+            }
+        }
+
+        self.steps.iter().flat_map(step_to_system_count).max().unwrap_or(1)
+    }
+
     pub fn run(&mut self, world: &mut World, resources: &mut Resources) {
-        for stage in self.stages.iter_mut() {
-            match stage {
-                ScheduleStage::Systems(systems) => {
-                    let sync_resources = resources.sync();
+        #[cfg(feature = "parallel")]
+        self.run_par(world, resources);
 
-                    for system in systems.iter_mut() {
-                        system.run(world, sync_resources);
-                    }
+        #[cfg(not(feature = "parallel"))]
+        self.run_seq(world, resources);
+    }
+
+    pub fn run_seq(&mut self, world: &mut World, resources: &mut Resources) {
+        self.run_generic(world, resources, |systems, world, resources| {
+            for system in systems {
+                system.run(world, resources);
+            }
+        })
+    }
+
+    #[cfg(feature = "parallel")]
+    pub fn run_par(&mut self, world: &mut World, resources: &mut Resources) {
+        use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
+
+        self.run_generic(world, resources, |systems, world, resources| {
+            if systems.len() > 1 {
+                systems.par_iter_mut().for_each(|system| {
+                    system.run(world, resources);
+                });
+            } else {
+                for system in systems.iter_mut() {
+                    system.run(world, resources);
                 }
-                ScheduleStage::LocalSystems(systems) => {
-                    world.maintain();
+            }
+        })
+    }
 
+    #[cfg(feature = "parallel")]
+    pub fn run_in_thread_pool(
+        &mut self,
+        world: &mut World,
+        resources: &mut Resources,
+        thread_pool: &rayon::ThreadPool,
+    ) {
+        use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
+
+        self.run_generic(world, resources, |systems, world, resources| {
+            if systems.len() > 1 {
+                thread_pool.install(|| {
+                    systems.par_iter_mut().for_each(|system| {
+                        system.run(world, resources);
+                    });
+                });
+            } else {
+                for system in systems.iter_mut() {
+                    system.run(world, resources);
+                }
+            }
+        })
+    }
+
+    pub fn into_steps(self) -> Vec<ScheduleStep> {
+        self.steps
+    }
+
+    fn run_generic(
+        &mut self,
+        world: &mut World,
+        resources: &mut Resources,
+        mut system_runner: impl FnMut(&mut [System], &World, SyncResources) + Send,
+    ) {
+        for step in self.steps.iter_mut() {
+            match step {
+                ScheduleStep::Systems(systems) => {
+                    system_runner(systems, world, resources.sync());
+                    world.maintain();
+                }
+                ScheduleStep::LocalSystems(systems) => {
                     for system in systems.iter_mut() {
                         system.run(world, resources);
                     }
                 }
-                ScheduleStage::LocalFns(fns) => {
-                    world.maintain();
-
+                ScheduleStep::LocalFns(fns) => {
                     for local_fn in fns {
                         (local_fn)(world, resources);
                     }
                 }
-                ScheduleStage::Barrier => world.maintain(),
+                ScheduleStep::Barrier => world.maintain(),
             }
         }
-
-        world.maintain();
     }
 }
