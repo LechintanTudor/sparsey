@@ -1,5 +1,7 @@
 use crate::resources::{Resources, SyncResources};
-use crate::systems::{IntoLocalSystem, IntoSystem, LocalSystem, System, SystemParamType};
+use crate::systems::{
+    IntoLocalFn, IntoLocalSystem, IntoSystem, LocalFn, LocalSystem, System, SystemParamType,
+};
 use crate::world::World;
 
 const DEFAULT_MAX_SYSTEMS_PER_STEP: usize = 5;
@@ -7,7 +9,7 @@ const DEFAULT_MAX_SYSTEMS_PER_STEP: usize = 5;
 pub enum ScheduleStep {
     Systems(Vec<System>),
     LocalSystems(Vec<LocalSystem>),
-    LocalFns(Vec<Box<dyn FnMut(&mut World, &mut Resources)>>),
+    LocalFns(Vec<LocalFn>),
     Barrier,
 }
 
@@ -69,11 +71,8 @@ impl ScheduleBuilder {
         self
     }
 
-    pub fn add_local_fn(
-        &mut self,
-        local_fn: impl FnMut(&mut World, &mut Resources) + 'static,
-    ) -> &mut Self {
-        let local_fn = Box::new(local_fn);
+    pub fn add_local_fn<R>(&mut self, local_fn: impl IntoLocalFn<R>) -> &mut Self {
+        let local_fn = local_fn.local_fn();
 
         match self.final_steps.last_mut() {
             Some(ScheduleStep::LocalFns(fns)) => fns.push(local_fn),
@@ -106,7 +105,7 @@ impl ScheduleBuilder {
         &mut self,
         local_fn: impl FnMut(&mut World, &mut Resources) + 'static,
     ) -> &mut Self {
-        let local_fn = Box::new(local_fn);
+        let local_fn = local_fn.local_fn();
 
         match self.steps.last_mut() {
             Some(ScheduleStep::LocalFns(fns)) => fns.push(local_fn),
@@ -261,7 +260,7 @@ impl Schedule {
                 }
                 ScheduleStep::LocalFns(fns) => {
                     for local_fn in fns {
-                        (local_fn)(world, resources);
+                        (local_fn).run(world, resources);
                     }
                 }
                 ScheduleStep::Barrier => world.maintain(),
