@@ -1,6 +1,7 @@
 use crate::components::{ComponentSet, ComponentStorages};
 use crate::layout::Layout;
 use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
+use crate::utils::panic_missing_comp;
 use crate::world::{Comp, CompMut, Entities, NoSuchEntity};
 use std::any::TypeId;
 use std::mem;
@@ -165,22 +166,24 @@ impl World {
         Entities::new(&self.entities)
     }
 
-    pub fn borrow<T>(&self) -> Option<Comp<T>>
+    pub fn borrow<T>(&self) -> Comp<T>
     where
         T: Component,
     {
         self.components
             .borrow_with_info(&TypeId::of::<T>())
             .map(|(storage, info)| unsafe { Comp::<T>::new(storage, info) })
+            .unwrap_or_else(|| panic_missing_comp::<T>())
     }
 
-    pub fn borrow_mut<T>(&self) -> Option<CompMut<T>>
+    pub fn borrow_mut<T>(&self) -> CompMut<T>
     where
         T: Component,
     {
         self.components
             .borrow_with_info_mut(&TypeId::of::<T>())
             .map(|(storage, info)| unsafe { CompMut::<T>::new(storage, info) })
+            .unwrap_or_else(|| panic_missing_comp::<T>())
     }
 
     pub fn maintain(&mut self) {

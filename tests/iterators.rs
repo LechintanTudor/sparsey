@@ -13,11 +13,14 @@ fn test_sparse() {
     world.register::<C>();
     world.register::<D>();
 
-    let e0 = world.create_entity((A(0), B(0)));
-    let e1 = world.create_entity((A(1), B(1), C(1)));
-    let e2 = world.create_entity((A(2), B(2), C(2), D(2)));
+    let e0 = world.create((A(0), B(0)));
+    let e1 = world.create((A(1), B(1), C(1)));
+    let e2 = world.create((A(2), B(2), C(2), D(2)));
 
-    let (a, b, c, d) = world.borrow::<(Comp<A>, Comp<B>, Comp<C>, Comp<D>)>();
+    let a = world.borrow::<A>();
+    let b = world.borrow::<B>();
+    let c = world.borrow::<C>();
+    let d = world.borrow::<D>();
 
     let i = (&a, &b).iter();
     assert!(i.is_sparse());
@@ -54,11 +57,14 @@ fn test_dense() {
         .build();
 
     let mut world = World::with_layout(&layout);
-    let e0 = world.create_entity((A(0), B(0)));
-    let e1 = world.create_entity((A(1), B(1), C(1)));
-    let e2 = world.create_entity((A(2), B(2), C(2), D(2)));
+    let e0 = world.create((A(0), B(0)));
+    let e1 = world.create((A(1), B(1), C(1)));
+    let e2 = world.create((A(2), B(2), C(2), D(2)));
 
-    let (a, b, c, d) = world.borrow::<(Comp<A>, Comp<B>, Comp<C>, Comp<D>)>();
+    let a = world.borrow::<A>();
+    let b = world.borrow::<B>();
+    let c = world.borrow::<C>();
+    let d = world.borrow::<D>();
 
     let i = (&a, &b).iter();
     assert!(i.is_dense());

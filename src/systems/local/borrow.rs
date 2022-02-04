@@ -1,6 +1,6 @@
 use crate::resources::{Res, ResMut, Resource, Resources};
 use crate::storage::Component;
-use crate::utils::{panic_missing_comp, panic_missing_res};
+use crate::utils::panic_missing_res;
 use crate::world::{Comp, CompMut, Entities, World};
 
 pub trait BorrowLocalSystemData<'a> {
@@ -24,7 +24,7 @@ where
     type Item = Comp<'a, T>;
 
     fn borrow(world: &'a World, _resources: &'a Resources) -> Self::Item {
-        world.borrow::<T>().unwrap_or_else(|| panic_missing_comp::<T>())
+        world.borrow::<T>()
     }
 }
 
@@ -35,7 +35,7 @@ where
     type Item = CompMut<'a, T>;
 
     fn borrow(world: &'a World, _resources: &'a Resources) -> Self::Item {
-        world.borrow_mut::<T>().unwrap_or_else(|| panic_missing_comp::<T>())
+        world.borrow_mut::<T>()
     }
 }
 

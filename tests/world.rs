@@ -5,26 +5,26 @@ use sparsey::prelude::*;
 use std::any::TypeId;
 
 #[test]
-fn test_entities_crud() {
+fn test_entities() {
     let mut world = World::default();
 
     // Create
-    let e0 = world.create_entity(());
-    assert!(world.contains_entity(e0));
+    let e0 = world.create(());
+    assert!(world.contains(e0));
     assert_eq!(world.entities(), &[e0]);
 
     // Destroy
-    assert!(world.destroy_entity(e0));
-    assert!(!world.destroy_entity(e0));
-    assert!(!world.contains_entity(e0));
+    assert!(world.destroy(e0));
+    assert!(!world.destroy(e0));
+    assert!(!world.contains(e0));
     assert_eq!(world.entities(), &[]);
 
     // Clear
-    let e0 = world.create_entity(());
-    let e1 = world.create_entity(());
-    world.clear_entities();
-    assert!(!world.contains_entity(e0));
-    assert!(!world.contains_entity(e1));
+    let e0 = world.create(());
+    let e1 = world.create(());
+    world.clear();
+    assert!(!world.contains(e0));
+    assert!(!world.contains(e1));
     assert_eq!(world.entities(), &[]);
 }
 
@@ -43,47 +43,55 @@ fn test_register() {
 }
 
 #[test]
-fn test_components_crud() {
+fn test_components() {
     let mut world = World::default();
     world.register::<A>();
     world.register::<B>();
     world.register::<C>();
 
-    // Insert
-    let e0 = world.create_entity((A(0), B(0)));
+    // Create
+    let e0 = world.create((A(0), B(0)));
 
     {
-        let (a, b) = world.borrow::<(Comp<A>, Comp<B>)>();
+        let a = world.borrow::<A>();
+        let b = world.borrow::<B>();
+
         assert_eq!(a.get(e0).copied(), Some(A(0)));
         assert_eq!(b.get(e0).copied(), Some(B(0)));
     }
 
-    // Append
-    assert!(world.insert_components(e0, (C(0),)).is_ok());
+    // Insert
+    assert!(world.insert(e0, (C(0),)).is_ok());
 
     {
-        let (a, b, c) = world.borrow::<(Comp<A>, Comp<B>, Comp<C>)>();
+        let a = world.borrow::<A>();
+        let b = world.borrow::<B>();
+        let c = world.borrow::<C>();
+
         assert_eq!(a.get(e0).copied(), Some(A(0)));
         assert_eq!(b.get(e0).copied(), Some(B(0)));
         assert_eq!(c.get(e0).copied(), Some(C(0)));
     }
 
     // Remove
-    assert_eq!(world.remove_components::<(A, B)>(e0), Some((A(0), B(0))));
-    assert_eq!(world.remove_components::<(A, B)>(e0), None);
+    assert_eq!(world.remove::<(A, B)>(e0), Some((A(0), B(0))));
+    assert_eq!(world.remove::<(A, B)>(e0), None);
 
     {
-        let (a, b, c) = world.borrow::<(Comp<A>, Comp<B>, Comp<C>)>();
+        let a = world.borrow::<A>();
+        let b = world.borrow::<B>();
+        let c = world.borrow::<C>();
+
         assert_eq!(a.get(e0), None);
         assert_eq!(b.get(e0), None);
         assert_eq!(c.get(e0).copied(), Some(C(0)));
     }
 
     // Delete
-    world.delete_components::<(C,)>(e0);
+    world.delete::<(C,)>(e0);
 
     {
-        let c = world.borrow::<Comp<C>>();
+        let c = world.borrow::<C>();
         assert_eq!(c.get(e0), None);
     }
 }
