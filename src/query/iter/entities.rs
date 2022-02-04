@@ -38,14 +38,14 @@ where
 }
 
 pub trait IntoEntityIter: EntityIterator + Sized {
-    fn entities(self) -> EntityIter<Self>;
+    fn with_entity(self) -> EntityIter<Self>;
 }
 
 impl<I> IntoEntityIter for I
 where
     I: EntityIterator,
 {
-    fn entities(self) -> EntityIter<Self> {
+    fn with_entity(self) -> EntityIter<Self> {
         EntityIter(self)
     }
 }

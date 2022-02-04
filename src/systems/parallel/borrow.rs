@@ -1,7 +1,7 @@
 use crate::resources::{Res, ResMut, Resource, SyncResources};
 use crate::storage::Component;
 use crate::systems::BorrowLocalSystemData;
-use crate::utils::{panic_missing_res};
+use crate::utils::panic_missing_res;
 use crate::world::{Comp, CompMut, Entities, World};
 
 pub trait BorrowSystemData<'a>: BorrowLocalSystemData<'a> {

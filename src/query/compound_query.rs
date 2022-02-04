@@ -9,12 +9,28 @@ pub trait IntoCompoundQueryParts<'a> {
     fn into_compound_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude);
 }
 
-pub trait CompoundQuery<'a>: IntoCompoundQueryParts<'a> {
+pub trait CompoundQuery<'a>: IntoCompoundQueryParts<'a> + Sized {
     fn get(self, entity: Entity) -> Option<<Self::Get as Query<'a>>::Item>;
 
     fn contains(self, entity: Entity) -> bool;
 
     fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>;
+
+    fn for_each<F>(self, f: F)
+    where
+        F: FnMut(<Self::Get as Query<'a>>::Item),
+    {
+        self.iter().for_each(f)
+    }
+
+    fn for_each_with_entity<F>(self, f: F)
+    where
+        F: FnMut((Entity, <Self::Get as Query<'a>>::Item)),
+    {
+        use crate::query::iter::IntoEntityIter;
+
+        self.iter().with_entity().for_each(f)
+    }
 
     fn entities(self) -> Option<&'a [Entity]>;
 

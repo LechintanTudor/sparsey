@@ -24,27 +24,27 @@ fn test_sparse() {
 
     let i = (&a, &b).iter();
     assert!(i.is_sparse());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e0, e1, e2]));
 
     let i = (&a, &b, &c).iter();
     assert!(i.is_sparse());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e1, e2]));
 
     let i = (&a, &b, &c, &d).iter();
     assert!(i.is_sparse());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e2]));
 
     let i = (&a, &b).exclude(&c).iter();
     assert!(i.is_sparse());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e0]));
 
     let i = (&a, &b, &c).exclude(&d).iter();
     assert!(i.is_sparse());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e1]));
 }
 
@@ -68,26 +68,26 @@ fn test_dense() {
 
     let i = (&a, &b).iter();
     assert!(i.is_dense());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e0, e1, e2]));
 
     let i = (&a, &b, &c).iter();
     assert!(i.is_dense());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e1, e2]));
 
     let i = (&a, &b, &c, &d).iter();
     assert!(i.is_dense());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e2]));
 
     let i = (&a, &b).exclude(&c).iter();
     assert!(i.is_dense());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e0]));
 
     let i = (&a, &b, &c).exclude(&d).iter();
     assert!(i.is_dense());
-    let e = i.entities().map(|(e, _)| e).collect::<HashSet<_>>();
+    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
     assert_eq!(e, HashSet::from_iter([e1]));
 }
