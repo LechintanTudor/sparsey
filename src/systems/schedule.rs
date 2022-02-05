@@ -25,7 +25,7 @@ impl ScheduleBuilder {
         self
     }
 
-    pub fn add_system<P, R>(&mut self, system: impl IntoSystem<P, R>) -> &mut Self {
+    pub fn add_system<P>(&mut self, system: impl IntoSystem<P>) -> &mut Self {
         let system = system.system();
 
         fn step_to_systems(step: &mut ScheduleStep) -> Option<&mut Vec<System>> {
@@ -60,7 +60,7 @@ impl ScheduleBuilder {
         self
     }
 
-    pub fn add_local_system<P, R>(&mut self, system: impl IntoLocalSystem<P, R>) -> &mut Self {
+    pub fn add_local_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
         let system = system.local_system();
 
         match self.final_steps.last_mut() {
@@ -71,7 +71,7 @@ impl ScheduleBuilder {
         self
     }
 
-    pub fn add_local_fn<R>(&mut self, local_fn: impl IntoLocalFn<R>) -> &mut Self {
+    pub fn add_local_fn(&mut self, local_fn: impl IntoLocalFn) -> &mut Self {
         let local_fn = local_fn.local_fn();
 
         match self.final_steps.last_mut() {
@@ -90,7 +90,7 @@ impl ScheduleBuilder {
         self
     }
 
-    pub fn add_barrier_system<P, R>(&mut self, system: impl IntoLocalSystem<P, R>) -> &mut Self {
+    pub fn add_barrier_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
         let system = system.local_system();
 
         match self.steps.last_mut() {

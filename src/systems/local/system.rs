@@ -17,11 +17,11 @@ impl LocalSystem {
     }
 }
 
-pub trait IntoLocalSystem<Params, Return> {
+pub trait IntoLocalSystem<Params> {
     fn local_system(self) -> LocalSystem;
 }
 
-impl IntoLocalSystem<(), ()> for LocalSystem {
+impl IntoLocalSystem<()> for LocalSystem {
     fn local_system(self) -> LocalSystem {
         self
     }
@@ -29,7 +29,7 @@ impl IntoLocalSystem<(), ()> for LocalSystem {
 
 macro_rules! impl_into_system {
     ($($param:ident),*) => {
-        impl<Func, $($param),*> IntoLocalSystem<($($param,)*), ()> for Func
+        impl<Func, $($param),*> IntoLocalSystem<($($param,)*)> for Func
         where
             Func: Send + 'static,
             for<'a> &'a mut Func: FnMut($($param),*)

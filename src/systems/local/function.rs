@@ -9,15 +9,21 @@ impl LocalFn {
     }
 }
 
-pub trait IntoLocalFn<Return> {
+pub trait IntoLocalFn {
     fn local_fn(self) -> LocalFn;
 }
 
-impl<F> IntoLocalFn<()> for F
+impl<F> IntoLocalFn for F
 where
     F: FnMut(&mut World, &mut Resources) + 'static,
 {
     fn local_fn(self) -> LocalFn {
         LocalFn(Box::new(self))
+    }
+}
+
+impl IntoLocalFn for LocalFn {
+    fn local_fn(self) -> LocalFn {
+        self
     }
 }

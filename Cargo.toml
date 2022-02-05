@@ -15,7 +15,6 @@ default = ["parallel"]
 parallel = ["rayon"]
 
 [dependencies]
-anyhow = "1"
 atomic_refcell = "0.1.8"
 downcast-rs = "1.2"
 rustc-hash = "1.1"
