@@ -40,7 +40,7 @@ fn print_sprites(pos: Comp<Position>, sprites: Comp<Sprite>, transparencies: Com
 }
 
 fn main() {
-    let mut dispatcher = Dispatcher::builder().add_system(print_sprites.system()).build();
+    let mut schedule = Schedule::builder().add_system(print_sprites).build();
 
     let layout = Layout::builder()
         .add_group(<(Position, Sprite)>::group())
@@ -48,12 +48,14 @@ fn main() {
         .build();
 
     let mut world = World::with_layout(&layout);
-    dispatcher.register_storages(&mut world);
+    schedule.set_up(&mut world);
 
-    world.create_entity((Position(0, 0), Sprite { id: 0 }));
-    world.create_entity((Position(1, 1), Sprite { id: 1 }));
-    world.create_entity((Position(2, 2), Sprite { id: 2 }, Transparent));
-    world.create_entity((Position(3, 3), Sprite { id: 3 }, Transparent));
+    world.create((Position(0, 0), Sprite { id: 0 }));
+    world.create((Position(1, 1), Sprite { id: 1 }));
+    world.create((Position(2, 2), Sprite { id: 2 }, Transparent));
+    world.create((Position(3, 3), Sprite { id: 3 }, Transparent));
 
-    dispatcher.run_seq(&mut world).unwrap();
+    let mut resources = Resources::default();
+
+    schedule.run_seq(&mut world, &mut resources);
 }

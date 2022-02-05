@@ -7,15 +7,16 @@ struct Position(i32, i32);
 struct Velocity(i32, i32);
 
 #[derive(Clone, Copy, Debug)]
-struct Immovable;
+struct Frozen;
 
-fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
+fn update_velocity(mut vel: CompMut<Velocity>, frz: Comp<Frozen>) {
     println!("[Update velocities]");
 
-    for (e, vel) in (&mut vel).include(&imv).iter().entities() {
-        println!("{:?} is immovable; set its velocity to (0, 0)", e);
+    (&mut vel).include(&frz).for_each_with_entity(|(e, vel)| {
+        println!("{:?} is frozen. Set its velocity to (0, 0)", e);
+
         *vel = Velocity(0, 0);
-    }
+    });
 
     println!();
 }
@@ -23,30 +24,30 @@ fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
 fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
     println!("[Update positions]");
 
-    for (e, (pos, vel)) in (&mut pos, &vel).iter().entities() {
+    (&mut pos, &vel).for_each_with_entity(|(e, (pos, vel))| {
         pos.0 += vel.0;
         pos.1 += vel.1;
 
         println!("{:?}, {:?}, {:?}", e, *pos, vel);
-    }
+    });
 
     println!();
 }
 
 fn main() {
-    let mut dispatcher = Dispatcher::builder()
-        .add_system(update_velocity.system())
-        .add_system(update_position.system())
-        .build();
+    let mut schedule =
+        Schedule::builder().add_system(update_velocity).add_system(update_position).build();
 
     let mut world = World::default();
-    dispatcher.register_storages(&mut world);
+    schedule.set_up(&mut world);
 
-    world.create_entity((Position(0, 0), Velocity(1, 1)));
-    world.create_entity((Position(0, 0), Velocity(2, 2)));
-    world.create_entity((Position(0, 0), Velocity(3, 3), Immovable));
+    world.create((Position(0, 0), Velocity(1, 1)));
+    world.create((Position(0, 0), Velocity(2, 2)));
+    world.create((Position(0, 0), Velocity(3, 3), Frozen));
+
+    let mut resources = Resources::default();
 
     for _ in 0..3 {
-        dispatcher.run_seq(&mut world).unwrap();
+        schedule.run_seq(&mut world, &mut resources);
     }
 }

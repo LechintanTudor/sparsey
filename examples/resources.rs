@@ -5,44 +5,60 @@ struct Lava {
     height: i32,
 }
 
+#[derive(Debug)]
+struct FallenInLava {
+    entities: Vec<Entity>,
+}
+
 #[derive(Clone, Copy, Debug)]
-struct Position(i32, i32);
+struct Position {
+    y: i32,
+}
 
 fn raise_lava(mut lava: ResMut<Lava>) {
     lava.height += 2;
     println!("[Lava raised to y={}]", lava.height);
 }
 
-fn fall_in_lava(mut commands: Commands, pos: Comp<Position>, lava: Res<Lava>) {
-    for (e, pos) in (&pos).iter().entities() {
-        if pos.1 < lava.height {
-            println!("{:?} with y={} fell into lava", e, pos.1);
-            commands.destroy_entity(e);
+fn fall_in_lava(pos: Comp<Position>, lava: Res<Lava>, mut fallen_in_lava: ResMut<FallenInLava>) {
+    (&pos).for_each_with_entity(|(e, pos)| {
+        if pos.y < lava.height {
+            println!("{:?} with y={} fell in lava", e, pos.y);
+            fallen_in_lava.entities.push(e);
         }
-    }
+    });
 
     println!();
 }
 
+fn destroy_fallen_in_lava(world: &mut World, resources: &mut Resources) {
+    let mut fallen_in_lava = resources.borrow_mut::<FallenInLava>().unwrap();
+    world.bulk_destroy(&fallen_in_lava.entities);
+    fallen_in_lava.entities.clear();
+}
+
 fn main() {
-    let mut dispatcher = Dispatcher::builder()
-        .add_system(raise_lava.system())
-        .add_system(fall_in_lava.system())
+    let mut schedule = Schedule::builder()
+        .add_system(raise_lava)
+        .add_system(fall_in_lava)
+        .add_local_fn(destroy_fallen_in_lava)
         .build();
 
     let mut world = World::default();
-    dispatcher.register_storages(&mut world);
+    schedule.set_up(&mut world);
 
-    world.create_entity((Position(0, 0),));
-    world.create_entity((Position(0, 1),));
-    world.create_entity((Position(0, 2),));
-    world.create_entity((Position(0, 3),));
-    world.create_entity((Position(0, 4),));
-    world.create_entity((Position(0, 5),));
+    world.create((Position { y: 0 },));
+    world.create((Position { y: 1 },));
+    world.create((Position { y: 2 },));
+    world.create((Position { y: 3 },));
+    world.create((Position { y: 4 },));
+    world.create((Position { y: 5 },));
 
-    world.insert_resource(Lava { height: 0 });
+    let mut resources = Resources::default();
+    resources.insert(Lava { height: 0 });
+    resources.insert(FallenInLava { entities: Vec::new() });
 
     for _ in 0..3 {
-        dispatcher.run_seq(&mut world).unwrap();
+        schedule.run_seq(&mut world, &mut resources);
     }
 }
