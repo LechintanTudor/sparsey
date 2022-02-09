@@ -2,8 +2,7 @@
 [![Crates.io](https://img.shields.io/crates/v/sparsey)](https://crates.io/crates/sparsey)
 [![Documentation](https://docs.rs/sparsey/badge.svg)](https://docs.rs/sparsey)
 
-Sparsey is a sparse set-based Entity Component System with lots of features and nice syntax
-\~( ˘▾˘\~)
+Sparsey is a sparse set-based Entity Component System with beautiful syntax \~( ˘▾˘\~)
 <br />
 Check out the [Sparsey Cheat Sheet](/guides/cheat_sheet.md) and [examples](/examples/) to get
 started!
@@ -12,75 +11,72 @@ started!
 ```rust
 use sparsey::prelude::*;
 
-// Components are Send + Sync + 'static types.
 struct Position(f32);
 struct Velocity(f32);
-struct Immovable;
+struct Frozen;
 
-// Sets the Velocity of Immovable entities to zero.
-fn update_velocity(mut vel: CompMut<Velocity>, imv: Comp<Immovable>) {
-    for mut vel in (&mut vel).include(&imv).iter() {
-        vel.0 = 0.0;
-    }
+fn update_velocities(mut velocities: CompMut<Velocity>, frozen: Comp<Frozen>) {
+    (&mut velocities).include(&frozen).for_each(|velocity| {
+        velocity.0 = 0.0;
+    });
 }
 
-// Adds the Velocity of each entity to its Position. 
-fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
-    for (mut pos, vel) in (&mut pos, &vel).iter() {
-        pos.0 += vel.0;
-    }
+fn update_positions(mut positions: CompMut<Position>, velocities: Comp<Velocity>) {
+    (&mut positions, &velocities).for_each(|(position, velocity)| {
+        position.0 += velocity.0;
+    })
 } 
 
 fn main() {
-    // Create a World to store our game data.
-    let mut world = World::default();
-
-    // Create a Dispatcher to run our systems.
-    let mut dispatcher = Dispatcher::builder()
-        .add_system(update_velocity.system())
-        .add_system(update_position.system())
+    let mut schedule = Schedule::builder()
+        .add_system(update_velocities)
+        .add_system(update_positions)
         .build();
 
-    // Register all component types we want to use.
-    dispatcher.register_storages(&mut world);
+    let mut world = World::default();
+    schedule.set_up(&mut world);
 
-    // Create some entities.
-    world.create_entity((Position(0.0), Velocity(1.0)));
-    world.create_entity((Position(0.0), Velocity(2.0)));
-    world.create_entity((Position(0.0), Velocity(3.0), Immovable));
+    world.create((Position(0.0), Velocity(1.0)));
+    world.create((Position(0.0), Velocity(2.0)));
+    world.create((Position(0.0), Velocity(3.0), Immovable));
 
-    // Run the systems 3 times.
-    for _ in 0..3 {
-        dispatcher.run_seq(&mut world).unwrap();
-        world.increment_tick();
+    let mut resources = Resources::default();
+
+    for _ in 0..5 {
+        schedule.run(&mut world, &mut resources);
     }
 }
 ```
 
 # Features
-## Easy to Write Systems
-Systems are plain functions that may return a `SystemResult` to signal errors.
+## Easy to Use Systems
+Systems are plain functions that borrow data from `World` and `Resources`.
 
 ```rust
-fn print_alive_entities(hp: Comp<Hp>) {
-    for (entity, hp) in (&hp).iter().entities() {
-        if hp.0 > 0 {
-            println!("{:?} - {:?}", entity, hp);
-        }
-    }
+fn update_positions(mut positions: CompMut<Position>, velocities: Comp<Velocity>) {
+    (&mut positions, &velocities).for_each(|(position, velocity)| {
+        position.0 += velocity.0;
+    })
 }
 
-fn save_entities(save_file: ResMut<SaveFile>, position: Comp<Position>) -> SystemResult {
-    for (entity, position) in (&position).iter().entities() {
-        save_file.save_entity_with_position(entity, position)?;
-    }
-
-    Ok(())
+fn update_hps(mut hps: CompMut<Hp>, heals: Comp<Heal>, heal_multipler: Res<HealMultiplier>) {
+    (&mut hps, &heals).for_each(|(hp, heal)| {
+        hp.0 += heal.0 * heal_multiplier.0;
+    })
 }
 ```
 
+Systems will be scheduled to run in parallel if their paramters don't conflict.
+
+```rust
+let schedule = Schedule::builder()
+    .add_system(update_positions)
+    .add_system(update_hps)
+    .build()
+```
+
 ## Expressive Queries
-Get, include, exclude and filter components using Sparsey's query API.
+Get, include and exclude components using Sparsey's query API.
 
 ```rust
 fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
@@ -95,25 +91,6 @@ fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
 
     // Iter components A from entities with A and B, without C.
     for a in (&a).include(&b).exclude(&c).iter() {}
-
-    // Iter components A from entities with A and B, without C and with D xor E.
-    for a in (&a).include(&b).exclude(&c).filter(contains(&d) ^ contains(&e)).iter() {}
-}
-```
-
-## Granular Change Detection
-Filter queries based on whether or not a component or component set was changed.
-
-```rust
-fn change_detection(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
-    // Iter changed A components.
-    for a in changed(&a).iter() {}
-
-    // Iter A, B component sets where A or B was changed. 
-    for (a, b) in changed((&a, &b)).iter() {}
-
-    // Iter A, B, C component sets where A or B was changed and C was changed. 
-    for ((a, b), c) in (changed((&a, &b)), changed(&c)).iter() {}
 }
 ```
 
