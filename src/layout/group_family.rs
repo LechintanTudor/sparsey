@@ -8,10 +8,7 @@ pub(crate) struct LayoutGroupFamily {
 
 impl LayoutGroupFamily {
     pub fn new(group: &LayoutGroup) -> Self {
-        Self {
-            components: group.components().iter().cloned().collect(),
-            group_arities: vec![group.arity()],
-        }
+        Self { components: group.components().to_vec(), group_arities: vec![group.arity()] }
     }
 
     pub fn try_add_group(&mut self, group: &LayoutGroup) -> bool {

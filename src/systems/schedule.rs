@@ -227,9 +227,7 @@ impl Schedule {
                     system.run(world, resources);
                 });
             } else {
-                if let Some(system) = systems.last_mut() {
-                    system.run(world, resources);
-                }
+                systems.last_mut().unwrap().run(world, resources);
             }
         })
     }
@@ -251,9 +249,7 @@ impl Schedule {
                     });
                 });
             } else {
-                if let Some(system) = systems.last_mut() {
-                    system.run(world, resources);
-                }
+                systems.last_mut().unwrap().run(world, resources);
             }
         })
     }

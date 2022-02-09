@@ -1,6 +1,7 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::needless_doctest_main)]
+#![allow(clippy::unused_unit)]
 
 //! Sparsey is a sparse set-based Entity Component System with lots of features
 //! and nice syntax \~( ˘▾˘\~)

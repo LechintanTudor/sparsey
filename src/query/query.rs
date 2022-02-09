@@ -290,6 +290,7 @@ macro_rules! split_sparse {
         {
             let (mut entities, first_sparse, first_comp) = $first.split();
 
+            #[allow(clippy::eval_order_dependence)]
             let splits = (
                 (first_sparse, first_comp),
                 $(
