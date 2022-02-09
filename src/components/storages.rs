@@ -37,7 +37,7 @@ impl ComponentStorages {
             let first_storage_index = storages.len();
 
             let components = family.components();
-            let family_arity = family.max_arity();
+            let family_arity = family.arity();
 
             let mut prev_arity = 0_usize;
 
