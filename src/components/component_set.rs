@@ -10,11 +10,10 @@ use std::any::TypeId;
 /// # Safety
 /// All operations must preserve component grouping.
 pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
-    /// Inserts the `entity` and its `components` into the `storages`.
+    type RemoveResult: Send + Sync + 'static;
+
     fn insert(storages: &mut ComponentStorages, entity: Entity, components: Self);
 
-    /// Creates new entities with `Component`s produced by `components_iter`.
-    /// Returns the newly created entities as a slice.
     fn extend<'a, I>(
         entities: &'a mut EntityStorage,
         storages: &mut ComponentStorages,
@@ -23,25 +22,23 @@ pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
     where
         I: IntoIterator<Item = Self>;
 
-    /// Removes the `entity` and its `Component`s from the `storages` and
-    /// returns the `Component`s if they were successfully removed.
     #[must_use = "use `delete` to discard the components"]
-    fn remove(storages: &mut ComponentStorages, entity: Entity) -> Option<Self>;
+    fn remove(storages: &mut ComponentStorages, entity: Entity) -> Self::RemoveResult;
 
-    /// Deletes the `entity` and its `Component`s from the `storages`. This is
-    /// faster than removing them.
     fn delete(storages: &mut ComponentStorages, entity: Entity);
 }
 
 unsafe impl ComponentSet for () {
-    #[inline(always)]
-    fn insert(_: &mut ComponentStorages, _: Entity, _: Self) {
+    type RemoveResult = ();
+
+    #[inline]
+    fn insert(_storages: &mut ComponentStorages, _entity: Entity, _components: Self) {
         // Empty
     }
 
     fn extend<'a, I>(
         entities: &'a mut EntityStorage,
-        _: &mut ComponentStorages,
+        _storages: &mut ComponentStorages,
         components_iter: I,
     ) -> &'a [Entity]
     where
@@ -54,13 +51,13 @@ unsafe impl ComponentSet for () {
         unsafe { entities.get_unchecked(initial_entity_count..) }
     }
 
-    #[inline(always)]
-    fn remove(_: &mut ComponentStorages, _: Entity) -> Option<Self> {
-        Some(())
+    #[inline]
+    fn remove(_storages: &mut ComponentStorages, _entity: Entity) -> Self::RemoveResult {
+        ()
     }
 
-    #[inline(always)]
-    fn delete(_: &mut ComponentStorages, _: Entity) {
+    #[inline]
+    fn delete(_storages: &mut ComponentStorages, _entity: Entity) {
         // Empty
     }
 }
@@ -71,6 +68,8 @@ macro_rules! impl_component_set {
         where
             $($comp: Component,)+
         {
+            type RemoveResult = ($(Option<$comp>,)+);
+
             #[allow(clippy::eval_order_dependence)]
             fn insert(
                 storages: &mut ComponentStorages,
@@ -136,55 +135,18 @@ macro_rules! impl_component_set {
             }
 
             #[allow(clippy::eval_order_dependence)]
-            fn remove(storages: &mut ComponentStorages, entity: Entity) -> Option<Self> {
+            fn remove(storages: &mut ComponentStorages, entity: Entity) -> Self::RemoveResult {
                 let mut family_mask = FamilyMask::default();
                 let mut group_mask = GroupMask::default();
 
                 let storage_ptrs = ($(
                     {
-                        let (storage_ptr, family, group)
-                            = storages.get_as_ptr_with_masks(&TypeId::of::<$comp>());
-
-                        if storage_ptr.is_null() {
-                            panic_missing_comp::<$comp>();
-                        }
+                        let (storage, family, group) = get_with_masks_mut::<$comp>(storages);
 
                         family_mask |= family;
                         group_mask |= group;
-                        storage_ptr
-                    },
-                )+);
 
-                for i in iter_bit_indexes(family_mask) {
-                    unsafe {
-                        storages.ungroup_components(i, group_mask, Some(&entity));
-                    }
-                }
-
-                let components = unsafe { (
-                    $((&mut *storage_ptrs.$idx).remove::<$comp>(entity),)+
-                ) };
-
-                Some(($(components.$idx?,)+))
-            }
-
-            #[allow(clippy::eval_order_dependence)]
-            fn delete(storages: &mut ComponentStorages, entity: Entity) {
-                let mut family_mask = FamilyMask::default();
-                let mut group_mask = GroupMask::default();
-
-                let storage_ptrs = ($(
-                    {
-                        let (storage_ptr, family, group)
-                            = storages.get_as_ptr_with_masks(&TypeId::of::<$comp>());
-
-                        if storage_ptr.is_null() {
-                            panic_missing_comp::<$comp>();
-                        }
-
-                        family_mask |= family;
-                        group_mask |= group;
-                        storage_ptr
+                        storage as *mut ComponentStorage
                     },
                 )+);
 
@@ -195,7 +157,36 @@ macro_rules! impl_component_set {
                 }
 
                 unsafe {
-                    $((&mut *storage_ptrs.$idx).remove::<$comp>(entity);)+
+                    (
+                        $((&mut *storage_ptrs.$idx).remove::<$comp>(entity),)+
+                    )
+                }
+            }
+
+            #[allow(clippy::eval_order_dependence)]
+            fn delete(storages: &mut ComponentStorages, entity: Entity) {
+                let mut family_mask = FamilyMask::default();
+                let mut group_mask = GroupMask::default();
+
+                let storage_ptrs = ($(
+                    {
+                        let (storage, family, group) = get_with_masks_mut::<$comp>(storages);
+
+                        family_mask |= family;
+                        group_mask |= group;
+
+                        storage as *mut ComponentStorage
+                    },
+                )+);
+
+                for i in iter_bit_indexes(family_mask) {
+                    unsafe {
+                        storages.ungroup_components(i, group_mask, Some(&entity));
+                    }
+                }
+
+                unsafe {
+                    $((&mut *storage_ptrs.$idx).delete::<$comp>(entity);)+
                 }
             }
         }
@@ -211,6 +202,15 @@ where
     storages
         .get_with_family_mask_mut(&TypeId::of::<T>())
         .unwrap_or_else(|| panic_missing_comp::<T>())
+}
+
+fn get_with_masks_mut<T>(
+    storages: &mut ComponentStorages,
+) -> (&mut ComponentStorage, FamilyMask, GroupMask)
+where
+    T: Component,
+{
+    storages.get_with_masks_mut(&TypeId::of::<T>()).unwrap_or_else(|| panic_missing_comp::<T>())
 }
 
 fn borrow_with_family_mask_mut<T>(

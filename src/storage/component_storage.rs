@@ -91,6 +91,27 @@ impl ComponentStorage {
         Some(removed)
     }
 
+    pub(crate) unsafe fn delete<T>(&mut self, entity: Entity) {
+        let index = match self.sparse.remove(entity) {
+            Some(index) => index,
+            None => return,
+        };
+
+        self.len -= 1;
+
+        let last_entity = *self.entities.as_ptr().add(self.len);
+        *self.entities.as_ptr().add(index) = last_entity;
+
+        if index < self.len {
+            let index_entity = IndexEntity::new(index as u32, last_entity.version());
+            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(index_entity);
+        }
+
+        let components = self.components.cast::<T>().as_ptr();
+        ptr::drop_in_place(components.add(index));
+        ptr::copy(components.add(self.len), components.add(index), 1);
+    }
+
     pub(crate) fn remove_and_drop(&mut self, entity: Entity) {
         let index = match self.sparse.remove(entity) {
             Some(index) => index,

@@ -15,16 +15,16 @@
 //!     world.register::<Position>();
 //!     world.register::<Velocity>();
 //!
-//!     world.create_entity((Position(0.0, 0.0), Velocity(1.0, 2.0)));
-//!     world.create_entity((Position(0.0, 0.0), Velocity(3.0, 4.0)));
+//!     world.create((Position(0.0, 0.0), Velocity(1.0, 2.0)));
+//!     world.create((Position(0.0, 0.0), Velocity(3.0, 4.0)));
+//!     
+//!     let mut positions = world.borrow_mut::<Position>();
+//!     let velocities = world.borrow::<Velocity>();
 //!
-//!     let (mut positions, velocities)
-//!         = world.borrow::<(CompMut<Position>, Comp<Velocity>)>();
-//!
-//!     for (mut position, velocity) in (&mut positions, &velocities).iter() {
+//!     (&mut positions, &velocities).for_each(|(position, velocity)| {
 //!         position.0 += velocity.0;
 //!         position.1 += velocity.1;
-//!     }
+//!     });
 //! }
 //! ```
 

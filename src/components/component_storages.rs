@@ -6,9 +6,9 @@ use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::collections::hash_map::Entry;
+use std::mem;
 use std::ops::Range;
 use std::ptr::NonNull;
-use std::{mem, ptr};
 
 /// Container for `ComponentStorage`s. Also manages component grouping.
 #[derive(Default)]
@@ -316,20 +316,17 @@ impl ComponentStorages {
         }
     }
 
-    pub(crate) fn get_as_ptr_with_masks(
-        &self,
+    pub(crate) fn get_with_masks_mut(
+        &mut self,
         type_id: &TypeId,
-    ) -> (*mut ComponentStorage, FamilyMask, GroupMask) {
-        self.component_info
-            .get(type_id)
-            .map(|info| unsafe {
-                (
-                    self.storages.get_unchecked(info.storage_index).as_ptr(),
-                    info.family_mask,
-                    info.group_mask,
-                )
-            })
-            .unwrap_or((ptr::null_mut(), 0, 0))
+    ) -> Option<(&mut ComponentStorage, FamilyMask, GroupMask)> {
+        self.component_info.get(type_id).map(|info| unsafe {
+            (
+                self.storages.get_unchecked_mut(info.storage_index).get_mut(),
+                info.family_mask,
+                info.group_mask,
+            )
+        })
     }
 
     pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut ComponentStorage> {

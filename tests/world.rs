@@ -74,8 +74,8 @@ fn test_components() {
     }
 
     // Remove
-    assert_eq!(world.remove::<(A, B)>(e0), Some((A(0), B(0))));
-    assert_eq!(world.remove::<(A, B)>(e0), None);
+    assert_eq!(world.remove::<(A, B)>(e0), (Some(A(0)), Some(B(0))));
+    assert_eq!(world.remove::<(A, B)>(e0), (None, None));
 
     {
         let a = world.borrow::<A>();

@@ -129,7 +129,7 @@ impl World {
     /// Removes a component set from `entity` and returns them if they all
     /// exist in the `World` before the call.
     #[must_use = "use `delete_components` to discard the components"]
-    pub fn remove<C>(&mut self, entity: Entity) -> Option<C>
+    pub fn remove<C>(&mut self, entity: Entity) -> C::RemoveResult
     where
         C: ComponentSet,
     {
