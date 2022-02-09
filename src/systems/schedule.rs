@@ -3,8 +3,135 @@ use crate::systems::{
     IntoLocalFn, IntoLocalSystem, IntoSystem, LocalFn, LocalSystem, System, SystemParamType,
 };
 use crate::world::World;
+use std::cmp::Ordering;
+use std::fmt;
 
 const DEFAULT_MAX_SYSTEMS_PER_STEP: usize = 5;
+
+enum SimpleScheduleStep {
+    System(System),
+    LocalSystem(LocalSystem),
+    LocalFn(LocalFn),
+    Barrier,
+}
+
+impl fmt::Debug for SimpleScheduleStep {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::System(_) => write!(f, "SimpleScheduleStep::System"),
+            Self::LocalSystem(_) => write!(f, "SimpleScheduleStep::LocalSystem"),
+            Self::LocalFn(_) => write!(f, "SimpleScheduleStep::LocalFn"),
+            Self::Barrier => write!(f, "SimpleScheduleStep::Barrier"),
+        }
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct ScheduleBuilder {
+    steps: Vec<SimpleScheduleStep>,
+    final_steps: Vec<SimpleScheduleStep>,
+}
+
+impl ScheduleBuilder {
+    pub fn add_system<P>(&mut self, system: impl IntoSystem<P>) -> &mut Self {
+        self.steps.push(SimpleScheduleStep::System(system.system()));
+        self
+    }
+
+    pub fn add_local_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
+        self.final_steps.push(SimpleScheduleStep::LocalSystem(system.local_system()));
+        self
+    }
+
+    pub fn add_local_fn(&mut self, local_fn: impl IntoLocalFn) -> &mut Self {
+        self.final_steps.push(SimpleScheduleStep::LocalFn(local_fn.local_fn()));
+        self
+    }
+
+    pub fn add_barrier(&mut self) -> &mut Self {
+        self.steps.push(SimpleScheduleStep::Barrier);
+        self
+    }
+
+    pub fn add_barrier_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
+        self.steps.push(SimpleScheduleStep::LocalSystem(system.local_system()));
+        self
+    }
+
+    pub fn add_barrier_fn(
+        &mut self,
+        local_fn: impl FnMut(&mut World, &mut Resources) + 'static,
+    ) -> &mut Self {
+        self.steps.push(SimpleScheduleStep::LocalFn(local_fn.local_fn()));
+        self
+    }
+
+    pub fn append(&mut self, other: &mut ScheduleBuilder) -> &mut Self {
+        self.steps.append(&mut other.steps);
+        self.final_steps.append(&mut other.final_steps);
+        self
+    }
+
+    pub fn build(&mut self) -> Schedule {
+        self.build_with_max_threads(DEFAULT_MAX_SYSTEMS_PER_STEP)
+    }
+
+    pub fn build_with_max_threads(&mut self, max_threads: usize) -> Schedule {
+        fn step_to_non_conflicting_systems<'a>(
+            step: &'a mut ScheduleStep,
+            system: &System,
+        ) -> Option<&'a mut Vec<System>> {
+            match step {
+                ScheduleStep::Systems(systems) => {
+                    let systems_conflict = systems
+                        .iter()
+                        .flat_map(|s| s.params())
+                        .any(|p1| system.params().iter().any(|p2| p1.conflicts_with(p2)));
+
+                    if systems_conflict {
+                        None
+                    } else {
+                        Some(systems)
+                    }
+                }
+                _ => None,
+            }
+        }
+
+        let mut steps = Vec::<ScheduleStep>::new();
+
+        self.steps.drain(..).chain(self.final_steps.drain(..)).for_each(|step| match step {
+            SimpleScheduleStep::System(system) => {
+                let systems = steps
+                    .iter_mut()
+                    .rev()
+                    .map_while(|step| step_to_non_conflicting_systems(step, &system))
+                    .min_by(|s1, s2| s1.len().cmp(&s2.len()).then(Ordering::Greater))
+                    .filter(|s| s.len() < max_threads);
+
+                match systems {
+                    Some(systems) => systems.push(system),
+                    None => steps.push(ScheduleStep::Systems(vec![system])),
+                }
+            }
+            SimpleScheduleStep::LocalSystem(system) => match steps.last_mut() {
+                Some(ScheduleStep::LocalSystems(systems)) => systems.push(system),
+                _ => steps.push(ScheduleStep::LocalSystems(vec![system])),
+            },
+            SimpleScheduleStep::LocalFn(local_fn) => match steps.last_mut() {
+                Some(ScheduleStep::LocalFns(local_fns)) => local_fns.push(local_fn),
+                _ => steps.push(ScheduleStep::LocalFns(vec![local_fn])),
+            },
+            SimpleScheduleStep::Barrier => {
+                if matches!(steps.last(), Some(ScheduleStep::Systems(_))) {
+                    steps.push(ScheduleStep::Barrier)
+                }
+            }
+        });
+
+        Schedule { steps }
+    }
+}
 
 pub enum ScheduleStep {
     Systems(Vec<System>),
@@ -13,128 +140,33 @@ pub enum ScheduleStep {
     Barrier,
 }
 
-pub struct ScheduleBuilder {
-    max_systems_per_step: usize,
-    steps: Vec<ScheduleStep>,
-    final_steps: Vec<ScheduleStep>,
-}
-
-impl ScheduleBuilder {
-    pub fn set_max_systems_per_step(&mut self, max_systems_per_step: usize) -> &mut Self {
-        self.max_systems_per_step = max_systems_per_step.max(1);
-        self
-    }
-
-    pub fn add_system<P>(&mut self, system: impl IntoSystem<P>) -> &mut Self {
-        let system = system.system();
-
-        fn step_to_systems(step: &mut ScheduleStep) -> Option<&mut Vec<System>> {
-            match step {
-                ScheduleStep::Systems(systems) => Some(systems),
-                _ => None,
+impl fmt::Debug for ScheduleStep {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Systems(systems) => {
+                f.debug_tuple("ScheduleStep::Systems").field(&systems.len()).finish()
+            }
+            Self::LocalSystems(systems) => {
+                f.debug_tuple("ScheduleStep::LocalSystems").field(&systems.len()).finish()
+            }
+            Self::LocalFns(local_fns) => {
+                f.debug_tuple("ScheduleStep::LocalFns").field(&local_fns.len()).finish()
+            }
+            Self::Barrier => {
+                write!(f, "ScheduleStep::Barrier")
             }
         }
-
-        fn no_params_conflict(other_systems: &[System], system: &System) -> bool {
-            !other_systems
-                .iter()
-                .flat_map(|s| s.params())
-                .any(|p1| system.params().iter().any(|p2| p1.conflicts_with(p2)))
-        }
-
-        let systems = self
-            .steps
-            .iter_mut()
-            .rev()
-            .flat_map(step_to_systems)
-            .take_while(|other_systems| no_params_conflict(other_systems, &system))
-            .fuse()
-            .filter(|systems| systems.len() < self.max_systems_per_step)
-            .min_by_key(|systems| systems.len());
-
-        match systems {
-            Some(systems) => systems.push(system),
-            None => self.steps.push(ScheduleStep::Systems(vec![system])),
-        }
-
-        self
-    }
-
-    pub fn add_local_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
-        let system = system.local_system();
-
-        match self.final_steps.last_mut() {
-            Some(ScheduleStep::LocalSystems(systems)) => systems.push(system),
-            _ => self.final_steps.push(ScheduleStep::LocalSystems(vec![system])),
-        };
-
-        self
-    }
-
-    pub fn add_local_fn(&mut self, local_fn: impl IntoLocalFn) -> &mut Self {
-        let local_fn = local_fn.local_fn();
-
-        match self.final_steps.last_mut() {
-            Some(ScheduleStep::LocalFns(fns)) => fns.push(local_fn),
-            _ => self.final_steps.push(ScheduleStep::LocalFns(vec![local_fn])),
-        }
-
-        self
-    }
-
-    pub fn add_barrier(&mut self) -> &mut Self {
-        if matches!(self.steps.last(), Some(ScheduleStep::Systems(_))) {
-            self.steps.push(ScheduleStep::Barrier);
-        }
-
-        self
-    }
-
-    pub fn add_barrier_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
-        let system = system.local_system();
-
-        match self.steps.last_mut() {
-            Some(ScheduleStep::LocalSystems(systems)) => systems.push(system),
-            _ => self.steps.push(ScheduleStep::LocalSystems(vec![system])),
-        };
-
-        self
-    }
-
-    pub fn add_barrier_fn(
-        &mut self,
-        local_fn: impl FnMut(&mut World, &mut Resources) + 'static,
-    ) -> &mut Self {
-        let local_fn = local_fn.local_fn();
-
-        match self.steps.last_mut() {
-            Some(ScheduleStep::LocalFns(fns)) => fns.push(local_fn),
-            _ => self.steps.push(ScheduleStep::LocalFns(vec![local_fn])),
-        }
-
-        self
-    }
-
-    pub fn build(&mut self) -> Schedule {
-        let mut steps = std::mem::take(&mut self.steps);
-        let mut final_steps = std::mem::take(&mut self.final_steps);
-        steps.append(&mut final_steps);
-
-        Schedule { steps }
     }
 }
 
+#[derive(Debug)]
 pub struct Schedule {
     steps: Vec<ScheduleStep>,
 }
 
 impl Schedule {
     pub fn builder() -> ScheduleBuilder {
-        ScheduleBuilder {
-            max_systems_per_step: DEFAULT_MAX_SYSTEMS_PER_STEP,
-            steps: Default::default(),
-            final_steps: Default::default(),
-        }
+        Default::default()
     }
 
     pub fn set_up(&self, world: &mut World) {
@@ -169,17 +201,6 @@ impl Schedule {
         }
     }
 
-    pub fn max_threads(&self) -> usize {
-        fn step_to_system_count(step: &ScheduleStep) -> Option<usize> {
-            match step {
-                ScheduleStep::Systems(systems) => Some(systems.len()),
-                _ => None,
-            }
-        }
-
-        self.steps.iter().flat_map(step_to_system_count).max().unwrap_or(1)
-    }
-
     pub fn run(&mut self, world: &mut World, resources: &mut Resources) {
         #[cfg(feature = "parallel")]
         self.run_par(world, resources);
@@ -206,7 +227,7 @@ impl Schedule {
                     system.run(world, resources);
                 });
             } else {
-                for system in systems.iter_mut() {
+                if let Some(system) = systems.last_mut() {
                     system.run(world, resources);
                 }
             }
@@ -230,15 +251,11 @@ impl Schedule {
                     });
                 });
             } else {
-                for system in systems.iter_mut() {
+                if let Some(system) = systems.last_mut() {
                     system.run(world, resources);
                 }
             }
         })
-    }
-
-    pub fn into_steps(self) -> Vec<ScheduleStep> {
-        self.steps
     }
 
     fn run_generic(
@@ -263,8 +280,23 @@ impl Schedule {
                         (local_fn).run(world, resources);
                     }
                 }
-                ScheduleStep::Barrier => world.maintain(),
+                ScheduleStep::Barrier => (),
             }
         }
+    }
+
+    pub fn max_threads(&self) -> usize {
+        fn step_to_system_count(step: &ScheduleStep) -> Option<usize> {
+            match step {
+                ScheduleStep::Systems(systems) => Some(systems.len()),
+                _ => None,
+            }
+        }
+
+        self.steps.iter().flat_map(step_to_system_count).max().unwrap_or(1)
+    }
+
+    pub fn into_steps(self) -> Vec<ScheduleStep> {
+        self.steps
     }
 }
