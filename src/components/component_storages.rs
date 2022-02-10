@@ -1,5 +1,7 @@
-use crate::components;
-use crate::components::{FamilyMask, GroupInfo, GroupMask, GroupStatus, QueryMask, StorageMask};
+use crate::components::{
+    group_family, iter_bit_indexes, new_group_mask, ungroup_family, FamilyMask, Group, GroupInfo,
+    GroupMask, StorageMask,
+};
 use crate::layout::Layout;
 use crate::storage::{Component, ComponentStorage, Entity};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
@@ -50,7 +52,7 @@ impl ComponentStorages {
                     (&components[prev_arity..arity]).iter().enumerate()
                 {
                     let type_id = component.type_id();
-                    let group_mask = components::new_group_mask(groups.len(), arity, family_arity);
+                    let group_mask = new_group_mask(groups.len(), arity, family_arity);
 
                     component_info.insert(
                         type_id,
@@ -74,12 +76,7 @@ impl ComponentStorages {
                     storages.push(AtomicRefCell::new(storage));
                 }
 
-                groups.push(Group {
-                    begin: first_storage_index,
-                    new_begin: new_storage_index,
-                    end: storages.len(),
-                    len: 0,
-                });
+                groups.push(Group::new(first_storage_index, new_storage_index, storages.len()));
 
                 prev_arity = arity;
             }
@@ -148,107 +145,45 @@ impl ComponentStorages {
         self.component_info.contains_key(type_id)
     }
 
-    pub(crate) unsafe fn group_components<'a, E>(&mut self, family_index: usize, entities: E)
-    where
-        E: IntoIterator<Item = &'a Entity>,
-    {
-        let groups =
-            self.groups.get_unchecked_mut(self.families.get_unchecked(family_index).clone());
-        let storages = &mut self.storages;
-
-        entities.into_iter().for_each(|&entity| {
-            for group in groups.iter_mut() {
-                let status = components::get_group_status(
-                    storages.get_unchecked_mut(group.new_storage_range()),
-                    group.len,
-                    entity,
-                );
-
-                match status {
-                    GroupStatus::Grouped => (),
-                    GroupStatus::Ungrouped => {
-                        components::group_components(
-                            storages.get_unchecked_mut(group.storage_range()),
-                            &mut group.len,
-                            entity,
-                        );
-                    }
-                    GroupStatus::MissingComponents => break,
-                }
-            }
-        });
-    }
-
-    pub(crate) unsafe fn ungroup_components<'a, E>(
+    pub(crate) unsafe fn group_families(
         &mut self,
-        family_index: usize,
-        group_mask: GroupMask,
-        entities: E,
-    ) where
-        E: IntoIterator<Item = &'a Entity>,
-    {
-        let groups =
-            self.groups.get_unchecked_mut(self.families.get_unchecked(family_index).clone());
-        let storages = &mut self.storages;
-
-        entities.into_iter().for_each(|&entity| {
-            let mut ungroup_start = 0_usize;
-            let mut ungroup_len = 0_usize;
-
-            for (i, group) in groups.iter().enumerate() {
-                let status = components::get_group_status(
-                    storages.get_unchecked_mut(group.new_storage_range()),
-                    group.len,
-                    entity,
-                );
-
-                match status {
-                    GroupStatus::Grouped => {
-                        if ungroup_len == 0 {
-                            ungroup_start = i;
-                        }
-
-                        ungroup_len += 1;
-                    }
-                    GroupStatus::Ungrouped => break,
-                    GroupStatus::MissingComponents => break,
-                }
-            }
-
-            let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
-
-            for i in ungroup_range.rev().take_while(|i| (group_mask & (1 << i)) != 0) {
-                let group = groups.get_unchecked_mut(i);
-                let storages = storages.get_unchecked_mut(group.storage_range());
-                components::ungroup_components(storages, &mut group.len, entity);
-            }
-        });
+        family_mask: FamilyMask,
+        entities: impl Iterator<Item = Entity> + Clone,
+    ) {
+        for family_index in iter_bit_indexes(family_mask) {
+            let group_range = self.families.get_unchecked(family_index).clone();
+            let family = self.groups.get_unchecked_mut(group_range);
+            group_family(family, &mut self.storages, entities.clone());
+        }
     }
 
-    pub(crate) fn group_all_components<'a, E>(&mut self, entities: E)
-    where
-        E: IntoIterator<Item = &'a Entity>,
-        E::IntoIter: Clone,
-    {
-        let entities = entities.into_iter();
+    pub(crate) unsafe fn ungroup_families(
+        &mut self,
+        family_mask: FamilyMask,
+        group_mask: GroupMask,
+        entities: impl Iterator<Item = Entity> + Clone,
+    ) {
+        for family_index in iter_bit_indexes(family_mask) {
+            let group_range = self.families.get_unchecked(family_index).clone();
+            let family = self.groups.get_unchecked_mut(group_range);
+            ungroup_family(family, &mut self.storages, group_mask, entities.clone());
+        }
+    }
 
-        for i in 0..self.families.len() {
+    pub(crate) fn group_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
+        for group_range in self.families.iter() {
             unsafe {
-                self.group_components(i, entities.clone());
+                let family = self.groups.get_unchecked_mut(group_range.clone());
+                group_family(family, &mut self.storages, entities.clone());
             }
         }
     }
 
-    pub(crate) fn ungroup_all_components<'a, E>(&mut self, entities: E)
-    where
-        E: IntoIterator<Item = &'a Entity>,
-        E::IntoIter: Clone,
-    {
-        let entities = entities.into_iter();
-
-        for i in 0..self.families.len() {
+    pub(crate) fn ungroup_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
+        for group_range in self.families.iter() {
             unsafe {
-                self.ungroup_components(i, GroupMask::MAX, entities.clone());
+                let family = self.groups.get_unchecked_mut(group_range.clone());
+                ungroup_family(family, &mut self.storages, GroupMask::MAX, entities.clone());
             }
         }
     }
@@ -260,7 +195,7 @@ impl ComponentStorages {
         }
 
         for group in self.groups.iter_mut() {
-            group.len = 0;
+            group.clear();
         }
     }
 
@@ -296,33 +231,25 @@ impl ComponentStorages {
         })
     }
 
-    pub(crate) fn borrow_with_family_mask_mut(
+    pub(crate) fn get_as_ptr_with_family_mask(
         &self,
         type_id: &TypeId,
-    ) -> Option<(AtomicRefMut<ComponentStorage>, FamilyMask)> {
+    ) -> Option<(NonNull<ComponentStorage>, FamilyMask)> {
         self.component_info.get(type_id).map(|info| unsafe {
-            (self.storages.get_unchecked(info.storage_index).borrow_mut(), info.family_mask)
+            (
+                NonNull::new_unchecked(self.storages.get_unchecked(info.storage_index).as_ptr()),
+                info.family_mask,
+            )
         })
     }
 
-    pub(crate) fn get_with_family_mask_mut(
-        &mut self,
+    pub(crate) fn get_as_ptr_with_masks(
+        &self,
         type_id: &TypeId,
-    ) -> Option<(&mut ComponentStorage, FamilyMask)> {
-        let info = self.component_info.get(type_id)?;
-
-        unsafe {
-            Some((self.storages.get_unchecked_mut(info.storage_index).get_mut(), info.family_mask))
-        }
-    }
-
-    pub(crate) fn get_with_masks_mut(
-        &mut self,
-        type_id: &TypeId,
-    ) -> Option<(&mut ComponentStorage, FamilyMask, GroupMask)> {
+    ) -> Option<(NonNull<ComponentStorage>, FamilyMask, GroupMask)> {
         self.component_info.get(type_id).map(|info| unsafe {
             (
-                self.storages.get_unchecked_mut(info.storage_index).get_mut(),
+                NonNull::new_unchecked(self.storages.get_unchecked(info.storage_index).as_ptr()),
                 info.family_mask,
                 info.group_mask,
             )
@@ -347,51 +274,4 @@ struct StorageGroupInfo {
     family_index: usize,
     group_offset: usize,
     storage_mask: StorageMask,
-}
-
-/// Example:
-///
-/// Say we have a family made of two groups:
-/// - Group 0: (A, B)
-/// - Group 1: (A, B, C, D)
-///
-/// For the group 1, we get such a `Group` struct:
-///
-/// ```text
-/// storages: A B C D
-///           ^   ^   ^
-///           |   |   +-- end = begin + 4
-///           |   +------ new_begin = begin + 2
-///           +---------- begin
-/// ```
-#[derive(Clone, Copy)]
-pub(crate) struct Group {
-    begin: usize,
-    new_begin: usize,
-    end: usize,
-    /// Number of entities grouped by this group. Components of grouped entities
-    /// are aligned to the left in the storage.
-    len: usize,
-}
-
-impl Group {
-    pub fn storage_range(&self) -> Range<usize> {
-        self.begin..self.end
-    }
-
-    pub fn new_storage_range(&self) -> Range<usize> {
-        self.new_begin..self.end
-    }
-
-    pub fn include_mask(&self) -> QueryMask {
-        QueryMask::new_include_group(self.end - self.begin)
-    }
-
-    pub fn exclude_mask(&self) -> QueryMask {
-        QueryMask::new_exclude_group(self.new_begin - self.begin, self.end - self.begin)
-    }
-
-    pub fn len(&self) -> usize {
-        self.len
-    }
 }

@@ -1,8 +1,8 @@
-use crate::components::{iter_bit_indexes, ComponentStorages, FamilyMask, GroupMask};
+use crate::components::{ComponentStorages, FamilyMask, GroupMask};
 use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
 use crate::utils::panic_missing_comp;
-use atomic_refcell::AtomicRefMut;
 use std::any::TypeId;
+use std::iter;
 
 /// Handles adding/removing `Component`s to/from storages.
 /// Trait implemented by `Component` tuples up to arity 16.
@@ -80,16 +80,14 @@ macro_rules! impl_component_set {
 
                 $(
                     {
-                        let (storage, mask) = get_with_family_mask_mut::<$comp>(storages);
-                        unsafe { storage.insert::<$comp>(entity, components.$idx); }
+                        let (storage, mask) = get_as_ptr_with_family_mask::<$comp>(storages);
+                        unsafe { (*storage).insert::<$comp>(entity, components.$idx); }
                         family_mask |= mask;
                     }
                 )+
 
-                for i in iter_bit_indexes(family_mask) {
-                    unsafe {
-                        storages.group_components(i, Some(&entity));
-                    }
+                unsafe {
+                    storages.group_families(family_mask, iter::once(entity));
                 }
             }
 
@@ -106,9 +104,9 @@ macro_rules! impl_component_set {
                 let mut family_mask = FamilyMask::default();
 
                 {
-                    let mut borrowed_storages = (
+                    let storage_ptrs = (
                         $({
-                            let (storage, mask) = borrow_with_family_mask_mut::<$comp>(storages);
+                            let (storage, mask) = get_as_ptr_with_family_mask::<$comp>(storages);
                             family_mask |= mask;
                             storage
                         },)+
@@ -118,20 +116,18 @@ macro_rules! impl_component_set {
                         let entity = entities.create();
 
                         unsafe {
-                            $(borrowed_storages.$idx.insert::<$comp>(entity, components.$idx);)+
+                            $(
+                                (*storage_ptrs.$idx).insert::<$comp>(entity, components.$idx);
+                            )+
                         }
                     });
                 }
 
-                let new_entities = unsafe { entities.get_unchecked(initial_entity_count..) };
-
-                for i in iter_bit_indexes(family_mask) {
-                    unsafe {
-                        storages.group_components(i, new_entities);
-                    }
+                unsafe {
+                    let new_entities = entities.get_unchecked(initial_entity_count..);
+                    storages.group_families(family_mask, new_entities.iter().copied());
+                    new_entities
                 }
-
-                new_entities
             }
 
             #[allow(clippy::eval_order_dependence)]
@@ -141,25 +137,18 @@ macro_rules! impl_component_set {
 
                 let storage_ptrs = ($(
                     {
-                        let (storage, family, group) = get_with_masks_mut::<$comp>(storages);
+                        let (storage, family, group) = get_as_ptr_with_masks::<$comp>(storages);
 
                         family_mask |= family;
                         group_mask |= group;
 
-                        storage as *mut ComponentStorage
+                        storage
                     },
                 )+);
 
-                for i in iter_bit_indexes(family_mask) {
-                    unsafe {
-                        storages.ungroup_components(i, group_mask, Some(&entity));
-                    }
-                }
-
                 unsafe {
-                    (
-                        $((&mut *storage_ptrs.$idx).remove::<$comp>(entity),)+
-                    )
+                    storages.ungroup_families(family_mask, group_mask, iter::once(entity));
+                    ($((*storage_ptrs.$idx).remove::<$comp>(entity),)+)
                 }
             }
 
@@ -170,58 +159,48 @@ macro_rules! impl_component_set {
 
                 let storage_ptrs = ($(
                     {
-                        let (storage, family, group) = get_with_masks_mut::<$comp>(storages);
+                        let (storage, family, group) = get_as_ptr_with_masks::<$comp>(storages);
 
                         family_mask |= family;
                         group_mask |= group;
 
-                        storage as *mut ComponentStorage
+                        storage
                     },
                 )+);
 
-                for i in iter_bit_indexes(family_mask) {
-                    unsafe {
-                        storages.ungroup_components(i, group_mask, Some(&entity));
-                    }
-                }
-
                 unsafe {
-                    $((&mut *storage_ptrs.$idx).delete::<$comp>(entity);)+
+                    storages.ungroup_families(family_mask, group_mask, iter::once(entity));
+                    $((*storage_ptrs.$idx).delete::<$comp>(entity);)+
                 }
             }
         }
     };
 }
 
-fn get_with_family_mask_mut<T>(
-    storages: &mut ComponentStorages,
-) -> (&mut ComponentStorage, FamilyMask)
-where
-    T: Component,
-{
-    storages
-        .get_with_family_mask_mut(&TypeId::of::<T>())
-        .unwrap_or_else(|| panic_missing_comp::<T>())
-}
-
-fn get_with_masks_mut<T>(
-    storages: &mut ComponentStorages,
-) -> (&mut ComponentStorage, FamilyMask, GroupMask)
-where
-    T: Component,
-{
-    storages.get_with_masks_mut(&TypeId::of::<T>()).unwrap_or_else(|| panic_missing_comp::<T>())
-}
-
-fn borrow_with_family_mask_mut<T>(
+fn get_as_ptr_with_family_mask<T>(
     storages: &ComponentStorages,
-) -> (AtomicRefMut<ComponentStorage>, FamilyMask)
+) -> (*mut ComponentStorage, FamilyMask)
 where
     T: Component,
 {
-    storages
-        .borrow_with_family_mask_mut(&TypeId::of::<T>())
-        .unwrap_or_else(|| panic_missing_comp::<T>())
+    let (storage, family_mask) = storages
+        .get_as_ptr_with_family_mask(&TypeId::of::<T>())
+        .unwrap_or_else(|| panic_missing_comp::<T>());
+
+    (storage.as_ptr(), family_mask)
+}
+
+fn get_as_ptr_with_masks<T>(
+    storages: &ComponentStorages,
+) -> (*mut ComponentStorage, FamilyMask, GroupMask)
+where
+    T: Component,
+{
+    let (storage, family_mask, group_mask) = storages
+        .get_as_ptr_with_masks(&TypeId::of::<T>())
+        .unwrap_or_else(|| panic_missing_comp::<T>());
+
+    (storage.as_ptr(), family_mask, group_mask)
 }
 
 #[rustfmt::skip]

@@ -4,7 +4,7 @@ use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
 use crate::utils::panic_missing_comp;
 use crate::world::{Comp, CompMut, Entities, NoSuchEntity};
 use std::any::TypeId;
-use std::mem;
+use std::{iter, mem};
 
 /// Container for entities, components and resources.
 #[derive(Default)]
@@ -30,7 +30,7 @@ impl World {
 
         unsafe {
             self.components = ComponentStorages::new(layout, &mut storages);
-            self.components.group_all_components(self.entities.as_ref());
+            self.components.group_all_families(self.entities.iter().copied());
         }
     }
 
@@ -83,7 +83,7 @@ impl World {
             return false;
         }
 
-        self.components.ungroup_all_components(Some(&entity));
+        self.components.ungroup_all_families(iter::once(entity));
 
         for storage in self.components.iter_mut() {
             storage.remove_and_drop(entity);
@@ -99,17 +99,17 @@ impl World {
         E: IntoIterator<Item = &'a Entity>,
         E::IntoIter: Clone,
     {
-        let entities = entities.into_iter();
+        let entities = entities.into_iter().copied();
 
-        self.components.ungroup_all_components(entities.clone());
+        self.components.ungroup_all_families(entities.clone());
 
         for storage in self.components.iter_mut() {
-            entities.clone().for_each(|&entity| {
+            entities.clone().for_each(|entity| {
                 storage.remove_and_drop(entity);
             });
         }
 
-        entities.into_iter().map(|&entity| self.entities.destroy(entity) as usize).sum()
+        entities.into_iter().map(|entity| self.entities.destroy(entity) as usize).sum()
     }
 
     /// Appends the given `components` to `entity` if `entity` exists in the
