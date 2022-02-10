@@ -1,6 +1,6 @@
 # Summary
 
 - [Introduction](./01_introduction.md)
-- [World, Entities and Components](./02_world_entities_and_components.md)
+- [The World](./02_world.md)
 - [Component Views](./03_component_views.md)
-- [TODO](./todo.md)
+- [Queries](./04_queries.md)

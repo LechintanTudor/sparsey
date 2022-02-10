@@ -1,16 +1,5 @@
 # Introduction
-Welcome to The Sparsey Book, a guide to the Sparsey Entity Component Sysem (ECS).
 
-## Setting up
-Before you start, make sure you have the latest stable Rust version installed by running:
-
-```bash
-rustup update stable
-```
-
-Also, you should add `Sparsey` as a dependency in your `Cargo.toml`.
-
-```toml
-[dependencies]
-sparsey = "0.6"
-```
+Welcome to The Sparsey Book, a guide to the Sparsey Entity Component Sysem. If you are not familiar
+with data driven design or have never worked with an ECS before, you should check out the
+[Entity Component System FAQ](https://github.com/SanderMertens/ecs-faq).
