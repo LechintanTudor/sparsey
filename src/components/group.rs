@@ -9,50 +9,70 @@ use std::ops::Range;
 /// - Group 0: (A, B)
 /// - Group 1: (A, B, C, D)
 ///
-/// For the group 1, we get such a `Group` struct:
+/// For 'Group 1', we get such a `Group` struct:
 ///
 /// ```text
 /// storages: A B C D
 ///           ^   ^   ^
-///           |   |   +-- end = begin + 4
-///           |   +------ new_begin = begin + 2
-///           +---------- begin
+///           |   |   +-- end = start + 4
+///           |   +------ new_start = start + 2
+///           +---------- start
 /// ```
-#[derive(Clone, Copy)]
-pub(crate) struct Group {
-    begin: usize,
-    new_begin: usize,
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct GroupMetadata {
+    /// The index of the storage at which the group starts.
+    start: usize,
+    /// The index of the storage at which the group's first new storage starts.
+    new_start: usize,
+    /// The index of the last storage in the group plus one.
     end: usize,
-    /// Number of entities grouped by this group. Components of grouped entities
-    /// are aligned to the left in the storage.
+}
+
+impl GroupMetadata {
+    #[inline]
+    pub fn storage_range(&self) -> Range<usize> {
+        self.start..self.end
+    }
+
+    #[inline]
+    pub fn new_storage_range(&self) -> Range<usize> {
+        self.new_start..self.end
+    }
+
+    #[inline]
+    pub fn include_mask(&self) -> QueryMask {
+        QueryMask::new_include_group(self.end - self.start)
+    }
+
+    #[inline]
+    pub fn exclude_mask(&self) -> QueryMask {
+        QueryMask::new_exclude_group(self.new_start - self.start, self.end - self.start)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct Group {
+    metadata: GroupMetadata,
+    /// The number of components grouped by this group.
     len: usize,
 }
 
 impl Group {
-    pub fn new(begin: usize, new_begin: usize, end: usize) -> Self {
-        Self { begin, new_begin, end, len: 0 }
+    pub fn new(start: usize, new_start: usize, end: usize) -> Self {
+        Self { metadata: GroupMetadata { start, new_start, end }, len: 0 }
     }
 
-    pub fn storage_range(&self) -> Range<usize> {
-        self.begin..self.end
+    #[inline]
+    pub fn metadata(&self) -> &GroupMetadata {
+        &self.metadata
     }
 
-    pub fn new_storage_range(&self) -> Range<usize> {
-        self.new_begin..self.end
-    }
-
-    pub fn include_mask(&self) -> QueryMask {
-        QueryMask::new_include_group(self.end - self.begin)
-    }
-
-    pub fn exclude_mask(&self) -> QueryMask {
-        QueryMask::new_exclude_group(self.new_begin - self.begin, self.end - self.begin)
-    }
-
+    #[inline]
     pub fn len(&self) -> usize {
         self.len
     }
 
+    #[inline]
     pub fn clear(&mut self) {
         self.len = 0;
     }
@@ -60,11 +80,16 @@ impl Group {
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug)]
 enum GroupStatus {
+    /// The storages are missing components.
     Incomplete,
+    /// The storages contains all components but they are not grouped.
     Ungrouped,
+    /// The storages contains all components and they are grouped.
     Grouped,
 }
 
+/// # Safety
+/// The group family and the storages must be valid.
 pub(crate) unsafe fn group_family(
     family: &mut [Group],
     storages: &mut [AtomicRefCell<ComponentStorage>],
@@ -73,7 +98,7 @@ pub(crate) unsafe fn group_family(
     entities.for_each(|entity| {
         for group in family.iter_mut() {
             let status = get_group_status(
-                storages.get_unchecked_mut(group.new_storage_range()),
+                storages.get_unchecked_mut(group.metadata.new_storage_range()),
                 group.len,
                 entity,
             );
@@ -82,7 +107,7 @@ pub(crate) unsafe fn group_family(
                 GroupStatus::Grouped => (),
                 GroupStatus::Ungrouped => {
                     group_components(
-                        storages.get_unchecked_mut(group.storage_range()),
+                        storages.get_unchecked_mut(group.metadata.storage_range()),
                         &mut group.len,
                         entity,
                     );
@@ -93,6 +118,8 @@ pub(crate) unsafe fn group_family(
     });
 }
 
+/// # Safety
+/// The group family and the storages must be valid.
 pub(crate) unsafe fn ungroup_family(
     family: &mut [Group],
     storages: &mut [AtomicRefCell<ComponentStorage>],
@@ -105,7 +132,7 @@ pub(crate) unsafe fn ungroup_family(
 
         for (i, group) in family.iter().enumerate() {
             let status = get_group_status(
-                storages.get_unchecked_mut(group.new_storage_range()),
+                storages.get_unchecked_mut(group.metadata.new_storage_range()),
                 group.len,
                 entity,
             );
@@ -126,12 +153,13 @@ pub(crate) unsafe fn ungroup_family(
 
         for i in ungroup_range.rev().take_while(|i| (group_mask & (1 << i)) != 0) {
             let group = family.get_unchecked_mut(i);
-            let storages = storages.get_unchecked_mut(group.storage_range());
+            let storages = storages.get_unchecked_mut(group.metadata.storage_range());
             ungroup_components(storages, &mut group.len, entity);
         }
     });
 }
 
+/// # Safety
 /// The storage slice must be non-empty.
 unsafe fn get_group_status(
     storages: &mut [AtomicRefCell<ComponentStorage>],
@@ -158,7 +186,9 @@ unsafe fn get_group_status(
     }
 }
 
-/// Must only be called with ungrouped components.
+/// # Safety
+/// The components of the given entity must be ungrouped and the storages and length of the group
+/// must be valid.
 unsafe fn group_components(
     storages: &mut [AtomicRefCell<ComponentStorage>],
     group_len: &mut usize,
@@ -174,7 +204,9 @@ unsafe fn group_components(
     *group_len += 1;
 }
 
-/// Must only be called with grouped components.
+/// # Safety
+/// The components of the given entity must be grouped and the storages and length of the group must
+/// be valid.
 unsafe fn ungroup_components(
     storages: &mut [AtomicRefCell<ComponentStorage>],
     group_len: &mut usize,

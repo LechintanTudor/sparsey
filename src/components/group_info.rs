@@ -36,7 +36,7 @@ impl<'a> GroupInfo<'a> {
         let group = unsafe { *self.group.as_ptr().add(self.offset) };
         let mask = QueryMask::new(self.mask, 0);
 
-        (mask == group.include_mask()).then(|| group.len())
+        (mask == group.metadata().include_mask()).then(|| group.len())
     }
 
     pub(crate) fn exclude_group_range(&self, exclude: &GroupInfo) -> Option<Range<usize>> {
@@ -50,7 +50,7 @@ impl<'a> GroupInfo<'a> {
         unsafe {
             let group = *self.group.as_ptr().add(offset);
 
-            if mask == group.exclude_mask() {
+            if mask == group.metadata().exclude_mask() {
                 let prev_group = *self.group.as_ptr().add(offset - 1);
                 Some(group.len()..prev_group.len())
             } else {
