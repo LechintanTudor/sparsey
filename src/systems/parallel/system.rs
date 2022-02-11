@@ -2,22 +2,27 @@ use crate::resources::SyncResources;
 use crate::systems::{BorrowLocalSystemData, BorrowSystemData, SystemParam, SystemParamType};
 use crate::world::World;
 
+/// Encapsulates a system that can run on any thread.
 pub struct System {
     function: Box<dyn FnMut(&World, SyncResources) + Send + 'static>,
     params: Vec<SystemParamType>,
 }
 
 impl System {
+    /// Returns the system parameter types as a slice.
     pub fn params(&self) -> &[SystemParamType] {
         &self.params
     }
 
+    /// Runs the system.
     pub fn run(&mut self, world: &World, resources: SyncResources) {
         (self.function)(world, resources)
     }
 }
 
+/// Helper trait for creating a system from a function.
 pub trait IntoSystem<Params> {
+    /// Creates a system.
     fn system(self) -> System;
 }
 

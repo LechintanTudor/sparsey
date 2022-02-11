@@ -3,9 +3,12 @@ use crate::storage::Component;
 use crate::utils::panic_missing_res;
 use crate::world::{Comp, CompMut, Entities, World};
 
+/// Trait implemented by local system parameters to borrow data.
 pub trait BorrowLocalSystemData<'a> {
+    /// System data to borrow.
     type Item: 'a;
 
+    /// Borrows the system data.
     fn borrow(world: &'a World, resources: &'a Resources) -> Self::Item;
 }
 

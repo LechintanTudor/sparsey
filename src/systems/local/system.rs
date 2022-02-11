@@ -2,22 +2,27 @@ use crate::resources::Resources;
 use crate::systems::{BorrowLocalSystemData, SystemParam, SystemParamType};
 use crate::world::World;
 
+/// Encapsulates a system that can run locally.
 pub struct LocalSystem {
     function: Box<dyn FnMut(&World, &Resources) + 'static>,
     params: Vec<SystemParamType>,
 }
 
 impl LocalSystem {
+    /// Returns the system parameter types as a slice.
     pub fn params(&self) -> &[SystemParamType] {
         &self.params
     }
 
+    /// Runs the system.
     pub fn run(&mut self, world: &World, resources: &Resources) {
         (self.function)(world, resources)
     }
 }
 
+/// Helper trait for creating a local system from a function.
 pub trait IntoLocalSystem<Params> {
+    /// Creates a local system.
     fn local_system(self) -> LocalSystem;
 }
 

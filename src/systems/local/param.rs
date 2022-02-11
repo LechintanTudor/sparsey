@@ -5,16 +5,23 @@ use crate::systems::BorrowLocalSystemData;
 use crate::world::{Comp, CompMut, Entities};
 use std::any::TypeId;
 
+/// The type of parameters a system can have.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub enum SystemParamType {
+    /// View over all entities.
     Entities,
+    /// View over all components of a type.
     Comp(ComponentInfo),
+    /// Mutable view over all components of a type.
     CompMut(ComponentInfo),
+    /// View over a resource.
     Res(TypeId),
+    /// Mutable view over a resource.
     ResMut(TypeId),
 }
 
 impl SystemParamType {
+    /// Returns `true` if the parameters prevent the systems from running in parallel.
     pub fn conflicts_with(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Comp(c1), Self::CompMut(c2)) => c1 == c2,
@@ -28,7 +35,9 @@ impl SystemParamType {
     }
 }
 
+/// Trait implemented by local system parameters.
 pub trait LocalSystemParam: for<'a> BorrowLocalSystemData<'a> {
+    /// Returns the type of parameter.
     fn param_type() -> SystemParamType;
 }
 
