@@ -6,7 +6,7 @@ use crate::world::{Comp, CompMut, Entities, NoSuchEntity};
 use std::any::TypeId;
 use std::{iter, mem};
 
-/// Container for entities, components and resources.
+/// Container for entities and their associated components.
 #[derive(Default)]
 pub struct World {
     entities: EntityStorage,
@@ -14,17 +14,16 @@ pub struct World {
 }
 
 impl World {
-    /// Creates an empty world with the storages arranged as described by
-    /// `layout`.
+    /// Creates an empty world with the storages arranged as described by `layout`.
     pub fn with_layout(layout: &Layout) -> Self {
         let mut world = Self::default();
         world.set_layout(layout);
         world
     }
 
-    /// Arranges the storages as described by `layout`. This function iterates
-    /// through all the entities to ararange their components, so it is best
-    /// called right after creating the `World`.
+    /// Arranges the storages as described by `layout`. This function iterates through all the
+    /// entities to ararange their components, so it is best called right after creating the
+    /// `World`.
     pub fn set_layout(&mut self, layout: &Layout) {
         let mut storages = mem::take(&mut self.components).into_storages();
 
@@ -34,7 +33,7 @@ impl World {
         }
     }
 
-    /// Creates a component storage for `T` if one doesn't already exist.
+    /// Creates a storage for components of type `T` if one doesn't already exist.
     pub fn register<T>(&mut self)
     where
         T: Component,
@@ -56,7 +55,7 @@ impl World {
         self.components.is_registered(component_type_id)
     }
 
-    /// Creates an `Entity` with the given `components` and returns it.
+    /// Creates an entity with the given `components` and returns it.
     pub fn create<C>(&mut self, components: C) -> Entity
     where
         C: ComponentSet,
@@ -66,8 +65,8 @@ impl World {
         entity
     }
 
-    /// Creates new entities with the components produced by
-    /// `components_iter`. Returns the newly created entities as a slice.
+    /// Creates new entities with the components produced by `components_iter`. Returns the newly
+    /// created entities as a slice.
     pub fn bulk_create<C, I>(&mut self, components_iter: I) -> &[Entity]
     where
         C: ComponentSet,
@@ -76,8 +75,8 @@ impl World {
         C::extend(&mut self.entities, &mut self.components, components_iter)
     }
 
-    /// Removes `entity` and all of its components from the `World`.
-    /// Returns `true` if the `Entity` was successfully removed.
+    /// Removes `entity` and all of its components from the world. Returns `true` if the entity was
+    /// successfully removed.
     pub fn destroy(&mut self, entity: Entity) -> bool {
         if !self.entities.destroy(entity) {
             return false;
@@ -92,8 +91,8 @@ impl World {
         true
     }
 
-    /// Removes all entities (and their components) produced by the iterator.
-    /// Returns the number of entities successfully removed.
+    /// Removes all entities (and their components) yielded by the `entities` iterator. Returns the
+    /// number of entities successfully removed.
     pub fn bulk_destroy<'a, E>(&mut self, entities: E) -> usize
     where
         E: IntoIterator<Item = &'a Entity>,
@@ -112,8 +111,7 @@ impl World {
         entities.into_iter().map(|entity| self.entities.destroy(entity) as usize).sum()
     }
 
-    /// Appends the given `components` to `entity` if `entity` exists in the
-    /// `World`.
+    /// Associates the given `components` to `entity` if `entity` exists in the world.
     pub fn insert<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
     where
         C: ComponentSet,
@@ -126,9 +124,8 @@ impl World {
         Ok(())
     }
 
-    /// Removes a component set from `entity` and returns them if they all
-    /// exist in the `World` before the call.
-    #[must_use = "use `delete_components` to discard the components"]
+    /// Removes a component set from `entity` and returns them.
+    #[must_use = "use `delete` to discard the components"]
     pub fn remove<C>(&mut self, entity: Entity) -> C::RemoveResult
     where
         C: ComponentSet,
@@ -136,8 +133,7 @@ impl World {
         C::remove(&mut self.components, entity)
     }
 
-    /// Deletes a component set from `entity`. This is faster than removing
-    /// the components.
+    /// Deletes a component set from `entity`. This is faster than removing them.
     pub fn delete<C>(&mut self, entity: Entity)
     where
         C: ComponentSet,
@@ -145,27 +141,31 @@ impl World {
         C::delete(&mut self.components, entity);
     }
 
-    /// Returns `true` if `entity` exists in the `World`.
+    /// Returns `true` if `entity` exists in the world.
     #[must_use]
     pub fn contains(&self, entity: Entity) -> bool {
         self.entities.contains(entity)
     }
 
-    /// Returns all the `entities` in the world as a slice.
+    /// Returns all the entities in the world as a slice.
     pub fn entities(&self) -> &[Entity] {
         self.entities.as_ref()
     }
 
-    /// Removes all entities and components in the world.
+    /// Removes all the entities and components from the world.
     pub fn clear(&mut self) {
         self.entities.clear();
         self.components.clear();
     }
 
+    /// Borrows a view over all entities in the world. The view can be used in systems running in
+    /// parallel to create new entities atomically.
     pub fn borrow_entities(&self) -> Entities {
         Entities::new(&self.entities)
     }
 
+    /// Borrows an immutable view over all components of type `T` in the world. Panics if the
+    /// component wasn't registered.
     pub fn borrow<T>(&self) -> Comp<T>
     where
         T: Component,
@@ -176,6 +176,8 @@ impl World {
             .unwrap_or_else(|| panic_missing_comp::<T>())
     }
 
+    /// Borrows a mutable view over all components of type `T` in in the world. Panics if the
+    /// component wasn't registered.
     pub fn borrow_mut<T>(&self) -> CompMut<T>
     where
         T: Component,
@@ -186,6 +188,8 @@ impl World {
             .unwrap_or_else(|| panic_missing_comp::<T>())
     }
 
+    /// Adds the atomically created entities to the main entity storage. Called automatically by
+    /// `Schedule`.
     pub fn maintain(&mut self) {
         self.entities.maintain();
     }
