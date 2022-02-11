@@ -1,3 +1,5 @@
+//! Manages component storages and handles component grouping.
+
 pub use self::component_set::*;
 pub use self::component_storages::*;
 pub use self::group_info::*;

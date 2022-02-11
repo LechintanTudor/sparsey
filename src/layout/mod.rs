@@ -1,3 +1,5 @@
+//! Helper types for describing the layout of component storages within a `World`.
+
 pub use self::component_info::*;
 pub use self::group::*;
 pub use self::layout::*;

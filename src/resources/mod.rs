@@ -1,3 +1,5 @@
+//! Resource creation and management.
+
 pub use self::res::*;
 pub use self::resource::*;
 pub use self::resources::*;

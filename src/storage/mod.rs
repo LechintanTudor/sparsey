@@ -1,3 +1,5 @@
+//! Sparse set-based storages for entities and components.
+
 pub use self::component::*;
 pub use self::component_storage::*;
 pub use self::entity::*;

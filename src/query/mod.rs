@@ -1,3 +1,5 @@
+//! Fetch and iterate components and entities that match a query.
+
 pub use self::component_view::*;
 pub use self::compound_query::*;
 pub use self::iter::*;

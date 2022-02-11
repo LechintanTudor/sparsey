@@ -29,7 +29,7 @@
 //! }
 //! ```
 
-/// Exports most commonly used items.
+/// Re-exports the most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
     pub use crate::query::{CompoundQuery, IntoEntityIter, QueryFilters};
@@ -39,18 +39,12 @@ pub mod prelude {
     pub use crate::world::{Comp, CompMut, Entities, World};
 }
 
-pub(crate) mod utils;
-
-/// Manages `ComponentStorage`s and `Component` grouping within a `World`.
 pub mod components;
-/// Exports functionality for describing the layout of `ComponentStorages` within a `World`.
 pub mod layout;
-/// Exports functionality for fetching and iterating `Component`s from `ComponentView`s.
 pub mod query;
-/// Exports functionality for managing data which is unique within a `World`.
 pub mod resources;
-/// Exports functionality for managing `ComponentStorage`s.
 pub mod storage;
 pub mod systems;
-/// Exports functionality for creating and managing `World`s.
 pub mod world;
+
+pub(crate) mod utils;
