@@ -1,13 +1,12 @@
 use crate::query::{EntityIterator, Query};
 use crate::storage::Entity;
-use std::ops::Range;
-use std::slice::Iter as SliceIter;
 
 pub struct DenseIter<'a, G>
 where
     G: Query<'a>,
 {
-    entities: SliceIter<'a, Entity>,
+    index: usize,
+    entities: &'a [Entity],
     components: G::ComponentPtrs,
 }
 
@@ -15,16 +14,8 @@ impl<'a, G> DenseIter<'a, G>
 where
     G: Query<'a>,
 {
-    pub(crate) unsafe fn new(
-        entities: &'a [Entity],
-        components: G::ComponentPtrs,
-        range: Range<usize>,
-    ) -> Self {
-        let offset = range.start as isize;
-        let entities = entities.get_unchecked(range).iter();
-        let components = G::offset_component_ptrs(components, offset);
-
-        Self { entities, components }
+    pub(crate) unsafe fn new(entities: &'a [Entity], components: G::ComponentPtrs) -> Self {
+        Self { index: 0, entities, components }
     }
 }
 
@@ -35,13 +26,15 @@ where
     type Item = G::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.entities.next()?;
+        let index = self.index;
 
-        unsafe {
-            let item = G::get_from_component_ptrs(self.components);
-            self.components = G::offset_component_ptrs(self.components, 1);
-            Some(item)
+        if index >= self.entities.len() {
+            return None;
         }
+
+        self.index += 1;
+
+        unsafe { Some(G::get_from_dense_components(self.components, index)) }
     }
 
     fn fold<B, F>(mut self, mut init: B, mut f: F) -> B
@@ -49,11 +42,12 @@ where
         Self: Sized,
         F: FnMut(B, Self::Item) -> B,
     {
-        for _ in self.entities {
+        while self.index < self.entities.len() {
             unsafe {
-                init = f(init, G::get_from_component_ptrs(self.components));
-                self.components = G::offset_component_ptrs(self.components, 1);
+                init = f(init, G::get_from_dense_components(self.components, self.index));
             }
+
+            self.index += 1;
         }
 
         init
@@ -65,12 +59,19 @@ where
     G: Query<'a>,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
-        let entity = *self.entities.next()?;
+        let index = self.index;
+
+        if index >= self.entities.len() {
+            return None;
+        }
+
+        self.index += 1;
 
         unsafe {
-            let item = G::get_from_component_ptrs(self.components);
-            self.components = G::offset_component_ptrs(self.components, 1);
-            Some((entity, item))
+            Some((
+                *self.entities.get_unchecked(index),
+                G::get_from_dense_components(self.components, index),
+            ))
         }
     }
 
@@ -79,11 +80,18 @@ where
         Self: Sized,
         F: FnMut(B, (Entity, Self::Item)) -> B,
     {
-        for &entity in self.entities {
+        while self.index < self.entities.len() {
             unsafe {
-                init = f(init, (entity, G::get_from_component_ptrs(self.components)));
-                self.components = G::offset_component_ptrs(self.components, 1);
+                init = f(
+                    init,
+                    (
+                        *self.entities.get_unchecked(self.index),
+                        G::get_from_dense_components(self.components, self.index),
+                    ),
+                );
             }
+
+            self.index += 1;
         }
 
         init

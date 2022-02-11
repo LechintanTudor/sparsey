@@ -26,11 +26,18 @@ where
         match query::group_range(get_info, include_info, exclude_info) {
             Some(range) => {
                 let (entities, components) = get.split_dense();
-                let entities = entities.unwrap_or_else(|| {
-                    include.into_any_entities().expect("Cannot iterate empty Query")
-                });
 
-                unsafe { Self::Dense(DenseIter::new(entities, components, range)) }
+                unsafe {
+                    let components = G::offset_component_ptrs(components, range.start as isize);
+
+                    let entities = &entities
+                        .unwrap_or_else(|| {
+                            include.into_any_entities().expect("Cannot iterate empty Query")
+                        })
+                        .get_unchecked(range);
+
+                    Self::Dense(DenseIter::new(entities, components))
+                }
             }
             None => {
                 let (get_entities, sparse, components) = get.split_sparse();

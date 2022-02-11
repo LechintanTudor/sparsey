@@ -36,7 +36,10 @@ pub unsafe trait Query<'a> {
         index: Self::Index,
     ) -> Self::Item;
 
-    unsafe fn get_from_component_ptrs(components: Self::ComponentPtrs) -> Self::Item;
+    unsafe fn get_from_dense_components(
+        components: Self::ComponentPtrs,
+        index: usize,
+    ) -> Self::Item;
 
     unsafe fn offset_component_ptrs(
         components: Self::ComponentPtrs,
@@ -130,7 +133,10 @@ unsafe impl<'a> Query<'a> for () {
     }
 
     #[inline(always)]
-    unsafe fn get_from_component_ptrs(_components: Self::ComponentPtrs) -> Self::Item {
+    unsafe fn get_from_dense_components(
+        _components: Self::ComponentPtrs,
+        _index: usize,
+    ) -> Self::Item {
         ()
     }
 
@@ -237,8 +243,11 @@ where
         <E as ComponentView>::get_from_component_ptr(components.add(index))
     }
 
-    unsafe fn get_from_component_ptrs(components: Self::ComponentPtrs) -> Self::Item {
-        <E as ComponentView>::get_from_component_ptr(components)
+    unsafe fn get_from_dense_components(
+        components: Self::ComponentPtrs,
+        index: usize,
+    ) -> Self::Item {
+        <E as ComponentView>::get_from_component_ptr(components.add(index))
     }
 
     unsafe fn offset_component_ptrs(
@@ -419,9 +428,12 @@ macro_rules! impl_query {
                 )+)
             }
 
-            unsafe fn get_from_component_ptrs(components: Self::ComponentPtrs) -> Self::Item {
+            unsafe fn get_from_dense_components(
+                components: Self::ComponentPtrs,
+                index: usize,
+            ) -> Self::Item {
                 ($(
-                    $elem::get_from_component_ptr(components.$idx),
+                    $elem::get_from_component_ptr(components.$idx.add(index)),
                 )+)
             }
 
