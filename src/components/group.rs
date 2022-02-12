@@ -90,13 +90,17 @@ enum GroupStatus {
 
 /// # Safety
 /// The group family and the storages must be valid.
+#[inline]
 pub(crate) unsafe fn group_family(
-    family: &mut [Group],
     storages: &mut [AtomicRefCell<ComponentStorage>],
+    groups: &mut [Group],
+    family_range: Range<usize>,
     entities: impl Iterator<Item = Entity>,
 ) {
     entities.for_each(|entity| {
-        for group in family.iter_mut() {
+        for i in family_range.clone() {
+            let group = groups.get_unchecked_mut(i);
+
             let status = get_group_status(
                 storages.get_unchecked_mut(group.metadata.new_storage_range()),
                 group.len,
@@ -120,9 +124,11 @@ pub(crate) unsafe fn group_family(
 
 /// # Safety
 /// The group family and the storages must be valid.
+#[inline]
 pub(crate) unsafe fn ungroup_family(
-    family: &mut [Group],
     storages: &mut [AtomicRefCell<ComponentStorage>],
+    groups: &mut [Group],
+    family_range: Range<usize>,
     group_mask: GroupMask,
     entities: impl Iterator<Item = Entity>,
 ) {
@@ -130,7 +136,9 @@ pub(crate) unsafe fn ungroup_family(
         let mut ungroup_start = 0_usize;
         let mut ungroup_len = 0_usize;
 
-        for (i, group) in family.iter().enumerate() {
+        for i in family_range.clone() {
+            let group = groups.get_unchecked_mut(i);
+
             let status = get_group_status(
                 storages.get_unchecked_mut(group.metadata.new_storage_range()),
                 group.len,
@@ -149,24 +157,27 @@ pub(crate) unsafe fn ungroup_family(
             }
         }
 
-        let ungroup_range = ungroup_start..(ungroup_start + ungroup_len);
+        let ungroup_indexes = (ungroup_start..(ungroup_start + ungroup_len))
+            .rev()
+            .take_while(|i| group_mask & (1 << i) != 0);
 
-        for i in ungroup_range.rev().take_while(|i| (group_mask & (1 << i)) != 0) {
-            let group = family.get_unchecked_mut(i);
-            let storages = storages.get_unchecked_mut(group.metadata.storage_range());
-            ungroup_components(storages, &mut group.len, entity);
+        for i in ungroup_indexes {
+            let group = groups.get_unchecked_mut(i);
+            let group_storages = storages.get_unchecked_mut(group.metadata.storage_range());
+            ungroup_components(group_storages, &mut group.len, entity)
         }
     });
 }
 
 /// # Safety
 /// The storage slice must be non-empty.
+#[inline]
 unsafe fn get_group_status(
-    storages: &mut [AtomicRefCell<ComponentStorage>],
+    group_storages: &mut [AtomicRefCell<ComponentStorage>],
     group_len: usize,
     entity: Entity,
 ) -> GroupStatus {
-    let (first, others) = storages.split_first_mut().unwrap_unchecked();
+    let (first, others) = group_storages.split_first_mut().unwrap_unchecked();
 
     let status = match first.get_mut().get_index(entity) {
         Some(index) => {
@@ -189,14 +200,15 @@ unsafe fn get_group_status(
 /// # Safety
 /// The components of the given entity must be ungrouped and the storages and length of the group
 /// must be valid.
+#[inline]
 unsafe fn group_components(
-    storages: &mut [AtomicRefCell<ComponentStorage>],
+    group_storages: &mut [AtomicRefCell<ComponentStorage>],
     group_len: &mut usize,
     entity: Entity,
 ) {
     let swap_index = *group_len;
 
-    for storage in storages.iter_mut().map(AtomicRefCell::get_mut) {
+    for storage in group_storages.iter_mut().map(AtomicRefCell::get_mut) {
         let index = storage.get_index(entity).unwrap_unchecked();
         storage.swap_unchecked(index, swap_index);
     }
@@ -207,14 +219,15 @@ unsafe fn group_components(
 /// # Safety
 /// The components of the given entity must be grouped and the storages and length of the group must
 /// be valid.
+#[inline]
 unsafe fn ungroup_components(
-    storages: &mut [AtomicRefCell<ComponentStorage>],
+    group_storages: &mut [AtomicRefCell<ComponentStorage>],
     group_len: &mut usize,
     entity: Entity,
 ) {
     *group_len -= 1;
 
-    for storage in storages.iter_mut().map(AtomicRefCell::get_mut) {
+    for storage in group_storages.iter_mut().map(AtomicRefCell::get_mut) {
         let index = storage.get_index(entity).unwrap_unchecked();
         storage.swap_unchecked(index, *group_len);
     }

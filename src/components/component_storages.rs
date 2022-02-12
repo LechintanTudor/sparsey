@@ -151,9 +151,8 @@ impl ComponentStorages {
         entities: impl Iterator<Item = Entity> + Clone,
     ) {
         for family_index in iter_bit_indexes(family_mask) {
-            let group_range = self.families.get_unchecked(family_index).clone();
-            let family = self.groups.get_unchecked_mut(group_range);
-            group_family(family, &mut self.storages, entities.clone());
+            let family_range = self.families.get_unchecked(family_index).clone();
+            group_family(&mut self.storages, &mut self.groups, family_range, entities.clone());
         }
     }
 
@@ -164,26 +163,40 @@ impl ComponentStorages {
         entities: impl Iterator<Item = Entity> + Clone,
     ) {
         for family_index in iter_bit_indexes(family_mask) {
-            let group_range = self.families.get_unchecked(family_index).clone();
-            let family = self.groups.get_unchecked_mut(group_range);
-            ungroup_family(family, &mut self.storages, group_mask, entities.clone());
+            let family_range = self.families.get_unchecked(family_index).clone();
+            ungroup_family(
+                &mut self.storages,
+                &mut self.groups,
+                family_range,
+                group_mask,
+                entities.clone(),
+            );
         }
     }
 
     pub(crate) fn group_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
-        for group_range in self.families.iter() {
+        for family_range in self.families.iter() {
             unsafe {
-                let family = self.groups.get_unchecked_mut(group_range.clone());
-                group_family(family, &mut self.storages, entities.clone());
+                group_family(
+                    &mut self.storages,
+                    &mut self.groups,
+                    family_range.clone(),
+                    entities.clone(),
+                );
             }
         }
     }
 
     pub(crate) fn ungroup_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
-        for group_range in self.families.iter() {
+        for family_range in self.families.iter() {
             unsafe {
-                let family = self.groups.get_unchecked_mut(group_range.clone());
-                ungroup_family(family, &mut self.storages, GroupMask::MAX, entities.clone());
+                ungroup_family(
+                    &mut self.storages,
+                    &mut self.groups,
+                    family_range.clone(),
+                    GroupMask::MAX,
+                    entities.clone(),
+                );
             }
         }
     }
