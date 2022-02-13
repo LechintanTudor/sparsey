@@ -64,7 +64,7 @@ impl ComponentStorage {
                 }
 
                 *self.entities.as_ptr().add(self.len) = entity;
-                *self.components.cast::<T>().as_ptr().add(self.len) = component;
+                self.components.cast::<T>().as_ptr().add(self.len).write(component);
 
                 self.len += 1;
                 None
@@ -112,7 +112,7 @@ impl ComponentStorage {
         ptr::copy(components.add(self.len), components.add(index), 1);
     }
 
-    pub(crate) fn remove_and_drop(&mut self, entity: Entity) {
+    pub(crate) fn delete_untyped(&mut self, entity: Entity) {
         let index = match self.sparse.remove(entity) {
             Some(index) => index,
             None => return,

@@ -85,7 +85,7 @@ impl World {
         self.components.ungroup_all_families(iter::once(entity));
 
         for storage in self.components.iter_mut() {
-            storage.remove_and_drop(entity);
+            storage.delete_untyped(entity);
         }
 
         true
@@ -104,7 +104,7 @@ impl World {
 
         for storage in self.components.iter_mut() {
             entities.clone().for_each(|entity| {
-                storage.remove_and_drop(entity);
+                storage.delete_untyped(entity);
             });
         }
 
