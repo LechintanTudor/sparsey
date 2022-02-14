@@ -61,7 +61,7 @@ fn test_components() {
     }
 
     // Insert
-    assert!(world.insert(e0, (C(0),)).is_ok());
+    assert!(world.insert(e0, (C(0),)));
 
     {
         let a = world.borrow::<A>();
