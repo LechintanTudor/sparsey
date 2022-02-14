@@ -95,31 +95,29 @@ pub(crate) unsafe fn group_family(
     storages: &mut [AtomicRefCell<ComponentStorage>],
     groups: &mut [Group],
     family_range: Range<usize>,
-    entities: impl Iterator<Item = Entity>,
+    entity: Entity,
 ) {
-    entities.for_each(|entity| {
-        for i in family_range.clone() {
-            let group = groups.get_unchecked_mut(i);
+    for i in family_range {
+        let group = groups.get_unchecked_mut(i);
 
-            let status = get_group_status(
-                storages.get_unchecked_mut(group.metadata.new_storage_range()),
-                group.len,
-                entity,
-            );
+        let status = get_group_status(
+            storages.get_unchecked_mut(group.metadata.new_storage_range()),
+            group.len,
+            entity,
+        );
 
-            match status {
-                GroupStatus::Grouped => (),
-                GroupStatus::Ungrouped => {
-                    group_components(
-                        storages.get_unchecked_mut(group.metadata.storage_range()),
-                        &mut group.len,
-                        entity,
-                    );
-                }
-                GroupStatus::Incomplete => break,
+        match status {
+            GroupStatus::Grouped => (),
+            GroupStatus::Ungrouped => {
+                group_components(
+                    storages.get_unchecked_mut(group.metadata.storage_range()),
+                    &mut group.len,
+                    entity,
+                );
             }
+            GroupStatus::Incomplete => break,
         }
-    });
+    }
 }
 
 /// # Safety
@@ -130,43 +128,41 @@ pub(crate) unsafe fn ungroup_family(
     groups: &mut [Group],
     family_range: Range<usize>,
     group_mask: GroupMask,
-    entities: impl Iterator<Item = Entity>,
+    entity: Entity,
 ) {
-    entities.into_iter().for_each(|entity| {
-        let mut ungroup_start = 0_usize;
-        let mut ungroup_len = 0_usize;
+    let mut ungroup_start = 0_usize;
+    let mut ungroup_len = 0_usize;
 
-        for i in family_range.clone() {
-            let group = groups.get_unchecked_mut(i);
+    for i in family_range {
+        let group = groups.get_unchecked_mut(i);
 
-            let status = get_group_status(
-                storages.get_unchecked_mut(group.metadata.new_storage_range()),
-                group.len,
-                entity,
-            );
+        let status = get_group_status(
+            storages.get_unchecked_mut(group.metadata.new_storage_range()),
+            group.len,
+            entity,
+        );
 
-            match status {
-                GroupStatus::Grouped => {
-                    if ungroup_len == 0 {
-                        ungroup_start = i;
-                    }
-
-                    ungroup_len += 1;
+        match status {
+            GroupStatus::Grouped => {
+                if ungroup_len == 0 {
+                    ungroup_start = i;
                 }
-                GroupStatus::Ungrouped | GroupStatus::Incomplete => break,
+
+                ungroup_len += 1;
             }
+            GroupStatus::Ungrouped | GroupStatus::Incomplete => break,
         }
+    }
 
-        let ungroup_indexes = (ungroup_start..(ungroup_start + ungroup_len))
-            .rev()
-            .take_while(|i| group_mask & (1 << i) != 0);
+    let ungroup_indexes = (ungroup_start..(ungroup_start + ungroup_len))
+        .rev()
+        .take_while(|i| group_mask & (1 << i) != 0);
 
-        for i in ungroup_indexes {
-            let group = groups.get_unchecked_mut(i);
-            let group_storages = storages.get_unchecked_mut(group.metadata.storage_range());
-            ungroup_components(group_storages, &mut group.len, entity)
-        }
-    });
+    for i in ungroup_indexes {
+        let group = groups.get_unchecked_mut(i);
+        let group_storages = storages.get_unchecked_mut(group.metadata.storage_range());
+        ungroup_components(group_storages, &mut group.len, entity)
+    }
 }
 
 /// # Safety
