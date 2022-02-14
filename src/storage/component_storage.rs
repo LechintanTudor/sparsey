@@ -10,9 +10,9 @@ pub struct ComponentStorage {
     sparse: SparseArray,
     components: NonNull<u8>,
     layout: Layout,
-    swap_space: NonNull<u8>,
     cap: usize,
-    drop: unsafe fn(*mut u8),
+    drop_in_place: unsafe fn(*mut u8),
+    swap_nonoverlapping: unsafe fn(&mut Self, usize, usize),
     needs_drop: bool,
 }
 
@@ -26,14 +26,6 @@ impl ComponentStorage {
     {
         let layout = Layout::new::<T>();
 
-        let swap_space = unsafe {
-            if layout.size() != 0 {
-                NonNull::new(alloc(layout)).unwrap_or_else(|| handle_alloc_error(layout))
-            } else {
-                NonNull::new_unchecked(layout.align() as _)
-            }
-        };
-
         Self {
             entities: NonNull::dangling(),
             len: 0,
@@ -41,8 +33,8 @@ impl ComponentStorage {
             components: NonNull::<T>::dangling().cast(),
             cap: 0,
             layout,
-            swap_space,
-            drop: drop_in_place::<T>,
+            drop_in_place: drop_in_place_typed::<T>,
+            swap_nonoverlapping: Self::swap_nonoverlapping_typed::<T>,
             needs_drop: mem::needs_drop::<T>(),
         }
     }
@@ -143,31 +135,35 @@ impl ComponentStorage {
             let to_remove = self.components.as_ptr().add(index * size);
             let last = self.components.as_ptr().add(self.len * size);
 
-            (self.drop)(to_remove);
+            (self.drop_in_place)(to_remove);
             ptr::copy(last, to_remove, size);
         }
     }
 
-    pub(crate) unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+    pub(crate) unsafe fn swap_nonoverlapping(&mut self, a: usize, b: usize) {
+        (self.swap_nonoverlapping)(self, a, b);
+    }
+
+    unsafe fn swap_nonoverlapping_typed<T>(&mut self, a: usize, b: usize)
+    where
+        T: Component,
+    {
         debug_assert!(a < self.len);
         debug_assert!(b < self.len);
 
-        let entity_a = self.entities.as_ptr().add(a);
-        let entity_b = self.entities.as_ptr().add(b);
-        ptr::swap(entity_a, entity_b);
+        let (sparse_a, sparse_b) = {
+            let entity_a = &mut *self.get_entity_ptr(a);
+            let entity_b = &mut *self.get_entity_ptr(b);
+            std::mem::swap(entity_a, entity_b);
 
-        let sparse_a = (*entity_a).sparse();
-        let sparse_b = (*entity_b).sparse();
-        self.sparse.swap_unchecked(sparse_a, sparse_b);
+            (entity_a.sparse(), entity_b.sparse())
+        };
 
-        let size = self.layout.size();
-        let component_a = self.components.as_ptr().add(a * size);
-        let component_b = self.components.as_ptr().add(b * size);
-        let swap_space = self.swap_space.as_ptr();
+        self.sparse.swap_nonoverlapping(sparse_a, sparse_b);
 
-        ptr::copy_nonoverlapping(component_a, swap_space, size);
-        ptr::copy(component_b, component_a, size);
-        ptr::copy_nonoverlapping(swap_space, component_b, size);
+        let component_a = &mut *self.get_component_ptr::<T>(a);
+        let component_b = &mut *self.get_component_ptr::<T>(a);
+        std::mem::swap(component_a, component_b);
     }
 
     #[inline]
@@ -196,6 +192,16 @@ impl ComponentStorage {
     #[inline]
     pub(crate) fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
+    }
+
+    #[inline]
+    pub(crate) fn get_index_from_sparse(&self, sparse: usize) -> Option<usize> {
+        self.sparse.get_from_sparse(sparse)
+    }
+
+    #[inline]
+    pub(crate) fn contains_sparse(&self, sparse: usize) -> bool {
+        self.sparse.contains_sparse(sparse)
     }
 
     #[inline]
@@ -250,7 +256,7 @@ impl ComponentStorage {
 
             for i in 0..len {
                 unsafe {
-                    (self.drop)(self.components.as_ptr().add(i * self.layout.size()));
+                    (self.drop_in_place)(self.components.as_ptr().add(i * self.layout.size()));
                 }
             }
         } else {
@@ -318,12 +324,6 @@ impl ComponentStorage {
 
 impl Drop for ComponentStorage {
     fn drop(&mut self) {
-        if self.layout.size() != 0 {
-            unsafe {
-                dealloc(self.swap_space.as_ptr(), self.layout);
-            }
-        }
-
         if self.cap != 0 {
             self.clear();
 
@@ -338,7 +338,8 @@ impl Drop for ComponentStorage {
     }
 }
 
-unsafe fn drop_in_place<T>(ptr: *mut u8) {
+#[inline]
+unsafe fn drop_in_place_typed<T>(ptr: *mut u8) {
     ptr::drop_in_place(ptr.cast::<T>())
 }
 

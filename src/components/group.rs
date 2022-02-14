@@ -186,7 +186,9 @@ unsafe fn get_group_status(
         None => return GroupStatus::Incomplete,
     };
 
-    if others.iter_mut().all(|storage| storage.get_mut().contains(entity)) {
+    let sparse = entity.sparse();
+
+    if others.iter_mut().all(|storage| storage.get_mut().contains_sparse(sparse)) {
         status
     } else {
         GroupStatus::Incomplete
@@ -205,8 +207,11 @@ unsafe fn group_components(
     let swap_index = *group_len;
 
     for storage in group_storages.iter_mut().map(AtomicRefCell::get_mut) {
-        let index = storage.get_index(entity).unwrap_unchecked();
-        storage.swap_unchecked(index, swap_index);
+        let dense = storage.get_index_from_sparse(entity.sparse()).unwrap_unchecked();
+
+        if dense != swap_index {
+            storage.swap_nonoverlapping(dense, swap_index);
+        }
     }
 
     *group_len += 1;
@@ -222,9 +227,13 @@ unsafe fn ungroup_components(
     entity: Entity,
 ) {
     *group_len -= 1;
+    let swap_index = *group_len;
 
     for storage in group_storages.iter_mut().map(AtomicRefCell::get_mut) {
-        let index = storage.get_index(entity).unwrap_unchecked();
-        storage.swap_unchecked(index, *group_len);
+        let dense = storage.get_index_from_sparse(entity.sparse()).unwrap_unchecked();
+
+        if dense != swap_index {
+            storage.swap_nonoverlapping(dense, swap_index);
+        }
     }
 }

@@ -29,6 +29,22 @@ impl SparseArray {
             .is_some()
     }
 
+    pub fn get_from_sparse(&self, sparse: usize) -> Option<usize> {
+        self.pages
+            .get(sparse / PAGE_SIZE)
+            .and_then(Option::as_ref)
+            .and_then(|p| p[sparse % PAGE_SIZE].as_ref())
+            .map(IndexEntity::dense)
+    }
+
+    pub fn contains_sparse(&self, sparse: usize) -> bool {
+        self.pages
+            .get(sparse / PAGE_SIZE)
+            .and_then(Option::as_ref)
+            .and_then(|p| p[sparse % PAGE_SIZE].as_ref())
+            .is_some()
+    }
+
     pub(crate) fn remove(&mut self, entity: Entity) -> Option<usize> {
         self.pages
             .get_mut(page_index(entity))
@@ -78,10 +94,10 @@ impl SparseArray {
 
     /// Swaps the `IndexEntities` at `a` and `b` without checking if `a` and `b`
     /// are valid.
-    pub(crate) unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+    pub(crate) unsafe fn swap_nonoverlapping(&mut self, a: usize, b: usize) {
         let pa = self.get_unchecked_mut(a) as *mut _;
         let pb = self.get_unchecked_mut(b) as *mut _;
-        ptr::swap(pa, pb);
+        ptr::swap_nonoverlapping(pa, pb, 1);
     }
 
     /// Removes all entities from the array.
