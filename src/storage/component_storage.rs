@@ -47,14 +47,17 @@ impl ComponentStorage {
         }
     }
 
-    pub(crate) unsafe fn insert<T>(&mut self, entity: Entity, component: T) -> Option<T> {
+    pub(crate) unsafe fn insert<T>(&mut self, entity: Entity, component: T) -> Option<T>
+    where
+        T: Component,
+    {
         let index_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
         match index_entity {
             Some(index_entity) => {
                 let index = index_entity.dense();
-                *self.entities.as_ptr().add(index) = entity;
-                Some(self.components.cast::<T>().as_ptr().add(index).replace(component))
+                self.get_entity_ptr(index).write(entity);
+                Some(self.get_component_ptr::<T>(index).replace(component))
             }
             None => {
                 *index_entity = Some(IndexEntity::new(self.len as u32, entity.version()));
@@ -63,8 +66,8 @@ impl ComponentStorage {
                     self.grow_amortized();
                 }
 
-                *self.entities.as_ptr().add(self.len) = entity;
-                self.components.cast::<T>().as_ptr().add(self.len).write(component);
+                self.get_entity_ptr(self.len).write(entity);
+                self.get_component_ptr::<T>(self.len).write(component);
 
                 self.len += 1;
                 None
@@ -72,26 +75,32 @@ impl ComponentStorage {
         }
     }
 
-    pub(crate) unsafe fn remove<T>(&mut self, entity: Entity) -> Option<T> {
+    pub(crate) unsafe fn remove<T>(&mut self, entity: Entity) -> Option<T>
+    where
+        T: Component,
+    {
         let index = self.sparse.remove(entity)?;
-
         self.len -= 1;
 
-        let last_entity = *self.entities.as_ptr().add(self.len);
-        *self.entities.as_ptr().add(index) = last_entity;
+        let last_entity = *self.get_entity_ptr(self.len);
+        self.get_entity_ptr(index).write(last_entity);
 
         if index < self.len {
             let index_entity = IndexEntity::new(index as u32, last_entity.version());
             *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(index_entity);
         }
 
-        let components = self.components.cast::<T>().as_ptr();
-        let removed = components.add(index).read();
-        ptr::copy(components.add(self.len), components.add(index), 1);
+        let removed_ptr = self.get_component_ptr::<T>(index);
+        let removed = removed_ptr.read();
+
+        ptr::copy(self.get_component_ptr::<T>(self.len), removed_ptr, 1);
         Some(removed)
     }
 
-    pub(crate) unsafe fn delete<T>(&mut self, entity: Entity) {
+    pub(crate) unsafe fn delete<T>(&mut self, entity: Entity)
+    where
+        T: Component,
+    {
         let index = match self.sparse.remove(entity) {
             Some(index) => index,
             None => return,
@@ -99,17 +108,18 @@ impl ComponentStorage {
 
         self.len -= 1;
 
-        let last_entity = *self.entities.as_ptr().add(self.len);
-        *self.entities.as_ptr().add(index) = last_entity;
+        let last_entity = *self.get_entity_ptr(self.len);
+        self.get_entity_ptr(index).write(last_entity);
 
         if index < self.len {
             let index_entity = IndexEntity::new(index as u32, last_entity.version());
             *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(index_entity);
         }
 
-        let components = self.components.cast::<T>().as_ptr();
-        ptr::drop_in_place(components.add(index));
-        ptr::copy(components.add(self.len), components.add(index), 1);
+        let dropped_ptr = self.get_component_ptr::<T>(index);
+        dropped_ptr.drop_in_place();
+
+        ptr::copy(self.get_component_ptr::<T>(self.len), dropped_ptr, 1);
     }
 
     pub(crate) fn delete_untyped(&mut self, entity: Entity) {
@@ -121,8 +131,8 @@ impl ComponentStorage {
         self.len -= 1;
 
         unsafe {
-            let last_entity = *self.entities.as_ptr().add(self.len);
-            *self.entities.as_ptr().add(index) = last_entity;
+            let last_entity = *self.get_entity_ptr(self.len);
+            self.get_entity_ptr(index).write(last_entity);
 
             if index < self.len {
                 let index_entity = IndexEntity::new(index as u32, last_entity.version());
@@ -160,14 +170,22 @@ impl ComponentStorage {
         ptr::copy_nonoverlapping(swap_space, component_b, size);
     }
 
-    pub unsafe fn get<T>(&self, entity: Entity) -> Option<&T> {
+    #[inline]
+    pub(crate) unsafe fn get<T>(&self, entity: Entity) -> Option<&T>
+    where
+        T: Component,
+    {
         let index = self.sparse.get(entity)?;
-        Some(&*self.components.cast::<T>().as_ptr().add(index))
+        Some(&*self.get_component_ptr(index))
     }
 
-    pub unsafe fn get_mut<T>(&self, entity: Entity) -> Option<&mut T> {
+    #[inline]
+    pub(crate) unsafe fn get_mut<T>(&self, entity: Entity) -> Option<&mut T>
+    where
+        T: Component,
+    {
         let index = self.sparse.get(entity)?;
-        Some(&mut *self.components.cast::<T>().as_ptr().add(index))
+        Some(&mut *self.get_component_ptr(index))
     }
 
     #[inline]
@@ -238,6 +256,19 @@ impl ComponentStorage {
         } else {
             self.len = 0;
         }
+    }
+
+    #[inline]
+    unsafe fn get_entity_ptr(&self, index: usize) -> *mut Entity {
+        self.entities.as_ptr().add(index)
+    }
+
+    #[inline]
+    unsafe fn get_component_ptr<T>(&self, index: usize) -> *mut T
+    where
+        T: Component,
+    {
+        self.components.cast::<T>().as_ptr().add(index)
     }
 
     fn grow_amortized(&mut self) {

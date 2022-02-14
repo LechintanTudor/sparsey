@@ -1,5 +1,5 @@
 use crate::components::GroupInfo;
-use crate::storage::{ComponentStorage, Entity, SparseArray};
+use crate::storage::{Component, ComponentStorage, Entity, SparseArray};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::marker::PhantomData;
 
@@ -10,7 +10,10 @@ pub struct Comp<'a, T> {
     _phantom: PhantomData<&'a [T]>,
 }
 
-impl<'a, T> Comp<'a, T> {
+impl<'a, T> Comp<'a, T>
+where
+    T: Component,
+{
     pub(crate) unsafe fn new(
         storage: AtomicRef<'a, ComponentStorage>,
         group_info: Option<GroupInfo<'a>>,
@@ -64,7 +67,10 @@ pub struct CompMut<'a, T> {
     _phantom: PhantomData<&'a mut [T]>,
 }
 
-impl<'a, T> CompMut<'a, T> {
+impl<'a, T> CompMut<'a, T>
+where
+    T: Component,
+{
     pub(crate) unsafe fn new(
         storage: AtomicRefMut<'a, ComponentStorage>,
         group_info: Option<GroupInfo<'a>>,

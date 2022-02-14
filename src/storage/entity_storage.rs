@@ -13,10 +13,7 @@ pub struct EntityStorage {
 impl EntityStorage {
     /// Creates a new `Entity` and returns it.
     pub(crate) fn create(&mut self) -> Entity {
-        self.maintain();
-
         let entity = self.allocator.allocate().expect("No entities left to allocate");
-
         self.storage.insert(entity);
         entity
     }
