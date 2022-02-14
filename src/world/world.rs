@@ -2,7 +2,7 @@ use crate::components::{ComponentSet, ComponentStorages};
 use crate::layout::Layout;
 use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
 use crate::utils::panic_missing_comp;
-use crate::world::{Comp, CompMut, Entities, NoSuchEntity};
+use crate::world::{Comp, CompMut, Entities};
 use std::any::TypeId;
 use std::{iter, mem};
 
@@ -111,17 +111,18 @@ impl World {
         entities.into_iter().map(|entity| self.entities.destroy(entity) as usize).sum()
     }
 
-    /// Associates the given `components` to `entity` if `entity` exists in the world.
-    pub fn insert<C>(&mut self, entity: Entity, components: C) -> Result<(), NoSuchEntity>
+    /// Associates the given `components` to `entity` if `entity` exists in the world. Returns
+    /// `true` if the operation was successful.
+    pub fn insert<C>(&mut self, entity: Entity, components: C) -> bool
     where
         C: ComponentSet,
     {
-        if !self.contains(entity) {
-            return Err(NoSuchEntity);
+        if !self.entities.contains(entity) {
+            return false;
         }
 
         C::insert(&mut self.components, entity, components);
-        Ok(())
+        true
     }
 
     /// Removes a component set from `entity` and returns them.

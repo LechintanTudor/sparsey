@@ -29,7 +29,7 @@ fn main() {
     assert!(velocity.is_none());
 
     // Adds components to an existing entity.
-    world.insert(entity, (Velocity(1, 1),)).unwrap();
+    world.insert(entity, (Velocity(1, 1),));
 
     // Deletes components from an existing entity. This is faster than removing them.
     world.delete::<(Velocity,)>(entity);
