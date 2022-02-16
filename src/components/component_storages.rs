@@ -18,7 +18,7 @@ pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
     component_info: FxHashMap<TypeId, ComponentInfo>,
     groups: Vec<Group>,
-    families: Vec<Range<usize>>,
+    family_ranges: Vec<Range<usize>>,
 }
 
 impl ComponentStorages {
@@ -59,7 +59,7 @@ impl ComponentStorages {
                             family_mask: 1 << family_index,
                             group_mask,
                             group_info: Some(StorageGroupInfo {
-                                family_index,
+                                family_start: first_group_index,
                                 group_offset,
                                 storage_mask: 1 << (prev_arity + component_offset),
                             }),
@@ -95,7 +95,7 @@ impl ComponentStorages {
             storages.push(AtomicRefCell::new(storage));
         }
 
-        Self { component_info, storages, families, groups }
+        Self { component_info, storages, family_ranges: families, groups }
     }
 
     pub(crate) fn into_storages(mut self) -> FxHashMap<TypeId, ComponentStorage> {
@@ -148,7 +148,7 @@ impl ComponentStorages {
         entities: impl Iterator<Item = Entity> + Clone,
     ) {
         for family_index in iter_bit_indexes(family_mask) {
-            let family_range = self.families.get_unchecked(family_index);
+            let family_range = self.family_ranges.get_unchecked(family_index);
 
             entities.clone().for_each(|entity| {
                 group_family(&mut self.storages, &mut self.groups, family_range.clone(), entity);
@@ -163,7 +163,7 @@ impl ComponentStorages {
         entities: impl Iterator<Item = Entity> + Clone,
     ) {
         for family_index in iter_bit_indexes(family_mask) {
-            let family_range = self.families.get_unchecked(family_index);
+            let family_range = self.family_ranges.get_unchecked(family_index);
 
             entities.clone().for_each(|entity| {
                 ungroup_family(
@@ -178,7 +178,7 @@ impl ComponentStorages {
     }
 
     pub(crate) fn group_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
-        for family_range in self.families.iter() {
+        for family_range in self.family_ranges.iter() {
             entities.clone().for_each(|entity| unsafe {
                 group_family(&mut self.storages, &mut self.groups, family_range.clone(), entity);
             });
@@ -186,7 +186,7 @@ impl ComponentStorages {
     }
 
     pub(crate) fn ungroup_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
-        for family_range in self.families.iter() {
+        for family_range in self.family_ranges.iter() {
             entities.clone().for_each(|entity| unsafe {
                 ungroup_family(
                     &mut self.storages,
@@ -218,9 +218,8 @@ impl ComponentStorages {
             (
                 self.storages.get_unchecked(info.storage_index).borrow(),
                 info.group_info.map(|info| {
-                    let group_index = self.families.get_unchecked(info.family_index).start;
-                    let group = NonNull::from(self.groups.get_unchecked(group_index));
-                    GroupInfo::new(group, info.group_offset, info.storage_mask)
+                    let family = NonNull::from(self.groups.get_unchecked(info.family_start));
+                    GroupInfo::new(family, info.group_offset, info.storage_mask)
                 }),
             )
         })
@@ -234,9 +233,8 @@ impl ComponentStorages {
             (
                 self.storages.get_unchecked(info.storage_index).borrow_mut(),
                 info.group_info.map(|info| {
-                    let group_index = self.families.get_unchecked(info.family_index).start;
-                    let group = NonNull::from(self.groups.get_unchecked(group_index));
-                    GroupInfo::new(group, info.group_offset, info.storage_mask)
+                    let family = NonNull::from(self.groups.get_unchecked(info.family_start));
+                    GroupInfo::new(family, info.group_offset, info.storage_mask)
                 }),
             )
         })
@@ -282,7 +280,9 @@ struct ComponentInfo {
 
 #[derive(Clone, Copy)]
 struct StorageGroupInfo {
-    family_index: usize,
+    /// Group index at which the family starts.
+    family_start: usize,
+    /// Offset from the family start.
     group_offset: usize,
     storage_mask: StorageMask,
 }
