@@ -3,17 +3,22 @@ use std::alloc::{alloc, dealloc, handle_alloc_error, realloc, Layout};
 use std::ptr::NonNull;
 use std::{mem, ptr, slice};
 
+struct ComponentStorageFns {
+    grow_amortized: unsafe fn(&mut ComponentStorage),
+    swap_nonoverlapping: unsafe fn(&mut ComponentStorage, usize, usize),
+    delete: unsafe fn(&mut ComponentStorage, entity: Entity),
+    clear: unsafe fn(&mut ComponentStorage),
+    drop: unsafe fn(&mut ComponentStorage),
+}
+
 /// Type-erased storage for `Component`s.
 pub struct ComponentStorage {
     entities: NonNull<Entity>,
     len: usize,
     sparse: SparseArray,
     components: NonNull<u8>,
-    layout: Layout,
     cap: usize,
-    drop_in_place: unsafe fn(*mut u8),
-    swap_nonoverlapping: unsafe fn(&mut Self, usize, usize),
-    needs_drop: bool,
+    fns: ComponentStorageFns,
 }
 
 unsafe impl Send for ComponentStorage {}
@@ -24,18 +29,19 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        let layout = Layout::new::<T>();
-
         Self {
             entities: NonNull::dangling(),
             len: 0,
             sparse: SparseArray::default(),
             components: NonNull::<T>::dangling().cast(),
             cap: 0,
-            layout,
-            drop_in_place: drop_in_place_typed::<T>,
-            swap_nonoverlapping: Self::swap_nonoverlapping_typed::<T>,
-            needs_drop: mem::needs_drop::<T>(),
+            fns: ComponentStorageFns {
+                grow_amortized: Self::grow_amortized_typed::<T>,
+                swap_nonoverlapping: Self::swap_nonoverlapping_typed::<T>,
+                delete: Self::delete_typed::<T>,
+                clear: Self::clear_typed::<T>,
+                drop: Self::drop_typed::<T>,
+            },
         }
     }
 
@@ -89,7 +95,12 @@ impl ComponentStorage {
         Some(removed)
     }
 
-    pub(crate) unsafe fn delete<T>(&mut self, entity: Entity)
+    #[inline]
+    pub(crate) fn delete(&mut self, entity: Entity) {
+        unsafe { (self.fns.delete)(self, entity) }
+    }
+
+    pub(crate) unsafe fn delete_typed<T>(&mut self, entity: Entity)
     where
         T: Component,
     {
@@ -114,34 +125,9 @@ impl ComponentStorage {
         ptr::copy(self.get_component_ptr::<T>(self.len), dropped_ptr, 1);
     }
 
-    pub(crate) fn delete_untyped(&mut self, entity: Entity) {
-        let index = match self.sparse.remove(entity) {
-            Some(index) => index,
-            None => return,
-        };
-
-        self.len -= 1;
-
-        unsafe {
-            let last_entity = *self.get_entity_ptr(self.len);
-            self.get_entity_ptr(index).write(last_entity);
-
-            if index < self.len {
-                let index_entity = IndexEntity::new(index as u32, last_entity.version());
-                *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(index_entity);
-            }
-
-            let size = self.layout.size();
-            let to_remove = self.components.as_ptr().add(index * size);
-            let last = self.components.as_ptr().add(self.len * size);
-
-            (self.drop_in_place)(to_remove);
-            ptr::copy(last, to_remove, size);
-        }
-    }
-
+    #[inline]
     pub(crate) unsafe fn swap_nonoverlapping(&mut self, a: usize, b: usize) {
-        (self.swap_nonoverlapping)(self, a, b);
+        (self.fns.swap_nonoverlapping)(self, a, b);
     }
 
     unsafe fn swap_nonoverlapping_typed<T>(&mut self, a: usize, b: usize)
@@ -154,7 +140,7 @@ impl ComponentStorage {
         let (sparse_a, sparse_b) = {
             let entity_a = &mut *self.get_entity_ptr(a);
             let entity_b = &mut *self.get_entity_ptr(b);
-            std::mem::swap(entity_a, entity_b);
+            mem::swap(entity_a, entity_b);
 
             (entity_a.sparse(), entity_b.sparse())
         };
@@ -163,7 +149,7 @@ impl ComponentStorage {
 
         let component_a = &mut *self.get_component_ptr::<T>(a);
         let component_b = &mut *self.get_component_ptr::<T>(a);
-        std::mem::swap(component_a, component_b);
+        mem::swap(component_a, component_b);
     }
 
     #[inline]
@@ -247,20 +233,24 @@ impl ComponentStorage {
         )
     }
 
+    #[inline]
     pub(crate) fn clear(&mut self) {
+        unsafe { (self.fns.clear)(self) }
+    }
+
+    fn clear_typed<T>(&mut self)
+    where
+        T: Component,
+    {
         self.sparse.clear();
 
-        if self.needs_drop {
-            let len = self.len;
-            self.len = 0;
+        let len = self.len;
+        self.len = 0;
 
-            for i in 0..len {
-                unsafe {
-                    (self.drop_in_place)(self.components.as_ptr().add(i * self.layout.size()));
-                }
+        for i in 0..len {
+            unsafe {
+                self.get_component_ptr::<T>(i).drop_in_place();
             }
-        } else {
-            self.len = 0;
         }
     }
 
@@ -277,113 +267,81 @@ impl ComponentStorage {
         self.components.cast::<T>().as_ptr().add(index)
     }
 
+    #[inline]
     fn grow_amortized(&mut self) {
-        unsafe {
-            let (entities, components, cap) = if self.cap == 0 {
-                let entities = NonNull::new(alloc(Layout::new::<Entity>()))
-                    .unwrap_or_else(|| handle_alloc_error(Layout::new::<Entity>()));
+        unsafe { (self.fns.grow_amortized)(self) }
+    }
 
-                let components = if self.layout.size() != 0 {
-                    NonNull::new(alloc(self.layout))
-                        .unwrap_or_else(|| handle_alloc_error(self.layout))
-                } else {
-                    self.components
-                };
+    unsafe fn grow_amortized_typed<T>(&mut self)
+    where
+        T: Component,
+    {
+        let (entities, components, cap) = if self.cap == 0 {
+            let entities_layout = Layout::new::<Entity>();
+            let entities = NonNull::new(alloc(entities_layout))
+                .unwrap_or_else(|| handle_alloc_error(entities_layout));
 
-                (entities, components, 1)
+            let components_layout = Layout::new::<T>();
+            let components = if mem::size_of::<T>() != 0 {
+                NonNull::new(alloc(components_layout))
+                    .unwrap_or_else(|| handle_alloc_error(components_layout))
             } else {
-                let cap = 2 * self.cap;
-
-                let entities = {
-                    let old_layout = array_layout::<Entity>(self.cap);
-                    let layout = array_layout::<Entity>(cap);
-
-                    NonNull::new(realloc(self.entities.as_ptr().cast(), old_layout, layout.size()))
-                        .unwrap_or_else(|| handle_alloc_error(layout))
-                };
-
-                let components = if self.layout.size() != 0 {
-                    let old_layout = repeat_layout(&self.layout, self.cap);
-                    let layout = repeat_layout(&self.layout, cap);
-
-                    NonNull::new(realloc(self.components.as_ptr(), old_layout, layout.size()))
-                        .unwrap_or_else(|| handle_alloc_error(layout))
-                } else {
-                    self.components
-                };
-
-                (entities, components, cap)
+                self.components
             };
 
-            self.entities = entities.cast();
-            self.components = components;
-            self.cap = cap;
+            (entities, components, 1)
+        } else {
+            let cap = 2 * self.cap;
+
+            let entities = {
+                let old_layout = array_layout::<Entity>(self.cap);
+                let layout = array_layout::<Entity>(cap);
+
+                NonNull::new(realloc(self.entities.as_ptr().cast(), old_layout, layout.size()))
+                    .unwrap_or_else(|| handle_alloc_error(layout))
+            };
+
+            let components = if mem::size_of::<T>() != 0 {
+                let old_layout = array_layout::<T>(self.cap);
+                let layout = array_layout::<T>(cap);
+
+                NonNull::new(realloc(self.components.as_ptr(), old_layout, layout.size()))
+                    .unwrap_or_else(|| handle_alloc_error(layout))
+            } else {
+                self.components
+            };
+
+            (entities, components, cap)
+        };
+
+        self.entities = entities.cast();
+        self.components = components;
+        self.cap = cap;
+    }
+
+    unsafe fn drop_typed<T>(&mut self)
+    where
+        T: Component,
+    {
+        if self.cap != 0 {
+            self.clear_typed::<T>();
+
+            dealloc(self.entities.as_ptr().cast(), array_layout::<Entity>(self.cap));
+
+            if mem::size_of::<T>() != 0 {
+                dealloc(self.components.as_ptr(), array_layout::<T>(self.cap));
+            }
         }
     }
 }
 
 impl Drop for ComponentStorage {
     fn drop(&mut self) {
-        if self.cap != 0 {
-            self.clear();
-
-            unsafe {
-                dealloc(self.entities.as_ptr().cast(), array_layout::<Entity>(self.cap));
-
-                if self.layout.size() != 0 {
-                    dealloc(self.components.as_ptr(), repeat_layout(&self.layout, self.cap));
-                }
-            }
-        }
+        unsafe { (self.fns.drop)(self) }
     }
 }
 
 #[inline]
-unsafe fn drop_in_place_typed<T>(ptr: *mut u8) {
-    ptr::drop_in_place(ptr.cast::<T>())
-}
-
-fn array_layout<T>(n: usize) -> Layout {
-    Layout::array::<T>(n).expect("Layout size overflow")
-}
-
-// From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
-fn repeat_layout(layout: &Layout, n: usize) -> Layout {
-    // This cannot overflow. Quoting from the invariant of Layout:
-    // > `size`, when rounded up to the nearest multiple of `align`,
-    // > must not overflow (i.e., the rounded value must be less than
-    // > `usize::MAX`)
-    let padded_size = layout.size() + padding_needed_for(layout, layout.align());
-    let alloc_size = padded_size.checked_mul(n).expect("Layout size overflow");
-
-    // SAFETY: self.align is already known to be valid and alloc_size has been
-    // padded already.
-    unsafe { Layout::from_size_align_unchecked(alloc_size, layout.align()) }
-}
-
-// From https://doc.rust-lang.org/src/core/alloc/layout.rs.html
-fn padding_needed_for(layout: &Layout, align: usize) -> usize {
-    let len = layout.size();
-
-    // Rounded up value is:
-    //   len_rounded_up = (len + align - 1) & !(align - 1);
-    // and then we return the padding difference: `len_rounded_up - len`.
-    //
-    // We use modular arithmetic throughout:
-    //
-    // 1. align is guaranteed to be > 0, so align - 1 is always
-    //    valid.
-    //
-    // 2. `len + align - 1` can overflow by at most `align - 1`,
-    //    so the &-mask with `!(align - 1)` will ensure that in the
-    //    case of overflow, `len_rounded_up` will itself be 0.
-    //    Thus the returned padding, when added to `len`, yields 0,
-    //    which trivially satisfies the alignment `align`.
-    //
-    // (Of course, attempts to allocate blocks of memory whose
-    // size and padding overflow in the above manner should cause
-    // the allocator to yield an error anyway.)
-
-    let len_rounded_up = len.wrapping_add(align).wrapping_sub(1) & !align.wrapping_sub(1);
-    len_rounded_up.wrapping_sub(len)
+fn array_layout<U>(n: usize) -> Layout {
+    Layout::array::<U>(n).unwrap()
 }

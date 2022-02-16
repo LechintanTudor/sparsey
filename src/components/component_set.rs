@@ -170,7 +170,7 @@ macro_rules! impl_component_set {
 
                 unsafe {
                     storages.ungroup_families(family_mask, group_mask, iter::once(entity));
-                    $((*storage_ptrs.$idx).delete::<$comp>(entity);)+
+                    $((*storage_ptrs.$idx).delete_typed::<$comp>(entity);)+
                 }
             }
         }
