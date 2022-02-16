@@ -5,9 +5,9 @@ use std::ptr::NonNull;
 
 #[derive(Clone, Copy)]
 pub struct GroupInfo<'a> {
-    group: NonNull<Group>,
-    offset: usize,
-    mask: StorageMask,
+    family: NonNull<Group>,
+    group_offset: usize,
+    storage_mask: StorageMask,
     _phantom: PhantomData<&'a [Group]>,
 }
 
@@ -15,43 +15,47 @@ unsafe impl Send for GroupInfo<'_> {}
 unsafe impl Sync for GroupInfo<'_> {}
 
 impl<'a> GroupInfo<'a> {
-    pub(crate) unsafe fn new(group: NonNull<Group>, offset: usize, mask: StorageMask) -> Self {
-        Self { group, offset, mask, _phantom: PhantomData }
+    pub(crate) unsafe fn new(
+        family: NonNull<Group>,
+        group_offset: usize,
+        storage_mask: StorageMask,
+    ) -> Self {
+        Self { family, group_offset, storage_mask, _phantom: PhantomData }
     }
 
     pub(crate) fn combine(self, info: Self) -> Option<Self> {
-        if self.group != info.group {
+        if self.family != info.family {
             return None;
         }
 
         Some(Self {
-            group: self.group,
-            offset: self.offset.max(info.offset),
-            mask: self.mask | info.mask,
+            family: self.family,
+            group_offset: self.group_offset.max(info.group_offset),
+            storage_mask: self.storage_mask | info.storage_mask,
             _phantom: PhantomData,
         })
     }
 
     pub(crate) fn group_len(&self) -> Option<usize> {
-        let group = unsafe { *self.group.as_ptr().add(self.offset) };
-        let mask = QueryMask::new(self.mask, 0);
+        let group = unsafe { *self.family.as_ptr().add(self.group_offset) };
+        let mask = QueryMask::new(self.storage_mask, 0);
 
         (mask == group.metadata().include_mask()).then(|| group.len())
     }
 
     pub(crate) fn exclude_group_range(&self, exclude: &GroupInfo) -> Option<Range<usize>> {
-        if self.group != exclude.group {
+        if self.family != exclude.family {
             return None;
         }
 
-        let mask = QueryMask::new(self.mask, exclude.mask);
-        let offset = self.offset.max(exclude.offset);
+        let mask = QueryMask::new(self.storage_mask, exclude.storage_mask);
+        let group_offset = self.group_offset.max(exclude.group_offset);
 
         unsafe {
-            let group = *self.group.as_ptr().add(offset);
+            let group = *self.family.as_ptr().add(group_offset);
 
             if mask == group.metadata().exclude_mask() {
-                let prev_group = *self.group.as_ptr().add(offset - 1);
+                let prev_group = *self.family.as_ptr().add(group_offset - 1);
                 Some(group.len()..prev_group.len())
             } else {
                 None

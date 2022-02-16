@@ -17,7 +17,6 @@ use std::ptr::NonNull;
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
     component_info: FxHashMap<TypeId, ComponentInfo>,
-    group_info: Vec<StorageGroupInfo>,
     groups: Vec<Group>,
     families: Vec<Range<usize>>,
 }
@@ -29,7 +28,6 @@ impl ComponentStorages {
     ) -> Self {
         let mut component_info = FxHashMap::default();
         let mut storages = Vec::new();
-        let mut group_info = Vec::new();
         let mut groups = Vec::new();
         let mut families = Vec::new();
 
@@ -58,21 +56,20 @@ impl ComponentStorages {
                         type_id,
                         ComponentInfo {
                             storage_index: storages.len(),
-                            group_info_index: group_info.len(),
-                            group_mask,
                             family_mask: 1 << family_index,
+                            group_mask,
+                            group_info: Some(StorageGroupInfo {
+                                family_index,
+                                group_offset,
+                                storage_mask: 1 << (prev_arity + component_offset),
+                            }),
                         },
                     );
-
-                    group_info.push(StorageGroupInfo {
-                        family_index,
-                        group_offset,
-                        storage_mask: 1 << (prev_arity + component_offset),
-                    });
 
                     let storage = spare_storages
                         .remove(&type_id)
                         .unwrap_or_else(|| component.create_storage());
+
                     storages.push(AtomicRefCell::new(storage));
                 }
 
@@ -89,16 +86,16 @@ impl ComponentStorages {
                 type_id,
                 ComponentInfo {
                     storage_index: storages.len(),
-                    group_info_index: usize::MAX,
-                    family_mask: 0,
-                    group_mask: 0,
+                    family_mask: FamilyMask::default(),
+                    group_mask: GroupMask::default(),
+                    group_info: None,
                 },
             );
 
             storages.push(AtomicRefCell::new(storage));
         }
 
-        Self { component_info, storages, group_info, families, groups }
+        Self { component_info, storages, families, groups }
     }
 
     pub(crate) fn into_storages(mut self) -> FxHashMap<TypeId, ComponentStorage> {
@@ -132,9 +129,9 @@ impl ComponentStorages {
         if let Entry::Vacant(entry) = self.component_info.entry(type_id) {
             entry.insert(ComponentInfo {
                 storage_index: self.storages.len(),
-                group_info_index: usize::MAX,
-                group_mask: 0,
-                family_mask: 0,
+                family_mask: FamilyMask::default(),
+                group_mask: GroupMask::default(),
+                group_info: None,
             });
 
             self.storages.push(AtomicRefCell::new(storage_builder()));
@@ -220,7 +217,7 @@ impl ComponentStorages {
         self.component_info.get(type_id).map(|info| unsafe {
             (
                 self.storages.get_unchecked(info.storage_index).borrow(),
-                self.group_info.get(info.group_info_index).map(|info| {
+                info.group_info.map(|info| {
                     let group_index = self.families.get_unchecked(info.family_index).start;
                     let group = NonNull::from(self.groups.get_unchecked(group_index));
                     GroupInfo::new(group, info.group_offset, info.storage_mask)
@@ -236,7 +233,7 @@ impl ComponentStorages {
         self.component_info.get(type_id).map(|info| unsafe {
             (
                 self.storages.get_unchecked(info.storage_index).borrow_mut(),
-                self.group_info.get(info.group_info_index).map(|info| {
+                info.group_info.map(|info| {
                     let group_index = self.families.get_unchecked(info.family_index).start;
                     let group = NonNull::from(self.groups.get_unchecked(group_index));
                     GroupInfo::new(group, info.group_offset, info.storage_mask)
@@ -278,9 +275,9 @@ impl ComponentStorages {
 #[derive(Clone, Copy)]
 struct ComponentInfo {
     storage_index: usize,
-    group_info_index: usize,
     family_mask: FamilyMask,
     group_mask: GroupMask,
+    group_info: Option<StorageGroupInfo>,
 }
 
 #[derive(Clone, Copy)]
