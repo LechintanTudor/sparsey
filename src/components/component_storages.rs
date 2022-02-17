@@ -11,7 +11,7 @@ use std::collections::hash_map::Entry;
 use std::ops::Range;
 use std::ptr::NonNull;
 
-/// Container for `ComponentStorage`s. Also manages component grouping.
+/// Container for component storages. Also manages component grouping.
 #[derive(Default)]
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,

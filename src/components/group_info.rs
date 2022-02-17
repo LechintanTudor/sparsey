@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use std::ops::Range;
 use std::ptr::NonNull;
 
+/// Tracks the group to which one or more component storages belong to.
 #[derive(Clone, Copy)]
 pub struct GroupInfo<'a> {
     family: NonNull<Group>,

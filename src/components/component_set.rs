@@ -4,16 +4,19 @@ use crate::utils::panic_missing_comp;
 use std::any::TypeId;
 use std::iter;
 
-/// Handles adding/removing `Component`s to/from storages.
-/// Trait implemented by `Component` tuples up to arity 16.
+/// Manages components in component storages.
+/// Implemented for `Component` tuples up to arity 16.
 ///
 /// # Safety
 /// All operations must preserve component grouping.
 pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
+    /// Result of the `remove` operation.
     type RemoveResult: Send + Sync + 'static;
 
+    /// Adds the given `components` to `entity`.
     fn insert(storages: &mut ComponentStorages, entity: Entity, components: Self);
 
+    /// Creates new entities with the components produced by the iterator.
     fn extend<'a, I>(
         entities: &'a mut EntityStorage,
         storages: &mut ComponentStorages,
@@ -22,9 +25,11 @@ pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
     where
         I: IntoIterator<Item = Self>;
 
+    /// Removes a component set from `entity` and returns the components.
     #[must_use = "use `delete` to discard the components"]
     fn remove(storages: &mut ComponentStorages, entity: Entity) -> Self::RemoveResult;
 
+    /// Deletes a component set from `entity`. This is faster than removing them.
     fn delete(storages: &mut ComponentStorages, entity: Entity);
 }
 
