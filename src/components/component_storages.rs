@@ -8,7 +8,6 @@ use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::collections::hash_map::Entry;
-use std::mem;
 use std::ops::Range;
 use std::ptr::NonNull;
 
@@ -29,56 +28,48 @@ impl ComponentStorages {
         let mut component_info = FxHashMap::default();
         let mut storages = Vec::new();
         let mut groups = Vec::new();
-        let mut families = Vec::new();
+        let mut family_ranges = Vec::new();
 
-        // Iterate group families.
+        // Iterate group families
         for (family_index, family) in layout.families().iter().enumerate() {
-            let first_group_index = groups.len();
-            let first_storage_index = storages.len();
+            let family_group_index = groups.len();
+            let family_storage_index = storages.len();
 
-            let components = family.components();
-            let family_arity = family.arity();
+            let mut prev_group_arity = 0_usize;
 
-            let mut prev_arity = 0_usize;
-
-            // Iterate groups in a group family.
-            for (group_offset, &arity) in family.group_arities().iter().enumerate() {
+            // Iterate groups in a group family
+            for (group_offset, &group_arity) in family.group_arities().iter().enumerate() {
                 let new_storage_index = storages.len();
+                let new_components = &family.components()[prev_group_arity..group_arity];
 
-                // Iterate new components in a group.
-                for (component_offset, component) in
-                    (&components[prev_arity..arity]).iter().enumerate()
-                {
-                    let type_id = component.type_id();
-                    let group_mask = new_group_mask(groups.len(), arity, family_arity);
-
+                // Iterate new components in a group
+                for (component_offset, component) in new_components.iter().enumerate() {
                     component_info.insert(
-                        type_id,
+                        component.type_id(),
                         ComponentInfo {
                             storage_index: storages.len(),
                             family_mask: 1 << family_index,
-                            group_mask,
+                            group_mask: new_group_mask(groups.len(), group_arity, family.arity()),
                             group_info: Some(StorageGroupInfo {
-                                family_start: first_group_index,
+                                family_group_index,
                                 group_offset,
-                                storage_mask: 1 << (prev_arity + component_offset),
+                                storage_mask: 1 << (prev_group_arity + component_offset),
                             }),
                         },
                     );
 
                     let storage = spare_storages
-                        .remove(&type_id)
+                        .remove(&component.type_id())
                         .unwrap_or_else(|| component.create_storage());
 
                     storages.push(AtomicRefCell::new(storage));
                 }
 
-                groups.push(Group::new(first_storage_index, new_storage_index, storages.len()));
-
-                prev_arity = arity;
+                groups.push(Group::new(family_storage_index, new_storage_index, storages.len()));
+                prev_group_arity = group_arity;
             }
 
-            families.push(first_group_index..groups.len());
+            family_ranges.push(family_group_index..groups.len());
         }
 
         for (type_id, storage) in spare_storages.drain() {
@@ -95,14 +86,14 @@ impl ComponentStorages {
             storages.push(AtomicRefCell::new(storage));
         }
 
-        Self { component_info, storages, family_ranges: families, groups }
+        Self { component_info, storages, family_ranges, groups }
     }
 
     pub(crate) fn into_storages(mut self) -> FxHashMap<TypeId, ComponentStorage> {
         let mut storages = FxHashMap::default();
 
         for (type_id, info) in self.component_info {
-            let storage = mem::replace(
+            let storage = std::mem::replace(
                 self.storages[info.storage_index].get_mut(),
                 ComponentStorage::new::<()>(),
             );
@@ -218,7 +209,7 @@ impl ComponentStorages {
             (
                 self.storages.get_unchecked(info.storage_index).borrow(),
                 info.group_info.map(|info| {
-                    let family = NonNull::from(self.groups.get_unchecked(info.family_start));
+                    let family = NonNull::from(self.groups.get_unchecked(info.family_group_index));
                     GroupInfo::new(family, info.group_offset, info.storage_mask)
                 }),
             )
@@ -233,7 +224,7 @@ impl ComponentStorages {
             (
                 self.storages.get_unchecked(info.storage_index).borrow_mut(),
                 info.group_info.map(|info| {
-                    let family = NonNull::from(self.groups.get_unchecked(info.family_start));
+                    let family = NonNull::from(self.groups.get_unchecked(info.family_group_index));
                     GroupInfo::new(family, info.group_offset, info.storage_mask)
                 }),
             )
@@ -281,8 +272,8 @@ struct ComponentInfo {
 #[derive(Clone, Copy)]
 struct StorageGroupInfo {
     /// Group index at which the family starts.
-    family_start: usize,
-    /// Offset from the family start.
+    family_group_index: usize,
+    /// Offset from the family group index.
     group_offset: usize,
     storage_mask: StorageMask,
 }
