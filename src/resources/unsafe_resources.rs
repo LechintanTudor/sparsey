@@ -4,7 +4,6 @@ use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::ops::{Deref, DerefMut};
 
-/// Maps `TypeIds` to type-erased `Resources`.
 #[derive(Default)]
 pub(crate) struct UnsafeResources {
     resources: FxHashMap<TypeId, AtomicRefCell<Box<dyn Resource>>>,

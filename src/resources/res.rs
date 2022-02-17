@@ -1,6 +1,7 @@
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::ops::{Deref, DerefMut};
 
+/// Immutable view over a resource.
 pub struct Res<'a, T>(AtomicRef<'a, T>);
 
 impl<'a, T> Res<'a, T> {
@@ -17,6 +18,7 @@ impl<T> Deref for Res<'_, T> {
     }
 }
 
+/// Mutable view over a resource.
 pub struct ResMut<'a, T>(AtomicRefMut<'a, T>);
 
 impl<'a, T> ResMut<'a, T> {
