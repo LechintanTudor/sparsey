@@ -12,6 +12,7 @@ use std::ops::Range;
 use std::ptr::NonNull;
 
 /// Container for component storages. Also manages component grouping.
+#[doc(hidden)]
 #[derive(Default)]
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
