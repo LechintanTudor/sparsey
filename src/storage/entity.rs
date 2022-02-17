@@ -1,8 +1,8 @@
 use std::fmt;
 use std::num::NonZeroU32;
 
-/// Used by `EntityStorage` to recycle indexes. Entities with the same id and
-/// different `Version`s are considered different.
+/// Type used to tell apart entities with the same id. Entities with the same id and different
+/// `Version`s are considered different.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Version(NonZeroU32);
 
@@ -30,7 +30,7 @@ impl Version {
     }
 }
 
-/// Handle used to fetch components from `ComponentStorages`.
+/// Uniquely identifies a set of components in a `World`.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Entity {
     id: u32,
@@ -62,8 +62,7 @@ impl Entity {
         self.id
     }
 
-    /// Returns the id of the entity extended to a usize. Used as an index into
-    /// `SparseArray`s.
+    /// Returns the id of the entity extended to a usize.
     #[inline]
     pub const fn sparse(&self) -> usize {
         self.id as _
@@ -100,8 +99,7 @@ impl IndexEntity {
         Self { id, version }
     }
 
-    /// Returns the `id` of the entity extended to a `usize`. Used to index
-    /// dense arrays.
+    /// Returns the `id` of the entity extended to a `usize`..
     #[inline]
     pub const fn dense(&self) -> usize {
         self.id as _

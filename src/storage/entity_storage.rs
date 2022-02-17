@@ -4,6 +4,7 @@ use std::ops::Deref;
 use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 
 /// Sparse set-based storage for entities.
+#[doc(hidden)]
 #[derive(Default)]
 pub struct EntityStorage {
     storage: EntitySparseSet,

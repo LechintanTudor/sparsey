@@ -5,12 +5,14 @@ const PAGE_SIZE: usize = 64;
 type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
 /// Maps sparse indexes to dense indexes. Used internally by `ComponentStorage`.
+#[doc(hidden)]
 #[derive(Clone, Debug, Default)]
 pub struct SparseArray {
     pages: Vec<EntityPage>,
 }
 
 impl SparseArray {
+    /// Returns the dense index mapped to `entity`, if any.
     pub fn get(&self, entity: Entity) -> Option<usize> {
         self.pages
             .get(page_index(entity))
@@ -20,6 +22,7 @@ impl SparseArray {
             .map(IndexEntity::dense)
     }
 
+    /// Returns `true` if the array contains `entity`.
     pub fn contains(&self, entity: Entity) -> bool {
         self.pages
             .get(page_index(entity))
@@ -29,6 +32,7 @@ impl SparseArray {
             .is_some()
     }
 
+    /// Returns the dense index mapped to `sparse`, if any.
     pub fn get_from_sparse(&self, sparse: usize) -> Option<usize> {
         self.pages
             .get(sparse / PAGE_SIZE)
@@ -37,6 +41,7 @@ impl SparseArray {
             .map(IndexEntity::dense)
     }
 
+    /// Returns `true` if the array contains `sparse`.
     pub fn contains_sparse(&self, sparse: usize) -> bool {
         self.pages
             .get(sparse / PAGE_SIZE)

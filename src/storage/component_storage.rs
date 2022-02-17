@@ -11,8 +11,8 @@ struct ComponentStorageFns {
     drop: unsafe fn(&mut ComponentStorage),
 }
 
-/// Type-erased storage for `Component`s.
-pub struct ComponentStorage {
+/// Type-erased storage for components.
+pub(crate) struct ComponentStorage {
     entities: NonNull<Entity>,
     len: usize,
     sparse: SparseArray,

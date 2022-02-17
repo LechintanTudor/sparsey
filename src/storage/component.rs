@@ -1,5 +1,5 @@
-/// Marker trait for types that can be stored in `ComponentStorage`s.
-/// Automatically implemented for all `Send + Sync + 'static` types.
+/// Trait automatically implemented for all types that can be used as components. (Any `Send + Sync
+/// + 'static` type)
 pub trait Component: Send + Sync + 'static {
     // Empty
 }

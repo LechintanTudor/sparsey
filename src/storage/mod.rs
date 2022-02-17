@@ -1,11 +1,11 @@
 //! Sparse set-based storages for entities and components.
 
 pub use self::component::*;
-pub use self::component_storage::*;
 pub use self::entity::*;
+pub use self::entity_storage::*;
 pub use self::sparse_array::*;
 
-pub(crate) use self::entity_storage::*;
+pub(crate) use self::component_storage::*;
 
 mod component;
 mod component_storage;
