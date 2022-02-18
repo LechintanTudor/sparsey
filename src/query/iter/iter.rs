@@ -2,13 +2,16 @@ use crate::query::iter::{DenseIter, SparseIter};
 use crate::query::{self, EntityIterator, Query};
 use crate::storage::Entity;
 
+/// Iterator over grouped or ungrouped storages.
 pub enum Iter<'a, G, I, E>
 where
     G: Query<'a>,
     I: Query<'a>,
     E: Query<'a>,
 {
+    /// Iterator over ungrouped storages.
     Sparse(SparseIter<'a, G, I, E>),
+    /// Iterator over grouped storages. Extremely fast.
     Dense(DenseIter<'a, G>),
 }
 
@@ -64,10 +67,12 @@ where
         }
     }
 
+    /// Returns `true` if the iterator is sparse.
     pub fn is_sparse(&self) -> bool {
         matches!(self, Self::Sparse(_))
     }
 
+    /// Returns `true` if the iterator is dense.
     pub fn is_dense(&self) -> bool {
         matches!(self, Self::Dense(_))
     }

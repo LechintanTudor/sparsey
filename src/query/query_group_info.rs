@@ -1,6 +1,7 @@
 use crate::components::GroupInfo;
 use std::ops::Range;
 
+#[doc(hidden)]
 #[derive(Clone, Copy)]
 pub enum QueryGroupInfo<'a> {
     Empty,

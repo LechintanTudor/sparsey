@@ -2,6 +2,7 @@ use crate::query::{EntityIterator, Query};
 use crate::storage::Entity;
 use std::slice::Iter as SliceIter;
 
+/// Iterator over ungrouped storages.
 pub struct SparseIter<'a, G, I, E>
 where
     G: Query<'a>,

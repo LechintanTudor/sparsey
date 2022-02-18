@@ -1,5 +1,6 @@
 use crate::storage::Entity;
 
+#[doc(hidden)]
 pub trait EntityIterator: Iterator {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)>;
 
@@ -16,6 +17,8 @@ pub trait EntityIterator: Iterator {
     }
 }
 
+/// Wrapper over a compoennt iterator that makes it also return the `Entity` to which the components
+/// belong.
 pub struct EntityIter<I>(I);
 
 impl<I> Iterator for EntityIter<I>
@@ -37,7 +40,9 @@ where
     }
 }
 
+/// Helper trait for creating an `EntityIter`.
 pub trait IntoEntityIter: EntityIterator + Sized {
+    /// Makes the iterator also return the `Entity` to which the components belong.
     fn with_entity(self) -> EntityIter<Self>;
 }
 

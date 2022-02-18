@@ -1,6 +1,7 @@
 use crate::query::{group_range, Iter, Query};
 use crate::storage::Entity;
 
+#[doc(hidden)]
 pub trait IntoCompoundQueryParts<'a> {
     type Get: Query<'a>;
     type Include: Query<'a> + Copy;
@@ -9,13 +10,18 @@ pub trait IntoCompoundQueryParts<'a> {
     fn into_compound_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude);
 }
 
+/// Trait used for fetching and iterating entities and components from component views.
 pub trait CompoundQuery<'a>: IntoCompoundQueryParts<'a> + Sized {
+    /// Returns the component set associated to `entity`.
     fn get(self, entity: Entity) -> Option<<Self::Get as Query<'a>>::Item>;
 
+    /// Returns `true` if `entity` matches the query.
     fn contains(self, entity: Entity) -> bool;
 
+    /// Returns an iterator over all items in the query.
     fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>;
 
+    /// Iterates over all items in the query. Equivalent to `.iter().for_each(|item| f(item))`.
     fn for_each<F>(self, f: F)
     where
         F: FnMut(<Self::Get as Query<'a>>::Item),
@@ -23,6 +29,8 @@ pub trait CompoundQuery<'a>: IntoCompoundQueryParts<'a> + Sized {
         self.iter().for_each(f)
     }
 
+    /// Iterates over all items in the query and the entities to which they belong. Equivalent to
+    /// `.iter().with_entity().for_each(|(entity, item)| f((entity, item)))`.
     fn for_each_with_entity<F>(self, f: F)
     where
         F: FnMut((Entity, <Self::Get as Query<'a>>::Item)),
@@ -32,10 +40,16 @@ pub trait CompoundQuery<'a>: IntoCompoundQueryParts<'a> + Sized {
         self.iter().with_entity().for_each(f)
     }
 
+    /// For grouped storages, returns all entities that match the query as a slice.
+    #[allow(clippy::wrong_self_convention)]
     fn as_entity_slice(self) -> Option<&'a [Entity]>;
 
+    /// For grouped storages, returns all components that match the query as slices.
+    #[allow(clippy::wrong_self_convention)]
     fn as_component_slices(self) -> Option<<Self::Get as Query<'a>>::ComponentSlices>;
 
+    /// For grouped storages, returns all entities and components that match the query as slices.
+    #[allow(clippy::wrong_self_convention)]
     fn as_entity_and_component_slices(
         self,
     ) -> Option<(&'a [Entity], <Self::Get as Query<'a>>::ComponentSlices)>;
@@ -99,6 +113,7 @@ where
     }
 }
 
+/// Wrapper over a query that applies an "include" filter.
 pub struct Include<G, I> {
     get: G,
     include: I,
@@ -113,6 +128,7 @@ where
         Self { get, include }
     }
 
+    /// Applies an "exclude" filter to the query.
     pub fn exclude<E>(self, exclude: E) -> IncludeExclude<G, I, E>
     where
         E: Query<'a> + Copy,
@@ -135,6 +151,7 @@ where
     }
 }
 
+/// Wrapper over a query that applies "include" and "exclude" filters.
 pub struct IncludeExclude<G, I, E> {
     get: G,
     include: I,
@@ -167,11 +184,14 @@ where
     }
 }
 
+/// Helper trait for applying "include" and "exclude" filters to queries.
 pub trait QueryFilters<'a>: Query<'a> + Sized {
+    /// Applies an "include" filter to the query.
     fn include<I>(self, include: I) -> Include<Self, I>
     where
         I: Query<'a> + Copy;
 
+    /// Applies an "exclude" filter to the query.
     fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
     where
         E: Query<'a> + Copy;

@@ -2,6 +2,7 @@ use crate::query::{ComponentView, QueryGroupInfo};
 use crate::storage::{Entity, SparseArray};
 use std::ops::RangeBounds;
 
+#[doc(hidden)]
 pub unsafe trait Query<'a> {
     type Item: 'a;
     type Index: Copy;

@@ -1,6 +1,7 @@
 use crate::query::{EntityIterator, Query};
 use crate::storage::Entity;
 
+/// Iterator over grouped storages. Extremely fast.
 pub struct DenseIter<'a, G>
 where
     G: Query<'a>,
