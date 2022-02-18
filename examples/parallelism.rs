@@ -41,6 +41,6 @@ fn main() {
     let mut resources = Resources::default();
 
     for _ in 0..5 {
-        schedule.run_par(&mut world, &mut resources);
+        schedule.run(&mut world, &mut resources);
     }
 }
