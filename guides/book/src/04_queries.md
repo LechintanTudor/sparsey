@@ -40,7 +40,7 @@ fn main() {
     });
 
     // Use `for_each_with_entity` to get the entity to which the components belong.
-    (&positions, &velocities).for_each(|(entity, (position, vleocity))| {
+    (&positions, &velocities).for_each_with_entity(|(entity, (position, vleocity))| {
         println!("{:?}: {:?}, {:?}", entity, position, velocity);
     })
 }
