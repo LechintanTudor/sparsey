@@ -1,13 +1,13 @@
 # Sparsey
+
 [![Crates.io](https://img.shields.io/crates/v/sparsey)](https://crates.io/crates/sparsey)
 [![Documentation](https://docs.rs/sparsey/badge.svg)](https://docs.rs/sparsey)
 
-Sparsey is a sparse set-based Entity Component System with beautiful syntax \~( ˘▾˘\~)
-<br />
-Check out the [Sparsey Cheat Sheet](/guides/cheat_sheet.md) and [examples](/examples/) to get
-started!
+Sparsey is a sparse set-based Entity Component System with lots of features and beautiful syntax ~(
+˘▾˘~)
 
-# Example 
+# Example
+
 ```rust
 use sparsey::prelude::*;
 
@@ -49,7 +49,9 @@ fn main() {
 ```
 
 # Features
+
 ## Easy to Use Systems
+
 Systems are plain functions that borrow data from `World` and `Resources`.
 
 ```rust
@@ -76,6 +78,7 @@ let schedule = Schedule::builder()
 ```
 
 ## Expressive Queries
+
 Get, include and exclude components using Sparsey's query API.
 
 ```rust
@@ -95,10 +98,12 @@ fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
 ```
 
 ## Great Performance with Grouped Storages
+
 Sparsey allows the user to "group" component storages to greatly optimize iteration performance.
 <br />
 
 Groups are created by setting a `Layout` on the `World`.
+
 ```rust
 let layout = Layout::builder()
     .add_group(<(A, B)>::group())
@@ -125,18 +130,19 @@ fn dense_iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>) {
 ```
 
 # Thanks
-Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely 
+
+Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely
 [Bevy](https://github.com/bevyengine/bevy), [EnTT](https://github.com/skypjack/entt),
-[Legion](https://github.com/amethyst/legion), [Shipyard](https://github.com/leudz/shipyard) and 
+[Legion](https://github.com/amethyst/legion), [Shipyard](https://github.com/leudz/shipyard) and
 [Specs](https://github.com/amethyst/specs). Make sure you check them out!
 
 # License
-Sparsey is dual-licensed under either
-* MIT License (docs/LICENSE-MIT or http://opensource.org/licenses/MIT)
-* Apache License, Version 2.0 (docs/LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
 
-at your option.
-<br />
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the
-work by you, as defined in the Apache-2.0 license, shall be dual licensed as above without any 
-additional terms or conditions.
+Sparsey is dual-licensed under either
+
+- MIT License (docs/LICENSE-MIT or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 (docs/LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
+
+at your option. <br /> Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual
+licensed as above without any additional terms or conditions.
