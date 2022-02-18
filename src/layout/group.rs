@@ -1,15 +1,18 @@
 use crate::layout::ComponentInfo;
 use crate::storage::Component;
 
+/// The minimum number of component storages that can form a group.
 pub const MIN_GROUP_ARITY: usize = 2;
+/// The maximum number of component storages that can form a group.
 pub const MAX_GROUP_ARITY: usize = 16;
 
+/// Tracks which component storages should form a group.
 pub struct LayoutGroup {
     components: Vec<ComponentInfo>,
 }
 
 impl LayoutGroup {
-    pub fn new(mut components: Vec<ComponentInfo>) -> Self {
+    pub(crate) fn new(mut components: Vec<ComponentInfo>) -> Self {
         let initial_len = components.len();
 
         components.sort();
@@ -28,16 +31,20 @@ impl LayoutGroup {
         Self { components }
     }
 
+    /// Returns the number of storages to be grouped.
     pub fn arity(&self) -> usize {
         self.components.len()
     }
 
+    /// Returns the component types that should be grouped together.
     pub fn components(&self) -> &[ComponentInfo] {
         &self.components
     }
 }
 
+/// Helper trait for building a `LayoutGroup` from a `Component` tuple.
 pub trait LayoutGroupDescriptor {
+    /// Builds a `LayoutGroup` with the given component types.
     fn group() -> LayoutGroup;
 }
 
