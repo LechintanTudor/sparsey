@@ -1,3 +1,23 @@
+# 0.7.0 (2022-02-18)
+## Added
+- Added `for_each` and `for_each_entity` methods to queries.
+- Adding a system a `Schedule` no longer requires calling `.system()` on the function. 
+
+## Changed
+- Removed resources from the `World`. Use `Resources` to create and manage resources.
+- Improved the system scheduling algorithm to allow more systems to run in parallel.
+- Renamed `Dispatcher` to `Schedule`.
+- Renamed query slicing methods to `as_entity_slice`, `as_component_slices`,
+`as_entity_and_component_slices`.
+- Refactored `ComponentStorage` to optimize component swapping.
+
+## Removed
+- Removed `ChangeTicks` and component change detection.
+- Removed `Commands`. Use `Entities` to create entities inside systems.
+
+## Fixed
+- Invalid `Layout`s can no longer be created.
+
 # 0.6.0 (2021-12-20)
 ## Added
 - Allow using change detection on multiple `ComponentView`s at the same time.
