@@ -32,11 +32,11 @@ pub trait CompoundQuery<'a>: IntoCompoundQueryParts<'a> + Sized {
         self.iter().with_entity().for_each(f)
     }
 
-    fn entities(self) -> Option<&'a [Entity]>;
+    fn as_entity_slice(self) -> Option<&'a [Entity]>;
 
-    fn components(self) -> Option<<Self::Get as Query<'a>>::ComponentSlices>;
+    fn as_component_slices(self) -> Option<<Self::Get as Query<'a>>::ComponentSlices>;
 
-    fn entities_components(
+    fn as_entity_and_component_slices(
         self,
     ) -> Option<(&'a [Entity], <Self::Get as Query<'a>>::ComponentSlices)>;
 }
@@ -65,19 +65,19 @@ where
         Iter::new(get, include, exclude)
     }
 
-    fn entities(self) -> Option<&'a [Entity]> {
+    fn as_entity_slice(self) -> Option<&'a [Entity]> {
         let (get, include, exclude) = self.into_compound_query_parts();
         let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
         unsafe { Some(get.get_entities_unchecked(range)) }
     }
 
-    fn components(self) -> Option<<Self::Get as Query<'a>>::ComponentSlices> {
+    fn as_component_slices(self) -> Option<<Self::Get as Query<'a>>::ComponentSlices> {
         let (get, include, exclude) = self.into_compound_query_parts();
         let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
         unsafe { Some(get.get_components_unchecked(range)) }
     }
 
-    fn entities_components(
+    fn as_entity_and_component_slices(
         self,
     ) -> Option<(&'a [Entity], <Self::Get as Query<'a>>::ComponentSlices)> {
         let (get, include, exclude) = self.into_compound_query_parts();

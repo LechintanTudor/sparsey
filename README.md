@@ -117,10 +117,10 @@ fn dense_iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>) {
     assert!((&a, &b, &c, &d).iter().is_dense());
     assert!((&a, &b).exclude((&c, &d)).iter().is_dense());
 
-    // These would panic if the storages weren't grouped.
-    let _: &[Entity] = (&a, &b).entities().unwrap();
-    let _: (&[A], &[B]) = (&a, &b).components().unwrap();
-    let _: (&[Entity], (&[A], &[B])) = (&a, &b).entities_components().unwrap();
+    // These return Some(_) if the storages are grouped and None otherwise.
+    let _: Option<&[Entity]> = (&a, &b).as_entity_slice();
+    let _: Option<(&[A], &[B])> = (&a, &b).as_component_slices();
+    let _: Option<(&[Entity], (&[A], &[B]))> = (&a, &b).as_entity_and_component_slices();
 }
 ```
 
