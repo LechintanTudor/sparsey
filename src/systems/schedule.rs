@@ -6,8 +6,6 @@ use crate::world::World;
 use std::cmp::Ordering;
 use std::fmt;
 
-const DEFAULT_MAX_SYSTEMS_PER_STEP: usize = 5;
-
 enum SimpleScheduleStep {
     System(System),
     LocalSystem(LocalSystem),
@@ -82,7 +80,7 @@ impl ScheduleBuilder {
 
     /// Builds the schedule.
     pub fn build(&mut self) -> Schedule {
-        self.build_with_max_threads(DEFAULT_MAX_SYSTEMS_PER_STEP)
+        self.build_with_max_threads(usize::MAX)
     }
 
     /// Builds the schedule allowing at most `max_threads` systems to run in parallel.
@@ -191,10 +189,7 @@ impl Schedule {
         fn register(world: &mut World, param: &SystemParamType) {
             unsafe {
                 match param {
-                    SystemParamType::Comp(c) => {
-                        world.register_with(c.type_id(), || c.create_storage())
-                    }
-                    SystemParamType::CompMut(c) => {
+                    SystemParamType::Comp(c) | SystemParamType::CompMut(c) => {
                         world.register_with(c.type_id(), || c.create_storage())
                     }
                     _ => (),
@@ -205,12 +200,12 @@ impl Schedule {
         for step in self.steps.iter() {
             match step {
                 ScheduleStep::Systems(systems) => {
-                    for param in systems.iter().flat_map(|s| s.params()) {
+                    for param in systems.iter().flat_map(System::params) {
                         register(world, param);
                     }
                 }
                 ScheduleStep::LocalSystems(systems) => {
-                    for param in systems.iter().flat_map(|s| s.params()) {
+                    for param in systems.iter().flat_map(LocalSystem::params) {
                         register(world, param);
                     }
                 }
@@ -219,7 +214,7 @@ impl Schedule {
         }
     }
 
-    /// Runs the systems in parallel on the global rayon thread pool, if parallelism is enabled, or
+    /// Runs the systems in parallel on the global rayon thread pool if parallelism is enabled, or
     /// sequentially otherwise.
     pub fn run(&mut self, world: &mut World, resources: &mut Resources) {
         #[cfg(feature = "parallel")]
