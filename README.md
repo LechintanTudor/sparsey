@@ -3,8 +3,8 @@
 [![Crates.io](https://img.shields.io/crates/v/sparsey)](https://crates.io/crates/sparsey)
 [![Documentation](https://docs.rs/sparsey/badge.svg)](https://docs.rs/sparsey)
 
-Sparsey is a sparse set-based Entity Component System with lots of features and beautiful syntax ~(
-˘▾˘~)
+Sparsey is a sparse set-based Entity Component System with lots of features and beautiful syntax \~(
+˘▾˘\~)
 
 # Example
 
