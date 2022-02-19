@@ -38,7 +38,7 @@ fn main() {
 
     world.create((Position(0.0), Velocity(1.0)));
     world.create((Position(0.0), Velocity(2.0)));
-    world.create((Position(0.0), Velocity(3.0), Immovable));
+    world.create((Position(0.0), Velocity(3.0), Frozen));
 
     let mut resources = Resources::default();
 
