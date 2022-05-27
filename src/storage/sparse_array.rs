@@ -4,7 +4,8 @@ use std::{iter, ptr};
 const PAGE_SIZE: usize = 64;
 type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
 
-/// Maps sparse indexes to dense indexes. Used internally by `ComponentStorage`.
+/// Maps versioned sparse indexes (entities) to dense indexes.
+/// Used internally by `ComponentStorage`.
 #[doc(hidden)]
 #[derive(Clone, Debug, Default)]
 pub struct SparseArray {
@@ -50,6 +51,7 @@ impl SparseArray {
             .is_some()
     }
 
+    /// Removes `entity` from the array and returns the dense index mapped to it, if any.
     pub(crate) fn remove(&mut self, entity: Entity) -> Option<usize> {
         self.pages
             .get_mut(page_index(entity))
@@ -60,8 +62,7 @@ impl SparseArray {
             .map(|e| e.dense())
     }
 
-    /// Returns the `IndexEntity` slot at `index` without checking if the
-    /// `index` it is valid.
+    /// Returns the `IndexEntity` slot at `index` without checking if the `index` is valid.
     pub(crate) unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<IndexEntity> {
         self.pages
             .get_unchecked_mut(index / PAGE_SIZE)
@@ -70,8 +71,8 @@ impl SparseArray {
             .get_unchecked_mut(index % PAGE_SIZE)
     }
 
-    /// Returns the `IndexEntity` slot at `index`. May allocate memory if the
-    /// index cannot be stored in the allocated pages.
+    /// Returns the `IndexEntity` slot at `index`. Will allocate memory if the index cannot be
+    /// stored in the allocated pages.
     pub(crate) fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<IndexEntity> {
         let page_index = index / PAGE_SIZE;
 
@@ -97,9 +98,10 @@ impl SparseArray {
         }
     }
 
-    /// Swaps the `IndexEntities` at `a` and `b` without checking if `a` and `b`
-    /// are valid.
+    /// Swaps the indexes at `a` and `b` without checking if `a` and `b` are valid sparse indexes.
     pub(crate) unsafe fn swap_nonoverlapping(&mut self, a: usize, b: usize) {
+        debug_assert!(a != b);
+
         let pa = self.get_unchecked_mut(a) as *mut _;
         let pb = self.get_unchecked_mut(b) as *mut _;
         ptr::swap_nonoverlapping(pa, pb, 1);
@@ -111,10 +113,12 @@ impl SparseArray {
     }
 }
 
+#[inline]
 fn page_index(entity: Entity) -> usize {
     entity.sparse() / PAGE_SIZE
 }
 
+#[inline]
 fn local_index(entity: Entity) -> usize {
     entity.sparse() % PAGE_SIZE
 }
