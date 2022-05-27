@@ -134,8 +134,7 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        debug_assert!(a < self.len);
-        debug_assert!(b < self.len);
+        debug_assert!(a < self.len && b < self.len && a != b);
 
         let (sparse_a, sparse_b) = {
             let entity_a = &mut *self.get_entity_ptr(a);
@@ -148,7 +147,7 @@ impl ComponentStorage {
         self.sparse.swap_nonoverlapping(sparse_a, sparse_b);
 
         let component_a = &mut *self.get_component_ptr::<T>(a);
-        let component_b = &mut *self.get_component_ptr::<T>(a);
+        let component_b = &mut *self.get_component_ptr::<T>(b);
         mem::swap(component_a, component_b);
     }
 
