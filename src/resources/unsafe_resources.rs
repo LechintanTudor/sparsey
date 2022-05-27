@@ -19,7 +19,7 @@ impl UnsafeResources {
     {
         self.resources
             .insert(TypeId::of::<T>(), AtomicRefCell::new(Box::new(resource)))
-            .map(|c| unsafe { *c.into_inner().downcast().unwrap_unchecked() })
+            .map(|c| *c.into_inner().downcast().unwrap_unchecked())
     }
 
     pub unsafe fn remove<T>(&mut self) -> Option<T>
@@ -28,7 +28,7 @@ impl UnsafeResources {
     {
         self.resources
             .remove(&TypeId::of::<T>())
-            .map(|c| unsafe { *c.into_inner().downcast().unwrap_unchecked() })
+            .map(|c| *c.into_inner().downcast().unwrap_unchecked())
     }
 
     pub unsafe fn delete(&mut self, resource_type_id: &TypeId) -> bool {
@@ -47,9 +47,9 @@ impl UnsafeResources {
     where
         T: Resource,
     {
-        self.resources.get(&TypeId::of::<T>()).map(|c| {
-            AtomicRef::map(c.borrow(), |c| unsafe { c.deref().downcast_ref().unwrap_unchecked() })
-        })
+        self.resources
+            .get(&TypeId::of::<T>())
+            .map(|c| AtomicRef::map(c.borrow(), |c| c.deref().downcast_ref().unwrap_unchecked()))
     }
 
     pub unsafe fn borrow_mut<T>(&self) -> Option<AtomicRefMut<T>>
@@ -57,9 +57,7 @@ impl UnsafeResources {
         T: Resource,
     {
         self.resources.get(&TypeId::of::<T>()).map(|c| {
-            AtomicRefMut::map(c.borrow_mut(), |c| unsafe {
-                c.deref_mut().downcast_mut().unwrap_unchecked()
-            })
+            AtomicRefMut::map(c.borrow_mut(), |c| c.deref_mut().downcast_mut().unwrap_unchecked())
         })
     }
 }
