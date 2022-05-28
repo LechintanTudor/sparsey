@@ -48,6 +48,12 @@ impl EntityStorage {
         self.storage.clear();
     }
 
+    /// Removes all entities from the storage and resets the entity allocator.
+    pub(crate) fn reset(&mut self) {
+        self.storage.clear();
+        self.allocator.reset();
+    }
+
     /// Adds the entities created atomically to the storage.
     pub(crate) fn maintain(&mut self) {
         self.allocator.maintain().for_each(|entity| self.storage.insert(entity));
@@ -158,6 +164,14 @@ impl EntityAllocator {
             self.recycled.push(Entity::new(entity.id(), Version::new(next_version_id)));
             *self.recycled_len.get_mut() += 1;
         }
+    }
+
+    /// Resets the allocator to the default value without deallocating the allocated storage.
+    fn reset(&mut self) {
+        *self.next_id_to_allocate.get_mut() = 0;
+        self.last_maintained_id = 0;
+        self.recycled.clear();
+        *self.recycled_len.get_mut() = 0;
     }
 
     /// Removes all allocated entities from the `recycled` vector and returns an iterator over all

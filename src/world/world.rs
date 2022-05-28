@@ -170,6 +170,13 @@ impl World {
         self.components.clear();
     }
 
+    /// Removes all entities and components from the world and resets the entity allocator,
+    /// allowing the world to reuse entities that were previously created.
+    pub fn reset(&mut self) {
+        self.entities.reset();
+        self.components.clear();
+    }
+
     /// Borrows a view over all entities in the world. The view can be used in systems running in
     /// parallel to create new entities atomically.
     pub fn borrow_entities(&self) -> Entities {
