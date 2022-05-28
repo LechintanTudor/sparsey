@@ -17,8 +17,8 @@ fn main() {
 
     {
         // Resources Views can be borrowed mutably or immtably.
-        let mut score: ResMut<Score> = resources.borrow_mut::<Score>().unwrap();
-        let score_multiplier: Res<ScoreMultipler> = resources.borrow::<ScoreMultipler>().unwrap();
+        let mut score: ResMut<Score> = resources.borrow_mut::<Score>();
+        let score_multiplier: Res<ScoreMultipler> = resources.borrow::<ScoreMultiplier>();
 
         for i in 0..5 {
             score.0 += i as f32 * score_multiplier.0;
