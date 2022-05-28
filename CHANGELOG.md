@@ -1,3 +1,11 @@
+# 0.8.0 (2022-05-28)
+## Added
+- Added panicking functions for borrowing resources.
+- Added `World::reset` to reset the world's entity allocator.
+
+## Fixed
+- Fixed bug that prevented `ComponentStorage` from swapping components.
+
 # 0.7.0 (2022-02-18)
 ## Added
 - Added `for_each` and `for_each_entity` methods to queries.
