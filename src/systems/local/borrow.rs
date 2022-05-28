@@ -1,6 +1,5 @@
 use crate::resources::{Res, ResMut, Resource, Resources};
 use crate::storage::Component;
-use crate::utils::panic_missing_res;
 use crate::world::{Comp, CompMut, Entities, World};
 
 /// Trait implemented by local system parameters to borrow data.
@@ -27,7 +26,7 @@ where
     type Item = Comp<'a, T>;
 
     fn borrow(world: &'a World, _resources: &'a Resources) -> Self::Item {
-        world.borrow::<T>()
+        world.borrow()
     }
 }
 
@@ -38,7 +37,7 @@ where
     type Item = CompMut<'a, T>;
 
     fn borrow(world: &'a World, _resources: &'a Resources) -> Self::Item {
-        world.borrow_mut::<T>()
+        world.borrow_mut()
     }
 }
 
@@ -49,7 +48,7 @@ where
     type Item = Res<'a, T>;
 
     fn borrow(_world: &'a World, resources: &'a Resources) -> Self::Item {
-        resources.borrow::<T>().unwrap_or_else(|| panic_missing_res::<T>())
+        resources.borrow()
     }
 }
 
@@ -60,7 +59,7 @@ where
     type Item = ResMut<'a, T>;
 
     fn borrow(_world: &'a World, resources: &'a Resources) -> Self::Item {
-        resources.borrow_mut::<T>().unwrap_or_else(|| panic_missing_res::<T>())
+        resources.borrow_mut()
     }
 }
 
@@ -71,7 +70,7 @@ where
     type Item = Option<Res<'a, T>>;
 
     fn borrow(_world: &'a World, resources: &'a Resources) -> Self::Item {
-        resources.borrow::<T>()
+        resources.try_borrow()
     }
 }
 
@@ -82,6 +81,6 @@ where
     type Item = Option<ResMut<'a, T>>;
 
     fn borrow(_world: &'a World, resources: &'a Resources) -> Self::Item {
-        resources.borrow_mut::<T>()
+        resources.try_borrow_mut()
     }
 }

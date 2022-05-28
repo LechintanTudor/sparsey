@@ -10,7 +10,7 @@ pub struct Resources {
 }
 
 impl Resources {
-    /// Returns a `Send + Sync` view over all resources that can be accessed from other threads.
+    /// Returns a `Send + Sync` view over all resources that can be accessed from any thread.
     pub fn sync(&self) -> SyncResources {
         SyncResources::new(&self.resources)
     }
@@ -23,43 +23,76 @@ impl Resources {
         unsafe { self.resources.insert(resource) }
     }
 
+    /// Borrows a view over a resource. Panics if the resource does not exist.
+    pub fn borrow<T>(&self) -> Res<T>
+    where
+        T: Resource,
+    {
+        unsafe { self.resources.borrow() }
+    }
+
+    /// Borrows a mutable view over a resource. Panics if the resource does not exist.
+    pub fn borrow_mut<T>(&self) -> ResMut<T>
+    where
+        T: Resource,
+    {
+        unsafe { self.resources.borrow_mut() }
+    }
+
+    /// Borrows a view over a resource if that resource exists.
+    pub fn try_borrow<T>(&self) -> Option<Res<T>>
+    where
+        T: Resource,
+    {
+        unsafe { self.resources.try_borrow() }
+    }
+
+    /// Borrows a mutable view over a resource if that resource exists.
+    pub fn try_borrow_mut<T>(&self) -> Option<ResMut<T>>
+    where
+        T: Resource,
+    {
+        unsafe { self.resources.try_borrow_mut() }
+    }
+
+    /// Returns `true` if the stoage contains a resource with type `T`.
+    pub fn contains<T>(&self) -> bool
+    where
+        T: Resource,
+    {
+        self.resources.contains::<T>()
+    }
+
+    /// Returns `true` if the storage contains a resource with the given `TypeId`.
+    #[inline]
+    pub fn contains_type_id(&self, resource_type_id: TypeId) -> bool {
+        self.resources.contains_type_id(resource_type_id)
+    }
+
+    /// Returns the number of resources in the storage.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.resources.len()
+    }
+
     /// Removes a resource from the storage and returns it.
     pub fn remove<T>(&mut self) -> Option<T>
     where
         T: Resource,
     {
-        unsafe { self.resources.remove::<T>() }
+        unsafe { self.resources.remove() }
     }
 
     /// Deletes the resource with the given `TypeId` from the storage. Returns `true` if there was
     /// anything to delete.
-    pub fn delete(&mut self, resource_type_id: &TypeId) -> bool {
+    #[inline]
+    pub fn delete(&mut self, resource_type_id: TypeId) -> bool {
         unsafe { self.resources.delete(resource_type_id) }
     }
 
-    /// Returns `true` if the storage contains a resource with the given `TypeId`.
-    pub fn contains(&self, resource_type_id: &TypeId) -> bool {
-        self.resources.contains(resource_type_id)
-    }
-
     /// Removes all resources from the storage.
+    #[inline]
     pub fn clear(&mut self) {
         unsafe { self.resources.clear() }
-    }
-
-    /// Borrows a view over a resource.
-    pub fn borrow<T>(&self) -> Option<Res<T>>
-    where
-        T: Resource,
-    {
-        unsafe { self.resources.borrow::<T>().map(Res::new) }
-    }
-
-    /// Mutably borrows a view over a resource.
-    pub fn borrow_mut<T>(&self) -> Option<ResMut<T>>
-    where
-        T: Resource,
-    {
-        unsafe { self.resources.borrow_mut::<T>().map(ResMut::new) }
     }
 }

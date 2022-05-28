@@ -1,7 +1,6 @@
 use crate::resources::{Res, ResMut, Resource, SyncResources};
 use crate::storage::Component;
 use crate::systems::BorrowLocalSystemData;
-use crate::utils::panic_missing_res;
 use crate::world::{Comp, CompMut, Entities, World};
 
 /// Trait implemented by system parameters to borrow data.
@@ -21,7 +20,7 @@ where
     T: Component,
 {
     fn borrow(world: &'a World, _resources: SyncResources<'a>) -> Self::Item {
-        world.borrow::<T>()
+        world.borrow()
     }
 }
 
@@ -30,7 +29,7 @@ where
     T: Component,
 {
     fn borrow(world: &'a World, _resources: SyncResources<'a>) -> Self::Item {
-        world.borrow_mut::<T>()
+        world.borrow_mut()
     }
 }
 
@@ -39,7 +38,7 @@ where
     T: Resource + Sync,
 {
     fn borrow(_world: &'a World, resources: SyncResources<'a>) -> Self::Item {
-        resources.borrow::<T>().unwrap_or_else(|| panic_missing_res::<T>())
+        resources.borrow()
     }
 }
 
@@ -48,7 +47,7 @@ where
     T: Resource + Send,
 {
     fn borrow(_world: &'a World, resources: SyncResources<'a>) -> Self::Item {
-        resources.borrow_mut::<T>().unwrap_or_else(|| panic_missing_res::<T>())
+        resources.borrow_mut()
     }
 }
 
@@ -57,7 +56,7 @@ where
     T: Resource + Sync,
 {
     fn borrow(_world: &'a World, resources: SyncResources<'a>) -> Self::Item {
-        resources.borrow::<T>()
+        resources.try_borrow()
     }
 }
 
@@ -66,6 +65,6 @@ where
     T: Resource + Send,
 {
     fn borrow(_world: &'a World, resources: SyncResources<'a>) -> Self::Item {
-        resources.borrow_mut::<T>()
+        resources.try_borrow_mut()
     }
 }

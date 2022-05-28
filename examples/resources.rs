@@ -32,7 +32,7 @@ fn fall_in_lava(pos: Comp<Position>, lava: Res<Lava>, mut fallen_in_lava: ResMut
 }
 
 fn destroy_fallen_in_lava(world: &mut World, resources: &mut Resources) {
-    let mut fallen_in_lava = resources.borrow_mut::<FallenInLava>().unwrap();
+    let mut fallen_in_lava = resources.borrow_mut::<FallenInLava>();
     world.bulk_destroy(&fallen_in_lava.entities);
     fallen_in_lava.entities.clear();
 }
