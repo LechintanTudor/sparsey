@@ -59,6 +59,7 @@ impl UnsafeResources {
         })
     }
 
+    #[must_use]
     pub fn contains<T>(&self) -> bool
     where
         T: Resource,
@@ -67,6 +68,7 @@ impl UnsafeResources {
     }
 
     #[inline]
+    #[must_use]
     pub fn contains_type_id(&self, resource_type_id: TypeId) -> bool {
         self.resources.contains_key(&resource_type_id)
     }
@@ -74,6 +76,11 @@ impl UnsafeResources {
     #[inline]
     pub fn len(&self) -> usize {
         self.resources.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.resources.is_empty()
     }
 
     pub unsafe fn remove<T>(&mut self) -> Option<T>

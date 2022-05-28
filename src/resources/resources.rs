@@ -56,6 +56,7 @@ impl Resources {
     }
 
     /// Returns `true` if the stoage contains a resource with type `T`.
+    #[must_use]
     pub fn contains<T>(&self) -> bool
     where
         T: Resource,
@@ -65,6 +66,7 @@ impl Resources {
 
     /// Returns `true` if the storage contains a resource with the given `TypeId`.
     #[inline]
+    #[must_use]
     pub fn contains_type_id(&self, resource_type_id: TypeId) -> bool {
         self.resources.contains_type_id(resource_type_id)
     }
@@ -73,6 +75,12 @@ impl Resources {
     #[inline]
     pub fn len(&self) -> usize {
         self.resources.len()
+    }
+
+    /// Returns `true` if the storage contains no resources.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.resources.is_empty()
     }
 
     /// Removes a resource from the storage and returns it.
