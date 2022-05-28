@@ -2,7 +2,6 @@ mod common;
 
 use common::*;
 use sparsey::prelude::*;
-use std::any::TypeId;
 
 #[test]
 fn test_entities() {
@@ -32,14 +31,14 @@ fn test_entities() {
 fn test_register() {
     let mut world = World::default();
 
-    assert!(!world.is_registered(&TypeId::of::<A>()));
-    assert!(!world.is_registered(&TypeId::of::<B>()));
+    assert!(!world.is_registered::<A>());
+    assert!(!world.is_registered::<B>());
 
     world.register::<A>();
     world.register::<B>();
 
-    assert!(world.is_registered(&TypeId::of::<A>()));
-    assert!(world.is_registered(&TypeId::of::<B>()));
+    assert!(world.is_registered::<A>());
+    assert!(world.is_registered::<B>());
 }
 
 #[test]

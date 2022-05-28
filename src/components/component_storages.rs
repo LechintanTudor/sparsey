@@ -130,8 +130,18 @@ impl ComponentStorages {
         }
     }
 
-    pub(crate) fn is_registered(&self, type_id: &TypeId) -> bool {
-        self.component_info.contains_key(type_id)
+    #[must_use]
+    pub(crate) fn is_registered<T>(&self) -> bool
+    where
+        T: Component,
+    {
+        self.is_type_id_registered(TypeId::of::<T>())
+    }
+
+    #[inline]
+    #[must_use]
+    pub(crate) fn is_type_id_registered(&self, component_type_id: TypeId) -> bool {
+        self.component_info.contains_key(&component_type_id)
     }
 
     pub(crate) unsafe fn group_families(

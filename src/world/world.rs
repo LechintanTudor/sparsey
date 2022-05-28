@@ -50,9 +50,20 @@ impl World {
     }
 
     /// Check if a component type is registered.
+    #[inline]
     #[must_use]
-    pub fn is_registered(&self, component_type_id: &TypeId) -> bool {
-        self.components.is_registered(component_type_id)
+    pub fn is_registered<T>(&self) -> bool
+    where
+        T: Component,
+    {
+        self.components.is_registered::<T>()
+    }
+
+    /// Check if a component type is registered.
+    #[inline]
+    #[must_use]
+    pub fn is_type_id_registered(&self, component_type_id: TypeId) -> bool {
+        self.components.is_type_id_registered(component_type_id)
     }
 
     /// Creates an entity with the given `components` and returns it.
