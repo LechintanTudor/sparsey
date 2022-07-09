@@ -215,7 +215,8 @@ impl Schedule {
     }
 
     /// Runs the systems in parallel on the global rayon thread pool if parallelism is enabled, or
-    /// sequentially otherwise.
+    /// sequentially otherwise. Calls `World::maintain` before each local system and local function,
+    /// after each barrier and right before the function returns.
     pub fn run(&mut self, world: &mut World, resources: &mut Resources) {
         #[cfg(feature = "parallel")]
         self.run_par(world, resources);
@@ -224,16 +225,19 @@ impl Schedule {
         self.run_seq(world, resources);
     }
 
-    /// Runs the systems sequentially.
+    /// Runs the systems sequentially. Calls `World::maintain` before each local system and local
+    /// function, after each barrier and right before the function returns.
     pub fn run_seq(&mut self, world: &mut World, resources: &mut Resources) {
         self.run_generic(world, resources, |systems, world, resources| {
             for system in systems {
                 system.run(world, resources);
             }
-        })
+        });
     }
 
-    /// Runs the systems in parallel on the global rayon thread pool.
+    /// Runs the systems in parallel on the global rayon thread pool. Calls `World::maintain` before
+    /// each local system and local function, after each barrier and right before the function
+    /// returns.
     #[cfg(feature = "parallel")]
     pub fn run_par(&mut self, world: &mut World, resources: &mut Resources) {
         use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
@@ -246,10 +250,12 @@ impl Schedule {
             } else {
                 systems.last_mut().unwrap().run(world, resources);
             }
-        })
+        });
     }
 
-    /// Runs the systems in parallel on the given thread pool.
+    /// Runs the systems in parallel on the given thread pool. Calls `World::maintain` before each
+    /// local system and local function, after each barrier and right before the function
+    /// returns.
     #[cfg(feature = "parallel")]
     pub fn run_in_thread_pool(
         &mut self,
@@ -269,7 +275,7 @@ impl Schedule {
             } else {
                 systems.last_mut().unwrap().run(world, resources);
             }
-        })
+        });
     }
 
     fn run_generic(
@@ -282,21 +288,24 @@ impl Schedule {
             match step {
                 ScheduleStep::Systems(systems) => {
                     system_runner(systems, world, resources.sync());
-                    world.maintain();
                 }
-                ScheduleStep::LocalSystems(systems) => {
-                    for system in systems.iter_mut() {
-                        system.run(world, resources);
+                ScheduleStep::LocalSystems(local_systems) => {
+                    for local_system in local_systems.iter_mut() {
+                        world.maintain();
+                        local_system.run(world, resources);
                     }
                 }
-                ScheduleStep::LocalFns(fns) => {
-                    for local_fn in fns {
+                ScheduleStep::LocalFns(local_fns) => {
+                    for local_fn in local_fns {
+                        world.maintain();
                         (local_fn).run(world, resources);
                     }
                 }
-                ScheduleStep::Barrier => (),
+                ScheduleStep::Barrier => world.maintain(),
             }
         }
+
+        world.maintain();
     }
 
     /// Returns the maximum number of systems that can run in parallel.
