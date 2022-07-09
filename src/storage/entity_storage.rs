@@ -27,8 +27,7 @@ impl EntityStorage {
         self.allocator.allocate_atomic().expect("No entities left to allocate")
     }
 
-    /// Removes `entity` from the storage if it exits. Returns whether or not
-    /// there was anything to remove.
+    /// Removes `entity` from the storage if it exits. Returns whether there was anything to remove.
     #[inline]
     pub(crate) fn destroy(&mut self, entity: Entity) -> bool {
         if self.storage.remove(entity) {
@@ -47,6 +46,9 @@ impl EntityStorage {
 
     /// Removes all entities from the storage.
     pub(crate) fn clear(&mut self) {
+        // Add the entities created atomically to the storage so they can be properly recycled
+        self.maintain();
+
         self.storage.entities.iter().for_each(|&entity| self.allocator.deallocate(entity));
         self.storage.clear();
     }
@@ -128,12 +130,12 @@ impl EntitySparseSet {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Default, Debug)]
 struct EntityAllocator {
     /// Value of the next Entity id to be allocated, capped at (u32::MAX + 1)
     next_id_to_allocate: AtomicU64,
     /// Value of next_id_to_allocate before the last call to maintain
-    last_maintained_id: u32,
+    last_maintained_id: u64,
     /// Entities with the same id as previously deallocated entities, but higher version
     recycled: VecDeque<Entity>,
     /// Number of recycled entities since the last call to maintain
@@ -187,16 +189,17 @@ impl EntityAllocator {
             (self.recycled.len() - recycled_since_maintain)..
         };
 
-        let new_id_range = if *self.next_id_to_allocate.get_mut() <= (u32::MAX as u64) {
-            let next_id_to_allocate = *self.next_id_to_allocate.get_mut() as u32;
+        let new_id_range = {
+            let next_id_to_allocate = *self.next_id_to_allocate.get_mut();
             let new_id_range = self.last_maintained_id..next_id_to_allocate;
             self.last_maintained_id = next_id_to_allocate;
             new_id_range
-        } else {
-            0..0
         };
 
-        self.recycled.drain(recycled_range).chain(new_id_range.map(Entity::with_id))
+        self.recycled.drain(recycled_range).chain(new_id_range.map(|i| {
+            // next_id_to_allocate is capped at (u32::MAX + 1), so i <= u32::MAX
+            Entity::with_id(i as u32)
+        }))
     }
 
     /// Resets the allocator to its default state without freeing the allocated memory.
