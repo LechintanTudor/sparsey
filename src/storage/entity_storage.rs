@@ -246,3 +246,47 @@ fn increment_next_id_to_allocate(next_id_to_allocate: &AtomicU64) -> Option<u32>
 
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create() {
+        let mut entity_storage = EntityStorage::default();
+
+        // e0 created synchronously
+        let e0 = entity_storage.create();
+        assert!(entity_storage.contains(e0));
+
+        // e1 created atomically, unmaintained
+        let e1 = entity_storage.create_atomic();
+        assert!(!entity_storage.contains(e1));
+
+        // e1 created atomically, maintained
+        entity_storage.maintain();
+        assert!(entity_storage.contains(e1));
+    }
+
+    #[test]
+    fn destroy() {
+        let mut entity_storage = EntityStorage::default();
+
+        // e0 created synchronously
+        let e0 = entity_storage.create();
+        assert!(entity_storage.destroy(e0));
+        assert!(!entity_storage.destroy(e0));
+        assert!(!entity_storage.contains(e0));
+
+        // e1 created atomically, unmaintained
+        let e1 = entity_storage.create_atomic();
+        assert!(!entity_storage.destroy(e1));
+        assert!(!entity_storage.contains(e1));
+
+        // e1 created atomically maintained
+        entity_storage.maintain();
+        assert!(entity_storage.destroy(e1));
+        assert!(!entity_storage.destroy(e1));
+        assert!(!entity_storage.contains(e1));
+    }
+}
