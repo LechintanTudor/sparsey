@@ -1,7 +1,8 @@
 use crate::storage::{Entity, IndexEntity, SparseArray, Version};
+use std::collections::VecDeque;
 use std::num::NonZeroU32;
 use std::ops::Deref;
-use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 /// Sparse set-based storage for entities.
 #[doc(hidden)]
@@ -27,8 +28,6 @@ impl EntityStorage {
     /// Removes `entity` from the storage if it exits. Returns whether or not
     /// there was anything to remove.
     pub(crate) fn destroy(&mut self, entity: Entity) -> bool {
-        self.maintain();
-
         if self.storage.remove(entity) {
             self.allocator.deallocate(entity);
             true
@@ -123,76 +122,103 @@ impl EntitySparseSet {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug, Default)]
 struct EntityAllocator {
-    next_id_to_allocate: AtomicU32,
+    /// Value of the next Entity id to be allocated, capped at (u32::MAX + 1)
+    next_id_to_allocate: AtomicU64,
+    /// Value of next_id_to_allocate before the last call to maintain
     last_maintained_id: u32,
-    recycled: Vec<Entity>,
-    recycled_len: AtomicUsize,
+    /// Entities with the same id as previously deallocated entities, but higher version
+    recycled: VecDeque<Entity>,
+    /// Number of recycled entities since the last call to maintain
+    recycled_since_maintain: AtomicUsize,
 }
 
 impl EntityAllocator {
-    /// Tries to allocate an `Entity` synchronously.
+    /// Allocates an entity.
     fn allocate(&mut self) -> Option<Entity> {
-        match self.recycled.pop() {
-            Some(entity) => {
-                *self.recycled_len.get_mut() -= 1;
-                Some(entity)
-            }
-            None => {
-                let current_id = *self.next_id_to_allocate.get_mut();
-                let new_next_id_to_allocate = current_id.checked_add(1)?;
+        let recycled_since_maintain = *self.recycled_since_maintain.get_mut();
 
-                *self.next_id_to_allocate.get_mut() = new_next_id_to_allocate;
-                Some(Entity::with_id(current_id))
+        if recycled_since_maintain < self.recycled.len() {
+            *self.recycled_since_maintain.get_mut() += 1;
+            Some(self.recycled[self.recycled.len() - recycled_since_maintain - 1])
+        } else {
+            if *self.next_id_to_allocate.get_mut() <= (u32::MAX as u64) {
+                let id = *self.next_id_to_allocate.get_mut() as u32;
+                *self.next_id_to_allocate.get_mut() += 1;
+                Some(Entity::with_id(id))
+            } else {
+                None
             }
         }
     }
 
-    /// Tries to allocate an `Entity` atomically.
+    /// Allocates an entity without needing exclusive access over the allocator. Slower than
+    /// `allocate`.
     fn allocate_atomic(&self) -> Option<Entity> {
-        match atomic_decrement_usize(&self.recycled_len) {
-            Some(recycled_len) => Some(self.recycled[recycled_len - 1]),
-            None => atomic_increment_u32(&self.next_id_to_allocate).map(Entity::with_id),
+        match increment_recycled_since_maintain(&self.recycled_since_maintain, self.recycled.len())
+        {
+            Some(recycled_since_maintain) => {
+                Some(self.recycled[self.recycled.len() - recycled_since_maintain - 1])
+            }
+            None => increment_next_id_to_allocate(&self.next_id_to_allocate).map(Entity::with_id),
         }
     }
 
-    /// Tries to recycle the given `Entity`.
+    /// Deallocates the entity and attempts to recycle its id.
     fn deallocate(&mut self, entity: Entity) {
-        if let Some(next_version_id) = entity.version().id().checked_add(1) {
-            let next_version_id = unsafe { NonZeroU32::new_unchecked(next_version_id) };
-            self.recycled.push(Entity::new(entity.id(), Version::new(next_version_id)));
-            *self.recycled_len.get_mut() += 1;
+        let next_version_id = NonZeroU32::new(entity.version().id().wrapping_add(1));
+
+        if let Some(next_version_id) = next_version_id {
+            self.recycled.push_front(Entity::new(entity.id(), Version::new(next_version_id)));
         }
     }
 
-    /// Resets the allocator to the default value without deallocating the allocated storage.
+    /// Clears the recycled entities queue and returns an iterator over all allocated entities
+    /// since the last call to maintain.
+    fn maintain(&mut self) -> impl Iterator<Item = Entity> + '_ {
+        let recycled_range = {
+            let recycled_since_maintain = *self.recycled_since_maintain.get_mut();
+            *self.recycled_since_maintain.get_mut() = 0;
+            (self.recycled.len() - recycled_since_maintain)..
+        };
+
+        let new_id_range = if *self.next_id_to_allocate.get_mut() <= (u32::MAX as u64) {
+            let next_id_to_allocate = *self.next_id_to_allocate.get_mut() as u32;
+            let new_id_range = self.last_maintained_id..next_id_to_allocate;
+            self.last_maintained_id = next_id_to_allocate;
+            new_id_range
+        } else {
+            0..0
+        };
+
+        self.recycled.drain(recycled_range).chain(new_id_range.map(Entity::with_id))
+    }
+
+    /// Resets the allocator to its default state without freeing the allocated memory.
     fn reset(&mut self) {
         *self.next_id_to_allocate.get_mut() = 0;
         self.last_maintained_id = 0;
         self.recycled.clear();
-        *self.recycled_len.get_mut() = 0;
-    }
-
-    /// Removes all allocated entities from the `recycled` vector and returns an iterator over all
-    /// the entities allocated since the last call to `maintain`.
-    fn maintain(&mut self) -> impl Iterator<Item = Entity> + '_ {
-        let remaining = *self.recycled_len.get_mut();
-        *self.recycled_len.get_mut() = self.recycled.len();
-
-        let new_id_range = self.last_maintained_id..*self.next_id_to_allocate.get_mut();
-        self.last_maintained_id = *self.next_id_to_allocate.get_mut();
-
-        self.recycled.drain(remaining..).chain(new_id_range.into_iter().map(Entity::with_id))
+        *self.recycled_since_maintain.get_mut() = 0;
     }
 }
 
-/// Like `fetch_sub`, but returns `None` on underflow instead of wrapping.
-fn atomic_decrement_usize(value: &AtomicUsize) -> Option<usize> {
-    let mut prev = value.load(Ordering::Relaxed);
+/// Atomically increments `recycled_since_maintain`, capping at `recycled_len`.
+/// Returns the value before the increment if it is <= `recycled_len`.
+fn increment_recycled_since_maintain(
+    recycled_since_maintain: &AtomicUsize,
+    recycled_len: usize,
+) -> Option<usize> {
+    let mut prev = recycled_since_maintain.load(Ordering::Relaxed);
 
-    while prev != 0 {
-        match value.compare_exchange_weak(prev, prev - 1, Ordering::Relaxed, Ordering::Relaxed) {
+    while prev < recycled_len {
+        match recycled_since_maintain.compare_exchange_weak(
+            prev,
+            prev + 1,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
             Ok(prev) => return Some(prev),
             Err(next_prev) => prev = next_prev,
         }
@@ -201,13 +227,19 @@ fn atomic_decrement_usize(value: &AtomicUsize) -> Option<usize> {
     None
 }
 
-/// Like `fetch_add`, but returns `None` on overflow instead of wrapping.
-fn atomic_increment_u32(value: &AtomicU32) -> Option<u32> {
-    let mut prev = value.load(Ordering::Relaxed);
+/// Atomically increments `next_id_to_allocate`, capping at (`u32::MAX + 1`).
+/// Returns the value before the increment if it is <= `u32::MAX`
+fn increment_next_id_to_allocate(next_id_to_allocate: &AtomicU64) -> Option<u32> {
+    let mut prev = next_id_to_allocate.load(Ordering::Relaxed);
 
-    while prev != u32::MAX {
-        match value.compare_exchange_weak(prev, prev + 1, Ordering::Relaxed, Ordering::Relaxed) {
-            Ok(prev) => return Some(prev),
+    while prev <= (u32::MAX as u64) {
+        match next_id_to_allocate.compare_exchange_weak(
+            prev,
+            prev + 1,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(prev) => return Some(prev as u32),
             Err(next_prev) => prev = next_prev,
         }
     }
