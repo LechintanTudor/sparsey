@@ -24,7 +24,7 @@ fn update_velocities(mut velocities: CompMut<Velocity>, frozen: Comp<Frozen>) {
 fn update_positions(mut positions: CompMut<Position>, velocities: Comp<Velocity>) {
     (&mut positions, &velocities).for_each(|(position, velocity)| {
         position.0 += velocity.0;
-    })
+    });
 } 
 
 fn main() {
@@ -58,13 +58,13 @@ Systems are plain functions that borrow data from `World` and `Resources`.
 fn update_positions(mut positions: CompMut<Position>, velocities: Comp<Velocity>) {
     (&mut positions, &velocities).for_each(|(position, velocity)| {
         position.0 += velocity.0;
-    })
+    });
 }
 
 fn update_hps(mut hps: CompMut<Hp>, heals: Comp<Heal>, heal_multipler: Res<HealMultiplier>) {
     (&mut hps, &heals).for_each(|(hp, heal)| {
         hp.0 += heal.0 * heal_multiplier.0;
-    })
+    });
 }
 ```
 
@@ -74,7 +74,7 @@ Systems will be scheduled to run in parallel if their paramters don't conflict.
 let schedule = Schedule::builder()
     .add_system(update_positions)
     .add_system(update_hps)
-    .build()
+    .build();
 ```
 
 ## Expressive Queries
