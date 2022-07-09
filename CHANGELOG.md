@@ -1,3 +1,13 @@
+# 0.8.1 (2022-07-09)
+## Changed
+- `Schedule` now calls `World::maintain` in a more predictable manner.
+- Entities are now recycled in the order in which they were deallocated.
+
+## Fixed
+- Fixed panic in `EntityAllocator` when calling `maintain` multiple times.
+- `EntityAllocator::clear` no longer prevents unmainted entities from being recycled.
+- `EntityAllocator` now correctly allocates entities with ids up to `u32::MAX` instead of `u32::MAX - 1`.
+
 # 0.8.0 (2022-05-28)
 ## Added
 - Added panicking functions for borrowing resources.
