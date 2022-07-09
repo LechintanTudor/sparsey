@@ -14,6 +14,7 @@ pub struct EntityStorage {
 
 impl EntityStorage {
     /// Creates a new `Entity` and returns it.
+    #[inline]
     pub(crate) fn create(&mut self) -> Entity {
         let entity = self.allocator.allocate().expect("No entities left to allocate");
         self.storage.insert(entity);
@@ -21,12 +22,14 @@ impl EntityStorage {
     }
 
     /// Atomically creates a new `Entity` and returns it.
+    #[inline]
     pub(crate) fn create_atomic(&self) -> Entity {
         self.allocator.allocate_atomic().expect("No entities left to allocate")
     }
 
     /// Removes `entity` from the storage if it exits. Returns whether or not
     /// there was anything to remove.
+    #[inline]
     pub(crate) fn destroy(&mut self, entity: Entity) -> bool {
         if self.storage.remove(entity) {
             self.allocator.deallocate(entity);
@@ -37,6 +40,7 @@ impl EntityStorage {
     }
 
     /// Returns `true` if the storage contains `entity`.
+    #[inline]
     pub(crate) fn contains(&self, entity: Entity) -> bool {
         self.storage.contains(entity)
     }
@@ -62,6 +66,7 @@ impl EntityStorage {
 impl Deref for EntityStorage {
     type Target = [Entity];
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.storage.entities
     }
@@ -111,6 +116,7 @@ impl EntitySparseSet {
     }
 
     /// Returns `true` if the storage contains `entity`.
+    #[inline]
     fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
     }
@@ -135,21 +141,19 @@ struct EntityAllocator {
 }
 
 impl EntityAllocator {
-    /// Allocates an entity.
+    /// Allocates an entity synchronously.
     fn allocate(&mut self) -> Option<Entity> {
         let recycled_since_maintain = *self.recycled_since_maintain.get_mut();
 
         if recycled_since_maintain < self.recycled.len() {
             *self.recycled_since_maintain.get_mut() += 1;
             Some(self.recycled[self.recycled.len() - recycled_since_maintain - 1])
+        } else if *self.next_id_to_allocate.get_mut() <= (u32::MAX as u64) {
+            let id = *self.next_id_to_allocate.get_mut() as u32;
+            *self.next_id_to_allocate.get_mut() += 1;
+            Some(Entity::with_id(id))
         } else {
-            if *self.next_id_to_allocate.get_mut() <= (u32::MAX as u64) {
-                let id = *self.next_id_to_allocate.get_mut() as u32;
-                *self.next_id_to_allocate.get_mut() += 1;
-                Some(Entity::with_id(id))
-            } else {
-                None
-            }
+            None
         }
     }
 
