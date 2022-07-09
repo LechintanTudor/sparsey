@@ -11,7 +11,8 @@ impl<'a> Entities<'a> {
         Self { storage }
     }
 
-    /// Atomically creates a new entity.
+    /// Creates a new entity atomically. The entity isn't saved to the main storage until
+    /// `World::maintain` is called.
     #[inline]
     pub fn create(&self) -> Entity {
         self.storage.create_atomic()

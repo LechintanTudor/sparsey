@@ -154,12 +154,14 @@ impl World {
     }
 
     /// Returns `true` if `entity` exists in the world.
+    #[inline]
     #[must_use]
     pub fn contains(&self, entity: Entity) -> bool {
         self.entities.contains(entity)
     }
 
     /// Returns all the entities in the world as a slice.
+    #[inline]
     pub fn entities(&self) -> &[Entity] {
         self.entities.as_ref()
     }
@@ -179,6 +181,7 @@ impl World {
 
     /// Borrows a view over all entities in the world. The view can be used in systems running in
     /// parallel to create new entities atomically.
+    #[inline]
     pub fn borrow_entities(&self) -> Entities {
         Entities::new(&self.entities)
     }
@@ -207,8 +210,9 @@ impl World {
             .unwrap_or_else(|| panic_missing_comp::<T>())
     }
 
-    /// Adds the atomically created entities to the main entity storage. Called automatically by
-    /// `Schedule`.
+    /// Adds the entities created atomically to the main storage and clears the entity recycling
+    /// queue. Should be called at the end of each frame. Called automatically by `Schedule`.
+    #[inline]
     pub fn maintain(&mut self) {
         self.entities.maintain();
     }
