@@ -84,7 +84,7 @@ where
     }
 
     /// Mutably returns the component mapped to `entity` if it exists.
-    pub fn get_mut(&self, entity: Entity) -> Option<&mut T> {
+    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
         unsafe { self.storage.get_mut::<T>(entity) }
     }
 

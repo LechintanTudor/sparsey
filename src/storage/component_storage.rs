@@ -161,7 +161,7 @@ impl ComponentStorage {
     }
 
     #[inline]
-    pub(crate) unsafe fn get_mut<T>(&self, entity: Entity) -> Option<&mut T>
+    pub(crate) unsafe fn get_mut<T>(&mut self, entity: Entity) -> Option<&mut T>
     where
         T: Component,
     {
