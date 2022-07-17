@@ -32,7 +32,7 @@
 /// Re-exports the most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
-    pub use crate::query::{CompoundQuery, IntoEntityIter, QueryFilters};
+    pub use crate::query::{IntoEntityIter, Query, QueryFilters};
     pub use crate::resources::{Res, ResMut, Resources};
     pub use crate::storage::Entity;
     pub use crate::systems::Schedule;

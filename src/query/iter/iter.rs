@@ -1,13 +1,13 @@
 use crate::query::iter::{DenseIter, SparseIter};
-use crate::query::{self, EntityIterator, Query};
+use crate::query::{self, EntityIterator, QueryPart};
 use crate::storage::Entity;
 
 /// Iterator over grouped or ungrouped storages.
 pub enum Iter<'a, G, I, E>
 where
-    G: Query<'a>,
-    I: Query<'a>,
-    E: Query<'a>,
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
 {
     /// Iterator over ungrouped storages.
     Sparse(SparseIter<'a, G, I, E>),
@@ -17,9 +17,9 @@ where
 
 impl<'a, G, I, E> Iter<'a, G, I, E>
 where
-    G: Query<'a>,
-    I: Query<'a>,
-    E: Query<'a>,
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
 {
     pub(crate) fn new(get: G, include: I, exclude: E) -> Self {
         let get_info = get.group_info();
@@ -80,9 +80,9 @@ where
 
 impl<'a, G, I, E> Iterator for Iter<'a, G, I, E>
 where
-    G: Query<'a>,
-    I: Query<'a>,
-    E: Query<'a>,
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
 {
     type Item = G::Item;
 
@@ -107,9 +107,9 @@ where
 
 impl<'a, G, I, E> EntityIterator for Iter<'a, G, I, E>
 where
-    G: Query<'a>,
-    I: Query<'a>,
-    E: Query<'a>,
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         match self {

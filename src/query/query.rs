@@ -1,494 +1,217 @@
-use crate::query::{ComponentView, QueryGroupInfo};
-use crate::storage::{Entity, SparseArray};
-use std::ops::RangeBounds;
+use crate::query::{group_range, Iter, QueryPart};
+use crate::storage::Entity;
 
 #[doc(hidden)]
-pub unsafe trait Query<'a> {
-    type Item: 'a;
-    type Index: Copy;
-    type ComponentPtrs: Copy;
-    type SparseArrays: Copy + 'a;
-    type ComponentSlices: 'a;
+pub trait IntoQueryParts<'a> {
+    type Get: QueryPart<'a>;
+    type Include: QueryPart<'a> + Copy;
+    type Exclude: QueryPart<'a> + Copy;
 
-    fn group_info(&self) -> Option<QueryGroupInfo<'a>>;
-
-    fn get(self, entity: Entity) -> Option<Self::Item>;
-
-    fn includes(self, entity: Entity) -> bool;
-
-    fn excludes(self, entity: Entity) -> bool;
-
-    fn into_any_entities(self) -> Option<&'a [Entity]>;
-
-    fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs);
-
-    fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs);
-
-    fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays);
-
-    fn includes_split(sparse: Self::SparseArrays, entity: Entity) -> bool;
-
-    fn excludes_split(sparse: Self::SparseArrays, entity: Entity) -> bool;
-
-    fn get_index_from_split(sparse: Self::SparseArrays, entity: Entity) -> Option<Self::Index>;
-
-    unsafe fn get_from_sparse_components(
-        components: Self::ComponentPtrs,
-        index: Self::Index,
-    ) -> Self::Item;
-
-    unsafe fn get_from_dense_components(
-        components: Self::ComponentPtrs,
-        index: usize,
-    ) -> Self::Item;
-
-    unsafe fn offset_component_ptrs(
-        components: Self::ComponentPtrs,
-        offset: isize,
-    ) -> Self::ComponentPtrs;
-
-    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
-    where
-        R: RangeBounds<usize>;
-
-    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlices
-    where
-        R: RangeBounds<usize>;
-
-    unsafe fn get_entities_components_unchecked<R>(
-        self,
-        range: R,
-    ) -> (&'a [Entity], Self::ComponentSlices)
-    where
-        R: RangeBounds<usize>;
+    fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude);
 }
 
-unsafe impl<'a> Query<'a> for () {
-    type Item = ();
-    type Index = ();
-    type ComponentPtrs = ();
-    type SparseArrays = ();
-    type ComponentSlices = ();
+/// Trait used for fetching and iterating entities and components from component views.
+pub trait Query<'a>: IntoQueryParts<'a> + Sized {
+    /// Returns the component set associated to `entity`.
+    fn get(self, entity: Entity) -> Option<<Self::Get as QueryPart<'a>>::Item>;
 
-    #[inline(always)]
-    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
-        Some(QueryGroupInfo::Empty)
-    }
+    /// Returns `true` if `entity` matches the query.
+    fn contains(self, entity: Entity) -> bool;
 
-    #[inline(always)]
-    fn get(self, _entity: Entity) -> Option<Self::Item> {
-        Some(())
-    }
+    /// Returns an iterator over all items in the query.
+    fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>;
 
-    #[inline(always)]
-    fn includes(self, _entity: Entity) -> bool {
-        true
-    }
-
-    #[inline(always)]
-    fn excludes(self, _entity: Entity) -> bool {
-        true
-    }
-
-    #[inline(always)]
-    fn into_any_entities(self) -> Option<&'a [Entity]> {
-        None
-    }
-
-    #[inline(always)]
-    fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
-        (None, (), ())
-    }
-
-    #[inline(always)]
-    fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs) {
-        (None, ())
-    }
-
-    #[inline(always)]
-    fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays) {
-        (None, ())
-    }
-
-    #[inline(always)]
-    fn includes_split(_sparse: Self::SparseArrays, _entity: Entity) -> bool {
-        true
-    }
-
-    #[inline(always)]
-    fn excludes_split(_sparse: Self::SparseArrays, _entity: Entity) -> bool {
-        true
-    }
-
-    #[inline(always)]
-    fn get_index_from_split(_sparse: Self::SparseArrays, _entity: Entity) -> Option<Self::Index> {
-        Some(())
-    }
-
-    #[inline(always)]
-    unsafe fn get_from_sparse_components(
-        _components: Self::ComponentPtrs,
-        _index: Self::Index,
-    ) -> Self::Item {
-        ()
-    }
-
-    #[inline(always)]
-    unsafe fn get_from_dense_components(
-        _components: Self::ComponentPtrs,
-        _index: usize,
-    ) -> Self::Item {
-        ()
-    }
-
-    #[inline(always)]
-    unsafe fn offset_component_ptrs(
-        _components: Self::ComponentPtrs,
-        _offset: isize,
-    ) -> Self::ComponentPtrs {
-        ()
-    }
-
-    #[inline(always)]
-    unsafe fn get_entities_unchecked<R>(self, _range: R) -> &'a [Entity]
+    /// Iterates over all items in the query. Equivalent to `.iter().for_each(|item| f(item))`.
+    fn for_each<F>(self, f: F)
     where
-        R: RangeBounds<usize>,
+        F: FnMut(<Self::Get as QueryPart<'a>>::Item),
     {
-        &[]
+        self.iter().for_each(f)
     }
 
-    #[inline(always)]
-    unsafe fn get_components_unchecked<R>(self, _range: R) -> Self::ComponentSlices
+    /// Iterates over all items in the query and the entities to which they belong. Equivalent to
+    /// `.iter().with_entity().for_each(|(entity, item)| f((entity, item)))`.
+    fn for_each_with_entity<F>(self, f: F)
     where
-        R: RangeBounds<usize>,
+        F: FnMut((Entity, <Self::Get as QueryPart<'a>>::Item)),
     {
-        ()
+        use crate::query::iter::IntoEntityIter;
+
+        self.iter().with_entity().for_each(f)
     }
 
-    #[inline(always)]
-    unsafe fn get_entities_components_unchecked<R>(
+    /// For grouped storages, returns all entities that match the query as a slice.
+    #[allow(clippy::wrong_self_convention)]
+    fn as_entity_slice(self) -> Option<&'a [Entity]>;
+
+    /// For grouped storages, returns all components that match the query as slices.
+    #[allow(clippy::wrong_self_convention)]
+    fn as_component_slices(self) -> Option<<Self::Get as QueryPart<'a>>::ComponentSlices>;
+
+    /// For grouped storages, returns all entities and components that match the query as slices.
+    #[allow(clippy::wrong_self_convention)]
+    fn as_entity_and_component_slices(
         self,
-        _range: R,
-    ) -> (&'a [Entity], Self::ComponentSlices)
-    where
-        R: RangeBounds<usize>,
-    {
-        (&[], ())
-    }
+    ) -> Option<(&'a [Entity], <Self::Get as QueryPart<'a>>::ComponentSlices)>;
 }
 
-unsafe impl<'a, E> Query<'a> for E
+impl<'a, Q> Query<'a> for Q
 where
-    E: ComponentView<'a>,
+    Q: IntoQueryParts<'a>,
 {
-    type Item = E::Item;
-    type Index = usize;
-    type ComponentPtrs = *mut E::Component;
-    type SparseArrays = &'a SparseArray;
-    type ComponentSlices = E::ComponentSlice;
+    fn get(self, entity: Entity) -> Option<<Self::Get as QueryPart<'a>>::Item> {
+        let (get, include, exclude) = self.into_query_parts();
 
-    fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
-        let len = ComponentView::len(self);
-        let info = ComponentView::group_info(self);
-        Some(QueryGroupInfo::Single { len, info })
+        if exclude.excludes(entity) && include.includes(entity) {
+            QueryPart::get(get, entity)
+        } else {
+            None
+        }
     }
 
-    fn get(self, entity: Entity) -> Option<Self::Item> {
-        ComponentView::get(self, entity)
+    fn contains(self, entity: Entity) -> bool {
+        let (get, include, exclude) = self.into_query_parts();
+        exclude.excludes(entity) && include.includes(entity) && get.includes(entity)
     }
 
-    fn includes(self, entity: Entity) -> bool {
-        ComponentView::contains(self, entity)
+    fn iter(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude> {
+        let (get, include, exclude) = self.into_query_parts();
+        Iter::new(get, include, exclude)
     }
 
-    fn excludes(self, entity: Entity) -> bool {
-        !ComponentView::contains(self, entity)
+    fn as_entity_slice(self) -> Option<&'a [Entity]> {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        unsafe { Some(get.get_entities_unchecked(range)) }
     }
 
-    fn into_any_entities(self) -> Option<&'a [Entity]> {
-        let (entities, _, _) = ComponentView::split(self);
-        Some(entities)
+    fn as_component_slices(self) -> Option<<Self::Get as QueryPart<'a>>::ComponentSlices> {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        unsafe { Some(get.get_components_unchecked(range)) }
     }
 
-    fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
-        let (entities, sparse, components) = ComponentView::split(self);
-        (Some(entities), sparse, components)
-    }
-
-    fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs) {
-        let (entities, _, components) = ComponentView::split(self);
-        (Some(entities), components)
-    }
-
-    fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays) {
-        let (entities, sparse, _) = ComponentView::split(self);
-        (Some(entities), sparse)
-    }
-
-    fn includes_split(sparse: Self::SparseArrays, entity: Entity) -> bool {
-        sparse.contains(entity)
-    }
-
-    fn excludes_split(sparse: Self::SparseArrays, entity: Entity) -> bool {
-        !sparse.contains(entity)
-    }
-
-    fn get_index_from_split(sparse: Self::SparseArrays, entity: Entity) -> Option<Self::Index> {
-        sparse.get(entity)
-    }
-
-    unsafe fn get_from_sparse_components(
-        components: Self::ComponentPtrs,
-        index: Self::Index,
-    ) -> Self::Item {
-        <E as ComponentView>::get_from_component_ptr(components.add(index))
-    }
-
-    unsafe fn get_from_dense_components(
-        components: Self::ComponentPtrs,
-        index: usize,
-    ) -> Self::Item {
-        <E as ComponentView>::get_from_component_ptr(components.add(index))
-    }
-
-    unsafe fn offset_component_ptrs(
-        components: Self::ComponentPtrs,
-        offset: isize,
-    ) -> Self::ComponentPtrs {
-        components.offset(offset)
-    }
-
-    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
-    where
-        R: RangeBounds<usize>,
-    {
-        <E as ComponentView>::get_entities_unchecked(self, range)
-    }
-
-    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlices
-    where
-        R: RangeBounds<usize>,
-    {
-        <E as ComponentView>::get_components_unchecked(self, range)
-    }
-
-    unsafe fn get_entities_components_unchecked<R>(
+    fn as_entity_and_component_slices(
         self,
-        range: R,
-    ) -> (&'a [Entity], Self::ComponentSlices)
-    where
-        R: RangeBounds<usize>,
-    {
-        <E as ComponentView>::get_entities_components_unchecked(self, range)
+    ) -> Option<(&'a [Entity], <Self::Get as QueryPart<'a>>::ComponentSlices)> {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        unsafe { Some(get.get_entities_components_unchecked(range)) }
     }
 }
 
-macro_rules! replace {
-    ($from:ident, $($to:tt)+) => {
-        $($to)+
-    };
+impl<'a, Q> IntoQueryParts<'a> for Q
+where
+    Q: QueryPart<'a>,
+{
+    type Get = Q;
+    type Include = ();
+    type Exclude = ();
+
+    fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude) {
+        (self, (), ())
+    }
 }
 
-macro_rules! query_group_info {
-    ($first:expr, $($other:expr),+) => {
-        Some(QueryGroupInfo::Multiple($first? $(.combine($other?)?)+))
-    };
+/// Wrapper over a query that applies an "include" filter.
+pub struct Include<G, I> {
+    get: G,
+    include: I,
 }
 
-macro_rules! split_sparse {
-    (($first:expr, $_:tt), $(($other:expr, $other_idx:tt)),+) => {
-        {
-            let (mut entities, first_sparse, first_comp) = $first.split();
+impl<'a, G, I> Include<G, I>
+where
+    G: QueryPart<'a>,
+    I: QueryPart<'a> + Copy,
+{
+    pub(crate) fn new(get: G, include: I) -> Self {
+        Self { get, include }
+    }
 
-            #[allow(clippy::eval_order_dependence)]
-            let splits = (
-                (first_sparse, first_comp),
-                $(
-                    {
-                        let (other_entities, other_sparse, other_comp) = $other.split();
-
-                        if other_entities.len() < entities.len() {
-                            entities = other_entities;
-                        }
-
-                        (other_sparse, other_comp)
-                    },
-                )+
-            );
-
-            let sparse = (first_sparse, $(splits.$other_idx.0),+);
-            let comp = (first_comp, $(splits.$other_idx.1),+);
-
-            (Some(entities), sparse, comp)
-        }
-    };
+    /// Applies an "exclude" filter to the query.
+    pub fn exclude<E>(self, exclude: E) -> IncludeExclude<G, I, E>
+    where
+        E: QueryPart<'a> + Copy,
+    {
+        IncludeExclude::new(self.get, self.include, exclude)
+    }
 }
 
-macro_rules! split_dense {
-    ($first:expr, $($other:expr),+) => {
-        {
-            let (entities, _, first_comp) = $first.split();
-            let comps = (first_comp, $($other.split().2),+);
+impl<'a, G, I> IntoQueryParts<'a> for Include<G, I>
+where
+    G: QueryPart<'a>,
+    I: QueryPart<'a> + Copy,
+{
+    type Get = G;
+    type Include = I;
+    type Exclude = ();
 
-            (Some(entities), comps)
-        }
-    };
+    fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude) {
+        (self.get, self.include, ())
+    }
 }
 
-macro_rules! split_filter {
-    ($first:expr, $($other:expr),+) => {
-        {
-            let (entities, first_sparse, _) = $first.split();
-            let sparse = (first_sparse, $($other.split().1),+);
-
-            (Some(entities), sparse)
-        }
-    };
+/// Wrapper over a query that applies "include" and "exclude" filters.
+pub struct IncludeExclude<G, I, E> {
+    get: G,
+    include: I,
+    exclude: E,
 }
 
-macro_rules! get_entities_components {
-    ($range:expr; $first:expr, $($other:expr),+) => {
-        {
-            let bounds = ($range.start_bound().cloned(), $range.end_bound().cloned());
-            let (entities, first_comp) = $first.get_entities_components_unchecked(bounds);
-            (entities, (first_comp, $($other.get_components_unchecked(bounds),)+))
-        }
-    };
+impl<'a, G, I, E> IncludeExclude<G, I, E>
+where
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
+{
+    pub(crate) fn new(get: G, include: I, exclude: E) -> Self {
+        Self { get, include, exclude }
+    }
 }
 
-macro_rules! impl_query {
-    ($(($elem:ident, $idx:tt)),+) => {
-        unsafe impl<'a, $($elem),+> Query<'a> for ($($elem,)+)
-        where
-            $($elem: ComponentView<'a>,)+
-        {
-            type Item = ($($elem::Item,)+);
-            type Index = ($(replace!($elem, usize),)+);
-            type ComponentPtrs = ($(*mut $elem::Component,)+);
-            type SparseArrays = ($(replace!($elem, &'a SparseArray),)+);
-            type ComponentSlices = ($($elem::ComponentSlice,)+);
+impl<'a, G, I, E> IntoQueryParts<'a> for IncludeExclude<G, I, E>
+where
+    G: QueryPart<'a>,
+    I: QueryPart<'a> + Copy,
+    E: QueryPart<'a> + Copy,
+{
+    type Get = G;
+    type Include = I;
+    type Exclude = E;
 
-            fn group_info(&self) -> Option<QueryGroupInfo<'a>> {
-                query_group_info!($(self.$idx.group_info()),+)
-            }
-
-            fn get(self, entity: Entity) -> Option<Self::Item> {
-                Some((
-                    $(self.$idx.get(entity)?,)+
-                ))
-            }
-
-            fn includes(self, entity: Entity) -> bool {
-                $(self.$idx.contains(entity))&&+
-            }
-
-            fn excludes(self, entity: Entity) -> bool {
-                $(!self.$idx.contains(entity))&&+
-            }
-
-            fn into_any_entities(self) -> Option<&'a [Entity]> {
-                let (entities, _, _) = ComponentView::split(self.0);
-                Some(entities)
-            }
-
-            fn split_sparse(self) -> (Option<&'a [Entity]>, Self::SparseArrays, Self::ComponentPtrs) {
-                split_sparse!($((self.$idx, $idx)),+)
-            }
-
-            fn split_dense(self) -> (Option<&'a [Entity]>, Self::ComponentPtrs) {
-                split_dense!($(self.$idx),+)
-            }
-
-            fn split_filter(self) -> (Option<&'a [Entity]>, Self::SparseArrays) {
-                split_filter!($(self.$idx),+)
-            }
-
-            fn includes_split(sparse: Self::SparseArrays, entity: Entity) -> bool {
-                $(sparse.$idx.contains(entity))&&+
-            }
-
-            fn excludes_split(sparse: Self::SparseArrays, entity: Entity) -> bool {
-                $(!sparse.$idx.contains(entity))&&+
-            }
-
-            fn get_index_from_split(
-                sparse: Self::SparseArrays,
-                entity: Entity,
-            ) -> Option<Self::Index> {
-                Some((
-                    $(sparse.$idx.get(entity)?,)+
-                ))
-            }
-
-            unsafe fn get_from_sparse_components(
-                components: Self::ComponentPtrs,
-                index: Self::Index,
-            ) -> Self::Item {
-                ($(
-                    $elem::get_from_component_ptr(components.$idx.add(index.$idx)),
-                )+)
-            }
-
-            unsafe fn get_from_dense_components(
-                components: Self::ComponentPtrs,
-                index: usize,
-            ) -> Self::Item {
-                ($(
-                    $elem::get_from_component_ptr(components.$idx.add(index)),
-                )+)
-            }
-
-            unsafe fn offset_component_ptrs(components: Self::ComponentPtrs, offset: isize) -> Self::ComponentPtrs {
-                ($(
-                    components.$idx.offset(offset),
-                )+)
-            }
-
-            unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
-            where
-                R: RangeBounds<usize>,
-            {
-                self.0.get_entities_unchecked(range)
-            }
-
-            unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlices
-            where
-                R: RangeBounds<usize>,
-            {
-                let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
-
-                ($(
-                    self.$idx.get_components_unchecked(bounds),
-                )+)
-            }
-
-            unsafe fn get_entities_components_unchecked<R>(self, range: R) -> (&'a [Entity], Self::ComponentSlices)
-            where
-                R: RangeBounds<usize>,
-            {
-                get_entities_components!(range; $(self.$idx),+)
-            }
-        }
-    };
+    fn into_query_parts(self) -> (Self::Get, Self::Include, Self::Exclude) {
+        (self.get, self.include, self.exclude)
+    }
 }
 
-#[rustfmt::skip]
-mod impls {
-    use super::*;
+/// Helper trait for applying "include" and "exclude" filters to queries.
+pub trait QueryFilters<'a>: QueryPart<'a> + Sized {
+    /// Applies an "include" filter to the query.
+    fn include<I>(self, include: I) -> Include<Self, I>
+    where
+        I: QueryPart<'a> + Copy;
 
-    impl_query!((A, 0), (B, 1));
-    impl_query!((A, 0), (B, 1), (C, 2));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14));
-    impl_query!((A, 0), (B, 1), (C, 2), (D, 3), (E, 4), (F, 5), (G, 6), (H, 7), (I, 8), (J, 9), (K, 10), (L, 11), (M, 12), (N, 13), (O, 14), (P, 15));
+    /// Applies an "exclude" filter to the query.
+    fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
+    where
+        E: QueryPart<'a> + Copy;
+}
+
+impl<'a, Q> QueryFilters<'a> for Q
+where
+    Q: QueryPart<'a>,
+{
+    fn include<I>(self, include: I) -> Include<Self, I>
+    where
+        I: QueryPart<'a> + Copy,
+    {
+        Include::new(self, include)
+    }
+
+    fn exclude<E>(self, exclude: E) -> IncludeExclude<Self, (), E>
+    where
+        E: QueryPart<'a> + Copy,
+    {
+        IncludeExclude::new(self, (), exclude)
+    }
 }

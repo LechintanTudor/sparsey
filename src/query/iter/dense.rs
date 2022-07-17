@@ -1,10 +1,10 @@
-use crate::query::{EntityIterator, Query};
+use crate::query::{EntityIterator, QueryPart};
 use crate::storage::Entity;
 
 /// Iterator over grouped storages. Extremely fast.
 pub struct DenseIter<'a, G>
 where
-    G: Query<'a>,
+    G: QueryPart<'a>,
 {
     index: usize,
     entities: &'a [Entity],
@@ -13,7 +13,7 @@ where
 
 impl<'a, G> DenseIter<'a, G>
 where
-    G: Query<'a>,
+    G: QueryPart<'a>,
 {
     pub(crate) unsafe fn new(entities: &'a [Entity], components: G::ComponentPtrs) -> Self {
         Self { index: 0, entities, components }
@@ -22,7 +22,7 @@ where
 
 impl<'a, G> Iterator for DenseIter<'a, G>
 where
-    G: Query<'a>,
+    G: QueryPart<'a>,
 {
     type Item = G::Item;
 
@@ -57,7 +57,7 @@ where
 
 impl<'a, G> EntityIterator for DenseIter<'a, G>
 where
-    G: Query<'a>,
+    G: QueryPart<'a>,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         let index = self.index;

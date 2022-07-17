@@ -1,13 +1,13 @@
-use crate::query::{EntityIterator, Query};
+use crate::query::{EntityIterator, QueryPart};
 use crate::storage::Entity;
 use std::slice::Iter as SliceIter;
 
 /// Iterator over ungrouped storages.
 pub struct SparseIter<'a, G, I, E>
 where
-    G: Query<'a>,
-    I: Query<'a>,
-    E: Query<'a>,
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
 {
     entities: SliceIter<'a, Entity>,
     sparse: G::SparseArrays,
@@ -18,9 +18,9 @@ where
 
 impl<'a, G, I, E> SparseIter<'a, G, I, E>
 where
-    G: Query<'a>,
-    I: Query<'a>,
-    E: Query<'a>,
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
 {
     pub(crate) unsafe fn new(
         entities: &'a [Entity],
@@ -35,9 +35,9 @@ where
 
 impl<'a, G, I, E> Iterator for SparseIter<'a, G, I, E>
 where
-    G: Query<'a>,
-    I: Query<'a>,
-    E: Query<'a>,
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
 {
     type Item = G::Item;
 
@@ -76,9 +76,9 @@ where
 
 impl<'a, G, I, E> EntityIterator for SparseIter<'a, G, I, E>
 where
-    G: Query<'a>,
-    I: Query<'a>,
-    E: Query<'a>,
+    G: QueryPart<'a>,
+    I: QueryPart<'a>,
+    E: QueryPart<'a>,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         loop {
