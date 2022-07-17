@@ -29,6 +29,14 @@
 //! }
 //! ```
 
+pub mod components;
+pub mod layout;
+pub mod query;
+pub mod resources;
+pub mod storage;
+pub mod systems;
+pub mod world;
+
 /// Re-exports the most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
@@ -38,13 +46,5 @@ pub mod prelude {
     pub use crate::systems::Schedule;
     pub use crate::world::{Comp, CompMut, Entities, World};
 }
-
-pub mod components;
-pub mod layout;
-pub mod query;
-pub mod resources;
-pub mod storage;
-pub mod systems;
-pub mod world;
 
 pub(crate) mod utils;
