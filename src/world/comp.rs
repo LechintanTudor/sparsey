@@ -52,7 +52,7 @@ where
     }
 
     pub(crate) fn group_info(&self) -> Option<GroupInfo<'a>> {
-        self.group_info
+        self.group_info.clone()
     }
 
     pub(crate) fn split(&self) -> (&[Entity], &SparseArray, &[T]) {
@@ -119,7 +119,7 @@ where
     }
 
     pub(crate) fn group_info(&self) -> Option<GroupInfo<'a>> {
-        self.group_info
+        self.group_info.clone()
     }
 
     pub(crate) fn split(&self) -> (&[Entity], &SparseArray, &[T]) {

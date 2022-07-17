@@ -3,12 +3,16 @@ use std::marker::PhantomData;
 use std::ops::Range;
 use std::ptr::NonNull;
 
-/// Tracks the group to which one or more component storages belong to.
-#[derive(Clone, Copy)]
+/// Tracks the group to which one or more component views belong to.
+#[derive(Clone)]
 pub struct GroupInfo<'a> {
+    /// Points to the first group of the family to which the component views belong.
     family: NonNull<Group>,
+    /// Index of the last group in the family to which any component view belongs.
     group_offset: usize,
+    /// Bitmask for storage indexes in the group family.
     storage_mask: StorageMask,
+    /// Lifetime of the group family.
     _phantom: PhantomData<&'a [Group]>,
 }
 

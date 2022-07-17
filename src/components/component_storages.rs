@@ -274,17 +274,22 @@ impl ComponentStorages {
 
 #[derive(Clone, Copy)]
 struct ComponentInfo {
+    /// Index of the storage in `storages`.
     storage_index: usize,
+    /// Bitmask for the family index to which the storage belongs.
     family_mask: FamilyMask,
+    /// Bitmask for the group indexes to which the storage belongs.
     group_mask: GroupMask,
+    /// Group info for the storage, if grouped.
     group_info: Option<StorageGroupInfo>,
 }
 
 #[derive(Clone, Copy)]
 struct StorageGroupInfo {
-    /// Group index at which the family starts.
+    /// Index in `storages` at which the family starts.
     family_group_index: usize,
     /// Offset from the family group index.
     group_offset: usize,
+    /// Bitmask for the index in the family of the storage.
     storage_mask: StorageMask,
 }
