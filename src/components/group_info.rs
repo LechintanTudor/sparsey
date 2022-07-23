@@ -43,7 +43,7 @@ impl<'a> GroupInfo<'a> {
 
     pub(crate) fn group_len(&self) -> Option<usize> {
         let group = unsafe { *self.family.as_ptr().add(self.group_offset) };
-        let mask = QueryMask::new(self.storage_mask.get(), 0);
+        let mask = QueryMask::new(self.storage_mask, StorageMask::NONE);
 
         (mask == group.metadata().include_mask()).then(|| group.len())
     }
@@ -53,7 +53,7 @@ impl<'a> GroupInfo<'a> {
             return None;
         }
 
-        let mask = QueryMask::new(self.storage_mask.get(), exclude.storage_mask.get());
+        let mask = QueryMask::new(self.storage_mask, exclude.storage_mask);
         let group_offset = self.group_offset.max(exclude.group_offset);
 
         unsafe {

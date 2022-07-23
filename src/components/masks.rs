@@ -1,10 +1,20 @@
 use std::ops::{BitOr, BitOrAssign};
 
-const U16_BITS: usize = u16::BITS as usize;
-const U32_BITS: usize = u32::BITS as usize;
+const STORAGE_MASK_ARITY: usize = u16::BITS as usize;
+const GROUP_MASK_ARITY: usize = u32::BITS as usize;
+
+fn first_n_bits_u16(n: usize) -> u16 {
+    assert!(n <= u16::BITS as usize);
+    (0..n).fold(0, |m, i| m | 1 << i)
+}
+
+fn first_n_bits_u32(n: usize) -> u32 {
+    assert!(n <= u32::BITS as usize);
+    (0..n).fold(0, |m, i| m | 1 << i)
+}
 
 #[derive(Clone, Debug)]
-pub struct MaskIndexIter {
+pub(crate) struct MaskIndexIter {
     mask: u32,
     offset: u32,
 }
@@ -37,31 +47,20 @@ impl Iterator for MaskIndexIter {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-pub struct FamilyMask(u32);
+pub(crate) struct FamilyMask(u32);
 
 impl FamilyMask {
     pub const NONE: Self = Self(0);
-    pub const ALL: Self = Self(u32::MAX);
 
     #[inline]
     pub fn from_family_index(index: usize) -> Self {
-        assert!(index < U32_BITS);
+        assert!(index < GROUP_MASK_ARITY);
         Self(1 << index)
-    }
-
-    #[inline]
-    pub fn contains_index(self, index: usize) -> bool {
-        (self.0 & (1 << index)) != 0
     }
 
     #[inline]
     pub fn iter_indexes(self) -> MaskIndexIter {
         MaskIndexIter::new(self.0)
-    }
-
-    #[inline]
-    pub fn get(self) -> u32 {
-        self.0
     }
 }
 
@@ -89,40 +88,24 @@ impl BitOrAssign for FamilyMask {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-pub struct GroupMask(u32);
+pub(crate) struct GroupMask(u32);
 
 impl GroupMask {
     pub const NONE: Self = Self(0);
     pub const ALL: Self = Self(u32::MAX);
 
     pub fn new(group_index: usize, group_arity: usize, family_arity: usize) -> Self {
-        assert!(group_index < U32_BITS);
-        assert!(group_arity < U32_BITS);
-        assert!(family_arity < U32_BITS);
+        assert!(group_index < GROUP_MASK_ARITY);
+        assert!(group_arity < GROUP_MASK_ARITY);
+        assert!(family_arity < GROUP_MASK_ARITY);
         assert!(group_arity <= family_arity);
 
-        let mut mask = 0;
-
-        for i in 0..(family_arity - group_arity + 1) {
-            mask |= 1 << i;
-        }
-
-        Self(mask << group_index)
+        Self(first_n_bits_u32(family_arity - group_arity + 1) << group_index)
     }
 
     #[inline]
     pub fn contains_index(self, index: usize) -> bool {
         (self.0 & (1 << index)) != 0
-    }
-
-    #[inline]
-    pub fn iter_indexes(self) -> MaskIndexIter {
-        MaskIndexIter::new(self.0)
-    }
-
-    #[inline]
-    pub fn get(self) -> u32 {
-        self.0
     }
 }
 
@@ -143,21 +126,15 @@ impl BitOrAssign for GroupMask {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-pub struct StorageMask(u16);
+pub(crate) struct StorageMask(u16);
 
 impl StorageMask {
     pub const NONE: Self = Self(0);
-    pub const ALL: Self = Self(u16::MAX);
 
     #[inline]
     pub fn from_storage_index(index: usize) -> Self {
-        assert!(index < U16_BITS);
+        assert!(index < STORAGE_MASK_ARITY);
         Self(1 << index)
-    }
-
-    #[inline]
-    pub fn get(self) -> u16 {
-        self.0
     }
 }
 
@@ -184,52 +161,40 @@ impl BitOrAssign for StorageMask {
     }
 }
 
-// #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-// pub struct QueryMask {
-//     include: StorageMask,
-//     exclude: StorageMask,
-// }
-
-// impl QueryMask {
-//     #[inline]
-//     pub const fn new(include: StorageMask, exclude: StorageMask) -> Self {
-//         Self { include, exclude }
-//     }
-
-//     pub fn for_include_group(group_arity: usize) -> Self {
-//         todo!()
-//     }
-
-//     pub fn for_exclude_group(prev_group_arity: usize, group_arity: usize) -> Self {
-//         todo!()
-//     }
-// }
-
-#[derive(Copy, Clone, Eq, PartialEq, Default, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub(crate) struct QueryMask {
-    include: u16,
-    exclude: u16,
+    include: StorageMask,
+    exclude: StorageMask,
 }
 
 impl QueryMask {
-    pub const fn new(include: u16, exclude: u16) -> Self {
+    pub const NONE: Self = Self { include: StorageMask(0), exclude: StorageMask(0) };
+
+    #[inline]
+    pub const fn new(include: StorageMask, exclude: StorageMask) -> Self {
         Self { include, exclude }
     }
 
-    pub const fn new_include_group(arity: usize) -> Self {
-        Self { include: (1 << arity) - 1, exclude: 0 }
+    pub fn for_include_group(group_arity: usize) -> Self {
+        assert!(group_arity <= STORAGE_MASK_ARITY);
+
+        Self { include: StorageMask(first_n_bits_u16(group_arity)), exclude: StorageMask::NONE }
     }
 
-    pub const fn new_exclude_group(prev_arity: usize, arity: usize) -> Self {
-        if prev_arity != 0 {
-            let exclude_count = arity - prev_arity;
+    pub fn for_exclude_group(prev_group_arity: usize, group_arity: usize) -> Self {
+        assert!(prev_group_arity <= STORAGE_MASK_ARITY);
+        assert!(group_arity <= STORAGE_MASK_ARITY);
+        assert!(prev_group_arity < group_arity);
 
-            Self {
-                include: (1 << prev_arity) - 1,
-                exclude: ((1 << exclude_count) - 1) << prev_arity,
-            }
-        } else {
-            Self::new(0, 0)
+        if prev_group_arity == 0 {
+            return Self::NONE;
+        }
+
+        let exclude_count = group_arity - prev_group_arity;
+
+        Self {
+            include: StorageMask(first_n_bits_u16(prev_group_arity)),
+            exclude: StorageMask(first_n_bits_u16(exclude_count) << prev_group_arity),
         }
     }
 }

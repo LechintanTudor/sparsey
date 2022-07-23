@@ -79,8 +79,8 @@ impl ComponentStorages {
                 type_id,
                 ComponentInfo {
                     storage_index: storages.len(),
-                    family_mask: FamilyMask::default(),
-                    group_mask: GroupMask::default(),
+                    family_mask: FamilyMask::NONE,
+                    group_mask: GroupMask::NONE,
                     group_info: None,
                 },
             );

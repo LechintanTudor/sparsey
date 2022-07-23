@@ -26,9 +26,21 @@ pub(crate) struct GroupMetadata {
     new_start: usize,
     /// The index of the last storage in the group plus one.
     end: usize,
+    include_mask: QueryMask,
+    exclude_mask: QueryMask,
 }
 
 impl GroupMetadata {
+    pub fn new(start: usize, new_start: usize, end: usize) -> Self {
+        Self {
+            start,
+            new_start,
+            end,
+            include_mask: QueryMask::for_include_group(end - start),
+            exclude_mask: QueryMask::for_exclude_group(new_start - start, end - start),
+        }
+    }
+
     #[inline]
     pub fn storage_range(&self) -> Range<usize> {
         self.start..self.end
@@ -41,12 +53,12 @@ impl GroupMetadata {
 
     #[inline]
     pub fn include_mask(&self) -> QueryMask {
-        QueryMask::new_include_group(self.end - self.start)
+        self.include_mask
     }
 
     #[inline]
     pub fn exclude_mask(&self) -> QueryMask {
-        QueryMask::new_exclude_group(self.new_start - self.start, self.end - self.start)
+        self.exclude_mask
     }
 }
 
@@ -59,7 +71,7 @@ pub(crate) struct Group {
 
 impl Group {
     pub fn new(start: usize, new_start: usize, end: usize) -> Self {
-        Self { metadata: GroupMetadata { start, new_start, end }, len: 0 }
+        Self { metadata: GroupMetadata::new(start, new_start, end), len: 0 }
     }
 
     #[inline]

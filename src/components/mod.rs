@@ -11,4 +11,4 @@ pub use self::component_storages::*;
 pub use self::group_info::*;
 
 pub(crate) use self::group::*;
-pub use self::masks::*;
+pub(crate) use self::masks::*;
