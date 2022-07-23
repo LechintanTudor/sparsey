@@ -51,14 +51,17 @@ impl LayoutGroupFamily {
         }
     }
 
+    #[inline]
     pub fn arity(&self) -> usize {
         self.components.len()
     }
 
+    #[inline]
     pub fn components(&self) -> &[ComponentInfo] {
         &self.components
     }
 
+    #[inline]
     pub fn group_arities(&self) -> &[usize] {
         &self.group_arities
     }
