@@ -1,3 +1,4 @@
+use std::cmp::{Ord, Ordering, PartialOrd};
 use std::fmt;
 use std::num::NonZeroU32;
 
@@ -31,10 +32,24 @@ impl Version {
 }
 
 /// Uniquely identifies a set of components in a `World`.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Entity {
     id: u32,
     version: Version,
+}
+
+impl PartialOrd for Entity {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Entity {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.version.cmp(&other.version).then(self.id.cmp(&other.id))
+    }
 }
 
 impl fmt::Debug for Entity {
@@ -77,10 +92,24 @@ impl Entity {
 
 /// Used internally by `SparseArray` to map `Entity` indexes to dense
 /// indexes.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) struct IndexEntity {
     id: u32,
     version: Version,
+}
+
+impl PartialOrd for IndexEntity {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for IndexEntity {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.version.cmp(&other.version).then(self.id.cmp(&other.id))
+    }
 }
 
 impl fmt::Debug for IndexEntity {
