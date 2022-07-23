@@ -156,7 +156,7 @@ pub(crate) unsafe fn ungroup_family(
 
     let ungroup_indexes = (ungroup_start..(ungroup_start + ungroup_len))
         .rev()
-        .take_while(|i| group_mask & (1 << i) != 0);
+        .take_while(|&i| group_mask.contains_index(i));
 
     for i in ungroup_indexes {
         let group = groups.get_unchecked_mut(i);

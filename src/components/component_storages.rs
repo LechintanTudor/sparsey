@@ -1,6 +1,5 @@
 use crate::components::{
-    group_family, iter_bit_indexes, new_group_mask, ungroup_family, FamilyMask, Group, GroupInfo,
-    GroupMask, StorageMask,
+    group_family, ungroup_family, FamilyMask, Group, GroupInfo, GroupMask, StorageMask,
 };
 use crate::layout::Layout;
 use crate::storage::{Component, ComponentStorage, Entity};
@@ -49,12 +48,14 @@ impl ComponentStorages {
                         component.type_id(),
                         ComponentInfo {
                             storage_index: storages.len(),
-                            family_mask: 1 << family_index,
-                            group_mask: new_group_mask(groups.len(), group_arity, family.arity()),
+                            family_mask: FamilyMask::from_family_index(family_index),
+                            group_mask: GroupMask::new(groups.len(), group_arity, family.arity()),
                             group_info: Some(StorageGroupInfo {
                                 family_group_index,
                                 group_offset,
-                                storage_mask: 1 << (prev_group_arity + component_offset),
+                                storage_mask: StorageMask::from_storage_index(
+                                    prev_group_arity + component_offset,
+                                ),
                             }),
                         },
                     );
@@ -149,7 +150,7 @@ impl ComponentStorages {
         family_mask: FamilyMask,
         entities: impl Iterator<Item = Entity> + Clone,
     ) {
-        for family_index in iter_bit_indexes(family_mask) {
+        for family_index in family_mask.iter_indexes() {
             let family_range = self.family_ranges.get_unchecked(family_index);
 
             entities.clone().for_each(|entity| {
@@ -164,7 +165,7 @@ impl ComponentStorages {
         group_mask: GroupMask,
         entities: impl Iterator<Item = Entity> + Clone,
     ) {
-        for family_index in iter_bit_indexes(family_mask) {
+        for family_index in family_mask.iter_indexes() {
             let family_range = self.family_ranges.get_unchecked(family_index);
 
             entities.clone().for_each(|entity| {
@@ -194,7 +195,7 @@ impl ComponentStorages {
                     &mut self.storages,
                     &mut self.groups,
                     family_range.clone(),
-                    GroupMask::MAX,
+                    GroupMask::ALL,
                     entity,
                 );
             });
