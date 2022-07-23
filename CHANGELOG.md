@@ -1,3 +1,15 @@
+# 0.9.0 (2022-07-23)
+## Changed
+- Entities are now ordered by their version first instead of their id, so
+entities created earlier show up first when sorting.
+- Various bitmasks used internally are now wrapped in new types to make the code
+easier to maintain.
+- Renamed `Query` to `QueryPart` and `CompoundQuery` to `Query`.
+
+## Fixed
+- `CompMut::get_mut` now takes `self` by mutable reference instead of shared
+reference.
+
 # 0.8.1 (2022-07-09)
 ## Changed
 - `Schedule` now calls `World::maintain` in a more predictable manner.
