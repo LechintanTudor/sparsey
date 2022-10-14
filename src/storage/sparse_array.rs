@@ -1,101 +1,64 @@
 use crate::storage::{Entity, IndexEntity};
-use std::{iter, ptr};
-
-const PAGE_SIZE: usize = 64;
-type EntityPage = Option<Box<[Option<IndexEntity>; PAGE_SIZE]>>;
+use std::ptr;
 
 /// Maps versioned sparse indexes (entities) to dense indexes.
 /// Used internally by `ComponentStorage`.
 #[doc(hidden)]
 #[derive(Clone, Debug, Default)]
 pub struct SparseArray {
-    pages: Vec<EntityPage>,
+    entities: Vec<Option<IndexEntity>>,
 }
 
 impl SparseArray {
     /// Returns the dense index mapped to `entity`, if any.
     pub fn get(&self, entity: Entity) -> Option<usize> {
-        self.pages
-            .get(page_index(entity))
+        self.entities
+            .get(entity.sparse())
             .and_then(Option::as_ref)
-            .and_then(|p| p[local_index(entity)].as_ref())
-            .filter(|e| e.version() == entity.version())
+            .filter(|index_entity| index_entity.version() == entity.version())
             .map(IndexEntity::dense)
     }
 
     /// Returns `true` if the array contains `entity`.
     pub fn contains(&self, entity: Entity) -> bool {
-        self.pages
-            .get(page_index(entity))
+        self.entities
+            .get(entity.sparse())
             .and_then(Option::as_ref)
-            .and_then(|p| p[local_index(entity)].as_ref())
-            .filter(|e| e.version() == entity.version())
+            .filter(|index_entity| index_entity.version() == entity.version())
             .is_some()
     }
 
     /// Returns the dense index mapped to `sparse`, if any.
     pub fn get_from_sparse(&self, sparse: usize) -> Option<usize> {
-        self.pages
-            .get(sparse / PAGE_SIZE)
-            .and_then(Option::as_ref)
-            .and_then(|p| p[sparse % PAGE_SIZE].as_ref())
-            .map(IndexEntity::dense)
+        self.entities.get(sparse).and_then(Option::as_ref).map(IndexEntity::dense)
     }
 
     /// Returns `true` if the array contains `sparse`.
     pub fn contains_sparse(&self, sparse: usize) -> bool {
-        self.pages
-            .get(sparse / PAGE_SIZE)
-            .and_then(Option::as_ref)
-            .and_then(|p| p[sparse % PAGE_SIZE].as_ref())
-            .is_some()
+        self.entities.get(sparse).and_then(Option::as_ref).is_some()
     }
 
     /// Removes `entity` from the array and returns the dense index mapped to it, if any.
     pub(crate) fn remove(&mut self, entity: Entity) -> Option<usize> {
-        self.pages
-            .get_mut(page_index(entity))
-            .and_then(Option::as_mut)
-            .map(|p| &mut p[local_index(entity)])
-            .filter(|e| e.map(|e| e.version() == entity.version()).unwrap_or(false))?
-            .take()
-            .map(|e| e.dense())
+        self.entities.get_mut(entity.sparse())?.take().map(|index_entity| index_entity.dense())
     }
 
     /// Returns the `IndexEntity` slot at `index` without checking if the `index` is valid.
     pub(crate) unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<IndexEntity> {
-        self.pages
-            .get_unchecked_mut(index / PAGE_SIZE)
-            .as_mut()
-            .unwrap_unchecked()
-            .get_unchecked_mut(index % PAGE_SIZE)
+        self.entities.get_unchecked_mut(index)
     }
 
     /// Returns the `IndexEntity` slot at `index`. Will allocate memory if the index cannot be
     /// stored in the allocated pages.
     pub(crate) fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<IndexEntity> {
-        let page_index = index / PAGE_SIZE;
+        if index >= self.entities.len() {
+            let extra_len =
+                index.checked_next_power_of_two().unwrap_or(index) - self.entities.len() + 1;
 
-        if page_index < self.pages.len() {
-            let page = &mut self.pages[page_index];
-
-            if page.is_none() {
-                *page = empty_page();
-            }
-        } else {
-            let extra_uninit_pages = page_index - self.pages.len();
-            self.pages.reserve(extra_uninit_pages + 1);
-            self.pages.extend(iter::repeat(uninit_page()).take(extra_uninit_pages));
-            self.pages.push(empty_page())
+            self.entities.extend(std::iter::repeat(None).take(extra_len));
         }
 
-        unsafe {
-            self.pages
-                .get_unchecked_mut(page_index)
-                .as_mut()
-                .unwrap_unchecked()
-                .get_unchecked_mut(index % PAGE_SIZE)
-        }
+        &mut self.entities[index]
     }
 
     /// Swaps the indexes at `a` and `b` without checking if `a` and `b` are valid sparse indexes.
@@ -109,24 +72,6 @@ impl SparseArray {
 
     /// Removes all entities from the array.
     pub(crate) fn clear(&mut self) {
-        self.pages.iter_mut().for_each(|p| *p = None);
+        self.entities.clear();
     }
-}
-
-#[inline]
-fn page_index(entity: Entity) -> usize {
-    entity.sparse() / PAGE_SIZE
-}
-
-#[inline]
-fn local_index(entity: Entity) -> usize {
-    entity.sparse() % PAGE_SIZE
-}
-
-fn uninit_page() -> EntityPage {
-    None
-}
-
-fn empty_page() -> EntityPage {
-    Some(Box::new([None; PAGE_SIZE]))
 }
