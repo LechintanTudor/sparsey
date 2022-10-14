@@ -1,5 +1,4 @@
 use crate::storage::{Entity, IndexEntity};
-use std::ptr;
 
 /// Maps versioned sparse indexes (entities) to dense indexes.
 /// Used internally by `ComponentStorage`.
@@ -62,12 +61,13 @@ impl SparseArray {
     }
 
     /// Swaps the indexes at `a` and `b` without checking if `a` and `b` are valid sparse indexes.
-    pub(crate) unsafe fn swap_nonoverlapping(&mut self, a: usize, b: usize) {
-        debug_assert!(a != b);
+    pub(crate) unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+        debug_assert!(a < self.entities.len());
+        debug_assert!(b < self.entities.len());
 
-        let pa = self.get_unchecked_mut(a) as *mut _;
-        let pb = self.get_unchecked_mut(b) as *mut _;
-        ptr::swap_nonoverlapping(pa, pb, 1);
+        let pa = self.entities.as_mut_ptr().add(a);
+        let pb = self.entities.as_mut_ptr().add(b);
+        std::ptr::swap(pa, pb);
     }
 
     /// Removes all entities from the array.

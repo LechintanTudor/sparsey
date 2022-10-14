@@ -144,7 +144,7 @@ impl ComponentStorage {
             (entity_a.sparse(), entity_b.sparse())
         };
 
-        self.sparse.swap_nonoverlapping(sparse_a, sparse_b);
+        self.sparse.swap_unchecked(sparse_a, sparse_b);
 
         let component_a = &mut *self.get_component_ptr::<T>(a);
         let component_b = &mut *self.get_component_ptr::<T>(b);
