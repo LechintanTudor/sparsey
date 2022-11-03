@@ -1,8 +1,7 @@
 use crate::layout::ComponentInfo;
-use crate::resources::{Res, ResMut, Resource};
+use crate::resources::{Res, ResMut, Resource, Resources};
 use crate::storage::Component;
-use crate::systems::BorrowLocalSystemData;
-use crate::world::{Comp, CompMut, Entities};
+use crate::world::{Comp, CompMut, Entities, World};
 use std::any::TypeId;
 
 /// The type of parameters a system can have.
@@ -35,15 +34,26 @@ impl SystemParamType {
     }
 }
 
-/// Trait implemented by local system parameters.
-pub trait LocalSystemParam: for<'a> BorrowLocalSystemData<'a> {
+pub trait LocalSystemParam {
+    /// Type of parameter.
+    type Param<'a>;
+
     /// Returns the type of parameter.
     fn param_type() -> SystemParamType;
+
+    /// Borrows the local parameter.
+    fn borrow<'a>(world: &'a World, resources: &'a Resources) -> Self::Param<'a>;
 }
 
 impl<'a> LocalSystemParam for Entities<'a> {
+    type Param<'b> = Entities<'b>;
+
     fn param_type() -> SystemParamType {
         SystemParamType::Entities
+    }
+
+    fn borrow<'b>(world: &'b World, _resources: &'b Resources) -> Self::Param<'b> {
+        world.borrow_entities()
     }
 }
 
@@ -51,8 +61,14 @@ impl<'a, T> LocalSystemParam for Comp<'a, T>
 where
     T: Component,
 {
+    type Param<'b> = Comp<'b, T>;
+
     fn param_type() -> SystemParamType {
         SystemParamType::Comp(ComponentInfo::new::<T>())
+    }
+
+    fn borrow<'b>(world: &'b World, _resources: &'b Resources) -> Self::Param<'b> {
+        world.borrow()
     }
 }
 
@@ -60,8 +76,14 @@ impl<'a, T> LocalSystemParam for CompMut<'a, T>
 where
     T: Component,
 {
+    type Param<'b> = CompMut<'b, T>;
+
     fn param_type() -> SystemParamType {
         SystemParamType::CompMut(ComponentInfo::new::<T>())
+    }
+
+    fn borrow<'b>(world: &'b World, _resources: &'b Resources) -> Self::Param<'b> {
+        world.borrow_mut()
     }
 }
 
@@ -69,8 +91,14 @@ impl<'a, T> LocalSystemParam for Res<'a, T>
 where
     T: Resource,
 {
+    type Param<'b> = Res<'b, T>;
+
     fn param_type() -> SystemParamType {
         SystemParamType::Res(TypeId::of::<T>())
+    }
+
+    fn borrow<'b>(_world: &'b World, resources: &'b Resources) -> Self::Param<'b> {
+        resources.borrow()
     }
 }
 
@@ -78,8 +106,14 @@ impl<'a, T> LocalSystemParam for ResMut<'a, T>
 where
     T: Resource,
 {
+    type Param<'b> = ResMut<'b, T>;
+
     fn param_type() -> SystemParamType {
         SystemParamType::ResMut(TypeId::of::<T>())
+    }
+
+    fn borrow<'b>(_world: &'b World, resources: &'b Resources) -> Self::Param<'b> {
+        resources.borrow_mut()
     }
 }
 
@@ -87,8 +121,14 @@ impl<'a, T> LocalSystemParam for Option<Res<'a, T>>
 where
     T: Resource,
 {
+    type Param<'b> = Option<Res<'b, T>>;
+
     fn param_type() -> SystemParamType {
         SystemParamType::Res(TypeId::of::<T>())
+    }
+
+    fn borrow<'b>(_world: &'b World, resources: &'b Resources) -> Self::Param<'b> {
+        resources.try_borrow()
     }
 }
 
@@ -96,7 +136,13 @@ impl<'a, T> LocalSystemParam for Option<ResMut<'a, T>>
 where
     T: Resource,
 {
+    type Param<'b> = Option<ResMut<'b, T>>;
+
     fn param_type() -> SystemParamType {
         SystemParamType::ResMut(TypeId::of::<T>())
+    }
+
+    fn borrow<'b>(_world: &'b World, resources: &'b Resources) -> Self::Param<'b> {
+        resources.try_borrow_mut()
     }
 }

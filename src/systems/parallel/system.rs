@@ -1,5 +1,5 @@
 use crate::resources::SyncResources;
-use crate::systems::{BorrowLocalSystemData, BorrowSystemData, SystemParam, SystemParamType};
+use crate::systems::{LocalSystemParam, SystemParam, SystemParamType};
 use crate::world::World;
 
 /// Encapsulates a system that can run on any thread.
@@ -38,7 +38,7 @@ macro_rules! impl_into_system {
         where
             Func: Send + 'static,
             for<'a> &'a mut Func: FnMut($($param),*)
-                + FnMut($(<$param as BorrowLocalSystemData>::Item),*)
+                + FnMut($(<$param as LocalSystemParam>::Param<'a>),*)
                 + Send,
             $($param: SystemParam,)*
         {
@@ -55,7 +55,7 @@ macro_rules! impl_into_system {
                 let function = Box::new(move |world: &World, resources: SyncResources| {
                     call_inner(
                         &mut self,
-                        $(<$param as BorrowSystemData>::borrow(world, resources)),*
+                        $(<$param as SystemParam>::borrow(world, resources)),*
                     )
                 });
 

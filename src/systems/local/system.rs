@@ -1,5 +1,5 @@
 use crate::resources::Resources;
-use crate::systems::{BorrowLocalSystemData, SystemParam, SystemParamType};
+use crate::systems::{LocalSystemParam, SystemParamType};
 use crate::world::World;
 
 /// Encapsulates a system that can run locally.
@@ -38,9 +38,9 @@ macro_rules! impl_into_system {
         where
             Func: Send + 'static,
             for<'a> &'a mut Func: FnMut($($param),*)
-                + FnMut($(<$param as BorrowLocalSystemData>::Item),*)
+                + FnMut($(<$param as LocalSystemParam>::Param<'a>),*)
                 + Send,
-            $($param: SystemParam,)*
+            $($param: LocalSystemParam,)*
         {
             fn local_system(mut self) -> LocalSystem {
                 #[allow(clippy::too_many_arguments, non_snake_case)]
@@ -55,7 +55,7 @@ macro_rules! impl_into_system {
                 let function = Box::new(move |world: &World, resources: &Resources| {
                     call_inner(
                         &mut self,
-                        $(<$param as BorrowLocalSystemData>::borrow(world, resources)),*
+                        $(<$param as LocalSystemParam>::borrow(world, resources)),*
                     )
                 });
 
