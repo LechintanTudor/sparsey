@@ -33,30 +33,19 @@ impl IntoSystem<()> for System {
 }
 
 macro_rules! impl_into_system {
-    ($($param:ident),*) => {
+    ($(($lifetime:lifetime, $param:ident)),*) => {
         impl<Func, $($param),*> IntoSystem<($($param,)*)> for Func
         where
-            Func: Send + 'static,
-            for<'a> &'a mut Func: FnMut($($param),*)
-                + FnMut($(<$param as LocalSystemParam>::Param<'a>),*)
-                + Send,
+            Func: FnMut($($param),*)
+                + for<$($lifetime),*> FnMut($(<$param as LocalSystemParam>::Param<$lifetime>),*)
+                + Send
+                + 'static,
             $($param: SystemParam,)*
         {
             fn system(mut self) -> System {
-                #[allow(clippy::too_many_arguments, non_snake_case)]
-                fn call_inner<$($param),*>(
-                    mut f: impl FnMut($($param),*) + Send,
-                    $($param: $param),*
-                ) {
-                    f($($param),*)
-                }
-
                 #[allow(unused_variables)]
                 let function = Box::new(move |world: &World, resources: SyncResources| {
-                    call_inner(
-                        &mut self,
-                        $(<$param as SystemParam>::borrow(world, resources)),*
-                    )
+                    self($(<$param as SystemParam>::borrow(world, resources)),*);
                 });
 
                 let params = vec![$($param::param_type(),)*];
@@ -67,20 +56,24 @@ macro_rules! impl_into_system {
     };
 }
 
-impl_into_system!();
-impl_into_system!(A);
-impl_into_system!(A, B);
-impl_into_system!(A, B, C);
-impl_into_system!(A, B, C, D);
-impl_into_system!(A, B, C, D, E);
-impl_into_system!(A, B, C, D, E, F);
-impl_into_system!(A, B, C, D, E, F, G);
-impl_into_system!(A, B, C, D, E, F, G, H);
-impl_into_system!(A, B, C, D, E, F, G, H, I);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+#[rustfmt::skip]
+mod impls {
+    use super::*;
+
+    impl_into_system!();
+    impl_into_system!(('a, A));
+    impl_into_system!(('a, A), ('b, B));
+    impl_into_system!(('a, A), ('b, B), ('c, C));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N));
+    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N), ('o, O));
+}
