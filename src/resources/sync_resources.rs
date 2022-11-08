@@ -82,3 +82,10 @@ impl<'a> From<&'a Resources> for SyncResources<'a> {
         resources.sync()
     }
 }
+
+impl<'a> From<&'a mut Resources> for SyncResources<'a> {
+    #[inline]
+    fn from(resources: &'a mut Resources) -> Self {
+        resources.sync()
+    }
+}

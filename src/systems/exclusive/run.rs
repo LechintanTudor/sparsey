@@ -1,5 +1,5 @@
 use crate::resources::Resources;
-use crate::systems::{LocalSystemParam, GenericSystemParam};
+use crate::systems::{GenericSystemParam, LocalSystemParam};
 use crate::world::World;
 
 pub trait RunExclusive<Params, Return> {

@@ -1,5 +1,4 @@
 use sparsey::prelude::*;
-use sparsey::systems::IntoLocalSystem;
 
 #[derive(Clone, Copy, Debug)]
 struct Position(i32, i32);
@@ -10,7 +9,7 @@ struct Velocity(i32, i32);
 #[derive(Clone, Copy, Debug)]
 struct Frozen;
 
-fn update_velocity(mut vel: CompMut<Velocity>, frz: Comp<Frozen>) {
+fn update_velocities(mut vel: CompMut<Velocity>, frz: Comp<Frozen>) {
     println!("[Update velocities]");
 
     (&mut vel).include(&frz).for_each_with_entity(|(e, vel)| {
@@ -22,7 +21,7 @@ fn update_velocity(mut vel: CompMut<Velocity>, frz: Comp<Frozen>) {
     println!();
 }
 
-fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
+fn update_positions(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
     println!("[Update positions]");
 
     (&mut pos, &vel).for_each_with_entity(|(e, (pos, vel))| {
@@ -36,22 +35,19 @@ fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
 }
 
 fn main() {
-    let mut schedule = Schedule::builder()
-        .add_system(update_velocity)
-        .add_system(update_position)
-        .add_local_system(update_velocity.local_system())
-        .build();
-
     let mut world = World::default();
-    schedule.set_up(&mut world);
+    world.register::<Position>();
+    world.register::<Velocity>();
+    world.register::<Frozen>();
 
     world.create((Position(0, 0), Velocity(1, 1)));
     world.create((Position(0, 0), Velocity(2, 2)));
     world.create((Position(0, 0), Velocity(3, 3), Frozen));
 
-    let mut resources = Resources::default();
+    let resources = Resources::default();
 
     for _ in 0..3 {
-        schedule.run_seq(&mut world, &mut resources);
+        sparsey::run(&world, &resources, update_velocities);
+        sparsey::run(&world, &resources, update_positions);
     }
 }
