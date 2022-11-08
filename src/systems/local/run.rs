@@ -18,18 +18,6 @@ pub fn run_locally<'a, Params, Return>(
 
 macro_rules! impl_run_locally {
     ($(($lifetime:lifetime, $param:ident)),*) => {
-        impl<Func, Return, $($param),*> RunExclusive<($($param,)*), Return> for Func
-        where
-            Func: FnOnce($($param),*) -> Return
-                + for<$($lifetime),*> FnOnce($(<$param as GenericSystemParam>::Param<$lifetime>),*) -> Return,
-            $($param: LocalSystemParam,)*
-        {
-            #[allow(unused_variables)]
-            fn run_exclusive(self, world: &mut World, resources: &mut Resources) -> Return {
-                self($(<$param as LocalSystemParam>::borrow(world, resources)),*)
-            }
-        }
-
         impl<Func, Return, $($param),*> RunLocally<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return

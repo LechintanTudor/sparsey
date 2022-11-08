@@ -26,7 +26,7 @@ impl<'a> RunLocally<(), ()> for &'a mut LocalSystem {
         self.params.clone()
     }
 
-    fn run_locally(self, world: &World, resources: &Resources) -> () {
+    fn run_locally(self, world: &World, resources: &Resources) {
         (self.function)(world, resources)
     }
 }
