@@ -29,6 +29,8 @@
 //! }
 //! ```
 
+pub(crate) mod utils;
+
 pub mod components;
 pub mod layout;
 pub mod query;
@@ -47,4 +49,4 @@ pub mod prelude {
     pub use crate::world::{Comp, CompMut, Entities, World};
 }
 
-pub(crate) mod utils;
+pub use self::systems::{run, run_exclusive, run_locally};

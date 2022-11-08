@@ -1,6 +1,7 @@
 use crate::resources::{Resources, SyncResources};
 use crate::systems::{
-    IntoLocalFn, IntoLocalSystem, IntoSystem, LocalFn, LocalSystem, System, SystemParamType,
+    ExclusiveSystem, IntoExclusiveSystem, IntoLocalSystem, IntoSystem, LocalSystem, System,
+    SystemParamType,
 };
 use crate::world::World;
 use std::cmp::Ordering;
@@ -9,7 +10,7 @@ use std::fmt;
 enum SimpleScheduleStep {
     System(System),
     LocalSystem(LocalSystem),
-    LocalFn(LocalFn),
+    ExclusiveSystem(ExclusiveSystem),
     Barrier,
 }
 
@@ -18,7 +19,7 @@ impl fmt::Debug for SimpleScheduleStep {
         match self {
             Self::System(_) => write!(f, "SimpleScheduleStep::System"),
             Self::LocalSystem(_) => write!(f, "SimpleScheduleStep::LocalSystem"),
-            Self::LocalFn(_) => write!(f, "SimpleScheduleStep::LocalFn"),
+            Self::ExclusiveSystem(_) => write!(f, "SimpleScheduleStep::ExclusiveSystem"),
             Self::Barrier => write!(f, "SimpleScheduleStep::Barrier"),
         }
     }
@@ -45,8 +46,8 @@ impl ScheduleBuilder {
     }
 
     /// Adds a local function at the end of the schedule.
-    pub fn add_local_fn(&mut self, local_fn: impl IntoLocalFn) -> &mut Self {
-        self.final_steps.push(SimpleScheduleStep::LocalFn(local_fn.local_fn()));
+    pub fn add_local_fn<P>(&mut self, local_fn: impl IntoExclusiveSystem<P>) -> &mut Self {
+        self.final_steps.push(SimpleScheduleStep::ExclusiveSystem(local_fn.exclusive_system()));
         self
     }
 
@@ -59,15 +60,6 @@ impl ScheduleBuilder {
     /// Adds a barrier and a local system to run right after.
     pub fn add_barrier_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
         self.steps.push(SimpleScheduleStep::LocalSystem(system.local_system()));
-        self
-    }
-
-    /// Adds a barrier and a function to run right after.
-    pub fn add_barrier_fn(
-        &mut self,
-        local_fn: impl FnMut(&mut World, &mut Resources) + 'static,
-    ) -> &mut Self {
-        self.steps.push(SimpleScheduleStep::LocalFn(local_fn.local_fn()));
         self
     }
 
@@ -126,9 +118,9 @@ impl ScheduleBuilder {
                 Some(ScheduleStep::LocalSystems(systems)) => systems.push(system),
                 _ => steps.push(ScheduleStep::LocalSystems(vec![system])),
             },
-            SimpleScheduleStep::LocalFn(local_fn) => match steps.last_mut() {
-                Some(ScheduleStep::LocalFns(local_fns)) => local_fns.push(local_fn),
-                _ => steps.push(ScheduleStep::LocalFns(vec![local_fn])),
+            SimpleScheduleStep::ExclusiveSystem(local_fn) => match steps.last_mut() {
+                Some(ScheduleStep::ExclusiveSystems(local_fns)) => local_fns.push(local_fn),
+                _ => steps.push(ScheduleStep::ExclusiveSystems(vec![local_fn])),
             },
             SimpleScheduleStep::Barrier => {
                 if matches!(steps.last(), Some(ScheduleStep::Systems(_))) {
@@ -148,7 +140,7 @@ pub enum ScheduleStep {
     /// Runs the systems sequentially.
     LocalSystems(Vec<LocalSystem>),
     /// Runs the functions sequentially.
-    LocalFns(Vec<LocalFn>),
+    ExclusiveSystems(Vec<ExclusiveSystem>),
     /// Prevents future systems from running in parallel with previous ones.
     Barrier,
 }
@@ -162,8 +154,8 @@ impl fmt::Debug for ScheduleStep {
             Self::LocalSystems(systems) => {
                 f.debug_tuple("ScheduleStep::LocalSystems").field(&systems.len()).finish()
             }
-            Self::LocalFns(local_fns) => {
-                f.debug_tuple("ScheduleStep::LocalFns").field(&local_fns.len()).finish()
+            Self::ExclusiveSystems(local_fns) => {
+                f.debug_tuple("ScheduleStep::ExclusiveSystems").field(&local_fns.len()).finish()
             }
             Self::Barrier => {
                 write!(f, "ScheduleStep::Barrier")
@@ -230,7 +222,7 @@ impl Schedule {
     pub fn run_seq(&mut self, world: &mut World, resources: &mut Resources) {
         self.run_generic(world, resources, |systems, world, resources| {
             for system in systems {
-                system.run(world, resources);
+                crate::run(world, resources, system);
             }
         });
     }
@@ -244,11 +236,9 @@ impl Schedule {
 
         self.run_generic(world, resources, |systems, world, resources| {
             if systems.len() > 1 {
-                systems.par_iter_mut().for_each(|system| {
-                    system.run(world, resources);
-                });
+                systems.par_iter_mut().for_each(|system| crate::run(world, resources, system));
             } else {
-                systems.last_mut().unwrap().run(world, resources);
+                crate::run(world, resources, systems.last_mut().unwrap())
             }
         });
     }
@@ -269,11 +259,11 @@ impl Schedule {
             if systems.len() > 1 {
                 thread_pool.install(|| {
                     systems.par_iter_mut().for_each(|system| {
-                        system.run(world, resources);
+                        crate::run(world, resources, system);
                     });
                 });
             } else {
-                systems.last_mut().unwrap().run(world, resources);
+                crate::run(world, resources, systems.last_mut().unwrap());
             }
         });
     }
@@ -292,13 +282,13 @@ impl Schedule {
                 ScheduleStep::LocalSystems(local_systems) => {
                     for local_system in local_systems.iter_mut() {
                         world.maintain();
-                        local_system.run(world, resources);
+                        crate::run_locally(world, resources, local_system);
                     }
                 }
-                ScheduleStep::LocalFns(local_fns) => {
+                ScheduleStep::ExclusiveSystems(local_fns) => {
                     for local_fn in local_fns {
                         world.maintain();
-                        (local_fn).run(world, resources);
+                        crate::run_exclusive(world, resources, local_fn);
                     }
                 }
                 ScheduleStep::Barrier => world.maintain(),

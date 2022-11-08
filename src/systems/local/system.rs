@@ -1,5 +1,5 @@
 use crate::resources::Resources;
-use crate::systems::{LocalSystemParam, SystemParamType};
+use crate::systems::{RunExclusive, RunLocally, SystemParamType};
 use crate::world::World;
 
 /// Encapsulates a system that can run locally.
@@ -13,9 +13,20 @@ impl LocalSystem {
     pub fn params(&self) -> &[SystemParamType] {
         &self.params
     }
+}
 
-    /// Runs the system.
-    pub fn run(&mut self, world: &World, resources: &Resources) {
+impl<'a> RunExclusive<(), ()> for &'a mut LocalSystem {
+    fn run_exclusive(self, world: &mut World, resources: &mut Resources) {
+        (self.function)(world, resources)
+    }
+}
+
+impl<'a> RunLocally<(), ()> for &'a mut LocalSystem {
+    fn param_types(&self) -> Vec<SystemParamType> {
+        self.params.clone()
+    }
+
+    fn run_locally(self, world: &World, resources: &Resources) -> () {
         (self.function)(world, resources)
     }
 }
@@ -32,47 +43,41 @@ impl IntoLocalSystem<()> for LocalSystem {
     }
 }
 
-macro_rules! impl_into_system {
-    ($(($lifetime:lifetime, $param:ident)),*) => {
+macro_rules! impl_into_local_system {
+    ($($param:ident),*) => {
         impl<Func, $($param),*> IntoLocalSystem<($($param,)*)> for Func
         where
-            Func: FnMut($($param),*)
-                + for<$($lifetime),*> FnMut($(<$param as LocalSystemParam>::Param<$lifetime>),*)
-                + 'static,
-            $($param: LocalSystemParam,)*
+            Func: RunLocally<($($param,)*), ()> + 'static,
+            for<'a> &'a mut Func: RunLocally<($($param,)*), ()>,
         {
             fn local_system(mut self) -> LocalSystem {
-                #[allow(unused_variables)]
-                let function = Box::new(move |world: &World, resources: &Resources| {
-                    (self)($(<$param as LocalSystemParam>::borrow(world, resources)),*);
-                });
+                let params = (&mut self).param_types();
 
-                let params = vec![$($param::param_type(),)*];
-
-                LocalSystem { function, params }
+                LocalSystem {
+                    function: Box::new(move |world: &World, resources: &Resources| {
+                        (&mut self).run_locally(world, resources)
+                    }),
+                    params,
+                }
             }
         }
     };
 }
 
-#[rustfmt::skip]
-mod impls {
-    use super::*;
-
-    impl_into_system!();
-    impl_into_system!(('a, A));
-    impl_into_system!(('a, A), ('b, B));
-    impl_into_system!(('a, A), ('b, B), ('c, C));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N));
-    impl_into_system!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N), ('o, O));
-}
+impl_into_local_system!();
+impl_into_local_system!(A);
+impl_into_local_system!(A, B);
+impl_into_local_system!(A, B, C);
+impl_into_local_system!(A, B, C, D);
+impl_into_local_system!(A, B, C, D, E);
+impl_into_local_system!(A, B, C, D, E, F);
+impl_into_local_system!(A, B, C, D, E, F, G);
+impl_into_local_system!(A, B, C, D, E, F, G, H);
+impl_into_local_system!(A, B, C, D, E, F, G, H, I);
+impl_into_local_system!(A, B, C, D, E, F, G, H, I, J);
+impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K);
+impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L);
+impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L, M);
+impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
+impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
+impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);

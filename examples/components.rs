@@ -1,4 +1,5 @@
 use sparsey::prelude::*;
+use sparsey::systems::IntoLocalSystem;
 
 #[derive(Clone, Copy, Debug)]
 struct Position(i32, i32);
@@ -35,8 +36,11 @@ fn update_position(mut pos: CompMut<Position>, vel: Comp<Velocity>) {
 }
 
 fn main() {
-    let mut schedule =
-        Schedule::builder().add_system(update_velocity).add_system(update_position).build();
+    let mut schedule = Schedule::builder()
+        .add_system(update_velocity)
+        .add_system(update_position)
+        .add_local_system(update_velocity.local_system())
+        .build();
 
     let mut world = World::default();
     schedule.set_up(&mut world);
