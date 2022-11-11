@@ -1,3 +1,5 @@
+use std::ops::RangeBounds;
+
 use crate::query::{ComponentView, QueryGroupInfo};
 use crate::storage::{Entity, SparseArray};
 
@@ -65,6 +67,24 @@ pub trait QueryPart {
     fn sparse_contains_none<'a>(sparse: Self::Sparse<'a>, entity: Entity) -> bool
     where
         Self: 'a;
+
+    unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
+    where
+        Self: 'a,
+        R: RangeBounds<usize>;
+
+    unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slices<'a>
+    where
+        Self: 'a,
+        R: RangeBounds<usize>;
+
+    unsafe fn get_entities_and_components_unchecked<'a, R>(
+        self,
+        range: R,
+    ) -> (&'a [Entity], Self::Slices<'a>)
+    where
+        Self: 'a,
+        R: RangeBounds<usize>;
 }
 
 impl QueryPart for () {
@@ -157,6 +177,33 @@ impl QueryPart for () {
         Self: 'a,
     {
         true
+    }
+
+    unsafe fn get_entities_unchecked<'a, R>(self, _range: R) -> &'a [Entity]
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        &[]
+    }
+
+    unsafe fn get_components_unchecked<'a, R>(self, _range: R) -> Self::Slices<'a>
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        ()
+    }
+
+    unsafe fn get_entities_and_components_unchecked<'a, R>(
+        self,
+        _range: R,
+    ) -> (&'a [Entity], Self::Slices<'a>)
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        (&[], ())
     }
 }
 
@@ -262,6 +309,33 @@ where
     {
         !sparse.contains(entity)
     }
+
+    unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        ComponentView::get_entities_unchecked(self, range)
+    }
+
+    unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slices<'a>
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        ComponentView::get_components_unchecked(self, range)
+    }
+
+    unsafe fn get_entities_and_components_unchecked<'a, R>(
+        self,
+        range: R,
+    ) -> (&'a [Entity], Self::Slices<'a>)
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        ComponentView::get_entities_and_components_unchecked(self, range)
+    }
 }
 
 impl<C> QueryPart for (C,)
@@ -366,6 +440,36 @@ where
     {
         !sparse.0.contains(entity)
     }
+
+    unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        ComponentView::get_entities_unchecked(self.0, range)
+    }
+
+    unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slices<'a>
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        (ComponentView::get_components_unchecked(self.0, range),)
+    }
+
+    unsafe fn get_entities_and_components_unchecked<'a, R>(
+        self,
+        range: R,
+    ) -> (&'a [Entity], Self::Slices<'a>)
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        let (entities, components) =
+            ComponentView::get_entities_and_components_unchecked(self.0, range);
+
+        (entities, (components,))
+    }
 }
 
 macro_rules! replace_with_sparse_array_ref {
@@ -437,6 +541,16 @@ macro_rules! split_for_filtering {
             );
 
             (Some(entities), sparse)
+        }
+    };
+}
+
+macro_rules! get_entities_and_components_unchecked {
+    ($range:expr; $first:expr, $($other:expr),+) => {
+        {
+            let bounds = ($range.start_bound().cloned(), $range.end_bound().cloned());
+            let (entities, first_comp) = $first.get_entities_and_components_unchecked(bounds);
+            (entities, (first_comp, $($other.get_components_unchecked(bounds),)+))
         }
     };
 }
@@ -541,6 +655,34 @@ macro_rules! impl_query_part {
                 Self: 'a,
             {
                 $(!sparse.$idx.contains(entity))&&+
+            }
+
+            unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
+            where
+                Self: 'a,
+                R: RangeBounds<usize>,
+            {
+                self.0.get_entities_unchecked(range)
+            }
+
+            unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slices<'a>
+            where
+                Self: 'a,
+                R: RangeBounds<usize>,
+            {
+                let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
+                ($(<$comp as ComponentView>::get_components_unchecked(self.$idx, bounds),)+)
+            }
+
+            unsafe fn get_entities_and_components_unchecked<'a, R>(
+                self,
+                range: R,
+            ) -> (&'a [Entity], Self::Slices<'a>)
+            where
+                Self: 'a,
+                R: RangeBounds<usize>,
+            {
+                get_entities_and_components_unchecked!(range; $(self.$idx),+)
             }
         }
     };

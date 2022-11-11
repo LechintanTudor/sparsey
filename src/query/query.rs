@@ -1,4 +1,4 @@
-use crate::query::{IntoQueryParts, QueryPart, Iter};
+use crate::query::{group_range, IntoQueryParts, Iter, QueryPart};
 use crate::storage::Entity;
 
 pub trait Query: IntoQueryParts + Sized {
@@ -32,6 +32,23 @@ pub trait Query: IntoQueryParts + Sized {
         use crate::query::IntoEntityIter;
         self.iter().with_entity().for_each(f)
     }
+
+    /// For grouped storages, returns all entities that match the query as a slice.
+    fn into_entities<'a>(self) -> Option<&'a [Entity]>
+    where
+        Self: 'a;
+
+    /// For grouped storages, returns all components that match the query as slices.
+    fn into_components<'a>(self) -> Option<<Self::Get<'a> as QueryPart>::Slices<'a>>
+    where
+        Self: 'a;
+
+    /// For grouped storages, returns all entities and components that match the query as slices.
+    fn into_entities_and_components<'a>(
+        self,
+    ) -> Option<(&'a [Entity], <Self::Get<'a> as QueryPart>::Slices<'a>)>
+    where
+        Self: 'a;
 }
 
 impl<Q> Query for Q
@@ -65,5 +82,34 @@ where
     {
         let (get, include, exclude) = self.into_query_parts();
         Iter::new(get, include, exclude)
+    }
+
+    fn into_entities<'a>(self) -> Option<&'a [Entity]>
+    where
+        Self: 'a,
+    {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        unsafe { Some(get.get_entities_unchecked(range)) }
+    }
+
+    fn into_components<'a>(self) -> Option<<Self::Get<'a> as QueryPart>::Slices<'a>>
+    where
+        Self: 'a,
+    {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        unsafe { Some(get.get_components_unchecked(range)) }
+    }
+
+    fn into_entities_and_components<'a>(
+        self,
+    ) -> Option<(&'a [Entity], <Self::Get<'a> as QueryPart>::Slices<'a>)>
+    where
+        Self: 'a,
+    {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(get.group_info(), include.group_info(), exclude.group_info())?;
+        unsafe { Some(get.get_entities_and_components_unchecked(range)) }
     }
 }
