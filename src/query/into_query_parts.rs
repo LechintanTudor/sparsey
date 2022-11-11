@@ -1,4 +1,4 @@
-use crate::query::{QueryPart, IncludeExcludeQuery, IncludeQuery};
+use crate::query::{IncludeExcludeQuery, IncludeQuery, QueryPart};
 
 pub trait IntoQueryParts {
     type Get<'a>: QueryPart
@@ -42,12 +42,12 @@ where
     type Get<'a> = G where Self: 'a;
     type Include<'a> = I where Self: 'a;
     type Exclude<'a> = () where Self: 'a;
-    
+
     fn into_query_parts<'a>(self) -> (Self::Get<'a>, Self::Include<'a>, Self::Exclude<'a>)
     where
         Self: 'a,
     {
-        (self.get, self.include, ())     
+        (self.get, self.include, ())
     }
 }
 
@@ -60,11 +60,11 @@ where
     type Get<'a> = G where Self: 'a;
     type Include<'a> = I where Self: 'a;
     type Exclude<'a> = E where Self: 'a;
-    
+
     fn into_query_parts<'a>(self) -> (Self::Get<'a>, Self::Include<'a>, Self::Exclude<'a>)
     where
         Self: 'a,
     {
-        (self.get, self.include, self.exclude)     
+        (self.get, self.include, self.exclude)
     }
 }

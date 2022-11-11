@@ -42,7 +42,7 @@ pub mod world;
 /// Re-exports the most commonly used items.
 pub mod prelude {
     pub use crate::layout::{Layout, LayoutGroupDescriptor};
-    pub use crate::query::{Query, BuildCompoundQuery};
+    pub use crate::query::{BuildCompoundQuery, Query};
     pub use crate::resources::{Res, ResMut, Resources};
     pub use crate::storage::Entity;
     pub use crate::systems::Schedule;

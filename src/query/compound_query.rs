@@ -4,11 +4,11 @@ pub trait BuildCompoundQuery: QueryPart + Sized {
     fn include<I>(self, include: I) -> IncludeQuery<Self, I>
     where
         I: QueryPart;
-    
+
     fn exclude<E>(self, exclude: E) -> IncludeExcludeQuery<Self, (), E>
     where
         E: QueryPart;
-    }
+}
 
 impl<Q> BuildCompoundQuery for Q
 where
@@ -20,7 +20,7 @@ where
     {
         IncludeQuery { get: self, include }
     }
-    
+
     fn exclude<E>(self, exclude: E) -> IncludeExcludeQuery<Self, (), E>
     where
         E: QueryPart,

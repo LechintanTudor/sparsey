@@ -1,4 +1,4 @@
-use crate::query::ComponentView;
+use crate::query::{ComponentView, QueryGroupInfo};
 use crate::storage::{Entity, SparseArray};
 
 pub trait QueryPart {
@@ -23,6 +23,28 @@ pub trait QueryPart {
     fn contains_all(self, entity: Entity) -> bool;
 
     fn contains_none(self, entity: Entity) -> bool;
+
+    fn group_info<'a>(&'a self) -> Option<QueryGroupInfo<'a>>
+    where
+        Self: 'a;
+
+    fn split_for_sparse_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Ptrs)
+    where
+        Self: 'a;
+
+    fn split_for_dense_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Ptrs)
+    where
+        Self: 'a;
+
+    fn split_for_filtering<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>)
+    where
+        Self: 'a;
+
+    fn into_any_entities<'a>(self) -> Option<&'a [Entity]>
+    where
+        Self: 'a;
+
+    unsafe fn offset_ptrs(ptrs: Self::Ptrs, offset: usize) -> Self::Ptrs;
 
     unsafe fn sparse_get<'a>(
         sparse: Self::Sparse<'a>,
@@ -64,6 +86,45 @@ impl QueryPart for () {
 
     fn contains_none(self, _entity: Entity) -> bool {
         true
+    }
+
+    fn group_info<'a>(&'a self) -> Option<QueryGroupInfo<'a>>
+    where
+        Self: 'a,
+    {
+        Some(QueryGroupInfo::Empty)
+    }
+
+    fn split_for_sparse_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Ptrs)
+    where
+        Self: 'a,
+    {
+        (None, (), ())
+    }
+
+    fn split_for_dense_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Ptrs)
+    where
+        Self: 'a,
+    {
+        (None, ())
+    }
+
+    fn split_for_filtering<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>)
+    where
+        Self: 'a,
+    {
+        (None, ())
+    }
+
+    fn into_any_entities<'a>(self) -> Option<&'a [Entity]>
+    where
+        Self: 'a,
+    {
+        None
+    }
+
+    unsafe fn offset_ptrs(_ptrs: Self::Ptrs, _offset: usize) -> Self::Ptrs {
+        ()
     }
 
     unsafe fn sparse_get<'a>(
@@ -121,6 +182,52 @@ where
 
     fn contains_none(self, entity: Entity) -> bool {
         !ComponentView::contains(self, entity)
+    }
+
+    fn group_info<'a>(&'a self) -> Option<QueryGroupInfo<'a>>
+    where
+        Self: 'a,
+    {
+        Some(QueryGroupInfo::Single {
+            len: ComponentView::len(self),
+            info: ComponentView::group_info(self),
+        })
+    }
+
+    fn split_for_sparse_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Ptrs)
+    where
+        Self: 'a,
+    {
+        let (entities, sparse, components) = ComponentView::split_for_iteration(self);
+        (Some(entities), sparse, components)
+    }
+
+    fn split_for_dense_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Ptrs)
+    where
+        Self: 'a,
+    {
+        let (entities, _, components) = ComponentView::split_for_iteration(self);
+        (Some(entities), components)
+    }
+
+    fn split_for_filtering<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>)
+    where
+        Self: 'a,
+    {
+        let (entities, sparse, _) = ComponentView::split_for_iteration(self);
+        (Some(entities), sparse)
+    }
+
+    fn into_any_entities<'a>(self) -> Option<&'a [Entity]>
+    where
+        Self: 'a,
+    {
+        let (entities, _, _) = ComponentView::split_for_iteration(self);
+        Some(entities)
+    }
+
+    unsafe fn offset_ptrs(ptrs: Self::Ptrs, offset: usize) -> Self::Ptrs {
+        <C as ComponentView>::offset_ptr(ptrs, offset)
     }
 
     unsafe fn sparse_get<'a>(
@@ -181,6 +288,52 @@ where
         !ComponentView::contains(self.0, entity)
     }
 
+    fn group_info<'a>(&'a self) -> Option<QueryGroupInfo<'a>>
+    where
+        Self: 'a,
+    {
+        Some(QueryGroupInfo::Single {
+            len: ComponentView::len(&self.0),
+            info: ComponentView::group_info(&self.0),
+        })
+    }
+
+    fn split_for_sparse_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Ptrs)
+    where
+        Self: 'a,
+    {
+        let (entities, sparse, components) = ComponentView::split_for_iteration(self.0);
+        (Some(entities), (sparse,), (components,))
+    }
+
+    fn split_for_dense_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Ptrs)
+    where
+        Self: 'a,
+    {
+        let (entities, _, components) = ComponentView::split_for_iteration(self.0);
+        (Some(entities), (components,))
+    }
+
+    fn split_for_filtering<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>)
+    where
+        Self: 'a,
+    {
+        let (entities, sparse, _) = ComponentView::split_for_iteration(self.0);
+        (Some(entities), (sparse,))
+    }
+
+    fn into_any_entities<'a>(self) -> Option<&'a [Entity]>
+    where
+        Self: 'a,
+    {
+        let (entities, _, _) = ComponentView::split_for_iteration(self.0);
+        Some(entities)
+    }
+
+    unsafe fn offset_ptrs(ptrs: Self::Ptrs, offset: usize) -> Self::Ptrs {
+        (<C as ComponentView>::offset_ptr(ptrs.0, offset),)
+    }
+
     unsafe fn sparse_get<'a>(
         sparse: Self::Sparse<'a>,
         ptrs: Self::Ptrs,
@@ -221,6 +374,73 @@ macro_rules! replace_with_sparse_array_ref {
     };
 }
 
+macro_rules! query_group_info {
+    ($first:expr, $($other:expr),+) => {
+        Some(QueryGroupInfo::Multiple($first? $(.combine($other?)?)+))
+    };
+}
+
+macro_rules! split_for_sparse_iteration {
+    (($first:expr, $_:tt), $(($other:expr, $other_idx:tt)),+) => {
+        {
+            let (mut entities, first_sparse, first_comp)
+                = ComponentView::split_for_iteration($first);
+
+            #[allow(clippy::eval_order_dependence)]
+            let splits = (
+                (first_sparse, first_comp),
+                $(
+                    {
+                        let (other_entities, other_sparse, other_comp)
+                            = ComponentView::split_for_iteration($other);
+
+                        if other_entities.len() < entities.len() {
+                            entities = other_entities;
+                        }
+
+                        (other_sparse, other_comp)
+                    },
+                )+
+            );
+
+            let sparse = (first_sparse, $(splits.$other_idx.0),+);
+            let comp = (first_comp, $(splits.$other_idx.1),+);
+
+            (Some(entities), sparse, comp)
+        }
+    };
+}
+
+macro_rules! split_for_dense_iteration {
+    ($first:expr, $($other:expr),+) => {
+        {
+            let (entities, _, first_comp) = ComponentView::split_for_iteration($first);
+
+            let comps = (
+                first_comp,
+                $(ComponentView::split_for_iteration($other).2,)+
+            );
+
+            (Some(entities), comps)
+        }
+    };
+}
+
+macro_rules! split_for_filtering {
+    ($first:expr, $($other:expr),+) => {
+        {
+            let (entities, first_sparse, _) = ComponentView::split_for_iteration($first);
+
+            let sparse = (
+                first_sparse,
+                $(ComponentView::split_for_iteration($other).1,)+
+            );
+
+            (Some(entities), sparse)
+        }
+    };
+}
+
 macro_rules! impl_query_part {
     ($(($comp:ident, $idx:tt)),+) => {
         impl<$($comp),+> QueryPart for ($($comp,)+)
@@ -247,6 +467,47 @@ macro_rules! impl_query_part {
 
             fn contains_none(self, entity: Entity) -> bool {
                 $(!$comp::contains(self.$idx, entity))&&+
+            }
+
+            fn group_info<'a>(&'a self) -> Option<QueryGroupInfo<'a>>
+            where
+                Self: 'a,
+            {
+                query_group_info!($(self.$idx.group_info()),+)
+            }
+
+            fn split_for_sparse_iteration<'a>(self)
+                -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Ptrs)
+            where
+                Self: 'a,
+            {
+                split_for_sparse_iteration!($((self.$idx, $idx)),+)
+            }
+
+            fn split_for_dense_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Ptrs)
+            where
+                Self: 'a,
+            {
+                split_for_dense_iteration!($(self.$idx),+)
+            }
+
+            fn split_for_filtering<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>)
+            where
+                Self: 'a,
+            {
+                split_for_filtering!($(self.$idx),+)
+            }
+
+            fn into_any_entities<'a>(self) -> Option<&'a [Entity]>
+            where
+                Self: 'a,
+            {
+                let (entities, _, _) = ComponentView::split_for_iteration(self.0);
+                Some(entities)
+            }
+
+            unsafe fn offset_ptrs(ptrs: Self::Ptrs, offset: usize) -> Self::Ptrs {
+                ($($comp::offset_ptr(ptrs.$idx, offset),)+)
             }
 
             unsafe fn sparse_get<'a>(

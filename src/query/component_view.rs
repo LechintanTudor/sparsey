@@ -30,6 +30,8 @@ pub trait ComponentView {
     where
         Self: 'a;
 
+    unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr;
+
     unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
     where
         Self: 'a;
@@ -89,6 +91,10 @@ where
     {
         let (entities, sparse, dense) = Comp::split(self);
         (entities, sparse, dense.as_ptr())
+    }
+
+    unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr {
+        ptr.add(offset)
     }
 
     unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
@@ -168,6 +174,10 @@ where
         (entities, sparse, dense.as_ptr())
     }
 
+    unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr {
+        ptr.add(offset)
+    }
+
     unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
     where
         Self: 'a,
@@ -243,6 +253,10 @@ where
     {
         let (dense, sparse, slice) = CompMut::split_mut(self);
         (dense, sparse, slice.as_mut_ptr())
+    }
+
+    unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr {
+        ptr.add(offset)
     }
 
     unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
