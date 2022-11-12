@@ -2,8 +2,10 @@ use crate::resources::Resources;
 use crate::systems::RunExclusive;
 use crate::world::World;
 
+type BoxedExclusiveSystemFn = Box<dyn FnMut(&mut World, &mut Resources)>;
+
 pub struct ExclusiveSystem {
-    function: Box<dyn FnMut(&mut World, &mut Resources)>,
+    function: BoxedExclusiveSystemFn,
 }
 
 impl<'a> RunExclusive<(), ()> for &'a mut ExclusiveSystem {
@@ -18,7 +20,7 @@ pub trait IntoExclusiveSystem<Params> {
 
 impl<F, Params> IntoExclusiveSystem<Params> for F
 where
-    F: 'static,
+    F: RunExclusive<Params, ()> + 'static,
     for<'a> &'a mut F: RunExclusive<Params, ()>,
 {
     fn exclusive_system(mut self) -> ExclusiveSystem {

@@ -2,9 +2,11 @@ use crate::resources::Resources;
 use crate::systems::{RunExclusive, RunLocally, SystemParamType};
 use crate::world::World;
 
+type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
+
 /// Encapsulates a system that can run locally.
 pub struct LocalSystem {
-    function: Box<dyn FnMut(&World, &Resources) + 'static>,
+    function: BoxedLocalSystemFn,
     params: Vec<SystemParamType>,
 }
 
@@ -51,7 +53,7 @@ macro_rules! impl_into_local_system {
             for<'a> &'a mut Func: RunLocally<($($param,)*), ()>,
         {
             fn local_system(mut self) -> LocalSystem {
-                let params = (&mut self).param_types();
+                let params = self.param_types();
 
                 LocalSystem {
                     function: Box::new(move |world: &World, resources: &Resources| {

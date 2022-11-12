@@ -490,7 +490,7 @@ macro_rules! split_for_sparse_iteration {
             let (mut entities, first_sparse, first_comp)
                 = ComponentView::split_for_iteration($first);
 
-            #[allow(clippy::eval_order_dependence)]
+            #[allow(clippy::mixed_read_write_in_expression)]
             let splits = (
                 (first_sparse, first_comp),
                 $(

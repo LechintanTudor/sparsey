@@ -2,9 +2,11 @@ use crate::resources::{Resources, SyncResources};
 use crate::systems::{Run, RunExclusive, RunLocally, SystemParamType};
 use crate::world::World;
 
+type BoxedSystemFn = Box<dyn FnMut(&World, SyncResources) + Send + 'static>;
+
 /// Encapsulates a system that can run on any thread.
 pub struct System {
-    function: Box<dyn FnMut(&World, SyncResources) + Send + 'static>,
+    function: BoxedSystemFn,
     params: Vec<SystemParamType>,
 }
 

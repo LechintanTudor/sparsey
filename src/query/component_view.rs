@@ -3,6 +3,7 @@ use crate::storage::{Component, Entity, SparseArray};
 use crate::world::{Comp, CompMut};
 use std::ops::RangeBounds;
 
+#[allow(clippy::len_without_is_empty)]
 pub trait ComponentView {
     type Ref<'a>
     where
