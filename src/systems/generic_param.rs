@@ -115,3 +115,7 @@ where
         SystemParamType::ResMut(TypeId::of::<T>())
     }
 }
+
+pub trait RunGeneric<Params, Return> {
+    fn append_param_types(&self, param_types: &mut Vec<SystemParamType>);
+}
