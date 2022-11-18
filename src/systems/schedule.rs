@@ -282,7 +282,7 @@ impl Schedule {
                 ScheduleStep::LocalSystems(local_systems) => {
                     for local_system in local_systems.iter_mut() {
                         world.maintain();
-                        crate::run_locally(world, resources, local_system);
+                        crate::run_local(world, resources, local_system);
                     }
                 }
                 ScheduleStep::ExclusiveSystems(local_fns) => {

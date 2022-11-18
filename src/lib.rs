@@ -49,4 +49,4 @@ pub mod prelude {
     pub use crate::world::{Comp, CompMut, Entities, World};
 }
 
-pub use self::systems::{run, run_exclusive, run_locally};
+pub use self::systems::{run, run_exclusive, run_local};

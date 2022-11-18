@@ -1,5 +1,5 @@
 use crate::resources::Resources;
-use crate::systems::{RunExclusive, RunLocally, SystemParamType};
+use crate::systems::{RunExclusive, RunLocal, SystemParamType};
 use crate::world::World;
 
 type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
@@ -23,12 +23,12 @@ impl<'a> RunExclusive<(), ()> for &'a mut LocalSystem {
     }
 }
 
-impl<'a> RunLocally<(), ()> for &'a mut LocalSystem {
+impl<'a> RunLocal<(), ()> for &'a mut LocalSystem {
     fn param_types(&self) -> Vec<SystemParamType> {
         self.params.clone()
     }
 
-    fn run_locally(self, world: &World, resources: &Resources) {
+    fn run_local(self, world: &World, resources: &Resources) {
         (self.function)(world, resources)
     }
 }
@@ -49,15 +49,15 @@ macro_rules! impl_into_local_system {
     ($($param:ident),*) => {
         impl<Func, $($param),*> IntoLocalSystem<($($param,)*)> for Func
         where
-            Func: RunLocally<($($param,)*), ()> + 'static,
-            for<'a> &'a mut Func: RunLocally<($($param,)*), ()>,
+            Func: RunLocal<($($param,)*), ()> + 'static,
+            for<'a> &'a mut Func: RunLocal<($($param,)*), ()>,
         {
             fn local_system(mut self) -> LocalSystem {
                 let params = self.param_types();
 
                 LocalSystem {
                     function: Box::new(move |world: &World, resources: &Resources| {
-                        (&mut self).run_locally(world, resources)
+                        (&mut self).run_local(world, resources)
                     }),
                     params,
                 }

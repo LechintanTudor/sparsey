@@ -2,23 +2,23 @@ use crate::resources::Resources;
 use crate::systems::{GenericSystemParam, LocalSystemParam, RunExclusive, SystemParamType};
 use crate::world::World;
 
-pub trait RunLocally<Params, Return>: RunExclusive<Params, Return> {
+pub trait RunLocal<Params, Return>: RunExclusive<Params, Return> {
     fn param_types(&self) -> Vec<SystemParamType>;
 
-    fn run_locally(self, world: &World, resources: &Resources) -> Return;
+    fn run_local(self, world: &World, resources: &Resources) -> Return;
 }
 
-pub fn run_locally<'a, Params, Return>(
+pub fn run_local<'a, Params, Return>(
     world: &'a World,
     resources: &'a Resources,
-    f: impl RunLocally<Params, Return>,
+    f: impl RunLocal<Params, Return>,
 ) -> Return {
-    f.run_locally(world, resources)
+    f.run_local(world, resources)
 }
 
-macro_rules! impl_run_locally {
+macro_rules! impl_run_local {
     ($(($lifetime:lifetime, $param:ident)),*) => {
-        impl<Func, Return, $($param),*> RunLocally<($($param,)*), Return> for Func
+        impl<Func, Return, $($param),*> RunLocal<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return
                 + for<$($lifetime),*> FnOnce($(<$param as GenericSystemParam>::Param<$lifetime>),*) -> Return,
@@ -29,7 +29,7 @@ macro_rules! impl_run_locally {
             }
 
             #[allow(unused_variables)]
-            fn run_locally(self, world: &World, resources: &Resources) -> Return {
+            fn run_local(self, world: &World, resources: &Resources) -> Return {
                 self($(<$param as LocalSystemParam>::borrow(world, resources)),*)
             }
         }
@@ -40,21 +40,21 @@ macro_rules! impl_run_locally {
 mod impls {
     use super::*;
 
-    impl_run_locally!();
-    impl_run_locally!(('a, A));
-    impl_run_locally!(('a, A), ('b, B));
-    impl_run_locally!(('a, A), ('b, B), ('c, C));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N), ('o, O));
-    impl_run_locally!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N), ('o, O), ('p, P));
+    impl_run_local!();
+    impl_run_local!(('a, A));
+    impl_run_local!(('a, A), ('b, B));
+    impl_run_local!(('a, A), ('b, B), ('c, C));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N), ('o, O));
+    impl_run_local!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N), ('o, O), ('p, P));
 }

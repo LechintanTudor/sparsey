@@ -1,8 +1,8 @@
 use crate::resources::SyncResources;
-use crate::systems::{GenericSystemParam, RunLocally, SystemParam};
+use crate::systems::{GenericSystemParam, RunLocal, SystemParam};
 use crate::world::World;
 
-pub trait Run<Params, Return>: RunLocally<Params, Return> {
+pub trait Run<Params, Return>: RunLocal<Params, Return> {
     fn run(self, world: &World, resources: SyncResources) -> Return;
 }
 

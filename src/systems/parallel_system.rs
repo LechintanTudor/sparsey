@@ -1,5 +1,5 @@
 use crate::resources::{Resources, SyncResources};
-use crate::systems::{Run, RunExclusive, RunLocally, SystemParamType};
+use crate::systems::{Run, RunExclusive, RunLocal, SystemParamType};
 use crate::world::World;
 
 type BoxedSystemFn = Box<dyn FnMut(&World, SyncResources) + Send + 'static>;
@@ -23,12 +23,12 @@ impl<'a> RunExclusive<(), ()> for &'a mut System {
     }
 }
 
-impl<'a> RunLocally<(), ()> for &'a mut System {
+impl<'a> RunLocal<(), ()> for &'a mut System {
     fn param_types(&self) -> Vec<SystemParamType> {
         self.params.clone()
     }
 
-    fn run_locally(self, world: &World, resources: &Resources) {
+    fn run_local(self, world: &World, resources: &Resources) {
         (self.function)(world, resources.sync())
     }
 }
