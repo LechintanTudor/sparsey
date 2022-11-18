@@ -18,6 +18,12 @@ pub trait IntoExclusiveSystem<Params> {
     fn exclusive_system(self) -> ExclusiveSystem;
 }
 
+impl IntoExclusiveSystem<()> for ExclusiveSystem {
+    fn exclusive_system(self) -> ExclusiveSystem {
+        self
+    }
+}
+
 impl<F, Params> IntoExclusiveSystem<Params> for F
 where
     F: RunExclusive<Params, ()> + 'static,
