@@ -45,7 +45,7 @@ pub mod prelude {
     pub use crate::query::{BuildCompoundQuery, IntoEntityIter, Query};
     pub use crate::resources::{Res, ResMut, Resources};
     pub use crate::storage::Entity;
-    pub use crate::systems::Schedule;
+    pub use crate::systems::{IntoExclusiveSystem, IntoLocalSystem, IntoSystem, Schedule};
     pub use crate::world::{Comp, CompMut, Entities, World};
 }
 

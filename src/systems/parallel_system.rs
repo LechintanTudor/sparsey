@@ -6,36 +6,41 @@ type BoxedSystemFn = Box<dyn FnMut(&World, SyncResources) + Send + 'static>;
 
 /// Encapsulates a system that can run on any thread.
 pub struct System {
-    function: BoxedSystemFn,
-    params: Vec<BorrowedSystemParam>,
+    system_fn: BoxedSystemFn,
+    borrowed_params: Vec<BorrowedSystemParam>,
 }
 
 impl System {
     /// Returns the system parameter types as a slice.
-    pub fn params(&self) -> &[BorrowedSystemParam] {
-        &self.params
+    #[inline]
+    pub fn borrowed_params(&self) -> &[BorrowedSystemParam] {
+        &self.borrowed_params
     }
 }
 
-impl<'a> RunExclusive<(), ()> for &'a mut System {
+impl RunExclusive<(), ()> for &'_ mut System {
+    #[inline]
     fn run_exclusive(self, world: &mut World, resources: &mut Resources) {
-        (self.function)(world, resources.sync())
+        (self.system_fn)(world, resources.sync())
     }
 }
 
-impl<'a> RunLocal<(), ()> for &'a mut System {
-    fn param_types(&self) -> Vec<BorrowedSystemParam> {
-        self.params.clone()
+impl RunLocal<(), ()> for &'_ mut System {
+    #[inline]
+    fn get_borrowed_params(&self) -> Vec<BorrowedSystemParam> {
+        self.borrowed_params.clone()
     }
 
+    #[inline]
     fn run_local(self, world: &World, resources: &Resources) {
-        (self.function)(world, resources.sync())
+        (self.system_fn)(world, resources.sync())
     }
 }
 
-impl<'a> Run<(), ()> for &'a mut System {
+impl Run<(), ()> for &'_ mut System {
+    #[inline]
     fn run(self, world: &World, resources: SyncResources) {
-        (self.function)(world, resources)
+        (self.system_fn)(world, resources)
     }
 }
 
@@ -46,6 +51,7 @@ pub trait IntoSystem<Params> {
 }
 
 impl IntoSystem<()> for System {
+    #[inline]
     fn system(self) -> System {
         self
     }
@@ -59,33 +65,15 @@ macro_rules! impl_into_system {
             for<'a> &'a mut Func: Run<($($param,)*), ()>,
         {
             fn system(mut self) -> System {
-                let params = self.param_types();
-
                 System {
-                    function: Box::new(move |world: &World, resources: SyncResources| {
+                    borrowed_params: self.get_borrowed_params(),
+                    system_fn: Box::new(move |world: &World, resources: SyncResources| {
                         (&mut self).run(world, resources);
                     }),
-                    params,
                 }
             }
         }
     };
 }
 
-impl_into_system!();
-impl_into_system!(A);
-impl_into_system!(A, B);
-impl_into_system!(A, B, C);
-impl_into_system!(A, B, C, D);
-impl_into_system!(A, B, C, D, E);
-impl_into_system!(A, B, C, D, E, F);
-impl_into_system!(A, B, C, D, E, F, G);
-impl_into_system!(A, B, C, D, E, F, G, H);
-impl_into_system!(A, B, C, D, E, F, G, H, I);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-impl_into_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+crate::utils::impl_generic_0_to_16!(impl_into_system);

@@ -1,5 +1,5 @@
-use std::any::TypeId;
 use crate::layout::ComponentInfo;
+use std::any::TypeId;
 
 /// The type of parameters a system can have.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]

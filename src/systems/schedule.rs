@@ -39,27 +39,48 @@ impl ScheduleBuilder {
         self
     }
 
-    /// Adds a local system at the end of the schedule.
-    pub fn add_local_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
-        self.final_steps.push(SimpleScheduleStep::LocalSystem(system.local_system()));
+    /// Adds a local system to the schedule. Prevents future systems from running in parallel
+    /// with the previously added systems. Prefer to use
+    /// [`ScheduleBuilder::add_local_system_to_end`] whenever possible.
+    pub fn add_local_system<P>(&mut self, local_system: impl IntoLocalSystem<P>) -> &mut Self {
+        self.steps.push(SimpleScheduleStep::LocalSystem(local_system.local_system()));
         self
     }
 
-    /// Adds a local function at the end of the schedule.
-    pub fn add_local_fn<P>(&mut self, local_fn: impl IntoExclusiveSystem<P>) -> &mut Self {
-        self.final_steps.push(SimpleScheduleStep::ExclusiveSystem(local_fn.exclusive_system()));
+    /// Adds an exclusive system to the schedule. Prevents future systems from running in parallel
+    /// with the previously added systems. Prefer to use
+    /// [`ScheduleBuilder::add_exclusive_system_to_end`] whenever possible.
+    pub fn add_exclusive_system<P>(
+        &mut self,
+        exclusive_system: impl IntoExclusiveSystem<P>,
+    ) -> &mut Self {
+        self.steps.push(SimpleScheduleStep::ExclusiveSystem(exclusive_system.exclusive_system()));
         self
     }
 
-    /// Adds a barrier, preventing future systems from running in parallel with the previous ones.
+    /// Adds a barrier, preventing future systems from running in parallel with the previously added
+    /// systems.
     pub fn add_barrier(&mut self) -> &mut Self {
         self.steps.push(SimpleScheduleStep::Barrier);
         self
     }
 
-    /// Adds a barrier and a local system to run right after.
-    pub fn add_barrier_system<P>(&mut self, system: impl IntoLocalSystem<P>) -> &mut Self {
-        self.steps.push(SimpleScheduleStep::LocalSystem(system.local_system()));
+    /// Adds a local system to the end of the schedule.
+    pub fn add_local_system_to_end<P>(
+        &mut self,
+        local_system: impl IntoLocalSystem<P>,
+    ) -> &mut Self {
+        self.final_steps.push(SimpleScheduleStep::LocalSystem(local_system.local_system()));
+        self
+    }
+
+    /// Adds an exclusive system to the end of the schedule.
+    pub fn add_exclusive_system_to_end<P>(
+        &mut self,
+        exclusive_system: impl IntoExclusiveSystem<P>,
+    ) -> &mut Self {
+        self.final_steps
+            .push(SimpleScheduleStep::ExclusiveSystem(exclusive_system.exclusive_system()));
         self
     }
 
@@ -85,8 +106,8 @@ impl ScheduleBuilder {
                 ScheduleStep::Systems(systems) => {
                     let systems_conflict = systems
                         .iter()
-                        .flat_map(|s| s.params())
-                        .any(|p1| system.params().iter().any(|p2| p1.conflicts_with(p2)));
+                        .flat_map(|s| s.borrowed_params())
+                        .any(|p1| system.borrowed_params().iter().any(|p2| p1.conflicts_with(p2)));
 
                     if systems_conflict {
                         None
@@ -192,12 +213,12 @@ impl Schedule {
         for step in self.steps.iter() {
             match step {
                 ScheduleStep::Systems(systems) => {
-                    for param in systems.iter().flat_map(System::params) {
+                    for param in systems.iter().flat_map(System::borrowed_params) {
                         register(world, param);
                     }
                 }
                 ScheduleStep::LocalSystems(systems) => {
-                    for param in systems.iter().flat_map(LocalSystem::params) {
+                    for param in systems.iter().flat_map(LocalSystem::borrowed_params) {
                         register(world, param);
                     }
                 }

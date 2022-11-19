@@ -6,30 +6,34 @@ type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
 
 /// Encapsulates a system that can run locally.
 pub struct LocalSystem {
-    function: BoxedLocalSystemFn,
-    params: Vec<BorrowedSystemParam>,
+    system_fn: BoxedLocalSystemFn,
+    borrowed_params: Vec<BorrowedSystemParam>,
 }
 
 impl LocalSystem {
     /// Returns the system parameter types as a slice.
-    pub fn params(&self) -> &[BorrowedSystemParam] {
-        &self.params
+    #[inline]
+    pub fn borrowed_params(&self) -> &[BorrowedSystemParam] {
+        &self.borrowed_params
     }
 }
 
-impl<'a> RunExclusive<(), ()> for &'a mut LocalSystem {
+impl RunExclusive<(), ()> for &'_ mut LocalSystem {
+    #[inline]
     fn run_exclusive(self, world: &mut World, resources: &mut Resources) {
-        (self.function)(world, resources)
+        (self.system_fn)(world, resources)
     }
 }
 
-impl<'a> RunLocal<(), ()> for &'a mut LocalSystem {
-    fn param_types(&self) -> Vec<BorrowedSystemParam> {
-        self.params.clone()
+impl RunLocal<(), ()> for &'_ mut LocalSystem {
+    #[inline]
+    fn get_borrowed_params(&self) -> Vec<BorrowedSystemParam> {
+        self.borrowed_params.clone()
     }
 
+    #[inline]
     fn run_local(self, world: &World, resources: &Resources) {
-        (self.function)(world, resources)
+        (self.system_fn)(world, resources)
     }
 }
 
@@ -40,6 +44,7 @@ pub trait IntoLocalSystem<Params> {
 }
 
 impl IntoLocalSystem<()> for LocalSystem {
+    #[inline]
     fn local_system(self) -> LocalSystem {
         self
     }
@@ -53,33 +58,15 @@ macro_rules! impl_into_local_system {
             for<'a> &'a mut Func: RunLocal<($($param,)*), ()>,
         {
             fn local_system(mut self) -> LocalSystem {
-                let params = self.param_types();
-
                 LocalSystem {
-                    function: Box::new(move |world: &World, resources: &Resources| {
+                    borrowed_params: self.get_borrowed_params(),
+                    system_fn: Box::new(move |world: &World, resources: &Resources| {
                         (&mut self).run_local(world, resources)
                     }),
-                    params,
                 }
             }
         }
     };
 }
 
-impl_into_local_system!();
-impl_into_local_system!(A);
-impl_into_local_system!(A, B);
-impl_into_local_system!(A, B, C);
-impl_into_local_system!(A, B, C, D);
-impl_into_local_system!(A, B, C, D, E);
-impl_into_local_system!(A, B, C, D, E, F);
-impl_into_local_system!(A, B, C, D, E, F, G);
-impl_into_local_system!(A, B, C, D, E, F, G, H);
-impl_into_local_system!(A, B, C, D, E, F, G, H, I);
-impl_into_local_system!(A, B, C, D, E, F, G, H, I, J);
-impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K);
-impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L);
-impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
-impl_into_local_system!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P);
+crate::utils::impl_generic_0_to_16!(impl_into_local_system);

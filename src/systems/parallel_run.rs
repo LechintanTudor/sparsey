@@ -18,13 +18,11 @@ where
 }
 
 macro_rules! impl_run {
-    ($(($lifetime:lifetime, $param:ident)),*) => {
+    ($($param:ident),*) => {
         impl<Func, Return, $($param),*> Run<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return
-                + for<$($lifetime),*> FnOnce(
-                    $(<$param as LocalSystemParam>::Param<$lifetime>),*
-                ) -> Return,
+                + FnOnce($(<$param as LocalSystemParam>::Param<'_>),*) -> Return,
             $($param: SystemParam,)*
         {
             #[allow(unused_variables)]
@@ -35,25 +33,4 @@ macro_rules! impl_run {
     };
 }
 
-#[rustfmt::skip]
-mod impls {
-    use super::*;
-
-    impl_run!();
-    impl_run!(('a, A));
-    impl_run!(('a, A), ('b, B));
-    impl_run!(('a, A), ('b, B), ('c, C));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N), ('o, O));
-    impl_run!(('a, A), ('b, B), ('c, C), ('d, D), ('e, E), ('f, F), ('g, G), ('h, H), ('i, I), ('j, J), ('k, K), ('l, L), ('m, M), ('n, N), ('o, O), ('p, P));
-}
+crate::utils::impl_generic_0_to_16!(impl_run);
