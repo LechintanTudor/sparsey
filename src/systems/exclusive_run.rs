@@ -1,5 +1,5 @@
 use crate::resources::Resources;
-use crate::systems::{GenericSystemParam, LocalSystemParam};
+use crate::systems::LocalSystemParam;
 use crate::world::World;
 
 pub trait RunExclusive<Params, Return> {
@@ -55,7 +55,7 @@ macro_rules! impl_run_exclusive {
         impl<Func, Return, $($param),*> RunExclusive<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return
-                + for<$($lifetime),*> FnOnce($(<$param as GenericSystemParam>::Param<$lifetime>),*) -> Return,
+                + for<$($lifetime),*> FnOnce($(<$param as LocalSystemParam>::Param<$lifetime>),*) -> Return,
             $($param: LocalSystemParam,)*
         {
             #[allow(unused_variables)]

@@ -1,7 +1,7 @@
 use crate::resources::{Resources, SyncResources};
 use crate::systems::{
-    ExclusiveSystem, IntoExclusiveSystem, IntoLocalSystem, IntoSystem, LocalSystem, System,
-    SystemParamType,
+    BorrowedSystemParam, ExclusiveSystem, IntoExclusiveSystem, IntoLocalSystem, IntoSystem,
+    LocalSystem, System,
 };
 use crate::world::World;
 use std::cmp::Ordering;
@@ -178,10 +178,10 @@ impl Schedule {
 
     /// Registered the storages used by the systems.
     pub fn set_up(&self, world: &mut World) {
-        fn register(world: &mut World, param: &SystemParamType) {
+        fn register(world: &mut World, param: &BorrowedSystemParam) {
             unsafe {
                 match param {
-                    SystemParamType::Comp(c) | SystemParamType::CompMut(c) => {
+                    BorrowedSystemParam::Comp(c) | BorrowedSystemParam::CompMut(c) => {
                         world.register_with(c.type_id(), || c.create_storage())
                     }
                     _ => (),

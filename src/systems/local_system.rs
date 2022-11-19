@@ -1,5 +1,5 @@
 use crate::resources::Resources;
-use crate::systems::{RunExclusive, RunLocal, SystemParamType};
+use crate::systems::{BorrowedSystemParam, RunExclusive, RunLocal};
 use crate::world::World;
 
 type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
@@ -7,12 +7,12 @@ type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
 /// Encapsulates a system that can run locally.
 pub struct LocalSystem {
     function: BoxedLocalSystemFn,
-    params: Vec<SystemParamType>,
+    params: Vec<BorrowedSystemParam>,
 }
 
 impl LocalSystem {
     /// Returns the system parameter types as a slice.
-    pub fn params(&self) -> &[SystemParamType] {
+    pub fn params(&self) -> &[BorrowedSystemParam] {
         &self.params
     }
 }
@@ -24,7 +24,7 @@ impl<'a> RunExclusive<(), ()> for &'a mut LocalSystem {
 }
 
 impl<'a> RunLocal<(), ()> for &'a mut LocalSystem {
-    fn param_types(&self) -> Vec<SystemParamType> {
+    fn param_types(&self) -> Vec<BorrowedSystemParam> {
         self.params.clone()
     }
 

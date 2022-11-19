@@ -1,9 +1,9 @@
 use crate::resources::Resources;
-use crate::systems::{GenericSystemParam, LocalSystemParam, RunExclusive, SystemParamType};
+use crate::systems::{BorrowedSystemParam, LocalSystemParam, RunExclusive};
 use crate::world::World;
 
 pub trait RunLocal<Params, Return>: RunExclusive<Params, Return> {
-    fn param_types(&self) -> Vec<SystemParamType>;
+    fn param_types(&self) -> Vec<BorrowedSystemParam>;
 
     fn run_local(self, world: &World, resources: &Resources) -> Return;
 }
@@ -21,11 +21,11 @@ macro_rules! impl_run_local {
         impl<Func, Return, $($param),*> RunLocal<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return
-                + for<$($lifetime),*> FnOnce($(<$param as GenericSystemParam>::Param<$lifetime>),*) -> Return,
+                + for<$($lifetime),*> FnOnce($(<$param as LocalSystemParam>::Param<$lifetime>),*) -> Return,
             $($param: LocalSystemParam,)*
         {
-            fn param_types(&self) -> Vec<SystemParamType> {
-                vec![$($param::param_type()),*]
+            fn param_types(&self) -> Vec<BorrowedSystemParam> {
+                vec![$($param::as_borrowed_param()),*]
             }
 
             #[allow(unused_variables)]

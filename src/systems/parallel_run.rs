@@ -1,5 +1,5 @@
 use crate::resources::SyncResources;
-use crate::systems::{GenericSystemParam, RunLocal, SystemParam};
+use crate::systems::{LocalSystemParam, RunLocal, SystemParam};
 use crate::world::World;
 
 pub trait Run<Params, Return>: RunLocal<Params, Return> {
@@ -22,7 +22,9 @@ macro_rules! impl_run {
         impl<Func, Return, $($param),*> Run<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return
-                + for<$($lifetime),*> FnOnce($(<$param as GenericSystemParam>::Param<$lifetime>),*) -> Return,
+                + for<$($lifetime),*> FnOnce(
+                    $(<$param as LocalSystemParam>::Param<$lifetime>),*
+                ) -> Return,
             $($param: SystemParam,)*
         {
             #[allow(unused_variables)]

@@ -1,5 +1,5 @@
 use crate::resources::{Resources, SyncResources};
-use crate::systems::{Run, RunExclusive, RunLocal, SystemParamType};
+use crate::systems::{BorrowedSystemParam, Run, RunExclusive, RunLocal};
 use crate::world::World;
 
 type BoxedSystemFn = Box<dyn FnMut(&World, SyncResources) + Send + 'static>;
@@ -7,12 +7,12 @@ type BoxedSystemFn = Box<dyn FnMut(&World, SyncResources) + Send + 'static>;
 /// Encapsulates a system that can run on any thread.
 pub struct System {
     function: BoxedSystemFn,
-    params: Vec<SystemParamType>,
+    params: Vec<BorrowedSystemParam>,
 }
 
 impl System {
     /// Returns the system parameter types as a slice.
-    pub fn params(&self) -> &[SystemParamType] {
+    pub fn params(&self) -> &[BorrowedSystemParam] {
         &self.params
     }
 }
@@ -24,7 +24,7 @@ impl<'a> RunExclusive<(), ()> for &'a mut System {
 }
 
 impl<'a> RunLocal<(), ()> for &'a mut System {
-    fn param_types(&self) -> Vec<SystemParamType> {
+    fn param_types(&self) -> Vec<BorrowedSystemParam> {
         self.params.clone()
     }
 

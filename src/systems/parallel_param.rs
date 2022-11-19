@@ -9,62 +9,62 @@ pub trait SystemParam: LocalSystemParam {
     fn borrow<'a>(world: &'a World, resources: SyncResources<'a>) -> Self::Param<'a>;
 }
 
-impl<'a> SystemParam for Entities<'a> {
-    fn borrow<'b>(world: &'b World, _resources: SyncResources<'b>) -> Self::Param<'b> {
+impl SystemParam for Entities<'_> {
+    fn borrow<'a>(world: &'a World, _resources: SyncResources<'a>) -> Self::Param<'a> {
         world.borrow_entities()
     }
 }
 
-impl<'a, T> SystemParam for Comp<'a, T>
+impl<T> SystemParam for Comp<'_, T>
 where
     T: Component,
 {
-    fn borrow<'b>(world: &'b World, _resources: SyncResources<'b>) -> Self::Param<'b> {
+    fn borrow<'a>(world: &'a World, _resources: SyncResources<'a>) -> Self::Param<'a> {
         world.borrow()
     }
 }
 
-impl<'a, T> SystemParam for CompMut<'a, T>
+impl<T> SystemParam for CompMut<'_, T>
 where
     T: Component,
 {
-    fn borrow<'b>(world: &'b World, _resources: SyncResources<'b>) -> Self::Param<'b> {
+    fn borrow<'a>(world: &'a World, _resources: SyncResources<'a>) -> Self::Param<'a> {
         world.borrow_mut()
     }
 }
 
-impl<'a, T> SystemParam for Res<'a, T>
+impl<T> SystemParam for Res<'_, T>
 where
     T: Resource + Sync,
 {
-    fn borrow<'b>(_world: &'b World, resources: SyncResources<'b>) -> Self::Param<'b> {
+    fn borrow<'a>(_world: &'a World, resources: SyncResources<'a>) -> Self::Param<'a> {
         resources.borrow()
     }
 }
 
-impl<'a, T> SystemParam for ResMut<'a, T>
+impl<T> SystemParam for ResMut<'_, T>
 where
     T: Resource + Send,
 {
-    fn borrow<'b>(_world: &'b World, resources: SyncResources<'b>) -> Self::Param<'b> {
+    fn borrow<'a>(_world: &'a World, resources: SyncResources<'a>) -> Self::Param<'a> {
         resources.borrow_mut()
     }
 }
 
-impl<'a, T> SystemParam for Option<Res<'a, T>>
+impl<T> SystemParam for Option<Res<'_, T>>
 where
     T: Resource + Sync,
 {
-    fn borrow<'b>(_world: &'b World, resources: SyncResources<'b>) -> Self::Param<'b> {
+    fn borrow<'a>(_world: &'a World, resources: SyncResources<'a>) -> Self::Param<'a> {
         resources.try_borrow()
     }
 }
 
-impl<'a, T> SystemParam for Option<ResMut<'a, T>>
+impl<T> SystemParam for Option<ResMut<'_, T>>
 where
     T: Resource + Send,
 {
-    fn borrow<'b>(_world: &'b World, resources: SyncResources<'b>) -> Self::Param<'b> {
+    fn borrow<'a>(_world: &'a World, resources: SyncResources<'a>) -> Self::Param<'a> {
         resources.try_borrow_mut()
     }
 }
