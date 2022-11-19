@@ -1,7 +1,7 @@
 use crate::resources::{Resources, SyncResources};
 use crate::systems::{
-    BorrowedSystemParam, ExclusiveSystem, IntoExclusiveSystem, IntoLocalSystem, IntoSystem,
-    LocalSystem, System,
+    ExclusiveSystem, IntoExclusiveSystem, IntoLocalSystem, IntoSystem, LocalSystem, System,
+    SystemBorrow,
 };
 use crate::world::World;
 use std::cmp::Ordering;
@@ -25,7 +25,7 @@ impl fmt::Debug for SimpleScheduleStep {
     }
 }
 
-/// Enables creating a `Schedule` using the builder pattern.
+/// Enables creating a [`Schedule`] using the builder pattern.
 #[derive(Default, Debug)]
 pub struct ScheduleBuilder {
     steps: Vec<SimpleScheduleStep>,
@@ -106,8 +106,8 @@ impl ScheduleBuilder {
                 ScheduleStep::Systems(systems) => {
                     let systems_conflict = systems
                         .iter()
-                        .flat_map(|s| s.borrowed_params())
-                        .any(|p1| system.borrowed_params().iter().any(|p2| p1.conflicts_with(p2)));
+                        .flat_map(|s| s.borrows())
+                        .any(|p1| system.borrows().iter().any(|p2| p1.conflicts_with(p2)));
 
                     if systems_conflict {
                         None
@@ -154,13 +154,13 @@ impl ScheduleBuilder {
     }
 }
 
-/// Steps that can be run by a `Schedule`.
+/// Steps that can be run by a [`Schedule`].
 pub enum ScheduleStep {
     /// Runs the systems in parallel.
     Systems(Vec<System>),
-    /// Runs the systems sequentially.
+    /// Runs the local systems sequentially.
     LocalSystems(Vec<LocalSystem>),
-    /// Runs the functions sequentially.
+    /// Runs the exclusive systems sequentially.
     ExclusiveSystems(Vec<ExclusiveSystem>),
     /// Prevents future systems from running in parallel with previous ones.
     Barrier,
@@ -199,10 +199,10 @@ impl Schedule {
 
     /// Registered the storages used by the systems.
     pub fn set_up(&self, world: &mut World) {
-        fn register(world: &mut World, param: &BorrowedSystemParam) {
+        fn register(world: &mut World, param: &SystemBorrow) {
             unsafe {
                 match param {
-                    BorrowedSystemParam::Comp(c) | BorrowedSystemParam::CompMut(c) => {
+                    SystemBorrow::Comp(c) | SystemBorrow::CompMut(c) => {
                         world.register_with(c.type_id(), || c.create_storage())
                     }
                     _ => (),
@@ -213,12 +213,12 @@ impl Schedule {
         for step in self.steps.iter() {
             match step {
                 ScheduleStep::Systems(systems) => {
-                    for param in systems.iter().flat_map(System::borrowed_params) {
+                    for param in systems.iter().flat_map(System::borrows) {
                         register(world, param);
                     }
                 }
                 ScheduleStep::LocalSystems(systems) => {
-                    for param in systems.iter().flat_map(LocalSystem::borrowed_params) {
+                    for param in systems.iter().flat_map(LocalSystem::borrows) {
                         register(world, param);
                     }
                 }

@@ -1,9 +1,9 @@
 use crate::layout::ComponentInfo;
 use std::any::TypeId;
 
-/// The type of parameters a system can have.
+/// Type of asset borrowed by systems during execution.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub enum BorrowedSystemParam {
+pub enum SystemBorrow {
     /// View over all entities.
     Entities,
     /// View over all components of a type.
@@ -16,7 +16,7 @@ pub enum BorrowedSystemParam {
     ResMut(TypeId),
 }
 
-impl BorrowedSystemParam {
+impl SystemBorrow {
     /// Returns `true` if the parameters prevent the systems from running in parallel.
     pub fn conflicts_with(&self, other: &Self) -> bool {
         match (self, other) {

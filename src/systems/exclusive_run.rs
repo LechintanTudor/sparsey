@@ -2,7 +2,9 @@ use crate::resources::Resources;
 use crate::systems::LocalSystemParam;
 use crate::world::World;
 
+/// Helper trait for executing systems that require exclusive access to [`World`] and [`Resources`].
 pub trait RunExclusive<Params, Return> {
+    /// Executes the system in the provided context.
     fn run_exclusive(self, world: &mut World, resources: &mut Resources) -> Return;
 }
 
@@ -42,6 +44,7 @@ where
     }
 }
 
+/// Executes an exclusive system in the provided context.
 pub fn run_exclusive<Params, Return>(
     world: &mut World,
     resources: &mut Resources,

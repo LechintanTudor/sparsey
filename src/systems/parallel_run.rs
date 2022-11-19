@@ -2,10 +2,13 @@ use crate::resources::SyncResources;
 use crate::systems::{LocalSystemParam, RunLocal, SystemParam};
 use crate::world::World;
 
+/// Helper trait for executing systems with shared access to [`World`] and [`SyncResources`].
 pub trait Run<Params, Return>: RunLocal<Params, Return> {
+    /// Executes the system in the provided context.
     fn run(self, world: &World, resources: SyncResources) -> Return;
 }
 
+/// Executes a system in the provided context.
 pub fn run<'a, R, Params, Return>(
     world: &'a World,
     resources: R,

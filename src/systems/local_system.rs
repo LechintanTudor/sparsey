@@ -1,20 +1,20 @@
 use crate::resources::Resources;
-use crate::systems::{BorrowedSystemParam, RunExclusive, RunLocal};
+use crate::systems::{RunExclusive, RunLocal, SystemBorrow};
 use crate::world::World;
 
 type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
 
-/// Encapsulates a system that can run locally.
+/// Encapsulates a system that borrows non-thread-safe resources.
 pub struct LocalSystem {
     system_fn: BoxedLocalSystemFn,
-    borrowed_params: Vec<BorrowedSystemParam>,
+    borrows: Vec<SystemBorrow>,
 }
 
 impl LocalSystem {
-    /// Returns the system parameter types as a slice.
+    /// Returns the assets borrowed by the system during execution as a slice.
     #[inline]
-    pub fn borrowed_params(&self) -> &[BorrowedSystemParam] {
-        &self.borrowed_params
+    pub fn borrows(&self) -> &[SystemBorrow] {
+        &self.borrows
     }
 }
 
@@ -27,8 +27,8 @@ impl RunExclusive<(), ()> for &'_ mut LocalSystem {
 
 impl RunLocal<(), ()> for &'_ mut LocalSystem {
     #[inline]
-    fn get_borrowed_params(&self) -> Vec<BorrowedSystemParam> {
-        self.borrowed_params.clone()
+    fn get_borrows(&self) -> Vec<SystemBorrow> {
+        self.borrows.clone()
     }
 
     #[inline]
@@ -37,9 +37,9 @@ impl RunLocal<(), ()> for &'_ mut LocalSystem {
     }
 }
 
-/// Helper trait for creating a local system from a function.
+/// Helper trait for creating a [`LocalSystem`] from a function.
 pub trait IntoLocalSystem<Params> {
-    /// Creates a local system.
+    /// Creates the local system.
     fn local_system(self) -> LocalSystem;
 }
 
@@ -59,7 +59,7 @@ macro_rules! impl_into_local_system {
         {
             fn local_system(mut self) -> LocalSystem {
                 LocalSystem {
-                    borrowed_params: self.get_borrowed_params(),
+                    borrows: self.get_borrows(),
                     system_fn: Box::new(move |world: &World, resources: &Resources| {
                         (&mut self).run_local(world, resources)
                     }),

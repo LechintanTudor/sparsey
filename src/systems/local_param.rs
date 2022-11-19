@@ -1,26 +1,28 @@
 use crate::layout::ComponentInfo;
 use crate::resources::{Res, ResMut, Resource, Resources};
 use crate::storage::Component;
-use crate::systems::BorrowedSystemParam;
+use crate::systems::SystemBorrow;
 use crate::world::{Comp, CompMut, Entities, World};
 use std::any::TypeId;
 
+/// Trait implemented by parameters of functions used to create
+/// [`LocalSystems`](crate::systems::LocalSystem).
 pub trait LocalSystemParam {
     /// Parameter type generic over its lifetime.
     type Param<'a>;
 
-    /// Returns the system parameter type.
-    fn as_borrowed_param() -> BorrowedSystemParam;
+    /// Returns the [`SystemBorrow`] associated with this type.
+    fn as_system_borrow() -> SystemBorrow;
 
-    /// Borrows the local param
+    /// Borrows the parameter.
     fn borrow<'a>(world: &'a World, resources: &'a Resources) -> Self::Param<'a>;
 }
 
 impl LocalSystemParam for Entities<'_> {
     type Param<'a> = Entities<'a>;
 
-    fn as_borrowed_param() -> BorrowedSystemParam {
-        BorrowedSystemParam::Entities
+    fn as_system_borrow() -> SystemBorrow {
+        SystemBorrow::Entities
     }
 
     fn borrow<'a>(world: &'a World, _resources: &'a Resources) -> Self::Param<'a> {
@@ -34,8 +36,8 @@ where
 {
     type Param<'a> = Comp<'a, T>;
 
-    fn as_borrowed_param() -> BorrowedSystemParam {
-        BorrowedSystemParam::Comp(ComponentInfo::new::<T>())
+    fn as_system_borrow() -> SystemBorrow {
+        SystemBorrow::Comp(ComponentInfo::new::<T>())
     }
 
     fn borrow<'a>(world: &'a World, _resources: &'a Resources) -> Self::Param<'a> {
@@ -49,8 +51,8 @@ where
 {
     type Param<'a> = CompMut<'a, T>;
 
-    fn as_borrowed_param() -> BorrowedSystemParam {
-        BorrowedSystemParam::CompMut(ComponentInfo::new::<T>())
+    fn as_system_borrow() -> SystemBorrow {
+        SystemBorrow::CompMut(ComponentInfo::new::<T>())
     }
 
     fn borrow<'a>(world: &'a World, _resources: &'a Resources) -> Self::Param<'a> {
@@ -64,8 +66,8 @@ where
 {
     type Param<'a> = Res<'a, T>;
 
-    fn as_borrowed_param() -> BorrowedSystemParam {
-        BorrowedSystemParam::Res(TypeId::of::<T>())
+    fn as_system_borrow() -> SystemBorrow {
+        SystemBorrow::Res(TypeId::of::<T>())
     }
 
     fn borrow<'a>(_world: &'a World, resources: &'a Resources) -> Self::Param<'a> {
@@ -79,8 +81,8 @@ where
 {
     type Param<'a> = ResMut<'a, T>;
 
-    fn as_borrowed_param() -> BorrowedSystemParam {
-        BorrowedSystemParam::ResMut(TypeId::of::<T>())
+    fn as_system_borrow() -> SystemBorrow {
+        SystemBorrow::ResMut(TypeId::of::<T>())
     }
 
     fn borrow<'a>(_world: &'a World, resources: &'a Resources) -> Self::Param<'a> {
@@ -94,8 +96,8 @@ where
 {
     type Param<'a> = Option<Res<'a, T>>;
 
-    fn as_borrowed_param() -> BorrowedSystemParam {
-        BorrowedSystemParam::Res(TypeId::of::<T>())
+    fn as_system_borrow() -> SystemBorrow {
+        SystemBorrow::Res(TypeId::of::<T>())
     }
 
     fn borrow<'a>(_world: &'a World, resources: &'a Resources) -> Self::Param<'a> {
@@ -109,8 +111,8 @@ where
 {
     type Param<'a> = Option<ResMut<'a, T>>;
 
-    fn as_borrowed_param() -> BorrowedSystemParam {
-        BorrowedSystemParam::ResMut(TypeId::of::<T>())
+    fn as_system_borrow() -> SystemBorrow {
+        SystemBorrow::ResMut(TypeId::of::<T>())
     }
 
     fn borrow<'a>(_world: &'a World, resources: &'a Resources) -> Self::Param<'a> {

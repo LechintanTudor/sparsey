@@ -1,5 +1,5 @@
 use crate::resources::{Resources, SyncResources};
-use crate::systems::{BorrowedSystemParam, Run, RunExclusive, RunLocal};
+use crate::systems::{Run, RunExclusive, RunLocal, SystemBorrow};
 use crate::world::World;
 
 type BoxedSystemFn = Box<dyn FnMut(&World, SyncResources) + Send + 'static>;
@@ -7,14 +7,14 @@ type BoxedSystemFn = Box<dyn FnMut(&World, SyncResources) + Send + 'static>;
 /// Encapsulates a system that can run on any thread.
 pub struct System {
     system_fn: BoxedSystemFn,
-    borrowed_params: Vec<BorrowedSystemParam>,
+    borrows: Vec<SystemBorrow>,
 }
 
 impl System {
-    /// Returns the system parameter types as a slice.
+    /// Returns the assets borrowed by the system during execution as a slice.
     #[inline]
-    pub fn borrowed_params(&self) -> &[BorrowedSystemParam] {
-        &self.borrowed_params
+    pub fn borrows(&self) -> &[SystemBorrow] {
+        &self.borrows
     }
 }
 
@@ -27,8 +27,8 @@ impl RunExclusive<(), ()> for &'_ mut System {
 
 impl RunLocal<(), ()> for &'_ mut System {
     #[inline]
-    fn get_borrowed_params(&self) -> Vec<BorrowedSystemParam> {
-        self.borrowed_params.clone()
+    fn get_borrows(&self) -> Vec<SystemBorrow> {
+        self.borrows.clone()
     }
 
     #[inline]
@@ -44,9 +44,9 @@ impl Run<(), ()> for &'_ mut System {
     }
 }
 
-/// Helper trait for creating a system from a function.
+/// Helper trait for creating a [`System`] from a function.
 pub trait IntoSystem<Params> {
-    /// Creates a system.
+    /// Creates the system.
     fn system(self) -> System;
 }
 
@@ -66,7 +66,7 @@ macro_rules! impl_into_system {
         {
             fn system(mut self) -> System {
                 System {
-                    borrowed_params: self.get_borrowed_params(),
+                    borrows: self.get_borrows(),
                     system_fn: Box::new(move |world: &World, resources: SyncResources| {
                         (&mut self).run(world, resources);
                     }),

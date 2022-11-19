@@ -3,7 +3,7 @@ use crate::storage::Component;
 use crate::systems::LocalSystemParam;
 use crate::world::{Comp, CompMut, Entities, World};
 
-/// Trait implemented by system parameters.
+/// Trait implemented by parameters of functions used to create [`Systems`](crate::systems::System).
 pub trait SystemParam: LocalSystemParam {
     /// Borrows the parameter.
     fn borrow<'a>(world: &'a World, resources: SyncResources<'a>) -> Self::Param<'a>;
