@@ -1,6 +1,7 @@
 use crate::resources::Resources;
 use crate::systems::{RunExclusive, RunLocal, SystemBorrow};
 use crate::world::World;
+use std::fmt;
 
 type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
 
@@ -8,6 +9,12 @@ type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
 pub struct LocalSystem {
     system_fn: BoxedLocalSystemFn,
     borrows: Vec<SystemBorrow>,
+}
+
+impl fmt::Debug for LocalSystem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LocalSystem").field("borrows", &self.borrows).finish_non_exhaustive()
+    }
 }
 
 impl LocalSystem {

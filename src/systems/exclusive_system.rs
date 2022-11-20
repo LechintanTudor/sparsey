@@ -1,12 +1,19 @@
 use crate::resources::Resources;
 use crate::systems::RunExclusive;
 use crate::world::World;
+use std::fmt;
 
 type BoxedExclusiveSystemFn = Box<dyn FnMut(&mut World, &mut Resources)>;
 
 /// Encapsulates a system that requires exclusive access to [`World`] and [`Resources`].
 pub struct ExclusiveSystem {
     system_fn: BoxedExclusiveSystemFn,
+}
+
+impl fmt::Debug for ExclusiveSystem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ExclusiveSystem").finish_non_exhaustive()
+    }
 }
 
 impl RunExclusive<(), ()> for &'_ mut ExclusiveSystem {
