@@ -1,5 +1,7 @@
 //! System creation, execution and scheduling.
 
+#![forbid(missing_docs)]
+
 mod exclusive_run;
 mod exclusive_system;
 mod local_param;

@@ -4,25 +4,13 @@ use crate::systems::{
     SystemBorrow,
 };
 use crate::world::World;
-use std::cmp::Ordering;
-use std::fmt;
 
+#[derive(Debug)]
 enum SimpleScheduleStep {
     System(System),
     LocalSystem(LocalSystem),
     ExclusiveSystem(ExclusiveSystem),
     Barrier,
-}
-
-impl fmt::Debug for SimpleScheduleStep {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::System(_) => write!(f, "SimpleScheduleStep::System"),
-            Self::LocalSystem(_) => write!(f, "SimpleScheduleStep::LocalSystem"),
-            Self::ExclusiveSystem(_) => write!(f, "SimpleScheduleStep::ExclusiveSystem"),
-            Self::Barrier => write!(f, "SimpleScheduleStep::Barrier"),
-        }
-    }
 }
 
 /// Enables creating a [`Schedule`] using the builder pattern.
@@ -127,8 +115,8 @@ impl ScheduleBuilder {
                     .iter_mut()
                     .rev()
                     .map_while(|step| step_to_non_conflicting_systems(step, &system))
-                    .min_by(|s1, s2| s1.len().cmp(&s2.len()).then(Ordering::Greater))
-                    .filter(|s| s.len() < max_threads);
+                    .filter(|systsems| systsems.len() < max_threads)
+                    .last();
 
                 match systems {
                     Some(systems) => systems.push(system),
@@ -155,6 +143,7 @@ impl ScheduleBuilder {
 }
 
 /// Steps that can be run by a [`Schedule`].
+#[derive(Debug)]
 pub enum ScheduleStep {
     /// Runs the systems in parallel.
     Systems(Vec<System>),
@@ -164,25 +153,6 @@ pub enum ScheduleStep {
     ExclusiveSystems(Vec<ExclusiveSystem>),
     /// Prevents future systems from running in parallel with previous ones.
     Barrier,
-}
-
-impl fmt::Debug for ScheduleStep {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Systems(systems) => {
-                f.debug_tuple("ScheduleStep::Systems").field(&systems.len()).finish()
-            }
-            Self::LocalSystems(systems) => {
-                f.debug_tuple("ScheduleStep::LocalSystems").field(&systems.len()).finish()
-            }
-            Self::ExclusiveSystems(local_fns) => {
-                f.debug_tuple("ScheduleStep::ExclusiveSystems").field(&local_fns.len()).finish()
-            }
-            Self::Barrier => {
-                write!(f, "ScheduleStep::Barrier")
-            }
-        }
-    }
 }
 
 /// Schedules systems to run sequentially or in parallel without data conflicts.
@@ -217,8 +187,8 @@ impl Schedule {
                         register(world, param);
                     }
                 }
-                ScheduleStep::LocalSystems(systems) => {
-                    for param in systems.iter().flat_map(LocalSystem::borrows) {
+                ScheduleStep::LocalSystems(local_systems) => {
+                    for param in local_systems.iter().flat_map(LocalSystem::borrows) {
                         register(world, param);
                     }
                 }
@@ -306,10 +276,10 @@ impl Schedule {
                         crate::run_local(world, resources, local_system);
                     }
                 }
-                ScheduleStep::ExclusiveSystems(local_fns) => {
-                    for local_fn in local_fns {
+                ScheduleStep::ExclusiveSystems(exclusive_systems) => {
+                    for exclusive_system in exclusive_systems {
                         world.maintain();
-                        crate::run_exclusive(world, resources, local_fn);
+                        crate::run_exclusive(world, resources, exclusive_system);
                     }
                 }
                 ScheduleStep::Barrier => world.maintain(),
