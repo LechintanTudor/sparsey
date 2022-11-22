@@ -4,28 +4,34 @@
 #![allow(clippy::unused_unit)]
 
 //! Sparsey is a sparse set-based Entity Component System with lots of features
-//! and nice syntax \~( ˘▾˘\~)
+//! and beautiful syntax.
+//! 
 //! ```
 //! use sparsey::prelude::*;
-//!
-//! struct Position(f32, f32);
-//! struct Velocity(f32, f32);
-//!
+//! 
+//! struct Position(f32);
+//! struct Velocity(f32);
+//! 
 //! fn main() {
 //!     let mut world = World::default();
 //!     world.register::<Position>();
 //!     world.register::<Velocity>();
-//!
-//!     world.create((Position(0.0, 0.0), Velocity(1.0, 2.0)));
-//!     world.create((Position(0.0, 0.0), Velocity(3.0, 4.0)));
-//!     
-//!     let mut positions = world.borrow_mut::<Position>();
-//!     let velocities = world.borrow::<Velocity>();
-//!
-//!     (&mut positions, &velocities).for_each(|(position, velocity)| {
-//!         position.0 += velocity.0;
-//!         position.1 += velocity.1;
-//!     });
+//! 
+//!     world.create((Position(0.0),));
+//!     world.create((Position(0.0), Velocity(1.0)));
+//!     world.create((Position(0.0), Velocity(2.0)));
+//! 
+//!     let resources = Resources::default();
+//! 
+//!     sparsey::run(
+//!         &world,
+//!         &resources,
+//!         |mut positions: CompMut<Position>, velocities: Comp<Velocity>| {
+//!             (&mut positions, &velocities).for_each(|(position, velocity)| {
+//!                 position.0 += velocity.0;
+//!             });
+//!         },
+//!     );
 //! }
 //! ```
 
