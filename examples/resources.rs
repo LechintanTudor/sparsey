@@ -41,7 +41,7 @@ fn main() {
     let mut schedule = Schedule::builder()
         .add_system(raise_lava)
         .add_system(fall_in_lava)
-        .add_local_fn(destroy_fallen_in_lava)
+        .add_exclusive_system_to_end(destroy_fallen_in_lava)
         .build();
 
     let mut world = World::default();

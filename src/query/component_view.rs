@@ -3,130 +3,233 @@ use crate::storage::{Component, Entity, SparseArray};
 use crate::world::{Comp, CompMut};
 use std::ops::RangeBounds;
 
-#[doc(hidden)]
 #[allow(clippy::len_without_is_empty)]
-pub unsafe trait ComponentView<'a> {
-    type Item: 'a;
-    type Component: Component;
-    type ComponentSlice: 'a;
+pub trait ComponentView {
+    type Ref<'a>
+    where
+        Self: 'a;
 
-    fn len(&self) -> usize;
+    type Ptr: Copy;
 
-    fn group_info(&self) -> Option<GroupInfo<'a>>;
+    type Slice<'a>
+    where
+        Self: 'a;
 
-    fn get(self, entity: Entity) -> Option<Self::Item>;
+    fn get<'a>(self, entity: Entity) -> Option<Self::Ref<'a>>
+    where
+        Self: 'a;
 
     fn contains(self, entity: Entity) -> bool;
 
-    fn split(self) -> (&'a [Entity], &'a SparseArray, *mut Self::Component);
+    fn len(&self) -> usize;
 
-    unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item;
-
-    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
+    fn group_info<'a>(&'a self) -> Option<GroupInfo<'a>>
     where
+        Self: 'a;
+
+    fn split_for_iteration<'a>(self) -> (&'a [Entity], &'a SparseArray, Self::Ptr)
+    where
+        Self: 'a;
+
+    unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr;
+
+    unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
+    where
+        Self: 'a;
+
+    unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
+    where
+        Self: 'a,
         R: RangeBounds<usize>;
 
-    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlice
+    unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slice<'a>
     where
+        Self: 'a,
         R: RangeBounds<usize>;
 
-    unsafe fn get_entities_components_unchecked<R>(
+    unsafe fn get_entities_and_components_unchecked<'a, R>(
         self,
         range: R,
-    ) -> (&'a [Entity], Self::ComponentSlice)
+    ) -> (&'a [Entity], Self::Slice<'a>)
     where
+        Self: 'a,
         R: RangeBounds<usize>;
 }
 
-macro_rules! impl_shared_component_view {
-    ($ty:ident) => {
-        unsafe impl<'a, T> ComponentView<'a> for &'a $ty<'a, T>
-        where
-            T: Component,
-        {
-            type Item = &'a T;
-            type Component = T;
-            type ComponentSlice = &'a [T];
-
-            fn len(&self) -> usize {
-                $ty::len(self)
-            }
-
-            fn group_info(&self) -> Option<GroupInfo<'a>> {
-                $ty::group_info(self)
-            }
-
-            fn get(self, entity: Entity) -> Option<Self::Item> {
-                $ty::get(self, entity)
-            }
-
-            fn contains(self, entity: Entity) -> bool {
-                $ty::contains(self, entity)
-            }
-
-            fn split(self) -> (&'a [Entity], &'a SparseArray, *mut Self::Component) {
-                let (entities, sparse, components) = $ty::split(self);
-                (entities, sparse, components.as_ptr() as *mut _)
-            }
-
-            unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item {
-                &*component
-            }
-
-            unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
-            where
-                R: RangeBounds<usize>,
-            {
-                let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
-                $ty::entities(self).get_unchecked(bounds)
-            }
-
-            unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlice
-            where
-                R: RangeBounds<usize>,
-            {
-                let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
-                $ty::components(self).get_unchecked(bounds)
-            }
-
-            unsafe fn get_entities_components_unchecked<R>(
-                self,
-                range: R,
-            ) -> (&'a [Entity], Self::ComponentSlice)
-            where
-                R: RangeBounds<usize>,
-            {
-                let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
-
-                (
-                    $ty::entities(self).get_unchecked(bounds),
-                    $ty::components(self).get_unchecked(bounds),
-                )
-            }
-        }
-    };
-}
-
-impl_shared_component_view!(Comp);
-impl_shared_component_view!(CompMut);
-
-unsafe impl<'a, 'b, T> ComponentView<'a> for &'a mut CompMut<'b, T>
+impl<T> ComponentView for &'_ Comp<'_, T>
 where
     T: Component,
 {
-    type Item = &'a mut T;
-    type Component = T;
-    type ComponentSlice = &'a mut [T];
+    type Ref<'a> = &'a T where Self: 'a;
+    type Ptr = *const T;
+    type Slice<'a> = &'a [T] where Self: 'a;
+
+    fn get<'a>(self, entity: Entity) -> Option<Self::Ref<'a>>
+    where
+        Self: 'a,
+    {
+        Comp::get(self, entity)
+    }
+
+    fn contains(self, entity: Entity) -> bool {
+        Comp::contains(self, entity)
+    }
+
+    fn len(&self) -> usize {
+        Comp::len(self)
+    }
+
+    fn group_info<'a>(&'a self) -> Option<GroupInfo<'a>>
+    where
+        Self: 'a,
+    {
+        Comp::group_info(self)
+    }
+
+    fn split_for_iteration<'a>(self) -> (&'a [Entity], &'a SparseArray, Self::Ptr)
+    where
+        Self: 'a,
+    {
+        let (entities, sparse, dense) = Comp::split(self);
+        (entities, sparse, dense.as_ptr())
+    }
+
+    unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr {
+        ptr.add(offset)
+    }
+
+    unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
+    where
+        Self: 'a,
+    {
+        &*ptr.add(index)
+    }
+
+    unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        Comp::entities(self).get_unchecked(range)
+    }
+
+    unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slice<'a>
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        Comp::components(self).get_unchecked(range)
+    }
+
+    unsafe fn get_entities_and_components_unchecked<'a, R>(
+        self,
+        range: R,
+    ) -> (&'a [Entity], Self::Slice<'a>)
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        let (entities, _, components) = Comp::split(self);
+        (entities.get_unchecked(range), components.get_unchecked(range))
+    }
+}
+
+impl<T> ComponentView for &'_ CompMut<'_, T>
+where
+    T: Component,
+{
+    type Ref<'a> = &'a T where Self: 'a;
+    type Ptr = *const T;
+    type Slice<'a> = &'a [T] where Self: 'a;
+
+    fn get<'a>(self, entity: Entity) -> Option<Self::Ref<'a>>
+    where
+        Self: 'a,
+    {
+        CompMut::get(self, entity)
+    }
+
+    fn contains(self, entity: Entity) -> bool {
+        CompMut::contains(self, entity)
+    }
 
     fn len(&self) -> usize {
         CompMut::len(self)
     }
 
-    fn group_info(&self) -> Option<GroupInfo<'a>> {
+    fn group_info<'a>(&'a self) -> Option<GroupInfo<'a>>
+    where
+        Self: 'a,
+    {
         CompMut::group_info(self)
     }
 
-    fn get(self, entity: Entity) -> Option<Self::Item> {
+    fn split_for_iteration<'a>(self) -> (&'a [Entity], &'a SparseArray, Self::Ptr)
+    where
+        Self: 'a,
+    {
+        let (entities, sparse, dense) = CompMut::split(self);
+        (entities, sparse, dense.as_ptr())
+    }
+
+    unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr {
+        ptr.add(offset)
+    }
+
+    unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
+    where
+        Self: 'a,
+    {
+        &*ptr.add(index)
+    }
+
+    unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        CompMut::entities(self).get_unchecked(range)
+    }
+
+    unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slice<'a>
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        CompMut::components(self).get_unchecked(range)
+    }
+
+    unsafe fn get_entities_and_components_unchecked<'a, R>(
+        self,
+        range: R,
+    ) -> (&'a [Entity], Self::Slice<'a>)
+    where
+        Self: 'a,
+        R: RangeBounds<usize>,
+    {
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        let (entities, _, components) = CompMut::split(self);
+        (entities.get_unchecked(range), components.get_unchecked(range))
+    }
+}
+
+impl<T> ComponentView for &'_ mut CompMut<'_, T>
+where
+    T: Component,
+{
+    type Ref<'a> = &'a mut T where Self: 'a;
+    type Ptr = *mut T;
+    type Slice<'a> = &'a mut [T] where Self: 'a;
+
+    fn get<'a>(self, entity: Entity) -> Option<Self::Ref<'a>>
+    where
+        Self: 'a,
+    {
         CompMut::get_mut(self, entity)
     }
 
@@ -134,41 +237,64 @@ where
         CompMut::contains(self, entity)
     }
 
-    fn split(self) -> (&'a [Entity], &'a SparseArray, *mut Self::Component) {
-        let (entities, sparse, components) = CompMut::split_mut(self);
-        (entities, sparse, components.as_mut_ptr())
+    fn len(&self) -> usize {
+        CompMut::len(self)
     }
 
-    unsafe fn get_from_component_ptr(component: *mut Self::Component) -> Self::Item {
-        &mut *component
-    }
-
-    unsafe fn get_entities_unchecked<R>(self, range: R) -> &'a [Entity]
+    fn group_info<'a>(&'a self) -> Option<GroupInfo<'a>>
     where
+        Self: 'a,
+    {
+        CompMut::group_info(self)
+    }
+
+    fn split_for_iteration<'a>(self) -> (&'a [Entity], &'a SparseArray, Self::Ptr)
+    where
+        Self: 'a,
+    {
+        let (dense, sparse, slice) = CompMut::split_mut(self);
+        (dense, sparse, slice.as_mut_ptr())
+    }
+
+    unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr {
+        ptr.add(offset)
+    }
+
+    unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
+    where
+        Self: 'a,
+    {
+        &mut *ptr.add(index)
+    }
+
+    unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
+    where
+        Self: 'a,
         R: RangeBounds<usize>,
     {
-        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
-        CompMut::entities(self).get_unchecked(bounds)
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        CompMut::entities(self).get_unchecked(range)
     }
 
-    unsafe fn get_components_unchecked<R>(self, range: R) -> Self::ComponentSlice
+    unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slice<'a>
     where
+        Self: 'a,
         R: RangeBounds<usize>,
     {
-        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
-        CompMut::components_mut(self).get_unchecked_mut(bounds)
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
+        CompMut::components_mut(self).get_unchecked_mut(range)
     }
 
-    unsafe fn get_entities_components_unchecked<R>(
+    unsafe fn get_entities_and_components_unchecked<'a, R>(
         self,
         range: R,
-    ) -> (&'a [Entity], Self::ComponentSlice)
+    ) -> (&'a [Entity], Self::Slice<'a>)
     where
+        Self: 'a,
         R: RangeBounds<usize>,
     {
+        let range = (range.start_bound().cloned(), range.end_bound().cloned());
         let (entities, _, components) = CompMut::split_mut(self);
-        let bounds = (range.start_bound().cloned(), range.end_bound().cloned());
-
-        (entities.get_unchecked(bounds), components.get_unchecked_mut(bounds))
+        (entities.get_unchecked(range), components.get_unchecked_mut(range))
     }
 }

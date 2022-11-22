@@ -166,6 +166,12 @@ impl World {
         self.entities.as_ref()
     }
 
+    /// Returns whether the `World` contains no entities.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.entities.is_empty()
+    }
+
     /// Removes all the entities and components from the world.
     pub fn clear(&mut self) {
         self.entities.clear();

@@ -1,4 +1,4 @@
-use crate::resources::{Res, ResMut, Resource, UnsafeResources};
+use crate::resources::{Res, ResMut, Resource, Resources, UnsafeResources};
 use std::any::TypeId;
 
 /// View over thread-safe resources.
@@ -73,5 +73,19 @@ impl<'a> SyncResources<'a> {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.resources.is_empty()
+    }
+}
+
+impl<'a> From<&'a Resources> for SyncResources<'a> {
+    #[inline]
+    fn from(resources: &'a Resources) -> Self {
+        resources.sync()
+    }
+}
+
+impl<'a> From<&'a mut Resources> for SyncResources<'a> {
+    #[inline]
+    fn from(resources: &'a mut Resources) -> Self {
+        resources.sync()
     }
 }

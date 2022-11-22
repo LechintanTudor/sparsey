@@ -5,9 +5,9 @@ use crate::storage::Entity;
 /// Iterator over grouped or ungrouped storages.
 pub enum Iter<'a, G, I, E>
 where
-    G: QueryPart<'a>,
-    I: QueryPart<'a>,
-    E: QueryPart<'a>,
+    G: QueryPart,
+    I: QueryPart,
+    E: QueryPart,
 {
     /// Iterator over ungrouped storages.
     Sparse(SparseIter<'a, G, I, E>),
@@ -17,9 +17,9 @@ where
 
 impl<'a, G, I, E> Iter<'a, G, I, E>
 where
-    G: QueryPart<'a>,
-    I: QueryPart<'a>,
-    E: QueryPart<'a>,
+    G: QueryPart,
+    I: QueryPart,
+    E: QueryPart,
 {
     pub(crate) fn new(get: G, include: I, exclude: E) -> Self {
         let get_info = get.group_info();
@@ -28,10 +28,10 @@ where
 
         match query::group_range(get_info, include_info, exclude_info) {
             Some(range) => {
-                let (entities, components) = get.split_dense();
+                let (entities, components) = get.split_for_dense_iteration();
 
                 unsafe {
-                    let components = G::offset_component_ptrs(components, range.start as isize);
+                    let components = G::offset_ptrs(components, range.start);
 
                     let entities = &entities
                         .unwrap_or_else(|| {
@@ -43,9 +43,9 @@ where
                 }
             }
             None => {
-                let (get_entities, sparse, components) = get.split_sparse();
-                let (sparse_entities, include) = include.split_filter();
-                let (_, exclude) = exclude.split_filter();
+                let (get_entities, sparse, components) = get.split_for_sparse_iteration();
+                let (sparse_entities, include) = include.split_for_filtering();
+                let (_, exclude) = exclude.split_for_filtering();
 
                 let entities = match (get_entities, sparse_entities) {
                     (Some(e1), Some(e2)) => {
@@ -80,11 +80,11 @@ where
 
 impl<'a, G, I, E> Iterator for Iter<'a, G, I, E>
 where
-    G: QueryPart<'a>,
-    I: QueryPart<'a>,
-    E: QueryPart<'a>,
+    G: QueryPart,
+    I: QueryPart,
+    E: QueryPart,
 {
-    type Item = G::Item;
+    type Item = G::Refs<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -107,9 +107,9 @@ where
 
 impl<'a, G, I, E> EntityIterator for Iter<'a, G, I, E>
 where
-    G: QueryPart<'a>,
-    I: QueryPart<'a>,
-    E: QueryPart<'a>,
+    G: QueryPart,
+    I: QueryPart,
+    E: QueryPart,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         match self {

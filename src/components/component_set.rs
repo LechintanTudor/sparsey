@@ -75,7 +75,6 @@ macro_rules! impl_component_set {
         {
             type RemoveResult = ($(Option<$comp>,)+);
 
-            #[allow(clippy::eval_order_dependence)]
             fn insert(
                 storages: &mut ComponentStorages,
                 entity: Entity,
@@ -96,7 +95,6 @@ macro_rules! impl_component_set {
                 }
             }
 
-            #[allow(clippy::eval_order_dependence)]
             fn extend<'a, It>(
                 entities: &'a mut EntityStorage,
                 storages: &mut ComponentStorages,
@@ -109,6 +107,7 @@ macro_rules! impl_component_set {
                 let mut family_mask = FamilyMask::default();
 
                 {
+                    #[allow(clippy::mixed_read_write_in_expression)]
                     let storage_ptrs = (
                         $({
                             let (storage, mask) = get_as_ptr_with_family_mask::<$comp>(storages);
@@ -135,11 +134,11 @@ macro_rules! impl_component_set {
                 }
             }
 
-            #[allow(clippy::eval_order_dependence)]
             fn remove(storages: &mut ComponentStorages, entity: Entity) -> Self::RemoveResult {
                 let mut family_mask = FamilyMask::default();
                 let mut group_mask = GroupMask::default();
 
+                #[allow(clippy::mixed_read_write_in_expression)]
                 let storage_ptrs = ($(
                     {
                         let (storage, family, group) = get_as_ptr_with_masks::<$comp>(storages);
@@ -157,11 +156,11 @@ macro_rules! impl_component_set {
                 }
             }
 
-            #[allow(clippy::eval_order_dependence)]
             fn delete(storages: &mut ComponentStorages, entity: Entity) {
                 let mut family_mask = FamilyMask::default();
                 let mut group_mask = GroupMask::default();
 
+                #[allow(clippy::mixed_read_write_in_expression)]
                 let storage_ptrs = ($(
                     {
                         let (storage, family, group) = get_as_ptr_with_masks::<$comp>(storages);

@@ -4,27 +4,27 @@ use crate::storage::Entity;
 /// Iterator over grouped storages. Extremely fast.
 pub struct DenseIter<'a, G>
 where
-    G: QueryPart<'a>,
+    G: QueryPart + 'a,
 {
     index: usize,
     entities: &'a [Entity],
-    components: G::ComponentPtrs,
+    components: G::Ptrs,
 }
 
 impl<'a, G> DenseIter<'a, G>
 where
-    G: QueryPart<'a>,
+    G: QueryPart,
 {
-    pub(crate) unsafe fn new(entities: &'a [Entity], components: G::ComponentPtrs) -> Self {
+    pub(crate) unsafe fn new(entities: &'a [Entity], components: G::Ptrs) -> Self {
         Self { index: 0, entities, components }
     }
 }
 
 impl<'a, G> Iterator for DenseIter<'a, G>
 where
-    G: QueryPart<'a>,
+    G: QueryPart,
 {
-    type Item = G::Item;
+    type Item = G::Refs<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let index = self.index;
@@ -35,17 +35,17 @@ where
 
         self.index += 1;
 
-        unsafe { Some(G::get_from_dense_components(self.components, index)) }
+        unsafe { Some(G::dense_get(self.components, index)) }
     }
 
     fn fold<B, F>(mut self, mut init: B, mut f: F) -> B
     where
-        Self: Sized,
+        Self: Sized + 'a,
         F: FnMut(B, Self::Item) -> B,
     {
         while self.index < self.entities.len() {
             unsafe {
-                init = f(init, G::get_from_dense_components(self.components, self.index));
+                init = f(init, G::dense_get(self.components, self.index));
             }
 
             self.index += 1;
@@ -57,7 +57,7 @@ where
 
 impl<'a, G> EntityIterator for DenseIter<'a, G>
 where
-    G: QueryPart<'a>,
+    G: QueryPart,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
         let index = self.index;
@@ -68,17 +68,12 @@ where
 
         self.index += 1;
 
-        unsafe {
-            Some((
-                *self.entities.get_unchecked(index),
-                G::get_from_dense_components(self.components, index),
-            ))
-        }
+        unsafe { Some((*self.entities.get_unchecked(index), G::dense_get(self.components, index))) }
     }
 
     fn fold_with_entity<B, F>(mut self, mut init: B, mut f: F) -> B
     where
-        Self: Sized,
+        Self: Sized + 'a,
         F: FnMut(B, (Entity, Self::Item)) -> B,
     {
         while self.index < self.entities.len() {
@@ -87,7 +82,7 @@ where
                     init,
                     (
                         *self.entities.get_unchecked(self.index),
-                        G::get_from_dense_components(self.components, self.index),
+                        G::dense_get(self.components, self.index),
                     ),
                 );
             }
