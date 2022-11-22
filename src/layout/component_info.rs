@@ -5,11 +5,11 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
-/// Holds information about a `Component` type.
+/// Holds information about a [`Component`] type.
 pub struct ComponentInfo(Box<dyn AbstractType>);
 
 impl ComponentInfo {
-    /// Creates a new `ComponentInfo` for the given `Component` type.
+    /// Creates an object that stores info for the given [`Component`] type.
     pub fn new<T>() -> Self
     where
         T: Component,
@@ -17,12 +17,12 @@ impl ComponentInfo {
         Self(Box::new(Type::<T>(PhantomData)))
     }
 
-    /// Returns the `TypeId` of the `Component`.
+    /// Returns the [`TypeId`] of the [`Component`].
     pub fn type_id(&self) -> TypeId {
         self.0.type_id()
     }
 
-    /// Returns an empty `ComponentStorage` for the `Component`.
+    /// Returns an empty [`ComponentStorage`] for the [`Component`].
     pub(crate) fn create_storage(&self) -> ComponentStorage {
         self.0.create_storage()
     }

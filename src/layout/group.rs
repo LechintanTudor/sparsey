@@ -42,9 +42,9 @@ impl LayoutGroup {
     }
 }
 
-/// Helper trait for building a `LayoutGroup` from a `Component` tuple.
+/// Helper trait for building a [`LayoutGroup`] from a [`Component`] tuple.
 pub trait LayoutGroupDescriptor {
-    /// Builds a `LayoutGroup` with the given component types.
+    /// Builds a [`LayoutGroup`] with the given component types.
     fn group() -> LayoutGroup;
 }
 

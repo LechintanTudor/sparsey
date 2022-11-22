@@ -5,12 +5,12 @@ use std::any::TypeId;
 use std::iter;
 
 /// Manages components in component storages.
-/// Implemented for `Component` tuples up to arity 16.
+/// Implemented for [`Component`] tuples up to arity 16.
 ///
 /// # Safety
 /// All operations must preserve component grouping.
 pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
-    /// Result of the `remove` operation.
+    /// Result of the [`remove`](ComponentSet::remove) operation.
     type RemoveResult: Send + Sync + 'static;
 
     /// Adds the given `components` to `entity`.

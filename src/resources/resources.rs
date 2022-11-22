@@ -64,7 +64,7 @@ impl Resources {
         self.resources.contains::<T>()
     }
 
-    /// Returns `true` if the storage contains a resource with the given `TypeId`.
+    /// Returns `true` if the storage contains a resource with the given [`TypeId`].
     #[inline]
     #[must_use]
     pub fn contains_type_id(&self, resource_type_id: TypeId) -> bool {
@@ -91,7 +91,7 @@ impl Resources {
         unsafe { self.resources.remove() }
     }
 
-    /// Deletes the resource with the given `TypeId` from the storage. Returns `true` if there was
+    /// Deletes the resource with the given [`TypeId`] from the storage. Returns `true` if there was
     /// anything to delete.
     #[inline]
     pub fn delete(&mut self, resource_type_id: TypeId) -> bool {

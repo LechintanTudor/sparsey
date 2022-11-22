@@ -1,5 +1,5 @@
-/// Trait automatically implemented for all types that can be used as components. (Any `Send + Sync
-/// + 'static` type)
+/// Trait automatically implemented for all types that can be used as components
+/// (Any `Send + Sync + 'static` type).
 pub trait Component: Send + Sync + 'static {
     // Empty
 }

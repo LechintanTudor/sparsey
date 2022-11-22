@@ -3,7 +3,7 @@ use crate::storage::{Component, ComponentStorage, Entity, SparseArray};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::marker::PhantomData;
 
-/// Immutable view over all components of type `T` in a world.
+/// Shared view over all components of type `T` in a world.
 pub struct Comp<'a, T> {
     storage: AtomicRef<'a, ComponentStorage>,
     group_info: Option<GroupInfo<'a>>,
@@ -60,7 +60,7 @@ where
     }
 }
 
-/// Mutable view over all components of type `T` in a world.
+/// Exclusive view over all components of type `T` in a world.
 pub struct CompMut<'a, T> {
     storage: AtomicRefMut<'a, ComponentStorage>,
     group_info: Option<GroupInfo<'a>>,

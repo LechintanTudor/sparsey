@@ -1,4 +1,5 @@
-//! Helper types for describing the layout of component storages within a `World`.
+//! Helper types for describing the layout of component storages within a
+//! [`World`](crate::world::World).
 
 mod component_info;
 mod group;

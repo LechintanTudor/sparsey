@@ -1,7 +1,5 @@
 //! Query and iterate component views.
 
-#![forbid(missing_docs)]
-
 mod component_view;
 mod compound_query;
 mod into_query_parts;
