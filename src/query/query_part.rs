@@ -114,6 +114,7 @@ impl QueryPart for () {
     type Ptrs = ();
     type Slices<'a> = ();
 
+    #[inline(always)]
     fn get<'a>(self, _entity: Entity) -> Option<Self::Refs<'a>>
     where
         Self: 'a,
@@ -121,14 +122,17 @@ impl QueryPart for () {
         None
     }
 
+    #[inline(always)]
     fn contains_all(self, _entity: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn contains_none(self, _entity: Entity) -> bool {
         true
     }
 
+    #[inline(always)]
     fn group_info<'a>(&'a self) -> Option<QueryGroupInfo<'a>>
     where
         Self: 'a,
@@ -136,6 +140,7 @@ impl QueryPart for () {
         Some(QueryGroupInfo::Empty)
     }
 
+    #[inline(always)]
     fn split_for_sparse_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Ptrs)
     where
         Self: 'a,
@@ -143,6 +148,7 @@ impl QueryPart for () {
         (None, (), ())
     }
 
+    #[inline(always)]
     fn split_for_dense_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Ptrs)
     where
         Self: 'a,
@@ -150,6 +156,7 @@ impl QueryPart for () {
         (None, ())
     }
 
+    #[inline(always)]
     fn split_for_filtering<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>)
     where
         Self: 'a,
@@ -157,6 +164,7 @@ impl QueryPart for () {
         (None, ())
     }
 
+    #[inline(always)]
     fn into_any_entities<'a>(self) -> Option<&'a [Entity]>
     where
         Self: 'a,
@@ -164,10 +172,12 @@ impl QueryPart for () {
         None
     }
 
+    #[inline(always)]
     unsafe fn offset_ptrs(_ptrs: Self::Ptrs, _offset: usize) -> Self::Ptrs {
         ()
     }
 
+    #[inline(always)]
     unsafe fn sparse_get<'a>(
         _sparse: Self::Sparse<'a>,
         _ptrs: Self::Ptrs,
@@ -179,6 +189,7 @@ impl QueryPart for () {
         None
     }
 
+    #[inline(always)]
     unsafe fn dense_get<'a>(_ptrs: Self::Ptrs, _dense_index: usize) -> Self::Refs<'a>
     where
         Self: 'a,
@@ -186,6 +197,7 @@ impl QueryPart for () {
         ()
     }
 
+    #[inline(always)]
     fn sparse_contains_all<'a>(_sparse: Self::Sparse<'a>, _entity: Entity) -> bool
     where
         Self: 'a,
@@ -193,6 +205,7 @@ impl QueryPart for () {
         true
     }
 
+    #[inline(always)]
     fn sparse_contains_none<'a>(_sparse: Self::Sparse<'a>, _entity: Entity) -> bool
     where
         Self: 'a,
@@ -200,6 +213,7 @@ impl QueryPart for () {
         true
     }
 
+    #[inline(always)]
     unsafe fn get_entities_unchecked<'a, R>(self, _range: R) -> &'a [Entity]
     where
         Self: 'a,
@@ -208,6 +222,7 @@ impl QueryPart for () {
         &[]
     }
 
+    #[inline(always)]
     unsafe fn get_components_unchecked<'a, R>(self, _range: R) -> Self::Slices<'a>
     where
         Self: 'a,
@@ -216,6 +231,7 @@ impl QueryPart for () {
         ()
     }
 
+    #[inline(always)]
     unsafe fn get_entities_and_components_unchecked<'a, R>(
         self,
         _range: R,
