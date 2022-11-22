@@ -19,7 +19,7 @@ atomic_refcell = "0.1.8"
 downcast-rs = "1.2"
 rustc-hash = "1.1"
 
-rayon = { version = "1.5", optional = true }
+rayon = { version = "1.6", optional = true }
 
 [dev-dependencies]
-rayon = "1.5"
+rayon = "1.6"
