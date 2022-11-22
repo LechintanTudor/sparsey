@@ -3,10 +3,15 @@
 [![Crates.io](https://img.shields.io/crates/v/sparsey)](https://crates.io/crates/sparsey)
 [![Documentation](https://docs.rs/sparsey/badge.svg)](https://docs.rs/sparsey)
 
-Sparsey is a sparse set-based Entity Component System with lots of features and
-beautiful syntax.
+Sparsey is a sparse set-based
+[Entity Component System (ECS)](https://github.com/SanderMertens/ecs-faq#what-is-ecs).
 
-# Example
+## Design Goals
+
+- Be flexible: Any `Send + Sync + 'static` type can be used as a component.
+- Be concise: The most commonly used functionalities should require the least amount of typing.
+
+## Example
 
 ```rust
 use sparsey::prelude::*;
@@ -48,9 +53,9 @@ fn main() {
 }
 ```
 
-# Features
+## Features
 
-## Easy to Use Systems
+### Easy to Use Systems
 
 Systems are plain functions that borrow data from `World` and `Resources`.
 
@@ -71,13 +76,15 @@ fn update_hps(mut hps: CompMut<Hp>, heals: Comp<Heal>, heal_multipler: Res<HealM
 Systems will be scheduled to run in parallel if their paramters don't conflict.
 
 ```rust
-let schedule = Schedule::builder()
+let mut schedule = Schedule::builder()
     .add_system(update_positions)
     .add_system(update_hps)
     .build();
+    
+schedule.run(&mut world, &mut resources);
 ```
 
-## Expressive Queries
+### Expressive Queries
 
 Get, include and exclude components using Sparsey's query API.
 
@@ -97,7 +104,7 @@ fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
 }
 ```
 
-## Great Performance with Grouped Storages
+### Great Performance with Grouped Storages
 
 Sparsey allows the user to "group" component storages to greatly optimize iteration performance.
 <br />
@@ -117,32 +124,39 @@ After the layout is set, iterators over the grouped storages become "dense", gre
 performance. Additionally, grouped storages allow access to their components and entities as slices.
 
 ```rust
-fn dense_iterators(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>) {
-    assert!((&a, &b).iter().is_dense());
-    assert!((&a, &b, &c, &d).iter().is_dense());
-    assert!((&a, &b).exclude((&c, &d)).iter().is_dense());
+fn dense_iterators(a: Comp<A>, b: Comp<B>) {
+    if let Some(entities) = (&a, &b).into_entities() {
+        // ...
+    }
 
-    // These return Some(_) if the storages are grouped and None otherwise.
-    let _: Option<&[Entity]> = (&a, &b).as_entity_slice();
-    let _: Option<(&[A], &[B])> = (&a, &b).as_component_slices();
-    let _: Option<(&[Entity], (&[A], &[B]))> = (&a, &b).as_entity_and_component_slices();
+    if let Some((a_slice, b_slice)) = (&a, &b).into_components() {
+        // ...
+    }
+
+    if let Some((entities, (a_slice, b_slice))) = (&a, &b).into_entities_and_components() {
+        /// ...
+    }
 }
 ```
 
-# Thanks
+## Thanks
 
 Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely
 [Bevy](https://github.com/bevyengine/bevy), [EnTT](https://github.com/skypjack/entt),
 [Legion](https://github.com/amethyst/legion), [Shipyard](https://github.com/leudz/shipyard) and
 [Specs](https://github.com/amethyst/specs). Make sure you check them out!
 
-# License
+## License
 
 Sparsey is dual-licensed under either
 
 - MIT License (docs/LICENSE-MIT or http://opensource.org/licenses/MIT)
 - Apache License, Version 2.0 (docs/LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
 
-at your option. <br /> Unless you explicitly state otherwise, any contribution intentionally
-submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual
-licensed as above without any additional terms or conditions.
+at your option.
+
+<br /><br />
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the
+work by you, as defined in the Apache-2.0 license, shall be dual licensed as above without any
+additional terms or conditions.

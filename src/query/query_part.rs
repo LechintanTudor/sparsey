@@ -1,53 +1,68 @@
-use std::ops::RangeBounds;
-
 use crate::query::{ComponentView, QueryGroupInfo};
 use crate::storage::{Entity, SparseArray};
+use std::ops::RangeBounds;
 
+/// Allows getting, including or excluding components in a query.
 pub trait QueryPart {
+    /// References to components returned by the query.
     type Refs<'a>
     where
         Self: 'a;
 
+    /// References to sparse arrays obtained from splitting the query part.
     type Sparse<'a>: Copy
     where
         Self: 'a;
 
+    /// Pointers to components returned by the query.
     type Ptrs: Copy;
 
+    /// Slices of components returned by the query.
     type Slices<'a>
     where
         Self: 'a;
 
+    /// Returns the components mapped to `entity` if the exist.
     fn get<'a>(self, entity: Entity) -> Option<Self::Refs<'a>>
     where
         Self: 'a;
 
+    /// Returns whether `entity` contains all the components specified by the query.
     fn contains_all(self, entity: Entity) -> bool;
 
+    /// Returns whether `entity` contains none of the components specified by the query.
     fn contains_none(self, entity: Entity) -> bool;
 
+    /// Returns the group info of the query.
     fn group_info<'a>(&'a self) -> Option<QueryGroupInfo<'a>>
     where
         Self: 'a;
 
+    /// Splits the query part for sparse iteration.
     fn split_for_sparse_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Ptrs)
     where
         Self: 'a;
 
+    /// Splits the query part for dense iteration.
     fn split_for_dense_iteration<'a>(self) -> (Option<&'a [Entity]>, Self::Ptrs)
     where
         Self: 'a;
 
+    /// Splits the query part for filtering iterators.
     fn split_for_filtering<'a>(self) -> (Option<&'a [Entity]>, Self::Sparse<'a>)
     where
         Self: 'a;
 
+    /// Returns a slice of entitites that belongs to one of the [`ComponentViews`](ComponentView)
+    /// specified by the query.
     fn into_any_entities<'a>(self) -> Option<&'a [Entity]>
     where
         Self: 'a;
 
+    /// Applies an offset to the given pointers.
     unsafe fn offset_ptrs(ptrs: Self::Ptrs, offset: usize) -> Self::Ptrs;
 
+    /// Returns the components at the given sparse index, if they exist.
     unsafe fn sparse_get<'a>(
         sparse: Self::Sparse<'a>,
         ptrs: Self::Ptrs,
@@ -56,28 +71,34 @@ pub trait QueryPart {
     where
         Self: 'a;
 
+    /// Returns the components at the given dense index, if they exist.
     unsafe fn dense_get<'a>(ptrs: Self::Ptrs, dense_index: usize) -> Self::Refs<'a>
     where
         Self: 'a;
 
+    /// Returns whether all of the sparse arrays contain `entity`.
     fn sparse_contains_all<'a>(sparse: Self::Sparse<'a>, entity: Entity) -> bool
     where
         Self: 'a;
 
+    /// Returns whether none of the sparse arrays contain `entity`.
     fn sparse_contains_none<'a>(sparse: Self::Sparse<'a>, entity: Entity) -> bool
     where
         Self: 'a;
 
+    /// Returns a slice containing all entities in the given `range`.
     unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
     where
         Self: 'a,
         R: RangeBounds<usize>;
 
+    /// Returns slices containing all components in the given `range`.
     unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slices<'a>
     where
         Self: 'a,
         R: RangeBounds<usize>;
 
+    /// Returns all entities and components in the given `range` as slices.
     unsafe fn get_entities_and_components_unchecked<'a, R>(
         self,
         range: R,

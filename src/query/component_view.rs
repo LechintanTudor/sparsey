@@ -3,50 +3,64 @@ use crate::storage::{Component, Entity, SparseArray};
 use crate::world::{Comp, CompMut};
 use std::ops::RangeBounds;
 
+/// Building block for queries.
 #[allow(clippy::len_without_is_empty)]
 pub trait ComponentView {
+    /// Reference to the component returned by the view.
     type Ref<'a>
     where
         Self: 'a;
 
+    /// Pointer to the component returned by the view.
     type Ptr: Copy;
 
+    /// Slice of components returned by the view.
     type Slice<'a>
     where
         Self: 'a;
 
+    /// Returns the component mapped to `entity` if it exists.
     fn get<'a>(self, entity: Entity) -> Option<Self::Ref<'a>>
     where
         Self: 'a;
 
+    /// Returns whether the view contains `entity`.
     fn contains(self, entity: Entity) -> bool;
 
+    /// Returns the number of entities in the view.
     fn len(&self) -> usize;
 
+    /// Returns the gorup info of the view.
     fn group_info<'a>(&'a self) -> Option<GroupInfo<'a>>
     where
         Self: 'a;
 
+    /// Splits the view for iteration.
     fn split_for_iteration<'a>(self) -> (&'a [Entity], &'a SparseArray, Self::Ptr)
     where
         Self: 'a;
 
+    /// Applies an offsets to the given pointer.
     unsafe fn offset_ptr(ptr: Self::Ptr, offset: usize) -> Self::Ptr;
 
+    /// Returns the component at the given `index`.
     unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
     where
         Self: 'a;
 
+    /// Returns a slice containing all entities in the given `range`.
     unsafe fn get_entities_unchecked<'a, R>(self, range: R) -> &'a [Entity]
     where
         Self: 'a,
         R: RangeBounds<usize>;
 
+    /// Returns a slice containing all components in the given `range`.
     unsafe fn get_components_unchecked<'a, R>(self, range: R) -> Self::Slice<'a>
     where
         Self: 'a,
         R: RangeBounds<usize>;
 
+    /// Returns all entities and components in the given `range` as slices.
     unsafe fn get_entities_and_components_unchecked<'a, R>(
         self,
         range: R,

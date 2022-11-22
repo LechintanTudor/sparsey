@@ -17,8 +17,8 @@ pub trait EntityIterator: Iterator {
     }
 }
 
-/// Wrapper over a compoennt iterator that makes it also return the `Entity` to which the components
-/// belong.
+/// Wrapper over a component iterator that makes it also return the [`Entity`] to which the
+/// components belong.
 pub struct EntityIter<I>(I);
 
 impl<I> Iterator for EntityIter<I>
@@ -40,9 +40,9 @@ where
     }
 }
 
-/// Helper trait for creating an `EntityIter`.
+/// Helper trait for creating an [`EntityIter`].
 pub trait IntoEntityIter: EntityIterator + Sized {
-    /// Makes the iterator also return the `Entity` to which the components belong.
+    /// Makes the iterator also return the [`Entity`] to which the components belong.
     fn with_entity(self) -> EntityIter<Self>;
 }
 

@@ -1,18 +1,23 @@
 use crate::query::{IncludeExcludeQuery, IncludeQuery, QueryPart};
 
+/// Helper trait for building a [`Query`](crate::query::Query).
 pub trait IntoQueryParts {
+    /// Which components to fetch.
     type Get<'a>: QueryPart
     where
         Self: 'a;
 
+    /// Which components to include.
     type Include<'a>: QueryPart
     where
         Self: 'a;
 
+    /// Which components to exclude.
     type Exclude<'a>: QueryPart
     where
         Self: 'a;
 
+    /// Splits `self` into its underlying [`QueryParts`](QueryPart).
     fn into_query_parts<'a>(self) -> (Self::Get<'a>, Self::Include<'a>, Self::Exclude<'a>)
     where
         Self: 'a;

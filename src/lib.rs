@@ -5,24 +5,24 @@
 
 //! Sparsey is a sparse set-based Entity Component System with lots of features
 //! and beautiful syntax.
-//! 
+//!
 //! ```
 //! use sparsey::prelude::*;
-//! 
+//!
 //! struct Position(f32);
 //! struct Velocity(f32);
-//! 
+//!
 //! fn main() {
 //!     let mut world = World::default();
 //!     world.register::<Position>();
 //!     world.register::<Velocity>();
-//! 
+//!
 //!     world.create((Position(0.0),));
 //!     world.create((Position(0.0), Velocity(1.0)));
 //!     world.create((Position(0.0), Velocity(2.0)));
-//! 
+//!
 //!     let resources = Resources::default();
-//! 
+//!
 //!     sparsey::run(
 //!         &world,
 //!         &resources,

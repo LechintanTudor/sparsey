@@ -1,9 +1,9 @@
-mod dense;
-mod entities;
+mod dense_iter;
+mod entities_iter;
 mod iter;
-mod sparse;
+mod sparse_iter;
 
-pub use self::dense::*;
-pub use self::entities::*;
+pub use self::dense_iter::*;
+pub use self::entities_iter::*;
 pub use self::iter::*;
-pub use self::sparse::*;
+pub use self::sparse_iter::*;

@@ -67,12 +67,12 @@ where
         }
     }
 
-    /// Returns `true` if the iterator is sparse.
+    /// Returns whether the iterator is sparse.
     pub fn is_sparse(&self) -> bool {
         matches!(self, Self::Sparse(_))
     }
 
-    /// Returns `true` if the iterator is dense.
+    /// Returns whether the iterator is dense.
     pub fn is_dense(&self) -> bool {
         matches!(self, Self::Dense(_))
     }
