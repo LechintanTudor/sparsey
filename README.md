@@ -135,7 +135,7 @@ fn dense_iterators(a: Comp<A>, b: Comp<B>) {
     }
 
     if let Some((entities, (a_slice, b_slice))) = (&a, &b).into_entities_and_components() {
-        /// ...
+        // ...
     }
 }
 ```
