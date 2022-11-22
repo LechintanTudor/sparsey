@@ -107,9 +107,7 @@ fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
 
 ### Great Performance with Grouped Storages
 
-Sparsey allows the user to "group" component storages to greatly optimize iteration performance.
-<br />
-
+Sparsey allows the user to "group" component storages to greatly optimize iteration performance. 
 Groups are created by setting a `Layout` on the `World`.
 
 ```rust
