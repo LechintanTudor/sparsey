@@ -10,6 +10,7 @@ Sparsey is a sparse set-based
 
 - Be flexible: Any `Send + Sync + 'static` type can be used as a component.
 - Be concise: The most commonly used functionalities should require the least amount of typing.
+- Make use of sparse sets: Provide features exclusive to sparse set-based ECS.
 
 ## Example
 

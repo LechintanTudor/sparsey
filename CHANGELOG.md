@@ -1,3 +1,12 @@
+# 0.10.0 (2022-11-22)
+## Added
+- Added `run`, `run_local` and `run_exclusive` to provide a uniform interface for running systems
+and functions that borrow assets from `World` and `Resources`.
+
+## Changed
+- Updated the `query` and `systems` modules to take advantage of GATs.
+- `EntityStorage` is no longer paginated, improving performance for all operations.
+
 # 0.9.0 (2022-07-23)
 ## Changed
 - Entities are now ordered by their version first instead of their id, so

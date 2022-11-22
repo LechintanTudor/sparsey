@@ -1,6 +1,6 @@
 [package]
 name = "sparsey"
-version = "0.9.0"
+version = "0.10.0"
 edition = "2021"
 description = "Sparse set-based entity component system"
 authors = ["Tudor-Cristian Lechintan <lechintantudor02@gmail.com>"]
