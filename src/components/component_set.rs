@@ -36,7 +36,7 @@ pub unsafe trait ComponentSet: Sized + Send + Sync + 'static {
 unsafe impl ComponentSet for () {
     type RemoveResult = ();
 
-    #[inline]
+    #[inline(always)]
     fn insert(_storages: &mut ComponentStorages, _entity: Entity, _components: Self) {
         // Empty
     }
@@ -56,12 +56,12 @@ unsafe impl ComponentSet for () {
         unsafe { entities.get_unchecked(initial_entity_count..) }
     }
 
-    #[inline]
+    #[inline(always)]
     fn remove(_storages: &mut ComponentStorages, _entity: Entity) -> Self::RemoveResult {
         ()
     }
 
-    #[inline]
+    #[inline(always)]
     fn delete(_storages: &mut ComponentStorages, _entity: Entity) {
         // Empty
     }
