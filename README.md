@@ -9,7 +9,8 @@ Sparsey is a sparse set-based
 ## Design Goals
 
 - Be flexible: Any `Send + Sync + 'static` type can be used as a component.
-- Be concise: The most commonly used functionalities should require the least amount of typing.
+- Be concise: The most commonly used functionalities should require the least
+  amount of typing.
 - Make use of sparse sets: Provide features exclusive to sparse set-based ECS.
 
 ## Example
@@ -107,8 +108,8 @@ fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
 
 ### Great Performance with Grouped Storages
 
-Sparsey allows the user to "group" component storages to greatly optimize iteration performance. 
-Groups are created by setting a `Layout` on the `World`.
+Sparsey allows the user to "group" component storages to greatly optimize
+iteration performance. Groups are created by setting a `Layout` on the `World`.
 
 ```rust
 let layout = Layout::builder()
@@ -119,8 +120,9 @@ let layout = Layout::builder()
 let world = World::with_layout(&layout);
 ```
 
-After the layout is set, iterators over the grouped storages become "dense", greatly improving their
-performance. Additionally, grouped storages allow access to their components and entities as slices.
+After the layout is set, iterators over the grouped storages become "dense",
+greatly improving their performance. Additionally, grouped storages allow access
+to their components and entities as slices.
 
 ```rust
 fn dense_iterators(a: Comp<A>, b: Comp<B>) {
@@ -140,22 +142,27 @@ fn dense_iterators(a: Comp<A>, b: Comp<B>) {
 
 ## Thanks
 
-Sparsey takes inspiration and borrows features from other free and open source ECS projects, namely
-[Bevy](https://github.com/bevyengine/bevy), [EnTT](https://github.com/skypjack/entt),
-[Legion](https://github.com/amethyst/legion), [Shipyard](https://github.com/leudz/shipyard) and
+Sparsey takes inspiration and borrows features from other free and open source
+ECS projects, namely [Bevy](https://github.com/bevyengine/bevy),
+[EnTT](https://github.com/skypjack/entt),
+[Legion](https://github.com/amethyst/legion),
+[Shipyard](https://github.com/leudz/shipyard) and
 [Specs](https://github.com/amethyst/specs). Make sure you check them out!
 
 ## License
 
 Sparsey is dual-licensed under either
 
-- MIT License (docs/LICENSE-MIT or http://opensource.org/licenses/MIT)
-- Apache License, Version 2.0 (docs/LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT License ([LICENSE-MIT](LICENSE-MIT) or
+  [https://opensource.org/license/mit/](https://opensource.org/license/mit/))
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or
+  [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0))
 
 at your option.
 
 <br />
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the
-work by you, as defined in the Apache-2.0 license, shall be dual licensed as above without any
-additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above without any additional terms or conditions.
