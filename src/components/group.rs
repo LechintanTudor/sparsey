@@ -217,14 +217,15 @@ unsafe fn group_components(
     entity: Entity,
 ) {
     let swap_index = *group_len;
+    let sparse = entity.sparse();
 
-    for storage in group_storages.iter_mut().map(AtomicRefCell::get_mut) {
-        let dense = storage.get_index_from_sparse(entity.sparse()).unwrap_unchecked();
+    group_storages.iter_mut().map(AtomicRefCell::get_mut).for_each(|storage| {
+        let dense = storage.get_index_from_sparse(sparse).unwrap_unchecked();
 
         if dense != swap_index {
             storage.swap_nonoverlapping(dense, swap_index);
         }
-    }
+    });
 
     *group_len += 1;
 }
@@ -240,12 +241,13 @@ unsafe fn ungroup_components(
 ) {
     *group_len -= 1;
     let swap_index = *group_len;
+    let sparse = entity.sparse();
 
-    for storage in group_storages.iter_mut().map(AtomicRefCell::get_mut) {
-        let dense = storage.get_index_from_sparse(entity.sparse()).unwrap_unchecked();
+    group_storages.iter_mut().map(AtomicRefCell::get_mut).for_each(|storage| {
+        let dense = storage.get_index_from_sparse(sparse).unwrap_unchecked();
 
         if dense != swap_index {
             storage.swap_nonoverlapping(dense, swap_index);
         }
-    }
+    });
 }

@@ -15,11 +15,11 @@ default = ["parallel"]
 parallel = ["rayon"]
 
 [dependencies]
-atomic_refcell = "0.1.8"
+atomic_refcell = "0.1.10"
 downcast-rs = "1.2"
 rustc-hash = "1.1"
 
-rayon = { version = "1.6", optional = true }
+rayon = { version = "1.7", optional = true }
 
 [dev-dependencies]
-rayon = "1.6"
+rayon = "1.7"
