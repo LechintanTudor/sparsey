@@ -220,7 +220,7 @@ unsafe fn group_components(
     let sparse = entity.sparse();
 
     group_storages.iter_mut().map(AtomicRefCell::get_mut).for_each(|storage| {
-        let dense = storage.get_index_from_sparse(sparse).unwrap_unchecked();
+        let dense = storage.get_from_sparse_unchecked(sparse);
 
         if dense != swap_index {
             storage.swap_nonoverlapping(dense, swap_index);
@@ -244,7 +244,7 @@ unsafe fn ungroup_components(
     let sparse = entity.sparse();
 
     group_storages.iter_mut().map(AtomicRefCell::get_mut).for_each(|storage| {
-        let dense = storage.get_index_from_sparse(sparse).unwrap_unchecked();
+        let dense = storage.get_from_sparse_unchecked(sparse);
 
         if dense != swap_index {
             storage.swap_nonoverlapping(dense, swap_index);

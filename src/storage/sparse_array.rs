@@ -32,6 +32,11 @@ impl SparseArray {
         self.entities.get(sparse).and_then(Option::as_ref).map(IndexEntity::dense)
     }
 
+    /// Returns the dense index mapped to `sparse`, without checking if the index is valid.
+    pub unsafe fn get_from_sparse_unchecked(&self, sparse: usize) -> usize {
+        self.entities.get_unchecked(sparse).unwrap_unchecked().dense()
+    }
+
     /// Returns `true` if the array contains `sparse`.
     pub fn contains_sparse(&self, sparse: usize) -> bool {
         self.entities.get(sparse).and_then(Option::as_ref).is_some()
@@ -61,13 +66,14 @@ impl SparseArray {
     }
 
     /// Swaps the indexes at `a` and `b` without checking if `a` and `b` are valid sparse indexes.
-    pub(crate) unsafe fn swap_unchecked(&mut self, a: usize, b: usize) {
+    pub(crate) unsafe fn swap_nonoverlapping_unchecked(&mut self, a: usize, b: usize) {
         debug_assert!(a < self.entities.len());
         debug_assert!(b < self.entities.len());
+        debug_assert_ne!(a, b);
 
-        let pa = self.entities.as_mut_ptr().add(a);
-        let pb = self.entities.as_mut_ptr().add(b);
-        std::ptr::swap(pa, pb);
+        let entity_a = &mut *self.entities.as_mut_ptr().add(a);
+        let entity_b = &mut *self.entities.as_mut_ptr().add(b);
+        std::mem::swap(entity_a, entity_b);
     }
 
     /// Removes all entities from the array.

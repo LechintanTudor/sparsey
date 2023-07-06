@@ -134,7 +134,9 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        debug_assert!(a < self.len && b < self.len && a != b);
+        debug_assert!(a < self.len);
+        debug_assert!(b < self.len);
+        debug_assert_ne!(a, b);
 
         let (sparse_a, sparse_b) = {
             let entity_a = &mut *self.get_entity_ptr(a);
@@ -144,7 +146,7 @@ impl ComponentStorage {
             (entity_a.sparse(), entity_b.sparse())
         };
 
-        self.sparse.swap_unchecked(sparse_a, sparse_b);
+        self.sparse.swap_nonoverlapping_unchecked(sparse_a, sparse_b);
 
         let component_a = &mut *self.get_component_ptr::<T>(a);
         let component_b = &mut *self.get_component_ptr::<T>(b);
@@ -179,9 +181,13 @@ impl ComponentStorage {
         self.sparse.contains(entity)
     }
 
+    // #[inline]
+    // pub(crate) fn get_index_from_sparse(&self, sparse: usize) -> Option<usize> {
+    //     self.sparse.get_from_sparse(sparse)
+    // }
     #[inline]
-    pub(crate) fn get_index_from_sparse(&self, sparse: usize) -> Option<usize> {
-        self.sparse.get_from_sparse(sparse)
+    pub unsafe fn get_from_sparse_unchecked(&self, sparse: usize) -> usize {
+        self.sparse.get_from_sparse_unchecked(sparse)
     }
 
     #[inline]
