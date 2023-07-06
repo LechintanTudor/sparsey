@@ -102,6 +102,6 @@ where
     }
 
     fn clone(&self) -> Box<dyn AbstractType> {
-        Box::new(Type::<T>::default())
+        Box::<Type<T>>::default()
     }
 }
