@@ -58,6 +58,7 @@ impl EntityStorage {
             .entities
             .iter()
             .for_each(|&entity| self.allocator.deallocate(entity));
+
         self.storage.clear();
     }
 
@@ -112,7 +113,7 @@ impl EntitySparseSet {
     /// Removes `entity` from the storage and returns `true` if it was successfully removed.
     fn remove(&mut self, entity: Entity) -> bool {
         let dense_index = match self.sparse.remove(entity) {
-            Some(index) => index,
+            Some(index_entity) => index_entity.dense(),
             None => return false,
         };
 

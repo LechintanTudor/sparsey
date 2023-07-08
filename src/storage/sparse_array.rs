@@ -9,34 +9,47 @@ pub struct SparseArray {
 }
 
 impl SparseArray {
-    /// Returns the dense index mapped to `entity`, if any.
-    pub fn get(&self, entity: Entity) -> Option<usize> {
+    /// Returns the index entity mapped to `entity`, if any.
+    #[inline]
+    #[must_use]
+    pub fn get(&self, entity: Entity) -> Option<IndexEntity> {
         self.entities
-            .get(entity.sparse())
-            .and_then(Option::as_ref)
+            .get(entity.sparse())?
             .filter(|index_entity| index_entity.version() == entity.version())
-            .map(IndexEntity::dense)
     }
 
     /// Returns `true` if the array contains `entity`.
+    #[inline]
+    #[must_use]
     pub fn contains(&self, entity: Entity) -> bool {
         self.entities
             .get(entity.sparse())
             .and_then(Option::as_ref)
-            .filter(|index_entity| index_entity.version() == entity.version())
-            .is_some()
+            .is_some_and(|index_entity| index_entity.version() == entity.version())
     }
 
-    /// Returns the dense index mapped to `sparse`, if any.
-    pub fn get_from_sparse(&self, sparse: usize) -> Option<usize> {
-        self.entities
-            .get(sparse)
-            .and_then(Option::as_ref)
-            .map(IndexEntity::dense)
+    #[inline]
+    pub fn remove(&mut self, entity: Entity) -> Option<IndexEntity> {
+        let entity_slot = self.entities.get_mut(entity.sparse())?;
+
+        if entity_slot.is_some_and(|index_entity| index_entity.version() == entity.version()) {
+            entity_slot.take()
+        } else {
+            None
+        }
+    }
+
+    /// Returns the index entity mapped to `sparse`, if any.
+    #[inline]
+    #[must_use]
+    pub fn get_sparse(&self, sparse: usize) -> Option<IndexEntity> {
+        *self.entities.get(sparse)?
     }
 
     /// Returns the dense index mapped to `sparse`, without checking if the index is valid.
-    pub unsafe fn get_from_sparse_unchecked(&self, sparse: usize) -> usize {
+    #[inline]
+    #[must_use]
+    pub unsafe fn get_sparse_unchecked(&self, sparse: usize) -> usize {
         self.entities
             .get_unchecked(sparse)
             .unwrap_unchecked()
@@ -44,16 +57,15 @@ impl SparseArray {
     }
 
     /// Returns `true` if the array contains `sparse`.
+    #[inline]
+    #[must_use]
     pub fn contains_sparse(&self, sparse: usize) -> bool {
         self.entities.get(sparse).and_then(Option::as_ref).is_some()
     }
 
-    /// Removes `entity` from the array and returns the dense index mapped to it, if any.
-    pub(crate) fn remove(&mut self, entity: Entity) -> Option<usize> {
-        self.entities
-            .get_mut(entity.sparse())?
-            .take()
-            .map(|index_entity| index_entity.dense())
+    #[inline]
+    pub fn remove_sparse(&mut self, sparse: usize) -> Option<IndexEntity> {
+        self.entities.get_mut(sparse)?.take()
     }
 
     /// Returns the `IndexEntity` slot at `index` without checking if the `index` is valid.

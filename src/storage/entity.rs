@@ -7,16 +7,9 @@ use std::num::NonZeroU32;
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Version(NonZeroU32);
 
-impl Default for Version {
-    #[inline]
-    fn default() -> Self {
-        unsafe { Self(NonZeroU32::new_unchecked(1)) }
-    }
-}
-
 impl Version {
     /// Default version of an [`Entity`].
-    pub const DEFAULT: Version = unsafe { Self::new(NonZeroU32::new_unchecked(1)) };
+    pub const DEFAULT: Version = unsafe { Self(NonZeroU32::new_unchecked(1)) };
 
     /// Creates a new version with the given `id`.
     #[inline]
@@ -26,8 +19,16 @@ impl Version {
 
     /// Returns the `id` of the version.
     #[inline]
+    #[must_use]
     pub const fn id(&self) -> u32 {
         self.0.get()
+    }
+}
+
+impl Default for Version {
+    #[inline]
+    fn default() -> Self {
+        Self::DEFAULT
     }
 }
 
@@ -36,6 +37,44 @@ impl Version {
 pub struct Entity {
     id: u32,
     version: Version,
+}
+
+impl Entity {
+    /// Creates a new entity with the given `id` and `version`.
+    #[inline]
+    pub const fn new(id: u32, version: Version) -> Self {
+        Self { id, version }
+    }
+
+    /// Creates a new entity with the given `id` and default `version`.
+    #[inline]
+    pub const fn with_id(id: u32) -> Self {
+        Self {
+            id,
+            version: Version::DEFAULT,
+        }
+    }
+
+    /// Returns the id of the entity.
+    #[inline]
+    #[must_use]
+    pub const fn id(&self) -> u32 {
+        self.id
+    }
+
+    /// Returns the id of the entity extended to a [`usize`].
+    #[inline]
+    #[must_use]
+    pub const fn sparse(&self) -> usize {
+        self.id as _
+    }
+
+    /// Returns the version of the entity.
+    #[inline]
+    #[must_use]
+    pub const fn version(&self) -> Version {
+        self.version
+    }
 }
 
 impl PartialOrd for Entity {
@@ -63,46 +102,40 @@ impl fmt::Debug for Entity {
     }
 }
 
-impl Entity {
-    /// Creates a new entity with the given `id` and `version`.
+/// Used internally by `SparseArray` to map entity indexes to dense indexes.
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+pub struct IndexEntity {
+    id: u32,
+    version: Version,
+}
+
+impl IndexEntity {
+    /// Creates a new index entity with the given `id` and `version`.
     #[inline]
     pub const fn new(id: u32, version: Version) -> Self {
         Self { id, version }
     }
 
-    /// Creates a new entity with the given `id` and default `version`.
+    /// Returns the id of the index entity.
     #[inline]
-    pub const fn with_id(id: u32) -> Self {
-        Self {
-            id,
-            version: Version::DEFAULT,
-        }
-    }
-
-    /// Returns the id of the entity.
-    #[inline]
+    #[must_use]
     pub const fn id(&self) -> u32 {
         self.id
     }
 
-    /// Returns the id of the entity extended to a usize.
+    /// Returns the id of the index entity extended to a [`usize`].
     #[inline]
-    pub const fn sparse(&self) -> usize {
+    #[must_use]
+    pub const fn dense(&self) -> usize {
         self.id as _
     }
 
-    /// Returns the version of the entity.
+    /// Returns the version of the index entity.
     #[inline]
+    #[must_use]
     pub const fn version(&self) -> Version {
         self.version
     }
-}
-
-/// Used internally by `SparseArray` to map entity indexes to dense indexes.
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub(crate) struct IndexEntity {
-    id: u32,
-    version: Version,
 }
 
 impl PartialOrd for IndexEntity {
@@ -127,25 +160,5 @@ impl fmt::Debug for IndexEntity {
             .field("id", &self.id)
             .field("version", &self.version.0)
             .finish()
-    }
-}
-
-impl IndexEntity {
-    /// Creates a new index entity with the given `id` and `version`.
-    #[inline]
-    pub const fn new(id: u32, version: Version) -> Self {
-        Self { id, version }
-    }
-
-    /// Returns the id of the entity extended to a [`usize`].
-    #[inline]
-    pub const fn dense(&self) -> usize {
-        self.id as _
-    }
-
-    /// Returns the version of the index entity.
-    #[inline]
-    pub const fn version(&self) -> Version {
-        self.version
     }
 }

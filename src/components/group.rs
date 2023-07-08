@@ -190,9 +190,9 @@ unsafe fn get_group_status(
 ) -> GroupStatus {
     let (first, others) = group_storages.split_first_mut().unwrap_unchecked();
 
-    let status = match first.get_mut().get_index(entity) {
-        Some(index) => {
-            if index < group_len {
+    let status = match first.get_mut().sparse().get(entity) {
+        Some(index_entity) => {
+            if index_entity.dense() < group_len {
                 GroupStatus::Grouped
             } else {
                 GroupStatus::Ungrouped
@@ -205,7 +205,7 @@ unsafe fn get_group_status(
 
     if others
         .iter_mut()
-        .all(|storage| storage.get_mut().contains_sparse(sparse))
+        .all(|storage| storage.get_mut().sparse().contains_sparse(sparse))
     {
         status
     } else {
@@ -229,7 +229,7 @@ unsafe fn group_components(
         .iter_mut()
         .map(AtomicRefCell::get_mut)
         .for_each(|storage| {
-            let dense = storage.get_from_sparse_unchecked(sparse);
+            let dense = storage.sparse().get_sparse_unchecked(sparse);
 
             if dense != swap_index {
                 storage.swap_nonoverlapping(dense, swap_index);
@@ -256,7 +256,7 @@ unsafe fn ungroup_components(
         .iter_mut()
         .map(AtomicRefCell::get_mut)
         .for_each(|storage| {
-            let dense = storage.get_from_sparse_unchecked(sparse);
+            let dense = storage.sparse().get_sparse_unchecked(sparse);
 
             if dense != swap_index {
                 storage.swap_nonoverlapping(dense, swap_index);

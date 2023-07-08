@@ -322,7 +322,7 @@ where
     where
         Self: 'a,
     {
-        let dense_index = sparse.get_from_sparse(sparse_index)?;
+        let dense_index = sparse.get_sparse(sparse_index)?.dense();
         Some(<C as ComponentView>::get_from_ptr(ptrs, dense_index))
     }
 
@@ -453,7 +453,7 @@ where
     where
         Self: 'a,
     {
-        let dense_index = sparse.0.get_from_sparse(sparse_index)?;
+        let dense_index = sparse.0.get_sparse(sparse_index)?.dense();
         Some((<C as ComponentView>::get_from_ptr(ptrs.0, dense_index),))
     }
 
@@ -669,7 +669,7 @@ macro_rules! impl_query_part {
             where
                 Self: 'a,
             {
-                let index = ($(sparse.$idx.get_from_sparse(sparse_index)?,)+);
+                let index = ($(sparse.$idx.get_sparse(sparse_index)?.dense(),)+);
                 Some(($($comp::get_from_ptr(ptrs.$idx, index.$idx),)+))
             }
 

@@ -77,7 +77,7 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        let index = self.sparse.remove(entity)?;
+        let index = self.sparse.remove(entity)?.dense();
         self.len -= 1;
 
         let last_entity = *self.get_entity_ptr(self.len);
@@ -105,7 +105,7 @@ impl ComponentStorage {
         T: Component,
     {
         let index = match self.sparse.remove(entity) {
-            Some(index) => index,
+            Some(index_entity) => index_entity.dense(),
             None => return,
         };
 
@@ -159,7 +159,7 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        let index = self.sparse.get(entity)?;
+        let index = self.sparse.get(entity)?.dense();
         Some(&*self.get_component_ptr(index))
     }
 
@@ -168,28 +168,8 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        let index = self.sparse.get(entity)?;
+        let index = self.sparse.get(entity)?.dense();
         Some(&mut *self.get_component_ptr(index))
-    }
-
-    #[inline]
-    pub(crate) fn get_index(&self, entity: Entity) -> Option<usize> {
-        self.sparse.get(entity)
-    }
-
-    #[inline]
-    pub(crate) fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains(entity)
-    }
-
-    #[inline]
-    pub unsafe fn get_from_sparse_unchecked(&self, sparse: usize) -> usize {
-        self.sparse.get_from_sparse_unchecked(sparse)
-    }
-
-    #[inline]
-    pub(crate) fn contains_sparse(&self, sparse: usize) -> bool {
-        self.sparse.contains_sparse(sparse)
     }
 
     #[inline]
@@ -254,6 +234,18 @@ impl ComponentStorage {
                 self.get_component_ptr::<T>(i).drop_in_place();
             }
         }
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn sparse(&self) -> &SparseArray {
+        &self.sparse
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.sparse.contains(entity)
     }
 
     #[inline]

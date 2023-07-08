@@ -59,7 +59,6 @@ impl World {
     }
 
     /// Check if a component type is registered.
-    #[inline]
     #[must_use]
     pub fn is_registered<T>(&self) -> bool
     where
@@ -81,7 +80,7 @@ impl World {
         C: ComponentSet,
     {
         let entity = self.entities.create();
-        let _ = self.insert(entity, components);
+        self.insert(entity, components);
         entity
     }
 
@@ -134,7 +133,7 @@ impl World {
             .sum()
     }
 
-    /// Associates the given `components` to `entity` if `entity` exists in the world. Returns
+    /// Adds the given `components` to `entity` if `entity` exists in the world. Returns
     /// `true` if the operation was successful.
     pub fn insert<C>(&mut self, entity: Entity, components: C) -> bool
     where
