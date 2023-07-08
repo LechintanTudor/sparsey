@@ -9,6 +9,7 @@ use std::any::TypeId;
 use std::collections::hash_map::Entry;
 use std::ops::Range;
 use std::ptr::NonNull;
+use std::slice;
 
 /// Container for component storages. Also manages component grouping.
 #[doc(hidden)]
@@ -51,8 +52,8 @@ impl ComponentStorages {
                             family_mask: FamilyMask::from_family_index(family_index),
                             group_mask: GroupMask::new(groups.len(), group_arity, family.arity()),
                             group_info: Some(StorageGroupInfo {
-                                family_group_index,
-                                group_offset,
+                                family_group_index: family_group_index as u32,
+                                group_offset: group_offset as u32,
                                 storage_mask: StorageMask::from_storage_index(
                                     prev_group_arity + component_offset,
                                 ),
@@ -236,30 +237,40 @@ impl ComponentStorages {
         &self,
         type_id: &TypeId,
     ) -> Option<(AtomicRef<ComponentStorage>, Option<GroupInfo>)> {
-        self.component_info.get(type_id).map(|info| unsafe {
-            (
+        let info = self.component_info.get(type_id)?;
+
+        unsafe {
+            Some((
                 self.storages.get_unchecked(info.storage_index).borrow(),
                 info.group_info.map(|info| {
-                    let family = NonNull::from(self.groups.get_unchecked(info.family_group_index));
-                    GroupInfo::new(family, info.group_offset, info.storage_mask)
+                    let groups = slice::from_raw_parts(
+                        self.groups.as_ptr().add(info.family_group_index as usize),
+                        info.group_offset as usize + 1,
+                    );
+                    GroupInfo::new(groups, info.storage_mask)
                 }),
-            )
-        })
+            ))
+        }
     }
 
     pub(crate) fn borrow_with_info_mut(
         &self,
         type_id: &TypeId,
     ) -> Option<(AtomicRefMut<ComponentStorage>, Option<GroupInfo>)> {
-        self.component_info.get(type_id).map(|info| unsafe {
-            (
+        let info = self.component_info.get(type_id)?;
+
+        unsafe {
+            Some((
                 self.storages.get_unchecked(info.storage_index).borrow_mut(),
                 info.group_info.map(|info| {
-                    let family = NonNull::from(self.groups.get_unchecked(info.family_group_index));
-                    GroupInfo::new(family, info.group_offset, info.storage_mask)
+                    let groups = slice::from_raw_parts(
+                        self.groups.as_ptr().add(info.family_group_index as usize),
+                        info.group_offset as usize + 1,
+                    );
+                    GroupInfo::new(groups, info.storage_mask)
                 }),
-            )
-        })
+            ))
+        }
     }
 
     pub(crate) fn get_as_ptr_with_family_mask(
@@ -307,9 +318,9 @@ struct ComponentInfo {
 #[derive(Clone, Copy)]
 struct StorageGroupInfo {
     /// Index in `storages` at which the family starts.
-    family_group_index: usize,
+    family_group_index: u32,
     /// Offset from the family group index.
-    group_offset: usize,
+    group_offset: u32,
     /// Bitmask for the index in the family of the storage.
     storage_mask: StorageMask,
 }
