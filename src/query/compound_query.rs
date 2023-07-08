@@ -28,7 +28,11 @@ where
     where
         E: QueryPart,
     {
-        IncludeExcludeQuery { get: self, include: (), exclude }
+        IncludeExcludeQuery {
+            get: self,
+            include: (),
+            exclude,
+        }
     }
 }
 
@@ -50,7 +54,11 @@ where
     where
         E: QueryPart,
     {
-        IncludeExcludeQuery { get: self.get, include: self.include, exclude }
+        IncludeExcludeQuery {
+            get: self.get,
+            include: self.include,
+            exclude,
+        }
     }
 }
 

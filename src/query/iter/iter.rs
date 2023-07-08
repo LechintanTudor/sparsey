@@ -35,7 +35,9 @@ where
 
                     let entities = &entities
                         .unwrap_or_else(|| {
-                            include.into_any_entities().expect("Cannot iterate empty Query")
+                            include
+                                .into_any_entities()
+                                .expect("Cannot iterate empty Query")
                         })
                         .get_unchecked(range);
 
@@ -61,7 +63,9 @@ where
                 };
 
                 unsafe {
-                    Self::Sparse(SparseIter::new(entities, sparse, include, exclude, components))
+                    Self::Sparse(SparseIter::new(
+                        entities, sparse, include, exclude, components,
+                    ))
                 }
             }
         }

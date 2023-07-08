@@ -147,7 +147,10 @@ where
     {
         let range = (range.start_bound().cloned(), range.end_bound().cloned());
         let (entities, _, components) = Comp::split(self);
-        (entities.get_unchecked(range), components.get_unchecked(range))
+        (
+            entities.get_unchecked(range),
+            components.get_unchecked(range),
+        )
     }
 }
 
@@ -228,7 +231,10 @@ where
     {
         let range = (range.start_bound().cloned(), range.end_bound().cloned());
         let (entities, _, components) = CompMut::split(self);
-        (entities.get_unchecked(range), components.get_unchecked(range))
+        (
+            entities.get_unchecked(range),
+            components.get_unchecked(range),
+        )
     }
 }
 
@@ -309,6 +315,9 @@ where
     {
         let range = (range.start_bound().cloned(), range.end_bound().cloned());
         let (entities, _, components) = CompMut::split_mut(self);
-        (entities.get_unchecked(range), components.get_unchecked_mut(range))
+        (
+            entities.get_unchecked(range),
+            components.get_unchecked_mut(range),
+        )
     }
 }

@@ -10,5 +10,4 @@ pub use self::res::*;
 pub use self::resource::*;
 pub use self::resources::*;
 pub use self::sync_resources::*;
-
 pub(crate) use self::unsafe_resources::*;

@@ -8,7 +8,6 @@ mod masks;
 
 pub use self::component_set::*;
 pub use self::component_storages::*;
-pub use self::group_info::*;
-
 pub(crate) use self::group::*;
+pub use self::group_info::*;
 pub(crate) use self::masks::*;

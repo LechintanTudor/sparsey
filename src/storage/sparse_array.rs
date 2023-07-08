@@ -29,12 +29,18 @@ impl SparseArray {
 
     /// Returns the dense index mapped to `sparse`, if any.
     pub fn get_from_sparse(&self, sparse: usize) -> Option<usize> {
-        self.entities.get(sparse).and_then(Option::as_ref).map(IndexEntity::dense)
+        self.entities
+            .get(sparse)
+            .and_then(Option::as_ref)
+            .map(IndexEntity::dense)
     }
 
     /// Returns the dense index mapped to `sparse`, without checking if the index is valid.
     pub unsafe fn get_from_sparse_unchecked(&self, sparse: usize) -> usize {
-        self.entities.get_unchecked(sparse).unwrap_unchecked().dense()
+        self.entities
+            .get_unchecked(sparse)
+            .unwrap_unchecked()
+            .dense()
     }
 
     /// Returns `true` if the array contains `sparse`.
@@ -44,7 +50,10 @@ impl SparseArray {
 
     /// Removes `entity` from the array and returns the dense index mapped to it, if any.
     pub(crate) fn remove(&mut self, entity: Entity) -> Option<usize> {
-        self.entities.get_mut(entity.sparse())?.take().map(|index_entity| index_entity.dense())
+        self.entities
+            .get_mut(entity.sparse())?
+            .take()
+            .map(|index_entity| index_entity.dense())
     }
 
     /// Returns the `IndexEntity` slot at `index` without checking if the `index` is valid.
@@ -59,7 +68,8 @@ impl SparseArray {
             let extra_len =
                 index.checked_next_power_of_two().unwrap_or(index) - self.entities.len() + 1;
 
-            self.entities.extend(std::iter::repeat(None).take(extra_len));
+            self.entities
+                .extend(std::iter::repeat(None).take(extra_len));
         }
 
         &mut self.entities[index]

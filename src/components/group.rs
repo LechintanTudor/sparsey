@@ -71,7 +71,10 @@ pub(crate) struct Group {
 
 impl Group {
     pub fn new(start: usize, new_start: usize, end: usize) -> Self {
-        Self { metadata: GroupMetadata::new(start, new_start, end), len: 0 }
+        Self {
+            metadata: GroupMetadata::new(start, new_start, end),
+            len: 0,
+        }
     }
 
     #[inline]
@@ -200,7 +203,10 @@ unsafe fn get_group_status(
 
     let sparse = entity.sparse();
 
-    if others.iter_mut().all(|storage| storage.get_mut().contains_sparse(sparse)) {
+    if others
+        .iter_mut()
+        .all(|storage| storage.get_mut().contains_sparse(sparse))
+    {
         status
     } else {
         GroupStatus::Incomplete
@@ -219,13 +225,16 @@ unsafe fn group_components(
     let swap_index = *group_len;
     let sparse = entity.sparse();
 
-    group_storages.iter_mut().map(AtomicRefCell::get_mut).for_each(|storage| {
-        let dense = storage.get_from_sparse_unchecked(sparse);
+    group_storages
+        .iter_mut()
+        .map(AtomicRefCell::get_mut)
+        .for_each(|storage| {
+            let dense = storage.get_from_sparse_unchecked(sparse);
 
-        if dense != swap_index {
-            storage.swap_nonoverlapping(dense, swap_index);
-        }
-    });
+            if dense != swap_index {
+                storage.swap_nonoverlapping(dense, swap_index);
+            }
+        });
 
     *group_len += 1;
 }
@@ -243,11 +252,14 @@ unsafe fn ungroup_components(
     let swap_index = *group_len;
     let sparse = entity.sparse();
 
-    group_storages.iter_mut().map(AtomicRefCell::get_mut).for_each(|storage| {
-        let dense = storage.get_from_sparse_unchecked(sparse);
+    group_storages
+        .iter_mut()
+        .map(AtomicRefCell::get_mut)
+        .for_each(|storage| {
+            let dense = storage.get_from_sparse_unchecked(sparse);
 
-        if dense != swap_index {
-            storage.swap_nonoverlapping(dense, swap_index);
-        }
-    });
+            if dense != swap_index {
+                storage.swap_nonoverlapping(dense, swap_index);
+            }
+        });
 }

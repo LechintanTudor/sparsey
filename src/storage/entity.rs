@@ -48,13 +48,18 @@ impl PartialOrd for Entity {
 impl Ord for Entity {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        self.version.cmp(&other.version).then(self.id.cmp(&other.id))
+        self.version
+            .cmp(&other.version)
+            .then(self.id.cmp(&other.id))
     }
 }
 
 impl fmt::Debug for Entity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Entity").field("id", &self.id).field("version", &self.version.0).finish()
+        f.debug_struct("Entity")
+            .field("id", &self.id)
+            .field("version", &self.version.0)
+            .finish()
     }
 }
 
@@ -68,7 +73,10 @@ impl Entity {
     /// Creates a new entity with the given `id` and default `version`.
     #[inline]
     pub const fn with_id(id: u32) -> Self {
-        Self { id, version: Version::DEFAULT }
+        Self {
+            id,
+            version: Version::DEFAULT,
+        }
     }
 
     /// Returns the id of the entity.
@@ -107,7 +115,9 @@ impl PartialOrd for IndexEntity {
 impl Ord for IndexEntity {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
-        self.version.cmp(&other.version).then(self.id.cmp(&other.id))
+        self.version
+            .cmp(&other.version)
+            .then(self.id.cmp(&other.id))
     }
 }
 

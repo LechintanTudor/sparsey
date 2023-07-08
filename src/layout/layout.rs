@@ -40,8 +40,10 @@ impl LayoutBuilder {
         let mut families = Vec::<LayoutGroupFamily>::new();
 
         for group in &self.groups {
-            let successes =
-                families.iter_mut().map(|f| f.try_add_group(group) as usize).sum::<usize>();
+            let successes = families
+                .iter_mut()
+                .map(|f| f.try_add_group(group) as usize)
+                .sum::<usize>();
 
             if successes == 0 {
                 families.push(LayoutGroupFamily::new(group));

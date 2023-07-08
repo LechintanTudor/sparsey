@@ -8,6 +8,5 @@ mod layout;
 
 pub use self::component_info::*;
 pub use self::group::*;
-pub use self::layout::*;
-
 pub(crate) use self::group_family::*;
+pub use self::layout::*;

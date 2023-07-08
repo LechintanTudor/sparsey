@@ -168,7 +168,10 @@ pub(crate) struct QueryMask {
 }
 
 impl QueryMask {
-    pub const NONE: Self = Self { include: StorageMask(0), exclude: StorageMask(0) };
+    pub const NONE: Self = Self {
+        include: StorageMask(0),
+        exclude: StorageMask(0),
+    };
 
     #[inline]
     pub const fn new(include: StorageMask, exclude: StorageMask) -> Self {
@@ -178,7 +181,10 @@ impl QueryMask {
     pub fn for_include_group(group_arity: usize) -> Self {
         assert!(group_arity <= STORAGE_MASK_ARITY);
 
-        Self { include: StorageMask(first_n_bits_u16(group_arity)), exclude: StorageMask::NONE }
+        Self {
+            include: StorageMask(first_n_bits_u16(group_arity)),
+            exclude: StorageMask::NONE,
+        }
     }
 
     pub fn for_exclude_group(prev_group_arity: usize, group_arity: usize) -> Self {

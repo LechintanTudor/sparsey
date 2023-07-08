@@ -25,7 +25,12 @@ impl<'a> GroupInfo<'a> {
         group_offset: usize,
         storage_mask: StorageMask,
     ) -> Self {
-        Self { family, group_offset, storage_mask, _phantom: PhantomData }
+        Self {
+            family,
+            group_offset,
+            storage_mask,
+            _phantom: PhantomData,
+        }
     }
 
     pub(crate) fn combine(self, info: Self) -> Option<Self> {

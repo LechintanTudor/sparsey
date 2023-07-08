@@ -8,7 +8,10 @@ pub enum QueryGroupInfo<'a> {
     /// The query is empty.
     Empty,
     /// The query contains a single component view which may belong to a family.
-    Single { len: usize, info: Option<GroupInfo<'a>> },
+    Single {
+        len: usize,
+        info: Option<GroupInfo<'a>>,
+    },
     /// The query contains multiple component views that belong to the same family.
     Multiple(GroupInfo<'a>),
 }

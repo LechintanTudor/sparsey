@@ -16,7 +16,11 @@ where
     G: QueryPart,
 {
     pub(crate) unsafe fn new(entities: &'a [Entity], components: G::Ptrs) -> Self {
-        Self { index: 0, entities, components }
+        Self {
+            index: 0,
+            entities,
+            components,
+        }
     }
 }
 
@@ -68,7 +72,12 @@ where
 
         self.index += 1;
 
-        unsafe { Some((*self.entities.get_unchecked(index), G::dense_get(self.components, index))) }
+        unsafe {
+            Some((
+                *self.entities.get_unchecked(index),
+                G::dense_get(self.components, index),
+            ))
+        }
     }
 
     fn fold_with_entity<B, F>(mut self, mut init: B, mut f: F) -> B

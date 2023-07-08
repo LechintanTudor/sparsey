@@ -29,14 +29,16 @@ impl UnsafeResources {
     where
         T: Resource,
     {
-        self.try_borrow().unwrap_or_else(|| utils::panic_missing_res::<T>())
+        self.try_borrow()
+            .unwrap_or_else(|| utils::panic_missing_res::<T>())
     }
 
     pub unsafe fn borrow_mut<T>(&self) -> ResMut<T>
     where
         T: Resource,
     {
-        self.try_borrow_mut().unwrap_or_else(|| utils::panic_missing_res::<T>())
+        self.try_borrow_mut()
+            .unwrap_or_else(|| utils::panic_missing_res::<T>())
     }
 
     pub unsafe fn try_borrow<T>(&self) -> Option<Res<T>>
@@ -44,7 +46,9 @@ impl UnsafeResources {
         T: Resource,
     {
         self.resources.get(&TypeId::of::<T>()).map(|c| {
-            Res::new(AtomicRef::map(c.borrow(), |c| c.deref().downcast_ref().unwrap_unchecked()))
+            Res::new(AtomicRef::map(c.borrow(), |c| {
+                c.deref().downcast_ref().unwrap_unchecked()
+            }))
         })
     }
 

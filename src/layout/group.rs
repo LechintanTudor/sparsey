@@ -23,7 +23,10 @@ impl LayoutGroup {
         if current_len != initial_len {
             panic!("Groups cannot contain duplicate components");
         } else if current_len < MIN_GROUP_ARITY {
-            panic!("Groups must contain at least {} components", MIN_GROUP_ARITY);
+            panic!(
+                "Groups must contain at least {} components",
+                MIN_GROUP_ARITY
+            );
         } else if current_len > MAX_GROUP_ARITY {
             panic!("Groups must contain at most {} components", MAX_GROUP_ARITY);
         }

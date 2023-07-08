@@ -65,7 +65,9 @@ impl Hash for ComponentInfo {
 
 impl fmt::Debug for ComponentInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("ComponentInfo").field(&self.0.type_id()).finish()
+        f.debug_tuple("ComponentInfo")
+            .field(&self.0.type_id())
+            .finish()
     }
 }
 

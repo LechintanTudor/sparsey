@@ -146,7 +146,8 @@ impl ComponentStorage {
             (entity_a.sparse(), entity_b.sparse())
         };
 
-        self.sparse.swap_nonoverlapping_unchecked(sparse_a, sparse_b);
+        self.sparse
+            .swap_nonoverlapping_unchecked(sparse_a, sparse_b);
 
         let component_a = &mut *self.get_component_ptr::<T>(a);
         let component_b = &mut *self.get_component_ptr::<T>(b);
@@ -181,10 +182,6 @@ impl ComponentStorage {
         self.sparse.contains(entity)
     }
 
-    // #[inline]
-    // pub(crate) fn get_index_from_sparse(&self, sparse: usize) -> Option<usize> {
-    //     self.sparse.get_from_sparse(sparse)
-    // }
     #[inline]
     pub unsafe fn get_from_sparse_unchecked(&self, sparse: usize) -> usize {
         self.sparse.get_from_sparse_unchecked(sparse)
@@ -302,8 +299,12 @@ impl ComponentStorage {
                 let old_layout = array_layout::<Entity>(self.cap);
                 let layout = array_layout::<Entity>(cap);
 
-                NonNull::new(realloc(self.entities.as_ptr().cast(), old_layout, layout.size()))
-                    .unwrap_or_else(|| handle_alloc_error(layout))
+                NonNull::new(realloc(
+                    self.entities.as_ptr().cast(),
+                    old_layout,
+                    layout.size(),
+                ))
+                .unwrap_or_else(|| handle_alloc_error(layout))
             };
 
             let components = if mem::size_of::<T>() != 0 {
@@ -331,7 +332,10 @@ impl ComponentStorage {
         if self.cap != 0 {
             self.clear_typed::<T>();
 
-            dealloc(self.entities.as_ptr().cast(), array_layout::<Entity>(self.cap));
+            dealloc(
+                self.entities.as_ptr().cast(),
+                array_layout::<Entity>(self.cap),
+            );
 
             if mem::size_of::<T>() != 0 {
                 dealloc(self.components.as_ptr(), array_layout::<T>(self.cap));

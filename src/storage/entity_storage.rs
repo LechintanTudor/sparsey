@@ -16,7 +16,10 @@ impl EntityStorage {
     /// Creates a new `Entity` and returns it.
     #[inline]
     pub(crate) fn create(&mut self) -> Entity {
-        let entity = self.allocator.allocate().expect("No entities left to allocate");
+        let entity = self
+            .allocator
+            .allocate()
+            .expect("No entities left to allocate");
         self.storage.insert(entity);
         entity
     }
@@ -24,7 +27,9 @@ impl EntityStorage {
     /// Atomically creates a new `Entity` and returns it.
     #[inline]
     pub(crate) fn create_atomic(&self) -> Entity {
-        self.allocator.allocate_atomic().expect("No entities left to allocate")
+        self.allocator
+            .allocate_atomic()
+            .expect("No entities left to allocate")
     }
 
     /// Removes `entity` from the storage if it exits. Returns whether there was anything to remove.
@@ -49,7 +54,10 @@ impl EntityStorage {
         // Add the entities created atomically to the storage so they can be properly recycled
         self.maintain();
 
-        self.storage.entities.iter().for_each(|&entity| self.allocator.deallocate(entity));
+        self.storage
+            .entities
+            .iter()
+            .for_each(|&entity| self.allocator.deallocate(entity));
         self.storage.clear();
     }
 
@@ -61,7 +69,9 @@ impl EntityStorage {
 
     /// Adds the entities created atomically to the storage.
     pub(crate) fn maintain(&mut self) {
-        self.allocator.maintain().for_each(|entity| self.storage.insert(entity));
+        self.allocator
+            .maintain()
+            .for_each(|entity| self.storage.insert(entity));
     }
 }
 
@@ -90,8 +100,10 @@ impl EntitySparseSet {
                 *self.entities.get_unchecked_mut(index_entity.dense()) = entity;
             },
             None => {
-                *index_entity =
-                    Some(IndexEntity::new(self.entities.len() as u32, entity.version()));
+                *index_entity = Some(IndexEntity::new(
+                    self.entities.len() as u32,
+                    entity.version(),
+                ));
                 self.entities.push(entity);
             }
         }
@@ -176,7 +188,8 @@ impl EntityAllocator {
         let next_version_id = NonZeroU32::new(entity.version().id().wrapping_add(1));
 
         if let Some(next_version_id) = next_version_id {
-            self.recycled.push_front(Entity::new(entity.id(), Version::new(next_version_id)));
+            self.recycled
+                .push_front(Entity::new(entity.id(), Version::new(next_version_id)));
         }
     }
 
@@ -196,10 +209,12 @@ impl EntityAllocator {
             new_id_range
         };
 
-        self.recycled.drain(recycled_range).chain(new_id_range.map(|i| {
-            // next_id_to_allocate is capped at (u32::MAX + 1), so i <= u32::MAX
-            Entity::with_id(i as u32)
-        }))
+        self.recycled
+            .drain(recycled_range)
+            .chain(new_id_range.map(|i| {
+                // next_id_to_allocate is capped at (u32::MAX + 1), so i <= u32::MAX
+                Entity::with_id(i as u32)
+            }))
     }
 
     /// Resets the allocator to its default state without freeing the allocated memory.

@@ -56,7 +56,9 @@ fn main() {
 
     let mut resources = Resources::default();
     resources.insert(Lava { height: 0 });
-    resources.insert(FallenInLava { entities: Vec::new() });
+    resources.insert(FallenInLava {
+        entities: Vec::new(),
+    });
 
     for _ in 0..3 {
         schedule.run_seq(&mut world, &mut resources);

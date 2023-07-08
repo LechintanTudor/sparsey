@@ -29,7 +29,13 @@ where
         exclude: E::Sparse<'a>,
         components: G::Ptrs,
     ) -> Self {
-        Self { entities: entities.iter(), sparse, include, exclude, components }
+        Self {
+            entities: entities.iter(),
+            sparse,
+            include,
+            exclude,
+            components,
+        }
     }
 }
 

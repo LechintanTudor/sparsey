@@ -31,7 +31,8 @@ impl ScheduleBuilder {
     /// with the previously added systems. Prefer to use
     /// [`ScheduleBuilder::add_local_system_to_end`] whenever possible.
     pub fn add_local_system<P>(&mut self, local_system: impl IntoLocalSystem<P>) -> &mut Self {
-        self.steps.push(SimpleScheduleStep::LocalSystem(local_system.local_system()));
+        self.steps
+            .push(SimpleScheduleStep::LocalSystem(local_system.local_system()));
         self
     }
 
@@ -42,7 +43,9 @@ impl ScheduleBuilder {
         &mut self,
         exclusive_system: impl IntoExclusiveSystem<P>,
     ) -> &mut Self {
-        self.steps.push(SimpleScheduleStep::ExclusiveSystem(exclusive_system.exclusive_system()));
+        self.steps.push(SimpleScheduleStep::ExclusiveSystem(
+            exclusive_system.exclusive_system(),
+        ));
         self
     }
 
@@ -58,7 +61,8 @@ impl ScheduleBuilder {
         &mut self,
         local_system: impl IntoLocalSystem<P>,
     ) -> &mut Self {
-        self.final_steps.push(SimpleScheduleStep::LocalSystem(local_system.local_system()));
+        self.final_steps
+            .push(SimpleScheduleStep::LocalSystem(local_system.local_system()));
         self
     }
 
@@ -67,8 +71,9 @@ impl ScheduleBuilder {
         &mut self,
         exclusive_system: impl IntoExclusiveSystem<P>,
     ) -> &mut Self {
-        self.final_steps
-            .push(SimpleScheduleStep::ExclusiveSystem(exclusive_system.exclusive_system()));
+        self.final_steps.push(SimpleScheduleStep::ExclusiveSystem(
+            exclusive_system.exclusive_system(),
+        ));
         self
     }
 
@@ -109,34 +114,45 @@ impl ScheduleBuilder {
 
         let mut steps = Vec::<ScheduleStep>::new();
 
-        self.steps.drain(..).chain(self.final_steps.drain(..)).for_each(|step| match step {
-            SimpleScheduleStep::System(system) => {
-                let systems = steps
-                    .iter_mut()
-                    .rev()
-                    .map_while(|step| step_to_non_conflicting_systems(step, &system))
-                    .filter(|systsems| systsems.len() < max_threads)
-                    .last();
+        self.steps
+            .drain(..)
+            .chain(self.final_steps.drain(..))
+            .for_each(|step| {
+                match step {
+                    SimpleScheduleStep::System(system) => {
+                        let systems = steps
+                            .iter_mut()
+                            .rev()
+                            .map_while(|step| step_to_non_conflicting_systems(step, &system))
+                            .filter(|systsems| systsems.len() < max_threads)
+                            .last();
 
-                match systems {
-                    Some(systems) => systems.push(system),
-                    None => steps.push(ScheduleStep::Systems(vec![system])),
+                        match systems {
+                            Some(systems) => systems.push(system),
+                            None => steps.push(ScheduleStep::Systems(vec![system])),
+                        }
+                    }
+                    SimpleScheduleStep::LocalSystem(system) => {
+                        match steps.last_mut() {
+                            Some(ScheduleStep::LocalSystems(systems)) => systems.push(system),
+                            _ => steps.push(ScheduleStep::LocalSystems(vec![system])),
+                        }
+                    }
+                    SimpleScheduleStep::ExclusiveSystem(local_fn) => {
+                        match steps.last_mut() {
+                            Some(ScheduleStep::ExclusiveSystems(local_fns)) => {
+                                local_fns.push(local_fn)
+                            }
+                            _ => steps.push(ScheduleStep::ExclusiveSystems(vec![local_fn])),
+                        }
+                    }
+                    SimpleScheduleStep::Barrier => {
+                        if matches!(steps.last(), Some(ScheduleStep::Systems(_))) {
+                            steps.push(ScheduleStep::Barrier)
+                        }
+                    }
                 }
-            }
-            SimpleScheduleStep::LocalSystem(system) => match steps.last_mut() {
-                Some(ScheduleStep::LocalSystems(systems)) => systems.push(system),
-                _ => steps.push(ScheduleStep::LocalSystems(vec![system])),
-            },
-            SimpleScheduleStep::ExclusiveSystem(local_fn) => match steps.last_mut() {
-                Some(ScheduleStep::ExclusiveSystems(local_fns)) => local_fns.push(local_fn),
-                _ => steps.push(ScheduleStep::ExclusiveSystems(vec![local_fn])),
-            },
-            SimpleScheduleStep::Barrier => {
-                if matches!(steps.last(), Some(ScheduleStep::Systems(_))) {
-                    steps.push(ScheduleStep::Barrier)
-                }
-            }
-        });
+            });
 
         Schedule { steps }
     }
@@ -227,7 +243,9 @@ impl Schedule {
 
         self.run_generic(world, resources, |systems, world, resources| {
             if systems.len() > 1 {
-                systems.par_iter_mut().for_each(|system| crate::run(world, resources, system));
+                systems
+                    .par_iter_mut()
+                    .for_each(|system| crate::run(world, resources, system));
             } else {
                 crate::run(world, resources, systems.last_mut().unwrap())
             }
@@ -298,7 +316,11 @@ impl Schedule {
             }
         }
 
-        self.steps.iter().flat_map(step_to_system_count).max().unwrap_or(1)
+        self.steps
+            .iter()
+            .flat_map(step_to_system_count)
+            .max()
+            .unwrap_or(1)
     }
 
     /// Consumes the schedule and returns the steps comprising it.

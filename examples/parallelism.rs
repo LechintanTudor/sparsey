@@ -30,8 +30,10 @@ fn update_movement(mut pos: CompMut<Position>, vels: Comp<Velocity>) {
 }
 
 fn main() {
-    let mut schedule =
-        Schedule::builder().add_system(update_health).add_system(update_movement).build();
+    let mut schedule = Schedule::builder()
+        .add_system(update_health)
+        .add_system(update_movement)
+        .build();
 
     let mut world = World::default();
     schedule.set_up(&mut world);

@@ -13,7 +13,9 @@ pub struct LocalSystem {
 
 impl fmt::Debug for LocalSystem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("LocalSystem").field("borrows", &self.borrows).finish_non_exhaustive()
+        f.debug_struct("LocalSystem")
+            .field("borrows", &self.borrows)
+            .finish_non_exhaustive()
     }
 }
 

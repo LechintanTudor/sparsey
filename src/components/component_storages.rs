@@ -67,7 +67,11 @@ impl ComponentStorages {
                     storages.push(AtomicRefCell::new(storage));
                 }
 
-                groups.push(Group::new(family_storage_index, new_storage_index, storages.len()));
+                groups.push(Group::new(
+                    family_storage_index,
+                    new_storage_index,
+                    storages.len(),
+                ));
                 prev_group_arity = group_arity;
             }
 
@@ -88,7 +92,12 @@ impl ComponentStorages {
             storages.push(AtomicRefCell::new(storage));
         }
 
-        Self { component_info, storages, family_ranges, groups }
+        Self {
+            component_info,
+            storages,
+            family_ranges,
+            groups,
+        }
     }
 
     pub(crate) fn into_storages(mut self) -> FxHashMap<TypeId, ComponentStorage> {
@@ -154,7 +163,12 @@ impl ComponentStorages {
             let family_range = self.family_ranges.get_unchecked(family_index);
 
             entities.clone().for_each(|entity| {
-                group_family(&mut self.storages, &mut self.groups, family_range.clone(), entity);
+                group_family(
+                    &mut self.storages,
+                    &mut self.groups,
+                    family_range.clone(),
+                    entity,
+                );
             });
         }
     }
@@ -183,7 +197,12 @@ impl ComponentStorages {
     pub(crate) fn group_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
         for family_range in self.family_ranges.iter() {
             entities.clone().for_each(|entity| unsafe {
-                group_family(&mut self.storages, &mut self.groups, family_range.clone(), entity);
+                group_family(
+                    &mut self.storages,
+                    &mut self.groups,
+                    family_range.clone(),
+                    entity,
+                );
             });
         }
     }
