@@ -48,21 +48,23 @@ where
     type Item = G::Refs<'a> where Self: 'a;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let entity = *self.entities.next()?;
+        while let Some(&entity) = self.entities.next() {
+            if !E::sparse_contains_none(self.exclude, entity) {
+                continue;
+            }
 
-            if E::sparse_contains_none(self.exclude, entity)
-                && I::sparse_contains_all(self.include, entity)
+            if !I::sparse_contains_all(self.include, entity) {
+                continue;
+            }
+
+            if let Some(components) =
+                unsafe { G::sparse_get(self.sparse, self.components, entity.sparse()) }
             {
-                unsafe {
-                    if let Some(components) =
-                        G::sparse_get(self.sparse, self.components, entity.sparse())
-                    {
-                        return Some(components);
-                    }
-                }
+                return Some(components);
             }
         }
+
+        None
     }
 
     fn fold<B, F>(self, mut init: B, mut f: F) -> B
@@ -71,16 +73,18 @@ where
         F: FnMut(B, Self::Item) -> B,
     {
         for &entity in self.entities {
-            if E::sparse_contains_none(self.exclude, entity)
-                && I::sparse_contains_all(self.include, entity)
+            if !E::sparse_contains_none(self.exclude, entity) {
+                continue;
+            }
+
+            if !I::sparse_contains_all(self.include, entity) {
+                continue;
+            }
+
+            if let Some(components) =
+                unsafe { G::sparse_get(self.sparse, self.components, entity.sparse()) }
             {
-                unsafe {
-                    if let Some(components) =
-                        G::sparse_get(self.sparse, self.components, entity.sparse())
-                    {
-                        init = f(init, components);
-                    }
-                }
+                init = f(init, components);
             }
         }
 
@@ -95,21 +99,23 @@ where
     E: QueryPart,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
-        loop {
-            let entity = *self.entities.next()?;
+        while let Some(&entity) = self.entities.next() {
+            if !E::sparse_contains_none(self.exclude, entity) {
+                continue;
+            }
 
-            if E::sparse_contains_none(self.exclude, entity)
-                && I::sparse_contains_all(self.include, entity)
+            if !I::sparse_contains_all(self.include, entity) {
+                continue;
+            }
+
+            if let Some(components) =
+                unsafe { G::sparse_get(self.sparse, self.components, entity.sparse()) }
             {
-                unsafe {
-                    if let Some(components) =
-                        G::sparse_get(self.sparse, self.components, entity.sparse())
-                    {
-                        return Some((entity, components));
-                    }
-                }
+                return Some((entity, components));
             }
         }
+
+        None
     }
 
     fn fold_with_entity<B, F>(self, mut init: B, mut f: F) -> B
@@ -118,16 +124,18 @@ where
         F: FnMut(B, (Entity, Self::Item)) -> B,
     {
         for &entity in self.entities {
-            if E::sparse_contains_none(self.exclude, entity)
-                && I::sparse_contains_all(self.include, entity)
+            if !E::sparse_contains_none(self.exclude, entity) {
+                continue;
+            }
+
+            if !I::sparse_contains_all(self.include, entity) {
+                continue;
+            }
+
+            if let Some(components) =
+                unsafe { G::sparse_get(self.sparse, self.components, entity.sparse()) }
             {
-                unsafe {
-                    if let Some(components) =
-                        G::sparse_get(self.sparse, self.components, entity.sparse())
-                    {
-                        init = f(init, (entity, components));
-                    }
-                }
+                init = f(init, (entity, components));
             }
         }
 

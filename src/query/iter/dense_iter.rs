@@ -48,9 +48,7 @@ where
         F: FnMut(B, Self::Item) -> B,
     {
         while self.index < self.entities.len() {
-            unsafe {
-                init = f(init, G::dense_get(self.components, self.index));
-            }
+            init = unsafe { f(init, G::dense_get(self.components, self.index)) };
 
             self.index += 1;
         }
@@ -86,15 +84,15 @@ where
         F: FnMut(B, (Entity, Self::Item)) -> B,
     {
         while self.index < self.entities.len() {
-            unsafe {
-                init = f(
+            init = unsafe {
+                f(
                     init,
                     (
                         *self.entities.get_unchecked(self.index),
                         G::dense_get(self.components, self.index),
                     ),
-                );
-            }
+                )
+            };
 
             self.index += 1;
         }
