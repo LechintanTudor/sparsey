@@ -37,6 +37,7 @@ where
 }
 
 /// [`Query`](crate::query::Query) with an include filter.
+#[derive(Debug)]
 pub struct IncludeQuery<G, I> {
     /// Which components to fetch.
     pub get: G,
@@ -63,6 +64,7 @@ where
 }
 
 /// [`Query`](crate::query::Query) with an include filter and an exclude filter.
+#[derive(Debug)]
 pub struct IncludeExcludeQuery<G, I, E> {
     /// Which components to fetch.
     pub get: G,
