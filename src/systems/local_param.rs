@@ -1,9 +1,8 @@
-use crate::layout::ComponentInfo;
 use crate::resources::{Res, ResMut, Resource, Resources};
 use crate::storage::Component;
 use crate::systems::SystemBorrow;
+use crate::utils::{ComponentData, ResourceData};
 use crate::world::{Comp, CompMut, Entities, World};
-use std::any::TypeId;
 
 /// Trait implemented by parameters of functions used to create
 /// [`LocalSystems`](crate::systems::LocalSystem).
@@ -37,7 +36,7 @@ where
     type Param<'a> = Comp<'a, T>;
 
     fn as_system_borrow() -> SystemBorrow {
-        SystemBorrow::Comp(ComponentInfo::new::<T>())
+        SystemBorrow::Comp(ComponentData::new::<T>())
     }
 
     fn borrow<'a>(world: &'a World, _resources: &'a Resources) -> Self::Param<'a> {
@@ -52,7 +51,7 @@ where
     type Param<'a> = CompMut<'a, T>;
 
     fn as_system_borrow() -> SystemBorrow {
-        SystemBorrow::CompMut(ComponentInfo::new::<T>())
+        SystemBorrow::CompMut(ComponentData::new::<T>())
     }
 
     fn borrow<'a>(world: &'a World, _resources: &'a Resources) -> Self::Param<'a> {
@@ -67,7 +66,7 @@ where
     type Param<'a> = Res<'a, T>;
 
     fn as_system_borrow() -> SystemBorrow {
-        SystemBorrow::Res(TypeId::of::<T>())
+        SystemBorrow::Res(ResourceData::new::<T>())
     }
 
     fn borrow<'a>(_world: &'a World, resources: &'a Resources) -> Self::Param<'a> {
@@ -82,7 +81,7 @@ where
     type Param<'a> = ResMut<'a, T>;
 
     fn as_system_borrow() -> SystemBorrow {
-        SystemBorrow::ResMut(TypeId::of::<T>())
+        SystemBorrow::ResMut(ResourceData::new::<T>())
     }
 
     fn borrow<'a>(_world: &'a World, resources: &'a Resources) -> Self::Param<'a> {
@@ -97,7 +96,7 @@ where
     type Param<'a> = Option<Res<'a, T>>;
 
     fn as_system_borrow() -> SystemBorrow {
-        SystemBorrow::Res(TypeId::of::<T>())
+        SystemBorrow::Res(ResourceData::new::<T>())
     }
 
     fn borrow<'a>(_world: &'a World, resources: &'a Resources) -> Self::Param<'a> {
@@ -112,7 +111,7 @@ where
     type Param<'a> = Option<ResMut<'a, T>>;
 
     fn as_system_borrow() -> SystemBorrow {
-        SystemBorrow::ResMut(TypeId::of::<T>())
+        SystemBorrow::ResMut(ResourceData::new::<T>())
     }
 
     fn borrow<'a>(_world: &'a World, resources: &'a Resources) -> Self::Param<'a> {

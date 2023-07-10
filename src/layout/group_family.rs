@@ -1,8 +1,9 @@
-use crate::layout::{ComponentInfo, LayoutGroup};
+use crate::layout::LayoutGroup;
+use crate::utils::ComponentData;
 
 #[derive(Debug)]
 pub(crate) struct LayoutGroupFamily {
-    components: Vec<ComponentInfo>,
+    components: Vec<ComponentData>,
     group_arities: Vec<usize>,
 }
 
@@ -23,11 +24,11 @@ impl LayoutGroupFamily {
             "Groups must be added from shortest to longest",
         );
 
-        fn is_disjoint(group: &[ComponentInfo], family: &[ComponentInfo]) -> bool {
+        fn is_disjoint(group: &[ComponentData], family: &[ComponentData]) -> bool {
             !group.iter().any(|c| family.contains(c))
         }
 
-        fn is_superset(group: &[ComponentInfo], family: &[ComponentInfo]) -> bool {
+        fn is_superset(group: &[ComponentData], family: &[ComponentData]) -> bool {
             family.iter().all(|c| group.contains(c))
         }
 
@@ -62,7 +63,7 @@ impl LayoutGroupFamily {
 
     #[inline]
     #[must_use]
-    pub fn components(&self) -> &[ComponentInfo] {
+    pub fn components(&self) -> &[ComponentData] {
         &self.components
     }
 

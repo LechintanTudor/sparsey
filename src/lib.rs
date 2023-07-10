@@ -35,14 +35,13 @@
 //! }
 //! ```
 
-pub(crate) mod utils;
-
 pub mod components;
 pub mod layout;
 pub mod query;
 pub mod resources;
 pub mod storage;
 pub mod systems;
+pub mod utils;
 pub mod world;
 
 /// Re-exports the most commonly used items.

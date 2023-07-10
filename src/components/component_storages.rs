@@ -16,7 +16,7 @@ use std::slice;
 #[derive(Default)]
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,
-    component_info: FxHashMap<TypeId, ComponentInfo>,
+    component_info: FxHashMap<TypeId, ComponentData>,
     groups: Vec<Group>,
     family_ranges: Vec<Range<usize>>,
 }
@@ -47,7 +47,7 @@ impl ComponentStorages {
                 for (component_offset, component) in new_components.iter().enumerate() {
                     component_info.insert(
                         component.type_id(),
-                        ComponentInfo {
+                        ComponentData {
                             storage_index: storages.len(),
                             family_mask: FamilyMask::from_family_index(family_index),
                             group_mask: GroupMask::new(groups.len(), group_arity, family.arity()),
@@ -82,7 +82,7 @@ impl ComponentStorages {
         for (type_id, storage) in spare_storages.drain() {
             component_info.insert(
                 type_id,
-                ComponentInfo {
+                ComponentData {
                     storage_index: storages.len(),
                     family_mask: FamilyMask::NONE,
                     group_mask: GroupMask::NONE,
@@ -130,7 +130,7 @@ impl ComponentStorages {
         storage_builder: impl FnOnce() -> ComponentStorage,
     ) {
         if let Entry::Vacant(entry) = self.component_info.entry(type_id) {
-            entry.insert(ComponentInfo {
+            entry.insert(ComponentData {
                 storage_index: self.storages.len(),
                 family_mask: FamilyMask::default(),
                 group_mask: GroupMask::default(),
@@ -304,7 +304,7 @@ impl ComponentStorages {
 }
 
 #[derive(Clone, Copy)]
-struct ComponentInfo {
+struct ComponentData {
     /// Index of the storage in `storages`.
     storage_index: usize,
     /// Bitmask for the family index to which the storage belongs.

@@ -1,5 +1,5 @@
-use crate::layout::ComponentInfo;
 use crate::storage::Component;
+use crate::utils::ComponentData;
 
 /// The minimum number of component storages that can form a group.
 pub const MIN_GROUP_ARITY: usize = 2;
@@ -9,11 +9,11 @@ pub const MAX_GROUP_ARITY: usize = 16;
 /// Tracks which component storages should form a group.
 #[derive(Clone, Debug)]
 pub struct LayoutGroup {
-    components: Vec<ComponentInfo>,
+    components: Vec<ComponentData>,
 }
 
 impl LayoutGroup {
-    pub(crate) fn new(mut components: Vec<ComponentInfo>) -> Self {
+    pub(crate) fn new(mut components: Vec<ComponentData>) -> Self {
         let initial_len = components.len();
 
         components.sort();
@@ -49,7 +49,7 @@ impl LayoutGroup {
     /// Returns the component types that should be grouped together.
     #[inline]
     #[must_use]
-    pub fn components(&self) -> &[ComponentInfo] {
+    pub fn components(&self) -> &[ComponentData] {
         &self.components
     }
 }
@@ -67,7 +67,7 @@ macro_rules! impl_layout_group_descriptor {
             $($comp: Component,)+
         {
             fn group() -> LayoutGroup {
-                LayoutGroup::new(vec![$(ComponentInfo::new::<$comp>()),+])
+                LayoutGroup::new(vec![$(ComponentData::new::<$comp>()),+])
             }
         }
     };

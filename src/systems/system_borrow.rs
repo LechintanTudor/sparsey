@@ -1,5 +1,4 @@
-use crate::layout::ComponentInfo;
-use std::any::TypeId;
+use crate::utils::{ComponentData, ResourceData};
 
 /// Type of asset borrowed by systems during execution.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -7,13 +6,13 @@ pub enum SystemBorrow {
     /// View over all entities.
     Entities,
     /// View over all components of a type.
-    Comp(ComponentInfo),
+    Comp(ComponentData),
     /// Mutable view over all components of a type.
-    CompMut(ComponentInfo),
+    CompMut(ComponentData),
     /// View over a resource.
-    Res(TypeId),
+    Res(ResourceData),
     /// Mutable view over a resource.
-    ResMut(TypeId),
+    ResMut(ResourceData),
 }
 
 impl SystemBorrow {
