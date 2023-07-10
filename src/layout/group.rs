@@ -7,6 +7,7 @@ pub const MIN_GROUP_ARITY: usize = 2;
 pub const MAX_GROUP_ARITY: usize = 16;
 
 /// Tracks which component storages should form a group.
+#[derive(Clone, Debug)]
 pub struct LayoutGroup {
     components: Vec<ComponentInfo>,
 }
@@ -20,26 +21,34 @@ impl LayoutGroup {
 
         let current_len = components.len();
 
-        if current_len != initial_len {
-            panic!("Groups cannot contain duplicate components");
-        } else if current_len < MIN_GROUP_ARITY {
-            panic!(
-                "Groups must contain at least {} components",
-                MIN_GROUP_ARITY
-            );
-        } else if current_len > MAX_GROUP_ARITY {
-            panic!("Groups must contain at most {} components", MAX_GROUP_ARITY);
-        }
+        assert_eq!(
+            current_len, initial_len,
+            "Group cannot contain duplicate components",
+        );
+
+        assert!(
+            current_len >= MIN_GROUP_ARITY,
+            "Groups must contain at least {MIN_GROUP_ARITY} components",
+        );
+
+        assert!(
+            current_len <= MAX_GROUP_ARITY,
+            "Groups must contain at most {MAX_GROUP_ARITY} components",
+        );
 
         Self { components }
     }
 
     /// Returns the number of storages to be grouped.
+    #[inline]
+    #[must_use]
     pub fn arity(&self) -> usize {
         self.components.len()
     }
 
     /// Returns the component types that should be grouped together.
+    #[inline]
+    #[must_use]
     pub fn components(&self) -> &[ComponentInfo] {
         &self.components
     }

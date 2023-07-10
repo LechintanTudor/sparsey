@@ -18,23 +18,29 @@ impl ComponentInfo {
     }
 
     /// Returns the [`TypeId`] of the [`Component`].
+    #[inline]
+    #[must_use]
     pub fn type_id(&self) -> TypeId {
         self.0.type_id()
     }
 
     /// Returns an empty [`ComponentStorage`] for the [`Component`].
+    #[inline]
+    #[must_use]
     pub(crate) fn create_storage(&self) -> ComponentStorage {
         self.0.create_storage()
     }
 }
 
 impl Clone for ComponentInfo {
+    #[inline]
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
 impl PartialEq for ComponentInfo {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.type_id().eq(&other.type_id())
     }
@@ -43,12 +49,14 @@ impl PartialEq for ComponentInfo {
 impl Eq for ComponentInfo {}
 
 impl PartialOrd for ComponentInfo {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.type_id().partial_cmp(&other.type_id())
     }
 }
 
 impl Ord for ComponentInfo {
+    #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         self.type_id().cmp(&other.type_id())
     }
