@@ -48,7 +48,9 @@ where
     type Item = G::Refs<'a> where Self: 'a;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(&entity) = self.entities.next() {
+        loop {
+            let entity = *self.entities.next()?;
+
             if !E::sparse_contains_none(self.exclude, entity) {
                 continue;
             }
@@ -63,8 +65,6 @@ where
                 return Some(components);
             }
         }
-
-        None
     }
 
     fn fold<B, F>(self, mut init: B, mut f: F) -> B
@@ -99,7 +99,9 @@ where
     E: QueryPart,
 {
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
-        while let Some(&entity) = self.entities.next() {
+        loop {
+            let entity = *self.entities.next()?;
+
             if !E::sparse_contains_none(self.exclude, entity) {
                 continue;
             }
@@ -114,8 +116,6 @@ where
                 return Some((entity, components));
             }
         }
-
-        None
     }
 
     fn fold_with_entity<B, F>(self, mut init: B, mut f: F) -> B
