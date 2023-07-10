@@ -1,5 +1,6 @@
 use crate::resources::{Res, ResMut, Resource, Resources, UnsafeResources};
 use std::any::TypeId;
+use std::fmt;
 
 /// View over thread-safe resources.
 #[derive(Clone, Copy)]
@@ -87,5 +88,12 @@ impl<'a> From<&'a mut Resources> for SyncResources<'a> {
     #[inline]
     fn from(resources: &'a mut Resources) -> Self {
         resources.sync()
+    }
+}
+
+impl fmt::Debug for SyncResources<'_> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SyncResources").finish_non_exhaustive()
     }
 }

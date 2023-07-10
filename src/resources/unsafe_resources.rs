@@ -3,6 +3,7 @@ use crate::utils;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 
 /// Unsafe resource storage. Unsafe because it can store `!Send` and `!Sync` resources while being
@@ -104,5 +105,22 @@ impl UnsafeResources {
     #[inline]
     pub unsafe fn clear(&mut self) {
         self.resources.clear()
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct DebugResourceTypeIdSet<'a>(pub &'a UnsafeResources);
+
+impl fmt::Debug for DebugResourceTypeIdSet<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_set().entries(self.0.resources.keys()).finish()
+    }
+}
+
+impl fmt::Debug for UnsafeResources {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UnsafeResources")
+            .field("resource_type_ids", &DebugResourceTypeIdSet(self))
+            .finish_non_exhaustive()
     }
 }
