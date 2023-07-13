@@ -1,4 +1,4 @@
-use crate::storage::{Entity, IndexEntity, SparseArray, Version};
+use crate::storage::{DenseEntity, Entity, SparseArray, Version};
 use std::collections::VecDeque;
 use std::num::NonZeroU32;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
@@ -104,14 +104,14 @@ struct EntitySparseSet {
 impl EntitySparseSet {
     /// Inserts `entity` into the storage.
     fn insert(&mut self, entity: Entity) {
-        let index_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
+        let dense_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
-        match index_entity {
-            Some(index_entity) => unsafe {
-                *self.entities.get_unchecked_mut(index_entity.dense()) = entity;
+        match dense_entity {
+            Some(dense_entity) => unsafe {
+                *self.entities.get_unchecked_mut(dense_entity.dense()) = entity;
             },
             None => {
-                *index_entity = Some(IndexEntity::new(
+                *dense_entity = Some(DenseEntity::new(
                     self.entities.len() as u32,
                     entity.version(),
                 ));
@@ -123,17 +123,17 @@ impl EntitySparseSet {
     /// Removes `entity` from the storage and returns `true` if it was successfully removed.
     fn remove(&mut self, entity: Entity) -> bool {
         let dense_index = match self.sparse.remove(entity) {
-            Some(index_entity) => index_entity.dense(),
+            Some(dense_entity) => dense_entity.dense(),
             None => return false,
         };
 
         self.entities.swap_remove(dense_index);
 
         if let Some(entity) = self.entities.get(dense_index) {
-            let new_index_entity = IndexEntity::new(dense_index as u32, entity.version());
+            let new_dense_entity = DenseEntity::new(dense_index as u32, entity.version());
 
             unsafe {
-                *self.sparse.get_unchecked_mut(entity.sparse()) = Some(new_index_entity);
+                *self.sparse.get_unchecked_mut(entity.sparse()) = Some(new_dense_entity);
             }
         }
 
@@ -176,7 +176,7 @@ impl EntityAllocator {
         } else if *self.next_id_to_allocate.get_mut() <= (u32::MAX as u64) {
             let id = *self.next_id_to_allocate.get_mut() as u32;
             *self.next_id_to_allocate.get_mut() += 1;
-            Some(Entity::with_id(id))
+            Some(Entity::with_index(id))
         } else {
             None
         }
@@ -190,17 +190,19 @@ impl EntityAllocator {
             Some(recycled_since_maintain) => {
                 Some(self.recycled[self.recycled.len() - recycled_since_maintain - 1])
             }
-            None => increment_next_id_to_allocate(&self.next_id_to_allocate).map(Entity::with_id),
+            None => {
+                increment_next_id_to_allocate(&self.next_id_to_allocate).map(Entity::with_index)
+            }
         }
     }
 
     /// Deallocates the entity and attempts to recycle its id.
     fn deallocate(&mut self, entity: Entity) {
-        let next_version_id = NonZeroU32::new(entity.version().id().wrapping_add(1));
+        let next_version_id = NonZeroU32::new(entity.version().index().wrapping_add(1));
 
         if let Some(next_version_id) = next_version_id {
             self.recycled
-                .push_front(Entity::new(entity.id(), Version::new(next_version_id)));
+                .push_front(Entity::new(entity.index(), Version::new(next_version_id)));
         }
     }
 
@@ -224,7 +226,7 @@ impl EntityAllocator {
             .drain(recycled_range)
             .chain(new_id_range.map(|i| {
                 // next_id_to_allocate is capped at (u32::MAX + 1), so i <= u32::MAX
-                Entity::with_id(i as u32)
+                Entity::with_index(i as u32)
             }))
     }
 

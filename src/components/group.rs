@@ -191,8 +191,8 @@ unsafe fn get_group_status(
     let (first, others) = group_storages.split_first_mut().unwrap_unchecked();
 
     let status = match first.get_mut().sparse().get(entity) {
-        Some(index_entity) => {
-            if index_entity.dense() < group_len {
+        Some(dense_entity) => {
+            if dense_entity.dense() < group_len {
                 GroupStatus::Grouped
             } else {
                 GroupStatus::Ungrouped

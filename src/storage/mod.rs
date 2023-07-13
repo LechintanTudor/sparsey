@@ -59,16 +59,16 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        let index_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
+        let dense_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
-        match index_entity {
-            Some(index_entity) => {
-                let index = index_entity.dense();
+        match dense_entity {
+            Some(dense_entity) => {
+                let index = dense_entity.dense();
                 self.get_entity_ptr(index).write(entity);
                 Some(self.get_component_ptr::<T>(index).replace(component))
             }
             None => {
-                *index_entity = Some(IndexEntity::new(self.len as u32, entity.version()));
+                *dense_entity = Some(DenseEntity::new(self.len as u32, entity.version()));
 
                 if self.len == self.cap {
                     self.grow_amortized();
@@ -94,8 +94,8 @@ impl ComponentStorage {
         self.get_entity_ptr(index).write(last_entity);
 
         if index < self.len {
-            let index_entity = IndexEntity::new(index as u32, last_entity.version());
-            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(index_entity);
+            let dense_entity = DenseEntity::new(index as u32, last_entity.version());
+            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(dense_entity);
         }
 
         let removed_ptr = self.get_component_ptr::<T>(index);
@@ -115,7 +115,7 @@ impl ComponentStorage {
         T: Component,
     {
         let index = match self.sparse.remove(entity) {
-            Some(index_entity) => index_entity.dense(),
+            Some(dense_entity) => dense_entity.dense(),
             None => return,
         };
 
@@ -125,8 +125,8 @@ impl ComponentStorage {
         self.get_entity_ptr(index).write(last_entity);
 
         if index < self.len {
-            let index_entity = IndexEntity::new(index as u32, last_entity.version());
-            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(index_entity);
+            let dense_entity = DenseEntity::new(index as u32, last_entity.version());
+            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(dense_entity);
         }
 
         let dropped_ptr = self.get_component_ptr::<T>(index);
