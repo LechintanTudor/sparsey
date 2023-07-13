@@ -1,7 +1,6 @@
 use crate::storage::{Entity, IndexEntity, SparseArray, Version};
 use std::collections::VecDeque;
 use std::num::NonZeroU32;
-use std::ops::Deref;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 /// Sparse set-based storage for entities.
@@ -20,6 +19,7 @@ impl EntityStorage {
             .allocator
             .allocate()
             .expect("No entities left to allocate");
+
         self.storage.insert(entity);
         entity
     }
@@ -35,18 +35,37 @@ impl EntityStorage {
     /// Removes `entity` from the storage if it exits. Returns whether there was anything to remove.
     #[inline]
     pub(crate) fn destroy(&mut self, entity: Entity) -> bool {
-        if self.storage.remove(entity) {
-            self.allocator.deallocate(entity);
-            true
-        } else {
-            false
+        if !self.storage.remove(entity) {
+            return false;
         }
+
+        self.allocator.deallocate(entity);
+        true
     }
 
     /// Returns `true` if the storage contains `entity`.
     #[inline]
-    pub(crate) fn contains(&self, entity: Entity) -> bool {
+    #[must_use]
+    pub fn contains(&self, entity: Entity) -> bool {
         self.storage.contains(entity)
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.storage.entities.len()
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.storage.entities.is_empty()
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn as_slice(&self) -> &[Entity] {
+        self.storage.entities.as_slice()
     }
 
     /// Removes all entities from the storage.
@@ -73,15 +92,6 @@ impl EntityStorage {
         self.allocator
             .maintain()
             .for_each(|entity| self.storage.insert(entity));
-    }
-}
-
-impl Deref for EntityStorage {
-    type Target = [Entity];
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.storage.entities
     }
 }
 

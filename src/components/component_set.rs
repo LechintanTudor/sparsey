@@ -53,6 +53,8 @@ unsafe impl ComponentSet for () {
         components_iter.into_iter().for_each(|_| {
             entities.create();
         });
+
+        let entities = entities.as_slice();
         unsafe { entities.get_unchecked(initial_entity_count..) }
     }
 
@@ -126,6 +128,8 @@ macro_rules! impl_component_set {
                         }
                     });
                 }
+
+                let entities = entities.as_slice();
 
                 unsafe {
                     let new_entities = entities.get_unchecked(initial_entity_count..);

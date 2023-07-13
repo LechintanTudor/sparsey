@@ -2,7 +2,6 @@ use crate::storage::{Entity, IndexEntity};
 
 /// Maps versioned sparse indexes (entities) to dense indexes.
 /// Used internally by `ComponentStorage`.
-#[doc(hidden)]
 #[derive(Clone, Debug, Default)]
 pub struct SparseArray {
     entities: Vec<Option<IndexEntity>>,
@@ -28,6 +27,7 @@ impl SparseArray {
             .is_some_and(|index_entity| index_entity.version() == entity.version())
     }
 
+    /// Removes the entity from the array.
     #[inline]
     pub fn remove(&mut self, entity: Entity) -> Option<IndexEntity> {
         let entity_slot = self.entities.get_mut(entity.sparse())?;
@@ -63,19 +63,21 @@ impl SparseArray {
         self.entities.get(sparse).and_then(Option::as_ref).is_some()
     }
 
+    /// Removes the entity at the `sparse` index from the array.
     #[inline]
     pub fn remove_sparse(&mut self, sparse: usize) -> Option<IndexEntity> {
         self.entities.get_mut(sparse)?.take()
     }
 
     /// Returns the `IndexEntity` slot at `index` without checking if the `index` is valid.
-    pub(crate) unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<IndexEntity> {
+    #[inline]
+    pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<IndexEntity> {
         self.entities.get_unchecked_mut(index)
     }
 
     /// Returns the `IndexEntity` slot at `index`. Will allocate memory if the index cannot be
     /// stored in the allocated pages.
-    pub(crate) fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<IndexEntity> {
+    pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<IndexEntity> {
         if index >= self.entities.len() {
             let extra_len =
                 index.checked_next_power_of_two().unwrap_or(index) - self.entities.len() + 1;
@@ -87,8 +89,9 @@ impl SparseArray {
         &mut self.entities[index]
     }
 
-    /// Swaps the indexes at `a` and `b` without checking if `a` and `b` are valid sparse indexes.
-    pub(crate) unsafe fn swap_nonoverlapping_unchecked(&mut self, a: usize, b: usize) {
+    /// Swaps the entities at the sparse indexes `a` and `b` without checking if they are valid.
+    #[inline]
+    pub unsafe fn swap_nonoverlapping_unchecked(&mut self, a: usize, b: usize) {
         debug_assert!(a < self.entities.len());
         debug_assert!(b < self.entities.len());
         debug_assert_ne!(a, b);
@@ -99,7 +102,8 @@ impl SparseArray {
     }
 
     /// Removes all entities from the array.
-    pub(crate) fn clear(&mut self) {
+    #[inline]
+    pub fn clear(&mut self) {
         self.entities.clear();
     }
 }

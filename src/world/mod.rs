@@ -10,7 +10,6 @@ use crate::layout::Layout;
 use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
 use crate::utils::panic_missing_comp;
 use std::any::TypeId;
-use std::ops::Deref;
 use std::{fmt, iter, mem};
 
 /// Container for entities and their associated components.
@@ -37,7 +36,7 @@ impl World {
         unsafe {
             self.components = ComponentStorages::new(layout, &mut storages);
             self.components
-                .group_all_families(self.entities.iter().copied());
+                .group_all_families(self.entities.as_slice().iter().copied());
         }
     }
 
@@ -175,7 +174,7 @@ impl World {
     #[inline]
     #[must_use]
     pub fn entities(&self) -> &[Entity] {
-        self.entities.as_ref()
+        self.entities.as_slice()
     }
 
     /// Returns whether the `World` contains no entities.
@@ -245,7 +244,7 @@ impl World {
 impl fmt::Debug for World {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("World")
-            .field("entities", &self.entities.deref())
+            .field("entities", &self.entities.as_slice())
             .finish_non_exhaustive()
     }
 }

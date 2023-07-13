@@ -44,7 +44,7 @@ impl<'a> Entities<'a> {
     #[inline]
     #[must_use]
     pub fn as_slice(&self) -> &[Entity] {
-        self.storage
+        self.storage.as_slice()
     }
 }
 
