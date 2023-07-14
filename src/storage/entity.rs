@@ -2,8 +2,8 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 use std::fmt;
 use std::num::NonZeroU32;
 
-/// Type used to tell apart entities with the same id. Entities with the same index and different
-/// versions are considered different.
+/// Type used to tell apart entities with the same index. Entities with the same index and
+/// different versions are considered different.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub struct Version(NonZeroU32);
 
@@ -11,17 +11,24 @@ impl Version {
     /// Default version of an [`Entity`].
     pub const DEFAULT: Version = unsafe { Self(NonZeroU32::new_unchecked(1)) };
 
-    /// Creates a new version with the given `id`.
+    /// Creates a new version with the given `indexd`.
     #[inline]
     pub const fn new(index: NonZeroU32) -> Self {
         Self(index)
     }
 
-    /// Returns the `id` of the version.
+    /// Returns the index of the version.
     #[inline]
     #[must_use]
     pub const fn index(&self) -> u32 {
         self.0.get()
+    }
+
+    /// Returns the version after the current one, if any.
+    #[inline]
+    #[must_use]
+    pub fn next(&self) -> Option<Version> {
+        self.0.checked_add(1).map(Self)
     }
 }
 

@@ -10,7 +10,8 @@ pub(crate) use self::group::*;
 pub use self::group_info::*;
 pub(crate) use self::masks::*;
 use crate::layout::Layout;
-use crate::storage::{Component, ComponentStorage, Entity};
+pub use crate::storage::Component;
+use crate::storage::{ComponentStorage, Entity};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
@@ -20,7 +21,6 @@ use std::ptr::NonNull;
 use std::slice;
 
 /// Container for component storages. Also manages component grouping.
-#[doc(hidden)]
 #[derive(Default)]
 pub struct ComponentStorages {
     storages: Vec<AtomicRefCell<ComponentStorage>>,

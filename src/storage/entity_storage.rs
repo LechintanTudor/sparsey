@@ -1,32 +1,28 @@
-use crate::storage::{DenseEntity, Entity, SparseArray, Version};
-use std::collections::VecDeque;
-use std::num::NonZeroU32;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use crate::storage::{Entity, EntityAllocator, EntitySparseSet};
 
 /// Sparse set-based storage for entities.
-#[doc(hidden)]
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct EntityStorage {
-    storage: EntitySparseSet,
+    entities: EntitySparseSet,
     allocator: EntityAllocator,
 }
 
 impl EntityStorage {
     /// Creates a new `Entity` and returns it.
     #[inline]
-    pub(crate) fn create(&mut self) -> Entity {
+    pub fn create(&mut self) -> Entity {
         let entity = self
             .allocator
             .allocate()
             .expect("No entities left to allocate");
 
-        self.storage.insert(entity);
+        self.entities.insert(entity);
         entity
     }
 
     /// Atomically creates a new `Entity` and returns it.
     #[inline]
-    pub(crate) fn create_atomic(&self) -> Entity {
+    pub fn create_atomic(&self) -> Entity {
         self.allocator
             .allocate_atomic()
             .expect("No entities left to allocate")
@@ -34,252 +30,98 @@ impl EntityStorage {
 
     /// Removes `entity` from the storage if it exits. Returns whether there was anything to remove.
     #[inline]
-    pub(crate) fn destroy(&mut self, entity: Entity) -> bool {
-        if !self.storage.remove(entity) {
+    pub fn destroy(&mut self, entity: Entity) -> bool {
+        if !self.entities.remove(entity) {
             return false;
         }
 
-        self.allocator.deallocate(entity);
+        self.allocator.recycle(entity);
         true
     }
 
-    /// Returns `true` if the storage contains `entity`.
+    /// Returns whether the storage contains `entity`.
     #[inline]
     #[must_use]
     pub fn contains(&self, entity: Entity) -> bool {
-        self.storage.contains(entity)
+        self.entities.contains(entity)
     }
 
+    /// Returns the number of entities in the storage.
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
-        self.storage.entities.len()
+        self.entities.len()
     }
 
+    /// Returns whether the storage is empty.
     #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.storage.entities.is_empty()
+        self.entities.is_empty()
     }
 
+    /// Returns all entities in the storage as a slice.
     #[inline]
     #[must_use]
     pub fn as_slice(&self) -> &[Entity] {
-        self.storage.entities.as_slice()
+        self.entities.as_slice()
     }
 
     /// Removes all entities from the storage.
-    pub(crate) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         // Add the entities created atomically to the storage so they can be properly recycled
         self.maintain();
 
-        self.storage
-            .entities
+        self.entities
+            .as_slice()
             .iter()
-            .for_each(|&entity| self.allocator.deallocate(entity));
+            .for_each(|&entity| self.allocator.recycle(entity));
 
-        self.storage.clear();
+        self.entities.clear();
     }
 
-    /// Removes all entities from the storage and resets the entity allocator.
-    pub(crate) fn reset(&mut self) {
-        self.storage.clear();
+    /// Removes all entities from the storage and resets the entity allocator allowing previously
+    /// generated entities to be generated again.
+    #[inline]
+    pub fn reset(&mut self) {
+        self.entities.clear();
         self.allocator.reset();
     }
 
     /// Adds the entities created atomically to the storage.
-    pub(crate) fn maintain(&mut self) {
-        self.allocator
-            .maintain()
-            .for_each(|entity| self.storage.insert(entity));
-    }
-}
-
-#[derive(Clone, Default, Debug)]
-struct EntitySparseSet {
-    sparse: SparseArray,
-    entities: Vec<Entity>,
-}
-
-impl EntitySparseSet {
-    /// Inserts `entity` into the storage.
-    fn insert(&mut self, entity: Entity) {
-        let dense_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
-
-        match dense_entity {
-            Some(dense_entity) => unsafe {
-                *self.entities.get_unchecked_mut(dense_entity.dense()) = entity;
-            },
-            None => {
-                *dense_entity = Some(DenseEntity::new(
-                    self.entities.len() as u32,
-                    entity.version(),
-                ));
-                self.entities.push(entity);
-            }
-        }
-    }
-
-    /// Removes `entity` from the storage and returns `true` if it was successfully removed.
-    fn remove(&mut self, entity: Entity) -> bool {
-        let dense_index = match self.sparse.remove(entity) {
-            Some(dense_entity) => dense_entity.dense(),
-            None => return false,
-        };
-
-        self.entities.swap_remove(dense_index);
-
-        if let Some(entity) = self.entities.get(dense_index) {
-            let new_dense_entity = DenseEntity::new(dense_index as u32, entity.version());
-
-            unsafe {
-                *self.sparse.get_unchecked_mut(entity.sparse()) = Some(new_dense_entity);
-            }
-        }
-
-        true
-    }
-
-    /// Returns `true` if the storage contains `entity`.
     #[inline]
-    fn contains(&self, entity: Entity) -> bool {
-        self.sparse.contains(entity)
+    pub fn maintain(&mut self) {
+        self.allocator.maintain().for_each(|entity| {
+            let _ = self.entities.insert(entity);
+        });
     }
 
-    /// Removes all entities from the storage.
-    fn clear(&mut self) {
-        self.sparse.clear();
-        self.entities.clear();
-    }
-}
-
-#[derive(Default, Debug)]
-struct EntityAllocator {
-    /// Value of the next Entity id to be allocated, capped at (u32::MAX + 1)
-    next_id_to_allocate: AtomicU64,
-    /// Value of next_id_to_allocate before the last call to maintain
-    last_maintained_id: u64,
-    /// Entities with the same id as previously deallocated entities, but higher version
-    recycled: VecDeque<Entity>,
-    /// Number of recycled entities since the last call to maintain
-    recycled_since_maintain: AtomicUsize,
-}
-
-impl EntityAllocator {
-    /// Allocates an entity synchronously.
-    fn allocate(&mut self) -> Option<Entity> {
-        let recycled_since_maintain = *self.recycled_since_maintain.get_mut();
-
-        if recycled_since_maintain < self.recycled.len() {
-            *self.recycled_since_maintain.get_mut() += 1;
-            Some(self.recycled[self.recycled.len() - recycled_since_maintain - 1])
-        } else if *self.next_id_to_allocate.get_mut() <= (u32::MAX as u64) {
-            let id = *self.next_id_to_allocate.get_mut() as u32;
-            *self.next_id_to_allocate.get_mut() += 1;
-            Some(Entity::with_index(id))
-        } else {
-            None
-        }
+    /// Returns the managed entity storage.
+    #[inline]
+    #[must_use]
+    pub fn storage(&self) -> &EntitySparseSet {
+        &self.entities
     }
 
-    /// Allocates an entity without needing exclusive access over the allocator. Slower than
-    /// `allocate`.
-    fn allocate_atomic(&self) -> Option<Entity> {
-        match increment_recycled_since_maintain(&self.recycled_since_maintain, self.recycled.len())
-        {
-            Some(recycled_since_maintain) => {
-                Some(self.recycled[self.recycled.len() - recycled_since_maintain - 1])
-            }
-            None => {
-                increment_next_id_to_allocate(&self.next_id_to_allocate).map(Entity::with_index)
-            }
-        }
+    /// Returns the allocator used to create and recycle entities.
+    #[inline]
+    #[must_use]
+    pub fn allocator(&self) -> &EntityAllocator {
+        &self.allocator
     }
 
-    /// Deallocates the entity and attempts to recycle its id.
-    fn deallocate(&mut self, entity: Entity) {
-        let next_version_id = NonZeroU32::new(entity.version().index().wrapping_add(1));
-
-        if let Some(next_version_id) = next_version_id {
-            self.recycled
-                .push_front(Entity::new(entity.index(), Version::new(next_version_id)));
-        }
-    }
-
-    /// Clears the recycled entities queue and returns an iterator over all allocated entities
-    /// since the last call to maintain.
-    fn maintain(&mut self) -> impl Iterator<Item = Entity> + '_ {
-        let recycled_range = {
-            let recycled_since_maintain = *self.recycled_since_maintain.get_mut();
-            *self.recycled_since_maintain.get_mut() = 0;
-            (self.recycled.len() - recycled_since_maintain)..
-        };
-
-        let new_id_range = {
-            let next_id_to_allocate = *self.next_id_to_allocate.get_mut();
-            let new_id_range = self.last_maintained_id..next_id_to_allocate;
-            self.last_maintained_id = next_id_to_allocate;
-            new_id_range
-        };
-
-        self.recycled
-            .drain(recycled_range)
-            .chain(new_id_range.map(|i| {
-                // next_id_to_allocate is capped at (u32::MAX + 1), so i <= u32::MAX
-                Entity::with_index(i as u32)
-            }))
-    }
-
-    /// Resets the allocator to its default state without freeing the allocated memory.
-    fn reset(&mut self) {
-        *self.next_id_to_allocate.get_mut() = 0;
-        self.last_maintained_id = 0;
-        self.recycled.clear();
-        *self.recycled_since_maintain.get_mut() = 0;
+    /// Decomposes the entity storage into its underlying parts.
+    #[inline]
+    pub fn into_raw_parts(self) -> (EntitySparseSet, EntityAllocator) {
+        (self.entities, self.allocator)
     }
 }
 
-/// Atomically increments `recycled_since_maintain`, capping at `recycled_len`.
-/// Returns the value before the increment if it is <= `recycled_len`.
-fn increment_recycled_since_maintain(
-    recycled_since_maintain: &AtomicUsize,
-    recycled_len: usize,
-) -> Option<usize> {
-    let mut prev = recycled_since_maintain.load(Ordering::Relaxed);
-
-    while prev < recycled_len {
-        match recycled_since_maintain.compare_exchange_weak(
-            prev,
-            prev + 1,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
-            Ok(prev) => return Some(prev),
-            Err(next_prev) => prev = next_prev,
-        }
+impl AsRef<[Entity]> for EntityStorage {
+    #[inline]
+    fn as_ref(&self) -> &[Entity] {
+        self.entities.as_slice()
     }
-
-    None
-}
-
-/// Atomically increments `next_id_to_allocate`, capping at (`u32::MAX + 1`).
-/// Returns the value before the increment if it is <= `u32::MAX`
-fn increment_next_id_to_allocate(next_id_to_allocate: &AtomicU64) -> Option<u32> {
-    let mut prev = next_id_to_allocate.load(Ordering::Relaxed);
-
-    while prev <= (u32::MAX as u64) {
-        match next_id_to_allocate.compare_exchange_weak(
-            prev,
-            prev + 1,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
-            Ok(prev) => return Some(prev as u32),
-            Err(next_prev) => prev = next_prev,
-        }
-    }
-
-    None
 }
 
 #[cfg(test)]
@@ -288,40 +130,40 @@ mod tests {
 
     #[test]
     fn create() {
-        let mut entity_storage = EntityStorage::default();
+        let mut entities = EntityStorage::default();
 
         // e0 created synchronously
-        let e0 = entity_storage.create();
-        assert!(entity_storage.contains(e0));
+        let e0 = entities.create();
+        assert!(entities.contains(e0));
 
         // e1 created atomically, unmaintained
-        let e1 = entity_storage.create_atomic();
-        assert!(!entity_storage.contains(e1));
+        let e1 = entities.create_atomic();
+        assert!(!entities.contains(e1));
 
         // e1 created atomically, maintained
-        entity_storage.maintain();
-        assert!(entity_storage.contains(e1));
+        entities.maintain();
+        assert!(entities.contains(e1));
     }
 
     #[test]
     fn destroy() {
-        let mut entity_storage = EntityStorage::default();
+        let mut entities = EntityStorage::default();
 
         // e0 created synchronously
-        let e0 = entity_storage.create();
-        assert!(entity_storage.destroy(e0));
-        assert!(!entity_storage.destroy(e0));
-        assert!(!entity_storage.contains(e0));
+        let e0 = entities.create();
+        assert!(entities.destroy(e0));
+        assert!(!entities.destroy(e0));
+        assert!(!entities.contains(e0));
 
         // e1 created atomically, unmaintained
-        let e1 = entity_storage.create_atomic();
-        assert!(!entity_storage.destroy(e1));
-        assert!(!entity_storage.contains(e1));
+        let e1 = entities.create_atomic();
+        assert!(!entities.destroy(e1));
+        assert!(!entities.contains(e1));
 
         // e1 created atomically maintained
-        entity_storage.maintain();
-        assert!(entity_storage.destroy(e1));
-        assert!(!entity_storage.destroy(e1));
-        assert!(!entity_storage.contains(e1));
+        entities.maintain();
+        assert!(entities.destroy(e1));
+        assert!(!entities.destroy(e1));
+        assert!(!entities.contains(e1));
     }
 }

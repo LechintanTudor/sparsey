@@ -204,7 +204,7 @@ impl World {
     #[inline]
     #[must_use]
     pub fn borrow_entities(&self) -> Entities {
-        Entities::new(&self.entities)
+        Entities::from(&self.entities)
     }
 
     /// Borrows an immutable view over all components of type `T` in the world. Panics if the
