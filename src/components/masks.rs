@@ -14,35 +14,29 @@ fn first_n_bits_u32(n: usize) -> u32 {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct MaskIndexIter {
-    mask: u32,
-    offset: u32,
+pub(crate) struct BitIndexIter {
+    value: u32,
 }
 
-impl MaskIndexIter {
-    #[inline]
-    fn new(mask: u32) -> MaskIndexIter {
-        MaskIndexIter { mask, offset: 0 }
-    }
-}
-
-impl Iterator for MaskIndexIter {
+impl Iterator for BitIndexIter {
     type Item = usize;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let trailing_zeros = self.mask.trailing_zeros();
-
-        if trailing_zeros == u32::BITS {
+        if self.value == 0 {
             return None;
         }
 
-        self.mask >>= trailing_zeros + 1;
-        self.offset += trailing_zeros;
+        let trailing_zeros = self.value.trailing_zeros();
+        self.value &= !(1 << trailing_zeros);
+        Some(trailing_zeros as usize)
+    }
+}
 
-        let index = self.offset as usize;
-        self.offset += 1;
-
-        Some(index)
+impl From<u32> for BitIndexIter {
+    #[inline]
+    fn from(value: u32) -> Self {
+        Self { value }
     }
 }
 
@@ -59,8 +53,8 @@ impl FamilyMask {
     }
 
     #[inline]
-    pub fn iter_indexes(self) -> MaskIndexIter {
-        MaskIndexIter::new(self.0)
+    pub fn iter_bit_indexes(self) -> BitIndexIter {
+        BitIndexIter::from(self.0)
     }
 }
 

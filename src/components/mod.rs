@@ -168,7 +168,7 @@ impl ComponentStorages {
 
     #[inline]
     pub(crate) unsafe fn group_families(&mut self, family_mask: FamilyMask, entity: Entity) {
-        for family_index in family_mask.iter_indexes() {
+        for family_index in family_mask.iter_bit_indexes() {
             let family_range = self.family_ranges.get_unchecked(family_index).clone();
             group_family(&mut self.storages, &mut self.groups, family_range, entity);
         }
@@ -181,7 +181,7 @@ impl ComponentStorages {
         group_mask: GroupMask,
         entity: Entity,
     ) {
-        for family_index in family_mask.iter_indexes() {
+        for family_index in family_mask.iter_bit_indexes() {
             let family_range = self.family_ranges.get_unchecked(family_index).clone();
 
             ungroup_family(
@@ -212,7 +212,7 @@ impl ComponentStorages {
         family_mask: FamilyMask,
         entities: impl Iterator<Item = Entity> + Clone,
     ) {
-        for family_index in family_mask.iter_indexes() {
+        for family_index in family_mask.iter_bit_indexes() {
             let family_range = self.family_ranges.get_unchecked(family_index);
 
             entities.clone().for_each(|entity| {
@@ -232,7 +232,7 @@ impl ComponentStorages {
         group_mask: GroupMask,
         entities: impl Iterator<Item = Entity> + Clone,
     ) {
-        for family_index in family_mask.iter_indexes() {
+        for family_index in family_mask.iter_bit_indexes() {
             let family_range = self.family_ranges.get_unchecked(family_index);
 
             entities.clone().for_each(|entity| {
