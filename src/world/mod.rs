@@ -10,7 +10,7 @@ use crate::layout::Layout;
 use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
 use crate::utils::panic_missing_comp;
 use std::any::TypeId;
-use std::{fmt, iter, mem};
+use std::{fmt, mem};
 
 /// Container for entities and their associated components.
 #[derive(Default)]
@@ -36,7 +36,7 @@ impl World {
         unsafe {
             self.components = ComponentStorages::new(layout, &mut storages);
             self.components
-                .group_all_families(self.entities.as_slice().iter().copied());
+                .bulk_group_all_families(self.entities.as_slice().iter().copied());
         }
     }
 
@@ -100,7 +100,9 @@ impl World {
             return false;
         }
 
-        self.components.ungroup_all_families(iter::once(entity));
+        unsafe {
+            self.components.ungroup_all_families(entity);
+        }
 
         for storage in self.components.iter_mut() {
             storage.delete(entity);
@@ -118,7 +120,7 @@ impl World {
     {
         let entities = entities.into_iter().copied();
 
-        self.components.ungroup_all_families(entities.clone());
+        self.components.bulk_ungroup_all_families(entities.clone());
 
         for storage in self.components.iter_mut() {
             entities.clone().for_each(|entity| {

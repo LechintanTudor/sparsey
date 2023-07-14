@@ -123,7 +123,8 @@ impl ComponentStorages {
         storages
     }
 
-    pub(crate) fn register<T>(&mut self)
+    /// Creates a storage for components of type `T` if one doesn't already exist.
+    pub fn register<T>(&mut self)
     where
         T: Component,
     {
@@ -149,21 +150,64 @@ impl ComponentStorages {
         }
     }
 
+    /// Returns whether a component type is registered.
     #[must_use]
-    pub(crate) fn is_registered<T>(&self) -> bool
+    pub fn is_registered<T>(&self) -> bool
     where
         T: Component,
     {
         self.is_type_id_registered(TypeId::of::<T>())
     }
 
+    /// Returns whether the component with the given [`TypeId`] registered.
     #[inline]
     #[must_use]
-    pub(crate) fn is_type_id_registered(&self, component_type_id: TypeId) -> bool {
+    pub fn is_type_id_registered(&self, component_type_id: TypeId) -> bool {
         self.component_info.contains_key(&component_type_id)
     }
 
-    pub(crate) unsafe fn group_families(
+    #[inline]
+    pub(crate) unsafe fn group_families(&mut self, family_mask: FamilyMask, entity: Entity) {
+        for family_index in family_mask.iter_indexes() {
+            let family_range = self.family_ranges.get_unchecked(family_index).clone();
+            group_family(&mut self.storages, &mut self.groups, family_range, entity);
+        }
+    }
+
+    #[inline]
+    pub(crate) unsafe fn ungroup_families(
+        &mut self,
+        family_mask: FamilyMask,
+        group_mask: GroupMask,
+        entity: Entity,
+    ) {
+        for family_index in family_mask.iter_indexes() {
+            let family_range = self.family_ranges.get_unchecked(family_index).clone();
+
+            ungroup_family(
+                &mut self.storages,
+                &mut self.groups,
+                family_range,
+                group_mask,
+                entity,
+            );
+        }
+    }
+
+    #[inline]
+    pub(crate) unsafe fn ungroup_all_families(&mut self, entity: Entity) {
+        for family_range in self.family_ranges.iter() {
+            ungroup_family(
+                &mut self.storages,
+                &mut self.groups,
+                family_range.clone(),
+                GroupMask::ALL,
+                entity,
+            );
+        }
+    }
+
+    pub(crate) unsafe fn bulk_group_families(
         &mut self,
         family_mask: FamilyMask,
         entities: impl Iterator<Item = Entity> + Clone,
@@ -182,7 +226,7 @@ impl ComponentStorages {
         }
     }
 
-    pub(crate) unsafe fn ungroup_families(
+    pub(crate) unsafe fn bulk_ungroup_families(
         &mut self,
         family_mask: FamilyMask,
         group_mask: GroupMask,
@@ -203,7 +247,10 @@ impl ComponentStorages {
         }
     }
 
-    pub(crate) fn group_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
+    pub(crate) fn bulk_group_all_families(
+        &mut self,
+        entities: impl Iterator<Item = Entity> + Clone,
+    ) {
         for family_range in self.family_ranges.iter() {
             entities.clone().for_each(|entity| unsafe {
                 group_family(
@@ -216,7 +263,10 @@ impl ComponentStorages {
         }
     }
 
-    pub(crate) fn ungroup_all_families(&mut self, entities: impl Iterator<Item = Entity> + Clone) {
+    pub(crate) fn bulk_ungroup_all_families(
+        &mut self,
+        entities: impl Iterator<Item = Entity> + Clone,
+    ) {
         for family_range in self.family_ranges.iter() {
             entities.clone().for_each(|entity| unsafe {
                 ungroup_family(

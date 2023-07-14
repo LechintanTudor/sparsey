@@ -2,7 +2,6 @@ use crate::components::{ComponentStorages, FamilyMask, GroupMask};
 use crate::storage::{Component, ComponentStorage, Entity, EntityStorage};
 use crate::utils::panic_missing_comp;
 use std::any::TypeId;
-use std::iter;
 
 /// Manages components in component storages.
 /// Implemented for [`Component`] tuples up to arity 16.
@@ -93,7 +92,7 @@ macro_rules! impl_component_set {
                 )+
 
                 unsafe {
-                    storages.group_families(family_mask, iter::once(entity));
+                    storages.group_families(family_mask, entity);
                 }
             }
 
@@ -133,7 +132,7 @@ macro_rules! impl_component_set {
 
                 unsafe {
                     let new_entities = entities.get_unchecked(initial_entity_count..);
-                    storages.group_families(family_mask, new_entities.iter().copied());
+                    storages.bulk_group_families(family_mask, new_entities.iter().copied());
                     new_entities
                 }
             }
@@ -155,7 +154,7 @@ macro_rules! impl_component_set {
                 )+);
 
                 unsafe {
-                    storages.ungroup_families(family_mask, group_mask, iter::once(entity));
+                    storages.ungroup_families(family_mask, group_mask, entity);
                     ($((*storage_ptrs.$idx).remove::<$comp>(entity),)+)
                 }
             }
@@ -177,7 +176,7 @@ macro_rules! impl_component_set {
                 )+);
 
                 unsafe {
-                    storages.ungroup_families(family_mask, group_mask, iter::once(entity));
+                    storages.ungroup_families(family_mask, group_mask, entity);
                     $((*storage_ptrs.$idx).delete_typed::<$comp>(entity);)+
                 }
             }
