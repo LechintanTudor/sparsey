@@ -3,41 +3,16 @@ use std::ops::{BitOr, BitOrAssign};
 const STORAGE_MASK_ARITY: usize = u16::BITS as usize;
 const GROUP_MASK_ARITY: usize = u32::BITS as usize;
 
+#[inline]
+#[must_use]
 fn first_n_bits_u16(n: usize) -> u16 {
-    assert!(n <= u16::BITS as usize);
-    (0..n).fold(0, |m, i| m | 1 << i)
+    u16::MAX >> (u16::BITS - n as u32)
 }
 
+#[inline]
+#[must_use]
 fn first_n_bits_u32(n: usize) -> u32 {
-    assert!(n <= u32::BITS as usize);
-    (0..n).fold(0, |m, i| m | 1 << i)
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct BitIndexIter {
-    value: u32,
-}
-
-impl Iterator for BitIndexIter {
-    type Item = usize;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.value == 0 {
-            return None;
-        }
-
-        let trailing_zeros = self.value.trailing_zeros();
-        self.value &= !(1 << trailing_zeros);
-        Some(trailing_zeros as usize)
-    }
-}
-
-impl From<u32> for BitIndexIter {
-    #[inline]
-    fn from(value: u32) -> Self {
-        Self { value }
-    }
+    u32::MAX >> (u32::BITS - n as u32)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
@@ -196,5 +171,32 @@ impl QueryMask {
             include: StorageMask(first_n_bits_u16(prev_group_arity)),
             exclude: StorageMask(first_n_bits_u16(exclude_count) << prev_group_arity),
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct BitIndexIter {
+    value: u32,
+}
+
+impl Iterator for BitIndexIter {
+    type Item = usize;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.value == 0 {
+            return None;
+        }
+
+        let trailing_zeros = self.value.trailing_zeros();
+        self.value &= !(1 << trailing_zeros);
+        Some(trailing_zeros as usize)
+    }
+}
+
+impl From<u32> for BitIndexIter {
+    #[inline]
+    fn from(value: u32) -> Self {
+        Self { value }
     }
 }

@@ -1,7 +1,102 @@
-use crate::components::{GroupMask, QueryMask};
+use crate::components::{ComponentStorages, FamilyMask, GroupMask, QueryMask};
 use crate::storage::{ComponentStorage, Entity};
 use atomic_refcell::AtomicRefCell;
 use std::ops::Range;
+
+impl ComponentStorages {
+    #[inline]
+    pub(crate) unsafe fn group_families(&mut self, family_mask: FamilyMask, entity: Entity) {
+        for family_index in family_mask.iter_bit_indexes() {
+            let family_range = self.family_ranges.get_unchecked(family_index).clone();
+            group_family(&mut self.storages, &mut self.groups, family_range, entity);
+        }
+    }
+
+    #[inline]
+    pub(crate) unsafe fn ungroup_families(
+        &mut self,
+        family_mask: FamilyMask,
+        group_mask: GroupMask,
+        entity: Entity,
+    ) {
+        for family_index in family_mask.iter_bit_indexes() {
+            let family_range = self.family_ranges.get_unchecked(family_index).clone();
+
+            ungroup_family(
+                &mut self.storages,
+                &mut self.groups,
+                family_range,
+                group_mask,
+                entity,
+            );
+        }
+    }
+
+    #[inline]
+    pub(crate) unsafe fn ungroup_all_families(&mut self, entity: Entity) {
+        for family_range in self.family_ranges.iter() {
+            ungroup_family(
+                &mut self.storages,
+                &mut self.groups,
+                family_range.clone(),
+                GroupMask::ALL,
+                entity,
+            );
+        }
+    }
+
+    pub(crate) unsafe fn bulk_group_families(
+        &mut self,
+        family_mask: FamilyMask,
+        entities: impl Iterator<Item = Entity> + Clone,
+    ) {
+        for family_index in family_mask.iter_bit_indexes() {
+            let family_range = self.family_ranges.get_unchecked(family_index);
+
+            entities.clone().for_each(|entity| {
+                group_family(
+                    &mut self.storages,
+                    &mut self.groups,
+                    family_range.clone(),
+                    entity,
+                );
+            });
+        }
+    }
+
+    pub(crate) fn bulk_group_all_families(
+        &mut self,
+        entities: impl Iterator<Item = Entity> + Clone,
+    ) {
+        for family_range in self.family_ranges.iter() {
+            entities.clone().for_each(|entity| unsafe {
+                group_family(
+                    &mut self.storages,
+                    &mut self.groups,
+                    family_range.clone(),
+                    entity,
+                );
+            });
+        }
+    }
+
+    pub(crate) fn bulk_ungroup_all_families(
+        &mut self,
+        entities: impl Iterator<Item = Entity> + Clone,
+    ) {
+        for family_range in self.family_ranges.iter() {
+            entities.clone().for_each(|entity| unsafe {
+                ungroup_family(
+                    &mut self.storages,
+                    &mut self.groups,
+                    family_range.clone(),
+                    GroupMask::ALL,
+                    entity,
+                );
+            });
+        }
+    }
+}
 
 /// Example:
 ///
@@ -42,21 +137,25 @@ impl GroupMetadata {
     }
 
     #[inline]
+    #[must_use]
     pub fn storage_range(&self) -> Range<usize> {
         self.start..self.end
     }
 
     #[inline]
+    #[must_use]
     pub fn new_storage_range(&self) -> Range<usize> {
         self.new_start..self.end
     }
 
     #[inline]
+    #[must_use]
     pub fn include_mask(&self) -> QueryMask {
         self.include_mask
     }
 
     #[inline]
+    #[must_use]
     pub fn exclude_mask(&self) -> QueryMask {
         self.exclude_mask
     }
@@ -70,6 +169,7 @@ pub(crate) struct Group {
 }
 
 impl Group {
+    #[inline]
     pub fn new(start: usize, new_start: usize, end: usize) -> Self {
         Self {
             metadata: GroupMetadata::new(start, new_start, end),
@@ -78,11 +178,13 @@ impl Group {
     }
 
     #[inline]
+    #[must_use]
     pub fn metadata(&self) -> &GroupMetadata {
         &self.metadata
     }
 
     #[inline]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.len
     }
@@ -106,7 +208,7 @@ enum GroupStatus {
 /// # Safety
 /// The group family and the storages must be valid.
 #[inline]
-pub(crate) unsafe fn group_family(
+unsafe fn group_family(
     storages: &mut [AtomicRefCell<ComponentStorage>],
     groups: &mut [Group],
     family_range: Range<usize>,
@@ -138,7 +240,7 @@ pub(crate) unsafe fn group_family(
 /// # Safety
 /// The group family and the storages must be valid.
 #[inline]
-pub(crate) unsafe fn ungroup_family(
+unsafe fn ungroup_family(
     storages: &mut [AtomicRefCell<ComponentStorage>],
     groups: &mut [Group],
     family_range: Range<usize>,

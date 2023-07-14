@@ -3,15 +3,15 @@
 mod component_set;
 mod group;
 mod group_info;
-mod masks;
+mod group_mask;
 
 pub use self::component_set::*;
 pub(crate) use self::group::*;
 pub use self::group_info::*;
-pub(crate) use self::masks::*;
+pub(crate) use self::group_mask::*;
 use crate::layout::Layout;
 pub use crate::storage::Component;
-use crate::storage::{ComponentStorage, Entity};
+use crate::storage::ComponentStorage;
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
@@ -164,120 +164,6 @@ impl ComponentStorages {
     #[must_use]
     pub fn is_type_id_registered(&self, component_type_id: TypeId) -> bool {
         self.component_info.contains_key(&component_type_id)
-    }
-
-    #[inline]
-    pub(crate) unsafe fn group_families(&mut self, family_mask: FamilyMask, entity: Entity) {
-        for family_index in family_mask.iter_bit_indexes() {
-            let family_range = self.family_ranges.get_unchecked(family_index).clone();
-            group_family(&mut self.storages, &mut self.groups, family_range, entity);
-        }
-    }
-
-    #[inline]
-    pub(crate) unsafe fn ungroup_families(
-        &mut self,
-        family_mask: FamilyMask,
-        group_mask: GroupMask,
-        entity: Entity,
-    ) {
-        for family_index in family_mask.iter_bit_indexes() {
-            let family_range = self.family_ranges.get_unchecked(family_index).clone();
-
-            ungroup_family(
-                &mut self.storages,
-                &mut self.groups,
-                family_range,
-                group_mask,
-                entity,
-            );
-        }
-    }
-
-    #[inline]
-    pub(crate) unsafe fn ungroup_all_families(&mut self, entity: Entity) {
-        for family_range in self.family_ranges.iter() {
-            ungroup_family(
-                &mut self.storages,
-                &mut self.groups,
-                family_range.clone(),
-                GroupMask::ALL,
-                entity,
-            );
-        }
-    }
-
-    pub(crate) unsafe fn bulk_group_families(
-        &mut self,
-        family_mask: FamilyMask,
-        entities: impl Iterator<Item = Entity> + Clone,
-    ) {
-        for family_index in family_mask.iter_bit_indexes() {
-            let family_range = self.family_ranges.get_unchecked(family_index);
-
-            entities.clone().for_each(|entity| {
-                group_family(
-                    &mut self.storages,
-                    &mut self.groups,
-                    family_range.clone(),
-                    entity,
-                );
-            });
-        }
-    }
-
-    pub(crate) unsafe fn bulk_ungroup_families(
-        &mut self,
-        family_mask: FamilyMask,
-        group_mask: GroupMask,
-        entities: impl Iterator<Item = Entity> + Clone,
-    ) {
-        for family_index in family_mask.iter_bit_indexes() {
-            let family_range = self.family_ranges.get_unchecked(family_index);
-
-            entities.clone().for_each(|entity| {
-                ungroup_family(
-                    &mut self.storages,
-                    &mut self.groups,
-                    family_range.clone(),
-                    group_mask,
-                    entity,
-                );
-            });
-        }
-    }
-
-    pub(crate) fn bulk_group_all_families(
-        &mut self,
-        entities: impl Iterator<Item = Entity> + Clone,
-    ) {
-        for family_range in self.family_ranges.iter() {
-            entities.clone().for_each(|entity| unsafe {
-                group_family(
-                    &mut self.storages,
-                    &mut self.groups,
-                    family_range.clone(),
-                    entity,
-                );
-            });
-        }
-    }
-
-    pub(crate) fn bulk_ungroup_all_families(
-        &mut self,
-        entities: impl Iterator<Item = Entity> + Clone,
-    ) {
-        for family_range in self.family_ranges.iter() {
-            entities.clone().for_each(|entity| unsafe {
-                ungroup_family(
-                    &mut self.storages,
-                    &mut self.groups,
-                    family_range.clone(),
-                    GroupMask::ALL,
-                    entity,
-                );
-            });
-        }
     }
 
     /// Removes all entities and components from the storages.
