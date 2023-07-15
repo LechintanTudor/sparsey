@@ -1,12 +1,12 @@
 use crate::resources::Resources;
-use crate::systems::{LocalSystemParam, RunExclusive, SystemBorrow};
+use crate::systems::{LocalSystemData, RunExclusive, SystemDataDescriptor, SystemDataType};
 use crate::world::World;
 
 /// Helper trait for executing systems that borrow non-thread-safe resources, with shared access to
 /// [`World`] and [`Resources`].
 pub trait RunLocal<Params, Return>: RunExclusive<Params, Return> {
     /// Returns the assets borrowed by the system during execution.
-    fn get_borrows(&self) -> Vec<SystemBorrow>;
+    fn get_borrows(&self) -> Vec<SystemDataType>;
 
     /// Executes the system in the provided context.
     fn run_local(self, world: &World, resources: &Resources) -> Return;
@@ -26,16 +26,16 @@ macro_rules! impl_run_local {
         impl<Func, Return, $($param),*> RunLocal<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return
-                + FnOnce($(<$param as LocalSystemParam>::Param<'_>),*) -> Return,
-            $($param: LocalSystemParam,)*
+                + FnOnce($(<$param as SystemDataDescriptor>::SystemData<'_>),*) -> Return,
+            $($param: LocalSystemData,)*
         {
-            fn get_borrows(&self) -> Vec<SystemBorrow> {
-                vec![$($param::as_system_borrow()),*]
+            fn get_borrows(&self) -> Vec<SystemDataType> {
+                vec![$($param::system_data_type()),*]
             }
 
             #[allow(unused_variables)]
             fn run_local(self, world: &World, resources: &Resources) -> Return {
-                self($(<$param as LocalSystemParam>::borrow(world, resources)),*)
+                self($(<$param as LocalSystemData>::borrow(world, resources)),*)
             }
         }
     };

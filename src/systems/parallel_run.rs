@@ -1,5 +1,5 @@
 use crate::resources::SyncResources;
-use crate::systems::{LocalSystemParam, RunLocal, SystemParam};
+use crate::systems::{RunLocal, SystemData, SystemDataDescriptor};
 use crate::world::World;
 
 /// Helper trait for executing systems with shared access to [`World`] and [`SyncResources`].
@@ -25,12 +25,12 @@ macro_rules! impl_run {
         impl<Func, Return, $($param),*> Run<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return
-                + FnOnce($(<$param as LocalSystemParam>::Param<'_>),*) -> Return,
-            $($param: SystemParam,)*
+                + FnOnce($(<$param as SystemDataDescriptor>::SystemData<'_>),*) -> Return,
+            $($param: SystemData,)*
         {
             #[allow(unused_variables)]
             fn run(self, world: &World, resources: SyncResources) -> Return {
-                self($(<$param as SystemParam>::borrow(world, resources)),*)
+                self($(<$param as SystemData>::borrow(world, resources)),*)
             }
         }
     };

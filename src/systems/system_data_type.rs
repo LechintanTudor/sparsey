@@ -2,7 +2,7 @@ use crate::utils::{ComponentData, ResourceData};
 
 /// Type of asset borrowed by systems during execution.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub enum SystemBorrow {
+pub enum SystemDataType {
     /// View over all entities.
     Entities,
     /// View over all components of a type.
@@ -15,8 +15,9 @@ pub enum SystemBorrow {
     ResMut(ResourceData),
 }
 
-impl SystemBorrow {
+impl SystemDataType {
     /// Returns `true` if the parameters prevent the systems from running in parallel.
+    #[must_use]
     pub fn conflicts_with(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Comp(c1), Self::CompMut(c2)) => c1 == c2,

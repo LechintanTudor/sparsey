@@ -1,7 +1,7 @@
 use crate::resources::{Resources, SyncResources};
 use crate::systems::{
     ExclusiveSystem, IntoExclusiveSystem, IntoLocalSystem, IntoSystem, LocalSystem, System,
-    SystemBorrow,
+    SystemDataType,
 };
 use crate::world::World;
 
@@ -97,10 +97,16 @@ impl ScheduleBuilder {
         ) -> Option<&'a mut Vec<System>> {
             match step {
                 ScheduleStep::Systems(systems) => {
-                    let systems_conflict = systems
-                        .iter()
-                        .flat_map(|s| s.borrows())
-                        .any(|p1| system.borrows().iter().any(|p2| p1.conflicts_with(p2)));
+                    let systems_conflict =
+                        systems
+                            .iter()
+                            .flat_map(|s| s.system_data_types())
+                            .any(|p1| {
+                                system
+                                    .system_data_types()
+                                    .iter()
+                                    .any(|p2| p1.conflicts_with(p2))
+                            });
 
                     if systems_conflict {
                         None
@@ -185,10 +191,10 @@ impl Schedule {
 
     /// Registered the storages used by the systems.
     pub fn set_up(&self, world: &mut World) {
-        fn register(world: &mut World, param: &SystemBorrow) {
+        fn register(world: &mut World, param: &SystemDataType) {
             unsafe {
                 match param {
-                    SystemBorrow::Comp(c) | SystemBorrow::CompMut(c) => {
+                    SystemDataType::Comp(c) | SystemDataType::CompMut(c) => {
                         world.register_with(c.type_id(), || c.create_storage())
                     }
                     _ => (),
@@ -199,7 +205,7 @@ impl Schedule {
         for step in self.steps.iter() {
             match step {
                 ScheduleStep::Systems(systems) => {
-                    for param in systems.iter().flat_map(System::borrows) {
+                    for param in systems.iter().flat_map(System::system_data_types) {
                         register(world, param);
                     }
                 }

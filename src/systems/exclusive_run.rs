@@ -1,5 +1,5 @@
 use crate::resources::Resources;
-use crate::systems::LocalSystemParam;
+use crate::systems::{LocalSystemData, SystemDataDescriptor};
 use crate::world::World;
 
 /// Helper trait for executing systems that require exclusive access to [`World`] and [`Resources`].
@@ -58,12 +58,12 @@ macro_rules! impl_run_exclusive {
         impl<Func, Return, $($param),*> RunExclusive<($($param,)*), Return> for Func
         where
             Func: FnOnce($($param),*) -> Return
-                + FnOnce($(<$param as LocalSystemParam>::Param<'_>),*) -> Return,
-            $($param: LocalSystemParam,)*
+                + FnOnce($(<$param as SystemDataDescriptor>::SystemData<'_>),*) -> Return,
+            $($param: LocalSystemData,)*
         {
             #[allow(unused_variables)]
             fn run_exclusive(self, world: &mut World, resources: &mut Resources) -> Return {
-                self($(<$param as LocalSystemParam>::borrow(world, resources)),*)
+                self($(<$param as LocalSystemData>::borrow(world, resources)),*)
             }
         }
     };

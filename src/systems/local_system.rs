@@ -1,5 +1,5 @@
 use crate::resources::Resources;
-use crate::systems::{RunExclusive, RunLocal, SystemBorrow};
+use crate::systems::{RunExclusive, RunLocal, SystemDataType};
 use crate::world::World;
 use std::fmt;
 
@@ -8,7 +8,7 @@ type BoxedLocalSystemFn = Box<dyn FnMut(&World, &Resources) + 'static>;
 /// Encapsulates a system that borrows non-thread-safe resources.
 pub struct LocalSystem {
     system_fn: BoxedLocalSystemFn,
-    borrows: Vec<SystemBorrow>,
+    borrows: Vec<SystemDataType>,
 }
 
 impl fmt::Debug for LocalSystem {
@@ -22,7 +22,7 @@ impl fmt::Debug for LocalSystem {
 impl LocalSystem {
     /// Returns the assets borrowed by the system during execution as a slice.
     #[inline]
-    pub fn borrows(&self) -> &[SystemBorrow] {
+    pub fn borrows(&self) -> &[SystemDataType] {
         &self.borrows
     }
 }
@@ -36,7 +36,7 @@ impl RunExclusive<(), ()> for &'_ mut LocalSystem {
 
 impl RunLocal<(), ()> for &'_ mut LocalSystem {
     #[inline]
-    fn get_borrows(&self) -> Vec<SystemBorrow> {
+    fn get_borrows(&self) -> Vec<SystemDataType> {
         self.borrows.clone()
     }
 
