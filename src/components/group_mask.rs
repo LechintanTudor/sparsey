@@ -73,8 +73,9 @@ impl GroupMask {
     }
 
     #[inline]
-    pub fn contains_index(self, index: usize) -> bool {
-        (self.0 & (1 << index)) != 0
+    #[must_use]
+    pub fn get(&self) -> u32 {
+        self.0
     }
 }
 

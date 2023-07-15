@@ -271,9 +271,8 @@ unsafe fn ungroup_family(
         }
     }
 
-    let ungroup_indexes = (ungroup_start..(ungroup_start + ungroup_len))
-        .rev()
-        .take_while(|&i| group_mask.contains_index(i));
+    let ungroup_len = ungroup_len.max(group_mask.get().leading_ones() as usize);
+    let ungroup_indexes = (ungroup_start..(ungroup_start + ungroup_len)).rev();
 
     for i in ungroup_indexes {
         let group = groups.get_unchecked_mut(i);
