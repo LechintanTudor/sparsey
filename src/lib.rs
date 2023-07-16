@@ -21,17 +21,11 @@
 //!     world.create((Position(0.0), Velocity(1.0)));
 //!     world.create((Position(0.0), Velocity(2.0)));
 //!
-//!     let resources = Resources::default();
-//!
-//!     sparsey::run(
-//!         &world,
-//!         &resources,
-//!         |mut positions: CompMut<Position>, velocities: Comp<Velocity>| {
-//!             (&mut positions, &velocities).for_each(|(position, velocity)| {
-//!                 position.0 += velocity.0;
-//!             });
-//!         },
-//!     );
+//!     world.run(|mut positions: CompMut<Position>, velocities: Comp<Velocity>| {
+//!         (&mut positions, &velocities).for_each(|(position, velocity)| {
+//!             position.0 += velocity.0;
+//!         });
+//!    });
 //! }
 //! ```
 
