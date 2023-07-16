@@ -1,11 +1,11 @@
 [package]
 name = "sparsey"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2021"
 description = "Sparse set-based entity component system"
-authors = ["Tudor-Cristian Lechintan <lechintantudor02@gmail.com>"]
+authors = ["Tudor-Cristian Lechințan <lechintantudor02@gmail.com>"]
 repository = "https://github.com/LechintanTudor/sparsey"
-keywords = ["ecs", "entity", "gamedev", "sparse"]
+keywords = ["component", "ecs", "entity", "gamedev", "system"]
 categories = ["data-structures", "game-development"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
