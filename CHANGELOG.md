@@ -1,3 +1,13 @@
+# 0.11.0 (2023-07-16)
+## Added
+- Added functions for running systems that only borrow data from `World`,
+`Resources` or `SyncResources`.
+- Added `Debug` implementations for most public data types.
+
+## Changed
+- Refactored `ComponentStorage` and `ComponentStorages` to significantly improve
+the performance of all component-related operations.
+
 # 0.10.0 (2022-11-22)
 ## Added
 - Added `run`, `run_local` and `run_exclusive` to provide a uniform interface for running systems
