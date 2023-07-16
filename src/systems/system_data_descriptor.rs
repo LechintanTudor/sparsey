@@ -4,9 +4,12 @@ use crate::systems::SystemDataType;
 use crate::utils::{ComponentData, ResourceData};
 use crate::world::{Comp, CompMut, Entities};
 
+/// Trait that describes the type of data that can be borrowed by systems during execution.
 pub trait SystemDataDescriptor {
+    /// The borrowed type.
     type SystemData<'a>;
 
+    /// Returns the type of the borrowed data.
     #[must_use]
     fn system_data_type() -> SystemDataType;
 }

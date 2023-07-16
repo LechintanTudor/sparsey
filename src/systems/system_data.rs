@@ -3,23 +3,33 @@ use crate::storage::Component;
 use crate::systems::SystemDataDescriptor;
 use crate::world::{Comp, CompMut, Entities, World};
 
+/// Trait for borrowing system data from [`World`].
 pub trait WorldSystemData: SystemDataDescriptor {
+    /// Borrows the system data.
     fn borrow(world: &World) -> Self::SystemData<'_>;
 }
 
+/// Trait for borrowing system data from [`Resources`].
 pub trait ResourcesSystemData: SystemDataDescriptor {
+    /// Borrows the system data.
     fn borrow(resources: &Resources) -> Self::SystemData<'_>;
 }
 
-pub trait SyncResourcesSystemData: SystemDataDescriptor + ResourcesSystemData {
+/// Trait for borrowing system data from [`SyncResources`].
+pub trait SyncResourcesSystemData: ResourcesSystemData {
+    /// Borrows the system data.
     fn borrow(resources: SyncResources<'_>) -> Self::SystemData<'_>;
 }
 
+/// Trait for borrowing system data from either [`World`] or [`Resources`].
 pub trait LocalSystemData: SystemDataDescriptor {
+    /// Borrows the system data.
     fn borrow<'a>(world: &'a World, resources: &'a Resources) -> Self::SystemData<'a>;
 }
 
-pub trait SystemData: SystemDataDescriptor + LocalSystemData {
+/// Trait for borrowing system data from either [`World`] or [`SyncResources`].
+pub trait SystemData: LocalSystemData {
+    /// Borrows the system data.
     fn borrow<'a>(world: &'a World, resources: SyncResources<'a>) -> Self::SystemData<'a>;
 }
 

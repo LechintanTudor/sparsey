@@ -338,6 +338,7 @@ impl ComponentStorage {
 }
 
 impl Drop for ComponentStorage {
+    #[inline]
     fn drop(&mut self) {
         unsafe { (self.fns.drop)(self) }
     }

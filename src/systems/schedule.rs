@@ -22,7 +22,7 @@ pub struct ScheduleBuilder {
 
 impl ScheduleBuilder {
     /// Adds a system to the schedule.
-    pub fn add_system<P>(&mut self, system: impl IntoSystem<P>) -> &mut Self {
+    pub fn add_system<TParams>(&mut self, system: impl IntoSystem<TParams>) -> &mut Self {
         self.steps.push(SimpleScheduleStep::System(system.system()));
         self
     }
@@ -30,7 +30,10 @@ impl ScheduleBuilder {
     /// Adds a local system to the schedule. Prevents future systems from running in parallel
     /// with the previously added systems. Prefer to use
     /// [`ScheduleBuilder::add_local_system_to_end`] whenever possible.
-    pub fn add_local_system<P>(&mut self, local_system: impl IntoLocalSystem<P>) -> &mut Self {
+    pub fn add_local_system<TParams>(
+        &mut self,
+        local_system: impl IntoLocalSystem<TParams>,
+    ) -> &mut Self {
         self.steps
             .push(SimpleScheduleStep::LocalSystem(local_system.local_system()));
         self
@@ -39,9 +42,9 @@ impl ScheduleBuilder {
     /// Adds an exclusive system to the schedule. Prevents future systems from running in parallel
     /// with the previously added systems. Prefer to use
     /// [`ScheduleBuilder::add_exclusive_system_to_end`] whenever possible.
-    pub fn add_exclusive_system<P>(
+    pub fn add_exclusive_system<TParams>(
         &mut self,
-        exclusive_system: impl IntoExclusiveSystem<P>,
+        exclusive_system: impl IntoExclusiveSystem<TParams>,
     ) -> &mut Self {
         self.steps.push(SimpleScheduleStep::ExclusiveSystem(
             exclusive_system.exclusive_system(),
@@ -57,9 +60,9 @@ impl ScheduleBuilder {
     }
 
     /// Adds a local system to the end of the schedule.
-    pub fn add_local_system_to_end<P>(
+    pub fn add_local_system_to_end<TParams>(
         &mut self,
-        local_system: impl IntoLocalSystem<P>,
+        local_system: impl IntoLocalSystem<TParams>,
     ) -> &mut Self {
         self.final_steps
             .push(SimpleScheduleStep::LocalSystem(local_system.local_system()));
@@ -67,9 +70,9 @@ impl ScheduleBuilder {
     }
 
     /// Adds an exclusive system to the end of the schedule.
-    pub fn add_exclusive_system_to_end<P>(
+    pub fn add_exclusive_system_to_end<TParams>(
         &mut self,
-        exclusive_system: impl IntoExclusiveSystem<P>,
+        exclusive_system: impl IntoExclusiveSystem<TParams>,
     ) -> &mut Self {
         self.final_steps.push(SimpleScheduleStep::ExclusiveSystem(
             exclusive_system.exclusive_system(),
@@ -98,15 +101,12 @@ impl ScheduleBuilder {
             match step {
                 ScheduleStep::Systems(systems) => {
                     let systems_conflict =
-                        systems
-                            .iter()
-                            .flat_map(|s| s.system_data_types())
-                            .any(|p1| {
-                                system
-                                    .system_data_types()
-                                    .iter()
-                                    .any(|p2| p1.conflicts_with(p2))
-                            });
+                        systems.iter().flat_map(|s| s.system_borrows()).any(|p1| {
+                            system
+                                .system_borrows()
+                                .iter()
+                                .any(|p2| p1.conflicts_with(p2))
+                        });
 
                     if systems_conflict {
                         None
@@ -205,12 +205,12 @@ impl Schedule {
         for step in self.steps.iter() {
             match step {
                 ScheduleStep::Systems(systems) => {
-                    for param in systems.iter().flat_map(System::system_data_types) {
+                    for param in systems.iter().flat_map(System::system_borrows) {
                         register(world, param);
                     }
                 }
                 ScheduleStep::LocalSystems(local_systems) => {
-                    for param in local_systems.iter().flat_map(LocalSystem::borrows) {
+                    for param in local_systems.iter().flat_map(LocalSystem::system_borrows) {
                         register(world, param);
                     }
                 }
@@ -314,22 +314,23 @@ impl Schedule {
     }
 
     /// Returns the maximum number of systems that can run in parallel.
-    pub fn max_threads(&self) -> usize {
-        fn step_to_system_count(step: &ScheduleStep) -> Option<usize> {
+    pub fn max_parallelism(&self) -> usize {
+        fn step_to_system_count(step: &ScheduleStep) -> usize {
             match step {
-                ScheduleStep::Systems(systems) => Some(systems.len()),
-                _ => None,
+                ScheduleStep::Systems(systems) => systems.len(),
+                _ => 1,
             }
         }
 
         self.steps
             .iter()
-            .flat_map(step_to_system_count)
+            .map(step_to_system_count)
             .max()
             .unwrap_or(1)
     }
 
     /// Consumes the schedule and returns the steps comprising it.
+    #[inline]
     pub fn into_steps(self) -> Vec<ScheduleStep> {
         self.steps
     }

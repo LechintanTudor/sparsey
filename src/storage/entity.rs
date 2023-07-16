@@ -55,7 +55,7 @@ impl Entity {
     }
 }
 
-/// Used internally by `SparseArray` to map sparse entity indexes to dense indexes.
+/// Used internally by `SparseArray` to store versioned dense indexes.
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct DenseEntity {
     index: u32,
