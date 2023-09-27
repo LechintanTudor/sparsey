@@ -50,6 +50,14 @@ impl Resources {
         unsafe { self.resources.borrow_mut() }
     }
 
+    /// Returns a mutable reference to a resource. Panics if the resource does not exist.
+    pub fn get_mut<T>(&mut self) -> &mut T
+    where
+        T: Resource,
+    {
+        unsafe { self.resources.get_mut() }
+    }
+
     /// Borrows a view over a resource if that resource exists.
     pub fn try_borrow<T>(&self) -> Option<Res<T>>
     where
@@ -64,6 +72,14 @@ impl Resources {
         T: Resource,
     {
         unsafe { self.resources.try_borrow_mut() }
+    }
+
+    /// Returns a mutable reference to a resource if that resource exist.
+    pub fn try_get_mut<T>(&mut self) -> Option<&mut T>
+    where
+        T: Resource,
+    {
+        unsafe { self.resources.try_get_mut() }
     }
 
     /// Returns `true` if the stoage contains a resource with type `T`.

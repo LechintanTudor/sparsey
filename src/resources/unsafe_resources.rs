@@ -4,7 +4,6 @@ use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::fmt;
-use std::ops::{Deref, DerefMut};
 
 /// Unsafe resource storage. Unsafe because it can store `!Send` and `!Sync` resources while being
 /// `Send + Sync` itself.
@@ -42,13 +41,21 @@ impl UnsafeResources {
             .unwrap_or_else(|| utils::panic_missing_res::<T>())
     }
 
+    pub unsafe fn get_mut<T>(&mut self) -> &mut T
+    where
+        T: Resource,
+    {
+        self.try_get_mut()
+            .unwrap_or_else(|| utils::panic_missing_res::<T>())
+    }
+
     pub unsafe fn try_borrow<T>(&self) -> Option<Res<T>>
     where
         T: Resource,
     {
         self.resources.get(&TypeId::of::<T>()).map(|c| {
             Res::new(AtomicRef::map(c.borrow(), |c| {
-                c.deref().downcast_ref().unwrap_unchecked()
+                c.downcast_ref().unwrap_unchecked()
             }))
         })
     }
@@ -59,9 +66,18 @@ impl UnsafeResources {
     {
         self.resources.get(&TypeId::of::<T>()).map(|c| {
             ResMut::new(AtomicRefMut::map(c.borrow_mut(), |c| {
-                c.deref_mut().downcast_mut().unwrap_unchecked()
+                c.downcast_mut().unwrap_unchecked()
             }))
         })
+    }
+
+    pub unsafe fn try_get_mut<T>(&mut self) -> Option<&mut T>
+    where
+        T: Resource,
+    {
+        self.resources
+            .get_mut(&TypeId::of::<T>())
+            .map(|c| c.get_mut().downcast_mut().unwrap_unchecked())
     }
 
     #[must_use]

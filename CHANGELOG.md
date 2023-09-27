@@ -1,3 +1,8 @@
+# 0.11.1 (2023-09-27)
+## Added
+- Added `get_mut` and `try_get_mut` functions for getting mutable references to
+resources from a `&mut Resources`.
+
 # 0.11.0 (2023-07-16)
 ## Added
 - Added functions for running systems that only borrow data from `World`,
