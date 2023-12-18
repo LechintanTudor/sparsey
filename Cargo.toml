@@ -16,7 +16,6 @@ parallel = ["rayon"]
 
 [dependencies]
 atomic_refcell = "0.1.13"
-downcast-rs = "1.2"
 rustc-hash = "1.1"
 
 rayon = { version = "1.8", optional = true }
