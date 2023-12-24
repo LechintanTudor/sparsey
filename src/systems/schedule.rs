@@ -101,7 +101,7 @@ impl ScheduleBuilder {
             match step {
                 ScheduleStep::Systems(systems) => {
                     let systems_conflict =
-                        systems.iter().flat_map(|s| s.system_borrows()).any(|p1| {
+                        systems.iter().flat_map(System::system_borrows).any(|p1| {
                             system
                                 .system_borrows()
                                 .iter()

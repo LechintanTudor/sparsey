@@ -216,10 +216,10 @@ impl World {
     where
         T: Component,
     {
-        self.components
-            .borrow_with_info(&TypeId::of::<T>())
-            .map(|(storage, info)| unsafe { Comp::<T>::new(storage, info) })
-            .unwrap_or_else(|| panic_missing_comp::<T>())
+        match self.components.borrow_with_info(&TypeId::of::<T>()) {
+            Some((storage, info)) => unsafe { Comp::<T>::new(storage, info) },
+            None => panic_missing_comp::<T>(),
+        }
     }
 
     /// Borrows a mutable view over all components of type `T` in in the world. Panics if the
@@ -229,10 +229,10 @@ impl World {
     where
         T: Component,
     {
-        self.components
-            .borrow_with_info_mut(&TypeId::of::<T>())
-            .map(|(storage, info)| unsafe { CompMut::<T>::new(storage, info) })
-            .unwrap_or_else(|| panic_missing_comp::<T>())
+        match self.components.borrow_with_info_mut(&TypeId::of::<T>()) {
+            Some((storage, info)) => unsafe { CompMut::<T>::new(storage, info) },
+            None => panic_missing_comp::<T>(),
+        }
     }
 
     /// Adds the entities created atomically to the main storage and clears the entity recycling
