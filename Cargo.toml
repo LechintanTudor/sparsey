@@ -1,0 +1,24 @@
+[package]
+name = "sparsey"
+version = "0.11.1"
+edition = "2021"
+description = "Sparse set-based entity component system"
+authors = ["Tudor-Cristian Lechințan <lechintantudor02@gmail.com>"]
+repository = "https://github.com/LechintanTudor/sparsey"
+keywords = ["component", "ecs", "entity", "gamedev", "system"]
+categories = ["data-structures", "game-development"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+
+[features]
+default = ["parallel"]
+parallel = ["rayon"]
+
+[dependencies]
+atomic_refcell = "0.1.13"
+rustc-hash = "1.1"
+
+rayon = { version = "1.8", optional = true }
+
+[dev-dependencies]
+rayon = "1.8"
