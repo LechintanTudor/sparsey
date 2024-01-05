@@ -1,63 +1,87 @@
+mod borrow;
+mod component;
+mod component_sparse_set;
+mod component_storage;
 mod entity;
 mod entity_allocator;
-mod entity_manager;
 mod entity_sparse_set;
+mod group;
+mod group_mask;
 mod sparse_vec;
 
+pub use self::borrow::*;
+pub use self::component::*;
+pub use self::component_sparse_set::*;
+pub use self::component_storage::*;
 pub use self::entity::*;
 pub use self::entity_allocator::*;
-pub use self::entity_manager::*;
 pub use self::entity_sparse_set::*;
+pub use self::group::*;
+pub use self::group_mask::*;
 pub use self::sparse_vec::*;
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct EntityStorage {
-    entities: EntityManager,
+    allocator: EntityAllocator,
+    entities: EntitySparseSet,
+    components: ComponentStorage,
 }
 
 impl EntityStorage {
-    #[inline]
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            entities: EntityManager::new(),
-        }
+    pub fn register_component<T>(&mut self) -> bool
+    where
+        T: Component,
+    {
+        self.components.register::<T>()
     }
 
     #[inline]
     #[must_use]
     pub fn create(&mut self) -> Entity {
-        self.entities
-            .create()
-            .expect("Failed to create a new Entity")
+        let entity = self
+            .allocator
+            .allocate()
+            .expect("Failed to create a new Entity");
+
+        self.entities.insert(entity);
+        entity
     }
 
     #[inline]
     #[must_use]
     pub fn create_atomic(&self) -> Entity {
-        self.entities
-            .create_atomic()
+        self.allocator
+            .allocate_atomic()
             .expect("Failed to create a new Entity")
     }
 
     #[inline]
     pub fn destroy(&mut self, entity: Entity) -> bool {
-        self.entities.destroy(entity)
+        if !self.entities.remove(entity) {
+            return false;
+        }
+
+        self.allocator.recycle(entity);
+        true
     }
 
     #[inline]
     pub fn clear(&mut self) {
+        self.maintain();
         self.entities.clear();
     }
 
     #[inline]
     pub fn reset(&mut self) {
-        self.entities.reset();
+        self.allocator.reset();
+        self.entities.clear();
     }
 
     #[inline]
     pub fn maintain(&mut self) {
-        self.entities.maintain();
+        self.allocator.maintain().for_each(|entity| {
+            self.entities.insert(entity);
+        });
     }
 
     #[inline]
@@ -69,6 +93,28 @@ impl EntityStorage {
     #[inline]
     #[must_use]
     pub fn entities(&self) -> &[Entity] {
-        self.entities.entities()
+        self.entities.as_slice()
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn borrow_entities(&self) -> Entities {
+        Entities::new(self)
+    }
+
+    #[must_use]
+    pub fn borrow_components<T>(&self) -> Comp<T>
+    where
+        T: Component,
+    {
+        self.components.borrow::<T>()
+    }
+
+    #[must_use]
+    pub fn borrow_components_mut<T>(&self) -> CompMut<T>
+    where
+        T: Component,
+    {
+        self.components.borrow_mut::<T>()
     }
 }
