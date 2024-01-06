@@ -7,7 +7,7 @@ use std::{any, fmt};
 
 #[derive(Default)]
 pub struct ComponentStorage {
-    storages: Vec<AtomicRefCell<ComponentSparseSet>>,
+    components: Vec<AtomicRefCell<ComponentSparseSet>>,
     metadata: FxHashMap<TypeId, ComponentMetadata>,
 }
 
@@ -21,10 +21,10 @@ impl ComponentStorage {
         };
 
         entry.insert(ComponentMetadata {
-            index: self.storages.len(),
+            index: self.components.len(),
         });
 
-        self.storages
+        self.components
             .push(AtomicRefCell::new(ComponentSparseSet::new::<T>()));
 
         true
@@ -47,7 +47,7 @@ impl ComponentStorage {
             panic_missing_comp::<T>();
         };
 
-        unsafe { Comp::<T>::new(self.storages.get_unchecked(metadata.index).borrow()) }
+        unsafe { Comp::<T>::new(self.components.get_unchecked(metadata.index).borrow()) }
     }
 
     #[must_use]
@@ -59,7 +59,7 @@ impl ComponentStorage {
             panic_missing_comp::<T>();
         };
 
-        unsafe { CompMut::<T>::new(self.storages.get_unchecked(metadata.index).borrow_mut()) }
+        unsafe { CompMut::<T>::new(self.components.get_unchecked(metadata.index).borrow_mut()) }
     }
 }
 

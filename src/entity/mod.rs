@@ -6,6 +6,7 @@ mod entity;
 mod entity_allocator;
 mod entity_sparse_set;
 mod group;
+mod group_layout;
 mod group_mask;
 mod sparse_vec;
 
@@ -17,6 +18,7 @@ pub use self::entity::*;
 pub use self::entity_allocator::*;
 pub use self::entity_sparse_set::*;
 pub use self::group::*;
+pub use self::group_layout::*;
 pub use self::group_mask::*;
 pub use self::sparse_vec::*;
 
