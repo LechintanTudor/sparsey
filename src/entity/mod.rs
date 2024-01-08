@@ -47,20 +47,20 @@ impl EntityStorage {
         self.components.register::<T>()
     }
 
-    #[inline]
-    #[must_use]
-    pub fn create(&mut self) -> Entity {
+    pub fn create<C>(&mut self, components: C) -> Entity
+    where
+        C: ComponentSet,
+    {
         let entity = self
             .allocator
             .allocate()
             .expect("Failed to create a new Entity");
 
         self.entities.insert(entity);
+        self.components.insert(entity, components);
         entity
     }
 
-    #[inline]
-    #[must_use]
     pub fn create_atomic(&self) -> Entity {
         self.allocator
             .allocate_atomic()

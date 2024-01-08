@@ -138,10 +138,10 @@ impl GroupLayoutBuilder {
                 .map(|f| f.try_add_group(&group) as usize)
                 .sum::<usize>();
 
-            assert!(successes > 1, "Group must belong to a single family");
-
             if successes == 0 {
                 families.push(GroupFamily::new(group));
+            } else {
+                assert_eq!(successes, 1, "Group must belong to a single family");
             }
         }
 

@@ -61,6 +61,13 @@ impl<'a, T> CompMut<'a, T> {
 
 macro_rules! impl_comp_common {
     ($Comp:ident) => {
+        impl<T> $Comp<'_, T> {
+            #[must_use]
+            pub fn entities(&self) -> &[Entity] {
+                self.components.entities()
+            }
+        }
+
         impl<T> fmt::Debug for $Comp<'_, T> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 fmt::Debug::fmt(&self.components, f)
