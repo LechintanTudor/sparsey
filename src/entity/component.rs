@@ -1,6 +1,6 @@
 use crate::entity::ComponentSparseSet;
 use std::any::{self, TypeId};
-use std::cmp::{Eq, PartialEq};
+use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -50,7 +50,7 @@ impl ComponentData {
 impl PartialEq for ComponentData {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self.0.type_id().eq(&other.type_id())
+        self.type_id().eq(&other.type_id())
     }
 }
 
@@ -58,20 +58,34 @@ impl Eq for ComponentData {
     // Empty
 }
 
+impl PartialOrd for ComponentData {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ComponentData {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.type_id().cmp(&other.0.type_id())
+    }
+}
+
 impl Hash for ComponentData {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        self.0.type_id().hash(state);
+        self.type_id().hash(state);
     }
 }
 
 impl fmt::Debug for ComponentData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct(stringify!(ComponentData))
-            .field("type_id", &self.0.type_id())
-            .field("type_name", &self.0.type_name())
+            .field("type_id", &self.type_id())
+            .field("type_name", &self.type_name())
             .finish()
     }
 }
