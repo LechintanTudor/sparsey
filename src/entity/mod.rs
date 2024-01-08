@@ -30,6 +30,16 @@ pub struct EntityStorage {
 }
 
 impl EntityStorage {
+    #[inline]
+    #[must_use]
+    pub fn new(layout: &GroupLayout) -> Self {
+        Self {
+            allocator: EntityAllocator::new(),
+            entities: EntitySparseSet::new(),
+            components: ComponentStorage::new(layout),
+        }
+    }
+
     pub fn register_component<T>(&mut self) -> bool
     where
         T: Component,

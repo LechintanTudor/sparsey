@@ -1,6 +1,6 @@
 use crate::entity::{Component, ComponentData};
 
-pub const MAX_GROUP_COUNT: usize = 32;
+pub const MAX_GROUP_COUNT: usize = 64;
 pub const MIN_GROUP_ARITY: usize = 2;
 pub const MAX_GROUP_ARITY: usize = 16;
 
@@ -138,9 +138,7 @@ impl GroupLayoutBuilder {
                 .map(|f| f.try_add_group(&group) as usize)
                 .sum::<usize>();
 
-            if successes > 1 {
-                panic!("Group must belong to a single family");
-            }
+            assert!(successes > 1, "Group must belong to a single family");
 
             if successes == 0 {
                 families.push(GroupFamily::new(group));

@@ -256,9 +256,10 @@ impl ComponentSparseSet {
                 cap => cap.saturating_add(cap),
             };
 
-            if new_cap == self.cap {
-                panic!("Cannot allocate space for more components");
-            }
+            assert_ne!(
+                new_cap, self.cap,
+                "Cannot allocate space for more components",
+            );
 
             let (new_layout, new_components_offset) =
                 Self::compute_layout::<T>(new_cap).expect("Failed to compute new component layout");
