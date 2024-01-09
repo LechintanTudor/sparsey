@@ -1,4 +1,5 @@
 pub mod entity;
+pub mod query;
 pub mod resource;
 
 use crate::entity::{EntityStorage, GroupLayout};

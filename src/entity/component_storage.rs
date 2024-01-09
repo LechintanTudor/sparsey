@@ -156,6 +156,12 @@ struct ComponentMetadata {
     delete_mask: GroupMask,
 }
 
+#[cold]
+#[inline(never)]
+fn panic_missing_comp<T>() -> ! {
+    panic!("Component '{}' was not registered", any::type_name::<T>());
+}
+
 pub unsafe trait ComponentSet {
     type Remove;
 
@@ -267,10 +273,24 @@ macro_rules! impl_component_set {
     };
 }
 
-#[cold]
-#[inline(never)]
-fn panic_missing_comp<T>() -> ! {
-    panic!("Component '{}' was not registered", any::type_name::<T>());
+#[allow(unused_variables)]
+unsafe impl ComponentSet for () {
+    type Remove = ();
+
+    #[inline(always)]
+    fn insert(storage: &mut ComponentStorage, entity: Entity, components: Self) {
+        // Empty
+    }
+
+    #[inline(always)]
+    fn remove(storage: &mut ComponentStorage, entity: Entity) -> Self::Remove {
+        // Empty
+    }
+
+    #[inline(always)]
+    fn delete(storage: &mut ComponentStorage, entity: Entity) {
+        // Empty
+    }
 }
 
 #[rustfmt::skip]
