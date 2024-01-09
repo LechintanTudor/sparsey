@@ -9,7 +9,7 @@ use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::collections::hash_map::Entry;
-use std::mem;
+use std::{fmt, mem};
 
 #[derive(Default)]
 pub struct ResourceStorage {
@@ -107,5 +107,13 @@ impl ResourceStorage {
     #[inline]
     pub fn clear(&mut self) {
         self.resources.clear();
+    }
+}
+
+impl fmt::Debug for ResourceStorage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct(stringify!(ResourceStorage))
+            .field("type_ids", &self.resources.keys())
+            .finish_non_exhaustive()
     }
 }

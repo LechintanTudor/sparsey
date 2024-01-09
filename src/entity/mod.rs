@@ -40,7 +40,7 @@ impl EntityStorage {
         }
     }
 
-    pub fn register_component<T>(&mut self) -> bool
+    pub fn register<T>(&mut self) -> bool
     where
         T: Component,
     {
@@ -61,6 +61,7 @@ impl EntityStorage {
         entity
     }
 
+    #[inline]
     pub fn create_atomic(&self) -> Entity {
         self.allocator
             .allocate_atomic()
@@ -95,6 +96,12 @@ impl EntityStorage {
         self.allocator.recycle(entity);
         self.components.delete_all(entity);
         true
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.entities.as_slice().is_empty()
     }
 
     #[inline]
@@ -135,7 +142,7 @@ impl EntityStorage {
     }
 
     #[must_use]
-    pub fn borrow_components<T>(&self) -> Comp<T>
+    pub fn borrow<T>(&self) -> Comp<T>
     where
         T: Component,
     {
@@ -143,7 +150,7 @@ impl EntityStorage {
     }
 
     #[must_use]
-    pub fn borrow_components_mut<T>(&self) -> CompMut<T>
+    pub fn borrow_mut<T>(&self) -> CompMut<T>
     where
         T: Component,
     {
