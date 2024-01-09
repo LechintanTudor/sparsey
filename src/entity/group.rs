@@ -88,6 +88,28 @@ pub(crate) unsafe fn ungroup(
     }
 }
 
+pub(crate) unsafe fn ungroup_all(
+    components: &mut [AtomicRefCell<ComponentSparseSet>],
+    groups: &mut [Group],
+    entity: Entity,
+) {
+    for group in groups.iter_mut().rev() {
+        let status = get_group_status(
+            &mut components[group.metadata.new_storage_range()],
+            group.len,
+            entity,
+        );
+
+        if status == GroupStatus::Grouped {
+            ungroup_components(
+                &mut components[group.metadata.storage_range()],
+                &mut group.len,
+                entity,
+            );
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 enum GroupStatus {
     Incomplete,

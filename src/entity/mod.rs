@@ -67,6 +67,25 @@ impl EntityStorage {
             .expect("Failed to create a new Entity")
     }
 
+    pub fn insert<C>(&mut self, entity: Entity, components: C) -> bool
+    where
+        C: ComponentSet,
+    {
+        if !self.entities.contains(entity) {
+            return false;
+        }
+
+        self.components.insert(entity, components);
+        true
+    }
+
+    pub fn remove<C>(&mut self, entity: Entity) -> C::Remove
+    where
+        C: ComponentSet,
+    {
+        self.components.remove::<C>(entity)
+    }
+
     #[inline]
     pub fn destroy(&mut self, entity: Entity) -> bool {
         if !self.entities.remove(entity) {
@@ -74,6 +93,7 @@ impl EntityStorage {
         }
 
         self.allocator.recycle(entity);
+        self.components.delete_all(entity);
         true
     }
 

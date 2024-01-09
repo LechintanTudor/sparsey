@@ -51,7 +51,7 @@ impl GroupFamily {
     fn try_add_group(&mut self, components: &[ComponentData]) -> bool {
         assert!(
             components.len() >= self.components.len(),
-            "Groups must be added from shortest to longest",
+            "Groups must be added from least restrictive to most restrictive",
         );
 
         // Group should form a separate family

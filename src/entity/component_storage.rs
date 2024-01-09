@@ -1,6 +1,6 @@
 use crate::entity::{
-    group, ungroup, Comp, CompMut, Component, ComponentSparseSet, Entity, Group, GroupLayout,
-    GroupMask, GroupMetadata,
+    group, ungroup, ungroup_all, Comp, CompMut, Component, ComponentSparseSet, Entity, Group,
+    GroupLayout, GroupMask, GroupMetadata,
 };
 use atomic_refcell::AtomicRefCell;
 use rustc_hash::FxHashMap;
@@ -23,7 +23,6 @@ impl ComponentStorage {
 
         for family in layout.families() {
             let storage_start = components.len();
-            let storage_end = storage_start + family.components().len();
             let group_start = groups.len();
             let group_end = group_start + family.arities().len();
 
@@ -35,8 +34,8 @@ impl ComponentStorage {
                 groups.push(Group {
                     metadata: GroupMetadata {
                         storage_start,
-                        new_storage_start: components.len(),
-                        storage_end,
+                        new_storage_start: storage_start + prev_arity,
+                        storage_end: storage_start + arity,
                         skip_mask: GroupMask::skip_from_to(new_group_start, group_end),
                     },
                     len: 0,
@@ -101,11 +100,28 @@ impl ComponentStorage {
         C::insert(self, entity, components);
     }
 
+    pub fn remove<C>(&mut self, entity: Entity) -> C::Remove
+    where
+        C: ComponentSet,
+    {
+        C::remove(self, entity)
+    }
+
     pub fn delete<C>(&mut self, entity: Entity)
     where
         C: ComponentSet,
     {
         C::delete(self, entity);
+    }
+
+    pub fn delete_all(&mut self, entity: Entity) {
+        unsafe {
+            ungroup_all(&mut self.components, &mut self.groups, entity);
+        }
+
+        for sparse_set in &mut self.components {
+            sparse_set.get_mut().delete_dyn(entity);
+        }
     }
 
     #[must_use]
@@ -141,7 +157,12 @@ struct ComponentMetadata {
 }
 
 pub unsafe trait ComponentSet {
+    type Remove;
+
     fn insert(storage: &mut ComponentStorage, entity: Entity, components: Self);
+
+    #[must_use]
+    fn remove(storage: &mut ComponentStorage, entity: Entity) -> Self::Remove;
 
     fn delete(storage: &mut ComponentStorage, entity: Entity);
 }
@@ -152,6 +173,8 @@ macro_rules! impl_component_set {
         where
             $($Comp: Component,)*
         {
+            type Remove = ($(Option<$Comp>,)*);
+
             fn insert(storage: &mut ComponentStorage, entity: Entity, components: Self) {
                 let mut group_mask = GroupMask(0);
 
@@ -181,6 +204,35 @@ macro_rules! impl_component_set {
                 }
             }
 
+            fn remove(storage: &mut ComponentStorage, entity: Entity) -> Self::Remove {
+                let mut group_mask = GroupMask(0);
+
+                let indexes = ($({
+                    let metadata = storage.metadata
+                        .get(&TypeId::of::<$Comp>())
+                        .unwrap_or_else(|| panic_missing_comp::<$Comp>());
+
+                    group_mask |= metadata.delete_mask;
+                    metadata.index
+                },)*);
+
+                unsafe {
+                    ungroup(
+                        &mut storage.components,
+                        &mut storage.groups,
+                        group_mask,
+                        entity,
+                    );
+
+                    ($(
+                        storage
+                            .components
+                            .get_unchecked_mut(indexes.$idx)
+                            .get_mut()
+                            .remove::<$Comp>(entity),
+                    )*)
+                }
+            }
 
             fn delete(storage: &mut ComponentStorage, entity: Entity) {
                 let mut group_mask = GroupMask(0);
