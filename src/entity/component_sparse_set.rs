@@ -171,7 +171,7 @@ impl ComponentSparseSet {
 
     #[inline]
     #[must_use]
-    pub unsafe fn components<T>(&self) -> &[T]
+    pub unsafe fn as_slice<T>(&self) -> &[T]
     where
         T: Component,
     {
@@ -180,7 +180,7 @@ impl ComponentSparseSet {
 
     #[inline]
     #[must_use]
-    pub unsafe fn components_mut<T>(&mut self) -> &mut [T]
+    pub unsafe fn as_mut_slice<T>(&mut self) -> &mut [T]
     where
         T: Component,
     {
