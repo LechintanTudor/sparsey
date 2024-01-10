@@ -4,7 +4,6 @@ mod resource;
 pub use self::borrow::*;
 pub use self::resource::*;
 
-use crate::resource::{Res, ResMut, Resource};
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
