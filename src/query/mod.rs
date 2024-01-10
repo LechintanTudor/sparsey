@@ -1,11 +1,13 @@
 mod component_view;
 mod compound_query;
 mod into_query_parts;
+mod iter;
 mod query_part;
 
 pub use self::component_view::*;
 pub use self::compound_query::*;
 pub use self::into_query_parts::*;
+pub use self::iter::*;
 pub use self::query_part::*;
 
 use crate::entity::Entity;
