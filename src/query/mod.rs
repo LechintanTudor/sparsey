@@ -18,6 +18,15 @@ pub trait Query: IntoQueryParts {
 
     #[must_use]
     fn matches(self, entity: Entity) -> bool;
+
+    fn iter<'a>(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>
+    where
+        Self: 'a;
+
+    fn for_each<'a, F>(self, f: F)
+    where
+        Self: 'a,
+        F: FnMut(<Self::Get as QueryPart>::Refs<'a>);
 }
 
 impl<Q> Query for Q
@@ -37,5 +46,21 @@ where
     fn matches(self, entity: Entity) -> bool {
         let (get, include, exclude) = self.into_query_parts();
         get.contains_all(entity) && include.contains_all(entity) && exclude.contains_none(entity)
+    }
+
+    fn iter<'a>(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>
+    where
+        Self: 'a,
+    {
+        let (get, include, exclude) = self.into_query_parts();
+        Iter::new(get, include, exclude)
+    }
+
+    fn for_each<'a, F>(self, f: F)
+    where
+        Self: 'a,
+        F: FnMut(<Self::Get as QueryPart>::Refs<'a>),
+    {
+        self.iter().for_each(f);
     }
 }

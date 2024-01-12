@@ -18,12 +18,29 @@ where
 
 impl<'a, G, I, E> Iter<'a, G, I, E>
 where
-    G: QueryPart,
-    I: QueryPart,
-    E: QueryPart,
+    G: QueryPart + 'a,
+    I: QueryPart + 'a,
+    E: QueryPart + 'a,
 {
     pub(crate) fn new(get: G, include: I, exclude: E) -> Self {
-        todo!()
+        let (get_entities, sparse, ptrs) = get.split_sparse();
+        let (sparse_entities, include) = include.split_filter();
+        let (_, exclude) = exclude.split_filter();
+
+        let entities = match (G::HAS_DATA, I::HAS_DATA) {
+            (true, false) => get_entities,
+            (false, true) => sparse_entities,
+            (true, true) => {
+                if get_entities.len() >= sparse_entities.len() {
+                    get_entities
+                } else {
+                    sparse_entities
+                }
+            }
+            (false, false) => panic!("Cannot iterate over an empty Query"),
+        };
+
+        unsafe { Self::Sparse(SparseIter::new(entities, sparse, include, exclude, ptrs)) }
     }
 
     #[must_use]

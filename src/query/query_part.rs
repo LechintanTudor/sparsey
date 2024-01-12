@@ -2,6 +2,8 @@ use crate::entity::{Entity, SparseVec};
 use crate::query::ComponentView;
 
 pub unsafe trait QueryPart {
+    const HAS_DATA: bool;
+
     type Sparse<'a>: Copy;
 
     type Ptrs: Copy;
@@ -54,6 +56,8 @@ pub unsafe trait QueryPart {
 #[allow(unused_variables)]
 #[allow(clippy::inline_always)]
 unsafe impl QueryPart for () {
+    const HAS_DATA: bool = false;
+
     type Sparse<'a> = ();
 
     type Ptrs = ();
@@ -119,6 +123,8 @@ unsafe impl<C> QueryPart for C
 where
     C: ComponentView,
 {
+    const HAS_DATA: bool = true;
+
     type Sparse<'a> = &'a SparseVec;
 
     type Ptrs = <C as ComponentView>::Ptr;
@@ -189,6 +195,8 @@ macro_rules! impl_query_part {
         where
             $($Comp: ComponentView,)+
         {
+            const HAS_DATA: bool = true;
+
             type Sparse<'a> = ($(sparse_vec!($Comp),)+);
 
             type Ptrs = ($($Comp::Ptr,)+);
