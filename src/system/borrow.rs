@@ -4,7 +4,7 @@ use crate::system::SystemParam;
 use crate::World;
 use std::any;
 
-pub trait SystemBorrow<TRegistry>: SystemParam {
+pub trait SystemBorrow<TRegistry = World>: SystemParam {
     #[must_use]
     fn borrow(registry: &TRegistry) -> Self::Param<'_>;
 }

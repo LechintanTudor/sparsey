@@ -10,15 +10,6 @@ categories = ["data-structures", "game-development"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 
-[features]
-default = ["parallel"]
-parallel = ["rayon"]
-
 [dependencies]
 atomic_refcell = "0.1.13"
 rustc-hash = "1.1"
-
-rayon = { version = "1.8", optional = true }
-
-[dev-dependencies]
-rayon = "1.8"

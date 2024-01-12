@@ -1,9 +1,11 @@
 use crate::entity::EntityStorage;
 use crate::resource::ResourceStorage;
-use crate::system::{SystemBorrow, SystemParam};
+use crate::system::{SystemBorrow, SystemParam, SystemParamKind};
 use crate::World;
 
 pub trait Run<TRegistry, TParams, TReturn> {
+    const PARAMS: &'static [SystemParamKind];
+
     fn run(self, registry: &TRegistry) -> TReturn;
 }
 
@@ -41,6 +43,8 @@ macro_rules! impl_run_in {
                  + FnOnce($(<$Param as SystemParam>::Param<'_>),*) -> TReturn,
             $($Param: SystemBorrow<$Registry>,)*
         {
+            const PARAMS: &'static [SystemParamKind] = &[$($Param::KIND),*];
+
             #[allow(unused_variables)]
             fn run(self, $registry: &$Registry) -> TReturn {
                 self($($Param::borrow($registry),)*)
