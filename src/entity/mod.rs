@@ -1,5 +1,6 @@
 mod borrow;
 mod component;
+mod component_set;
 mod component_sparse_set;
 mod component_storage;
 mod entity;
@@ -13,8 +14,8 @@ mod sparse_vec;
 
 pub use self::borrow::*;
 pub use self::component::*;
+pub use self::component_set::*;
 pub use self::component_sparse_set::*;
-pub use self::component_storage::*;
 pub use self::entity::*;
 pub use self::entity_allocator::*;
 pub use self::entity_sparse_set::*;
@@ -23,6 +24,8 @@ pub use self::group_info::*;
 pub use self::group_layout::*;
 pub use self::group_mask::*;
 pub use self::sparse_vec::*;
+
+pub(crate) use self::component_storage::*;
 
 #[derive(Default, Debug)]
 pub struct EntityStorage {
@@ -49,18 +52,29 @@ impl EntityStorage {
         self.components.register::<T>()
     }
 
+    #[must_use]
+    pub fn is_registered<T>(&self) -> bool
+    where
+        T: Component,
+    {
+        self.components.is_registered::<T>()
+    }
+
     pub fn create<C>(&mut self, components: C) -> Entity
     where
         C: ComponentSet,
     {
-        let entity = self
-            .allocator
-            .allocate()
-            .expect("Failed to create a new Entity");
-
-        self.entities.insert(entity);
-        self.components.insert(entity, components);
+        let entity = self.create_empty_entity();
+        C::insert(self, entity, components);
         entity
+    }
+
+    pub fn extend<C, I>(&mut self, components: I) -> &[Entity]
+    where
+        C: ComponentSet,
+        I: IntoIterator<Item = C>,
+    {
+        C::extend(self, components)
     }
 
     #[inline]
@@ -78,7 +92,7 @@ impl EntityStorage {
             return false;
         }
 
-        self.components.insert(entity, components);
+        C::insert(self, entity, components);
         true
     }
 
@@ -86,7 +100,7 @@ impl EntityStorage {
     where
         C: ComponentSet,
     {
-        self.components.remove::<C>(entity)
+        C::remove(self, entity)
     }
 
     #[inline]
@@ -157,5 +171,17 @@ impl EntityStorage {
         T: Component,
     {
         self.components.borrow_mut::<T>()
+    }
+
+    #[inline]
+    #[must_use]
+    fn create_empty_entity(&mut self) -> Entity {
+        let entity = self
+            .allocator
+            .allocate()
+            .expect("Failed to create a new Entity");
+
+        self.entities.insert(entity);
+        entity
     }
 }

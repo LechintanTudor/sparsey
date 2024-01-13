@@ -65,6 +65,18 @@ impl EntitySparseSet {
 
     #[inline]
     #[must_use]
+    pub fn len(&self) -> usize {
+        self.entities.len()
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.entities.is_empty()
+    }
+
+    #[inline]
+    #[must_use]
     pub fn as_slice(&self) -> &[Entity] {
         &self.entities
     }
