@@ -74,6 +74,7 @@ impl SparseVec {
         self.entities.get_unchecked_mut(index)
     }
 
+    #[inline]
     pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<DenseEntity> {
         if index >= self.entities.len() {
             let extra_len =

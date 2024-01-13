@@ -48,13 +48,15 @@ macro_rules! impl_component_set {
                     }
                 })*
 
-                unsafe {
-                    group(
-                        &mut entities.components.components,
-                        &mut entities.components.groups,
-                        group_mask,
-                        entity,
-                    );
+                if group_mask.0 != 0 {
+                    unsafe {
+                        group(
+                            &mut entities.components.components,
+                            &mut entities.components.groups,
+                            group_mask,
+                            entity,
+                        );
+                    }
                 }
             }
 
@@ -95,14 +97,16 @@ macro_rules! impl_component_set {
 
                 let new_entities = &entities.entities.as_slice()[start_entity..];
 
-                unsafe {
+                if group_mask.0 != 0 {
                     for &entity in new_entities {
-                        group(
-                            &mut entities.components.components,
-                            &mut entities.components.groups,
-                            group_mask,
-                            entity,
-                        );
+                        unsafe {
+                            group(
+                                &mut entities.components.components,
+                                &mut entities.components.groups,
+                                group_mask,
+                                entity,
+                            );
+                        }
                     }
                 }
 
@@ -131,12 +135,14 @@ macro_rules! impl_component_set {
                 },)*);
 
                 unsafe {
-                    ungroup(
-                        &mut entities.components.components,
-                        &mut entities.components.groups,
-                        group_mask,
-                        entity,
-                    );
+                    if group_mask.0 != 0 {
+                        ungroup(
+                            &mut entities.components.components,
+                            &mut entities.components.groups,
+                            group_mask,
+                            entity,
+                        );
+                    }
 
                     ($(
                         (*sparse_sets.$idx).remove::<$Comp>(entity),
@@ -166,12 +172,14 @@ macro_rules! impl_component_set {
                 },)*);
 
                 unsafe {
-                    ungroup(
-                        &mut entities.components.components,
-                        &mut entities.components.groups,
-                        group_mask,
-                        entity,
-                    );
+                    if group_mask.0 != 0 {
+                        ungroup(
+                            &mut entities.components.components,
+                            &mut entities.components.groups,
+                            group_mask,
+                            entity,
+                        );
+                    }
 
                     $(
                         (*sparse_sets.$idx).delete::<$Comp>(entity);

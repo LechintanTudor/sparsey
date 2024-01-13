@@ -108,7 +108,7 @@ impl EntityStorage {
     where
         C: ComponentSet,
     {
-        C::delete(self, entity)
+        C::delete(self, entity);
     }
 
     #[inline]
