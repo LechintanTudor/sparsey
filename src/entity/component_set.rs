@@ -64,7 +64,7 @@ macro_rules! impl_component_set {
             {
                 let mut group_mask = GroupMask(0);
 
-                let indexes = ($({
+                let sparse_sets = ($({
                     let metadata = entities
                         .components
                         .metadata
@@ -72,21 +72,24 @@ macro_rules! impl_component_set {
                         .unwrap_or_else(|| panic_missing_comp::<$Comp>());
 
                     group_mask |= metadata.delete_mask;
-                    metadata.storage_index
-                },)*);
 
-                let start_entity = entities.entities.len();
-
-                components.into_iter().for_each(|components| {
-                    let entity = entities.create_empty_entity();
-
-                    unsafe {$(
+                    unsafe {
                         entities
                             .components
                             .components
-                            .get_unchecked_mut(indexes.$idx)
-                            .get_mut()
-                            .insert(entity, components.$idx);
+                            .get_unchecked(metadata.storage_index)
+                            .as_ptr()
+                    }
+                },)*);
+
+                let start_entity = entities.entities.len();
+                let mut allocate_entity = || entities.create_empty_entity();
+
+                components.into_iter().for_each(move |components| {
+                    let entity = allocate_entity();
+
+                    unsafe {$(
+                        (*sparse_sets.$idx).insert(entity, components.$idx);
                     )*}
                 });
 
@@ -109,7 +112,7 @@ macro_rules! impl_component_set {
             fn remove(entities: &mut EntityStorage, entity: Entity) -> Self::Remove {
                 let mut group_mask = GroupMask(0);
 
-                let indexes = ($({
+                let sparse_sets = ($({
                     let metadata = entities
                         .components
                         .metadata
@@ -117,7 +120,14 @@ macro_rules! impl_component_set {
                         .unwrap_or_else(|| panic_missing_comp::<$Comp>());
 
                     group_mask |= metadata.delete_mask;
-                    metadata.storage_index
+
+                    unsafe {
+                        entities
+                            .components
+                            .components
+                            .get_unchecked(metadata.storage_index)
+                            .as_ptr()
+                    }
                 },)*);
 
                 unsafe {
@@ -129,12 +139,7 @@ macro_rules! impl_component_set {
                     );
 
                     ($(
-                        entities
-                            .components
-                            .components
-                            .get_unchecked_mut(indexes.$idx)
-                            .get_mut()
-                            .remove::<$Comp>(entity),
+                        (*sparse_sets.$idx).remove::<$Comp>(entity),
                     )*)
                 }
             }
@@ -142,7 +147,7 @@ macro_rules! impl_component_set {
             fn delete(entities: &mut EntityStorage, entity: Entity) {
                 let mut group_mask = GroupMask(0);
 
-                let indexes = ($({
+                let sparse_sets = ($({
                     let metadata = entities
                         .components
                         .metadata
@@ -150,7 +155,14 @@ macro_rules! impl_component_set {
                         .unwrap_or_else(|| panic_missing_comp::<$Comp>());
 
                     group_mask |= metadata.delete_mask;
-                    metadata.storage_index
+
+                    unsafe {
+                        entities
+                            .components
+                            .components
+                            .get_unchecked(metadata.storage_index)
+                            .as_ptr()
+                    }
                 },)*);
 
                 unsafe {
@@ -162,12 +174,7 @@ macro_rules! impl_component_set {
                     );
 
                     $(
-                        entities
-                            .components
-                            .components
-                            .get_unchecked_mut(indexes.$idx)
-                            .get_mut()
-                            .delete::<$Comp>(entity);
+                        (*sparse_sets.$idx).delete::<$Comp>(entity);
                     )*
                 }
             }

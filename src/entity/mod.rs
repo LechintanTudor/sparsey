@@ -96,11 +96,19 @@ impl EntityStorage {
         true
     }
 
+    #[must_use]
     pub fn remove<C>(&mut self, entity: Entity) -> C::Remove
     where
         C: ComponentSet,
     {
         C::remove(self, entity)
+    }
+
+    pub fn delete<C>(&mut self, entity: Entity)
+    where
+        C: ComponentSet,
+    {
+        C::delete(self, entity)
     }
 
     #[inline]
