@@ -174,7 +174,7 @@ impl DoubleEndedIterator for BitIndexIter {
             return None;
         }
 
-        let index = 31 - self.0.leading_zeros();
+        let index = 63 - self.0.leading_zeros();
         self.0 &= !(1 << index);
         Some(index)
     }
