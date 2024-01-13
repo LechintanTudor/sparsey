@@ -13,6 +13,7 @@ pub struct ComponentSparseSet {
 }
 
 impl ComponentSparseSet {
+    #[must_use]
     pub const fn new<T>() -> Self
     where
         T: Component,
@@ -270,6 +271,7 @@ impl ComponentSparseSet {
                 handle_alloc_error(new_layout);
             }
 
+            #[allow(clippy::cast_ptr_alignment)]
             (
                 NonNull::new_unchecked(new_data.cast::<Entity>()),
                 NonNull::new_unchecked(new_data.byte_add(new_components_offset)),

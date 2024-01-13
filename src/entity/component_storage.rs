@@ -1,6 +1,6 @@
 use crate::entity::{
     group, ungroup, ungroup_all, Comp, CompMut, Component, ComponentSparseSet, Entity, Group,
-    GroupLayout, GroupMask, GroupMetadata,
+    GroupInfo, GroupLayout, GroupMask, GroupMetadata, QueryMask, StorageMask,
 };
 use atomic_refcell::AtomicRefCell;
 use rustc_hash::FxHashMap;
@@ -16,6 +16,7 @@ pub struct ComponentStorage {
 }
 
 impl ComponentStorage {
+    #[must_use]
     pub fn new(layout: &GroupLayout) -> Self {
         let mut groups = Vec::new();
         let mut metadata = FxHashMap::default();
@@ -29,25 +30,32 @@ impl ComponentStorage {
             let mut prev_arity = 0;
 
             for &arity in family.arities() {
+                let storage_end = storage_start + arity;
                 let new_group_start = groups.len();
 
                 groups.push(Group {
                     metadata: GroupMetadata {
                         storage_start,
                         new_storage_start: storage_start + prev_arity,
-                        storage_end: storage_start + arity,
+                        storage_end,
                         skip_mask: GroupMask::skip_from_to(new_group_start, group_end),
+                        include_mask: QueryMask::include(arity),
+                        exclude_mask: QueryMask::exclude(prev_arity, arity),
                     },
                     len: 0,
                 });
 
-                for component in &family.components()[prev_arity..arity] {
+                for local_storage_index in prev_arity..arity {
+                    let component = &family.components()[local_storage_index];
+
                     metadata.insert(
                         component.type_id(),
                         ComponentMetadata {
-                            index: components.len(),
+                            storage_index: components.len(),
                             insert_mask: GroupMask::from_to(group_start, group_end),
                             delete_mask: GroupMask::from_to(new_group_start, group_end),
+                            group_end: groups.len(),
+                            storage_mask: StorageMask::single(local_storage_index),
                         },
                     );
 
@@ -74,9 +82,11 @@ impl ComponentStorage {
         };
 
         entry.insert(ComponentMetadata {
-            index: self.components.len(),
+            storage_index: self.components.len(),
             insert_mask: GroupMask::default(),
             delete_mask: GroupMask::default(),
+            group_end: 0,
+            storage_mask: StorageMask(0),
         });
 
         self.components
@@ -133,7 +143,21 @@ impl ComponentStorage {
             panic_missing_comp::<T>();
         };
 
-        unsafe { Comp::<T>::new(self.components.get_unchecked(metadata.index).borrow()) }
+        let group_info = (metadata.storage_mask.0 != 0).then(|| unsafe {
+            GroupInfo::new(
+                self.groups.get_unchecked(0..metadata.group_end),
+                metadata.storage_mask,
+            )
+        });
+
+        unsafe {
+            Comp::new(
+                self.components
+                    .get_unchecked(metadata.storage_index)
+                    .borrow(),
+                group_info,
+            )
+        }
     }
 
     #[must_use]
@@ -145,15 +169,31 @@ impl ComponentStorage {
             panic_missing_comp::<T>();
         };
 
-        unsafe { CompMut::<T>::new(self.components.get_unchecked(metadata.index).borrow_mut()) }
+        let group_info = (metadata.storage_mask.0 != 0).then(|| unsafe {
+            GroupInfo::new(
+                self.groups.get_unchecked(0..metadata.group_end),
+                metadata.storage_mask,
+            )
+        });
+
+        unsafe {
+            CompMut::new(
+                self.components
+                    .get_unchecked(metadata.storage_index)
+                    .borrow_mut(),
+                group_info,
+            )
+        }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 struct ComponentMetadata {
-    index: usize,
+    storage_index: usize,
     insert_mask: GroupMask,
     delete_mask: GroupMask,
+    group_end: usize,
+    storage_mask: StorageMask,
 }
 
 #[cold]
@@ -194,7 +234,7 @@ macro_rules! impl_component_set {
                     unsafe {
                         storage
                             .components
-                            .get_unchecked_mut(metadata.index)
+                            .get_unchecked_mut(metadata.storage_index)
                             .get_mut()
                             .insert(entity, components.$idx);
                     }
@@ -219,7 +259,7 @@ macro_rules! impl_component_set {
                         .unwrap_or_else(|| panic_missing_comp::<$Comp>());
 
                     group_mask |= metadata.delete_mask;
-                    metadata.index
+                    metadata.storage_index
                 },)*);
 
                 unsafe {
@@ -249,7 +289,7 @@ macro_rules! impl_component_set {
                         .unwrap_or_else(|| panic_missing_comp::<$Comp>());
 
                     group_mask |= metadata.delete_mask;
-                    metadata.index
+                    metadata.storage_index
                 },)*);
 
                 unsafe {

@@ -14,6 +14,7 @@ impl SystemParamKind {
     #[inline]
     #[must_use]
     pub fn conflicts_with(self, other: Self) -> bool {
+        #[allow(clippy::match_same_arms)]
         match (self, other) {
             (Self::Comp(c1), Self::CompMut(c2)) => c1 == c2,
             (Self::CompMut(c1), Self::Comp(c2)) => c1 == c2,

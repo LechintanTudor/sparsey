@@ -40,6 +40,7 @@ impl Default for Version {
     }
 }
 
+#[cfg_attr(target_pointer_width = "64", repr(align(8)))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Entity {
     pub index: u32,
@@ -54,6 +55,7 @@ impl Entity {
     }
 }
 
+#[cfg_attr(target_pointer_width = "64", repr(align(8)))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DenseEntity {
     pub index: u32,

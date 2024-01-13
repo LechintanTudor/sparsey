@@ -1,5 +1,5 @@
 use crate::entity::{Entity, SparseVec};
-use crate::query::ComponentView;
+use crate::query::{ComponentView, QueryGroupInfo};
 
 pub unsafe trait QueryPart {
     const HAS_DATA: bool;
@@ -22,6 +22,9 @@ pub unsafe trait QueryPart {
     fn contains_none(self, entity: Entity) -> bool;
 
     #[must_use]
+    fn group_info(&self) -> Option<QueryGroupInfo>;
+
+    #[must_use]
     fn split_sparse<'a>(self) -> (&'a [Entity], Self::Sparse<'a>, Self::Ptrs)
     where
         Self: 'a;
@@ -42,6 +45,9 @@ pub unsafe trait QueryPart {
         ptrs: Self::Ptrs,
         sparse_index: usize,
     ) -> Option<Self::Refs<'a>>;
+
+    #[must_use]
+    unsafe fn add_to_ptrs(ptrs: Self::Ptrs, index: usize) -> Self::Ptrs;
 
     #[must_use]
     unsafe fn get_dense<'a>(ptrs: Self::Ptrs, index: usize) -> Self::Refs<'a>;
@@ -80,6 +86,11 @@ unsafe impl QueryPart for () {
     }
 
     #[inline(always)]
+    fn group_info(&self) -> Option<QueryGroupInfo> {
+        Some(QueryGroupInfo::Empty)
+    }
+
+    #[inline(always)]
     fn split_sparse<'a>(self) -> (&'a [Entity], Self::Sparse<'a>, Self::Ptrs) {
         (&[], (), ())
     }
@@ -101,6 +112,11 @@ unsafe impl QueryPart for () {
         sparse_index: usize,
     ) -> Option<Self::Refs<'a>> {
         None
+    }
+
+    #[inline(always)]
+    unsafe fn add_to_ptrs(ptrs: Self::Ptrs, index: usize) -> Self::Ptrs {
+        // Empty
     }
 
     #[inline(always)]
@@ -143,6 +159,13 @@ where
         !ComponentView::contains(self, entity)
     }
 
+    fn group_info(&self) -> Option<QueryGroupInfo> {
+        Some(QueryGroupInfo::Single {
+            len: ComponentView::len(self),
+            group_info: ComponentView::group_info(self),
+        })
+    }
+
     fn split_sparse<'a>(self) -> (&'a [Entity], Self::Sparse<'a>, Self::Ptrs)
     where
         Self: 'a,
@@ -174,6 +197,10 @@ where
         sparse
             .get_sparse(sparse_index)
             .map(|dense_entity| C::get_from_ptr(ptrs, dense_entity.dense()))
+    }
+
+    unsafe fn add_to_ptrs(ptrs: Self::Ptrs, index: usize) -> Self::Ptrs {
+        C::add_to_ptr(ptrs, index)
     }
 
     unsafe fn get_dense<'a>(ptrs: Self::Ptrs, index: usize) -> Self::Refs<'a> {
@@ -223,6 +250,10 @@ macro_rules! impl_query_part {
                 )&&+
             }
 
+            fn group_info(&self) -> Option<QueryGroupInfo> {
+                group_info!($(&self.$idx),*)
+            }
+
             fn split_sparse<'a>(self) -> (&'a [Entity], Self::Sparse<'a>, Self::Ptrs)
             where
                 Self: 'a,
@@ -258,6 +289,12 @@ macro_rules! impl_query_part {
                 )+))
             }
 
+            unsafe fn add_to_ptrs(ptrs: Self::Ptrs, index: usize) -> Self::Ptrs {
+                ($(
+                    $Comp::add_to_ptr(ptrs.$idx, index),
+                )+)
+            }
+
             unsafe fn get_dense<'a>(ptrs: Self::Ptrs, index: usize) -> Self::Refs<'a> {
                 ($(
                     $Comp::get_from_ptr(ptrs.$idx, index),
@@ -283,6 +320,21 @@ macro_rules! sparse_vec {
     ($Comp:ident) => {
         &'a SparseVec
     };
+}
+
+macro_rules! group_info {
+    ($comp:expr) => {
+        Some(QueryGroupInfo::Single {
+            len: ComponentView::len($comp),
+            group_info: ComponentView::group_info($comp),
+        })
+    };
+    ($comp0:expr $(, $comp:expr)+) => {{
+        let group_info = ComponentView::group_info($comp0)?
+            $(.combine(&ComponentView::group_info($comp)?)?)+;
+
+        Some(QueryGroupInfo::Multiple(group_info))
+    }};
 }
 
 macro_rules! split_sparse {

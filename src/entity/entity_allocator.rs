@@ -105,7 +105,7 @@ impl EntityAllocator {
     fn increment_next_index_to_allocate(&self) -> Option<u32> {
         let mut prev = self.next_index_to_allocate.load(Ordering::Relaxed);
 
-        while prev <= (u32::MAX as u64) {
+        while u32::try_from(prev).is_ok() {
             match self.next_index_to_allocate.compare_exchange_weak(
                 prev,
                 prev + 1,

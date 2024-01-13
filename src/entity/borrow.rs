@@ -1,4 +1,4 @@
-use crate::entity::{Component, ComponentSparseSet, Entity, EntityStorage, SparseVec};
+use crate::entity::{Component, ComponentSparseSet, Entity, EntityStorage, GroupInfo, SparseVec};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::fmt;
 use std::marker::PhantomData;
@@ -30,15 +30,20 @@ impl<'a> Entities<'a> {
 
 pub struct Comp<'a, T> {
     components: AtomicRef<'a, ComponentSparseSet>,
+    group_info: Option<GroupInfo<'a>>,
     _phantom: PhantomData<&'a [T]>,
 }
 
 impl<'a, T> Comp<'a, T> {
     #[inline]
     #[must_use]
-    pub(crate) unsafe fn new(components: AtomicRef<'a, ComponentSparseSet>) -> Self {
+    pub(crate) unsafe fn new(
+        components: AtomicRef<'a, ComponentSparseSet>,
+        group_info: Option<GroupInfo<'a>>,
+    ) -> Self {
         Self {
             components,
+            group_info,
             _phantom: PhantomData,
         }
     }
@@ -46,6 +51,7 @@ impl<'a, T> Comp<'a, T> {
 
 pub struct CompMut<'a, T> {
     components: AtomicRefMut<'a, ComponentSparseSet>,
+    group_info: Option<GroupInfo<'a>>,
     _phantom: PhantomData<&'a mut [T]>,
 }
 
@@ -55,9 +61,13 @@ where
 {
     #[inline]
     #[must_use]
-    pub(crate) unsafe fn new(components: AtomicRefMut<'a, ComponentSparseSet>) -> Self {
+    pub(crate) unsafe fn new(
+        components: AtomicRefMut<'a, ComponentSparseSet>,
+        group_info: Option<GroupInfo<'a>>,
+    ) -> Self {
         Self {
             components,
+            group_info,
             _phantom: PhantomData,
         }
     }
@@ -111,6 +121,11 @@ macro_rules! impl_comp_common {
             #[must_use]
             pub fn is_empty(&self) -> bool {
                 self.components.is_empty()
+            }
+
+            #[must_use]
+            pub fn group_info(&self) -> Option<GroupInfo<'_>> {
+                self.group_info
             }
 
             #[must_use]

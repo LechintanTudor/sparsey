@@ -4,7 +4,7 @@ mod sparse_iter;
 pub use self::dense_iter::*;
 pub use self::sparse_iter::*;
 
-use crate::query::QueryPart;
+use crate::query::{group_range, QueryPart};
 
 pub enum Iter<'a, G, I, E>
 where
@@ -23,24 +23,42 @@ where
     E: QueryPart + 'a,
 {
     pub(crate) fn new(get: G, include: I, exclude: E) -> Self {
-        let (get_entities, sparse, ptrs) = get.split_sparse();
-        let (sparse_entities, include) = include.split_filter();
-        let (_, exclude) = exclude.split_filter();
+        if let Some(range) = group_range(&get, &include, &exclude) {
+            let (entities, ptrs) = get.split_dense();
 
-        let entities = match (G::HAS_DATA, I::HAS_DATA) {
-            (true, false) => get_entities,
-            (false, true) => sparse_entities,
-            (true, true) => {
-                if get_entities.len() >= sparse_entities.len() {
-                    get_entities
-                } else {
-                    sparse_entities
-                }
+            let entities = if G::HAS_DATA {
+                entities
+            } else {
+                debug_assert!(I::HAS_DATA);
+                let (entities, _, _) = include.split_sparse();
+                entities
+            };
+
+            unsafe {
+                let ptrs = G::add_to_ptrs(ptrs, range.start);
+                let entities = entities.get_unchecked(range);
+                Self::Dense(DenseIter::new(entities, ptrs))
             }
-            (false, false) => panic!("Cannot iterate over an empty Query"),
-        };
+        } else {
+            let (get_entities, sparse, ptrs) = get.split_sparse();
+            let (sparse_entities, include) = include.split_filter();
+            let (_, exclude) = exclude.split_filter();
 
-        unsafe { Self::Sparse(SparseIter::new(entities, sparse, include, exclude, ptrs)) }
+            let entities = match (G::HAS_DATA, I::HAS_DATA) {
+                (true, false) => get_entities,
+                (false, true) => sparse_entities,
+                (true, true) => {
+                    if get_entities.len() >= sparse_entities.len() {
+                        get_entities
+                    } else {
+                        sparse_entities
+                    }
+                }
+                (false, false) => panic!("Cannot iterate over an empty Query"),
+            };
+
+            unsafe { Self::Sparse(SparseIter::new(entities, sparse, include, exclude, ptrs)) }
+        }
     }
 
     #[must_use]

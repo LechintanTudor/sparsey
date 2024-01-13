@@ -1,4 +1,4 @@
-use crate::entity::{ComponentSparseSet, Entity, GroupMask};
+use crate::entity::{ComponentSparseSet, Entity, GroupMask, QueryMask};
 use atomic_refcell::AtomicRefCell;
 use std::ops::Range;
 
@@ -14,6 +14,8 @@ pub struct GroupMetadata {
     pub new_storage_start: usize,
     pub storage_end: usize,
     pub skip_mask: GroupMask,
+    pub include_mask: QueryMask,
+    pub exclude_mask: QueryMask,
 }
 
 impl GroupMetadata {

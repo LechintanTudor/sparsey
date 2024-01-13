@@ -1,5 +1,6 @@
-use crate::entity::{Comp, CompMut, Component, Entity, SparseVec};
+use crate::entity::{Comp, CompMut, Component, Entity, GroupInfo, SparseVec};
 
+#[allow(clippy::len_without_is_empty)]
 pub unsafe trait ComponentView {
     type Ptr: Copy;
 
@@ -14,6 +15,12 @@ pub unsafe trait ComponentView {
 
     #[must_use]
     fn contains(self, entity: Entity) -> bool;
+
+    #[must_use]
+    fn len(&self) -> usize;
+
+    #[must_use]
+    fn group_info(&self) -> Option<GroupInfo>;
 
     #[must_use]
     fn split<'a>(self) -> (&'a [Entity], &'a SparseVec, Self::Ptr)
@@ -48,6 +55,14 @@ macro_rules! impl_comp_common {
 
             fn contains(self, entity: Entity) -> bool {
                 $Comp::contains(self, entity)
+            }
+
+            fn len(&self) -> usize {
+                $Comp::len(self)
+            }
+
+            fn group_info(&self) -> Option<GroupInfo> {
+                $Comp::group_info(self)
             }
 
             fn split<'a>(self) -> (&'a [Entity], &'a SparseVec, Self::Ptr)
@@ -92,6 +107,14 @@ where
 
     fn contains(self, entity: Entity) -> bool {
         CompMut::contains(self, entity)
+    }
+
+    fn len(&self) -> usize {
+        CompMut::len(self)
+    }
+
+    fn group_info(&self) -> Option<GroupInfo> {
+        CompMut::group_info(self)
     }
 
     fn split<'a>(self) -> (&'a [Entity], &'a SparseVec, Self::Ptr)

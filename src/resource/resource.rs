@@ -37,7 +37,6 @@ impl dyn Resource {
         self.as_any().is::<T>()
     }
 
-    #[must_use]
     pub fn downcast<T>(self: Box<Self>) -> Result<Box<T>, Box<Self>>
     where
         T: Resource,
