@@ -29,6 +29,11 @@ pub trait Query: IntoQueryParts {
     where
         Self: 'a,
         F: FnMut(<Self::Get as QueryPart>::Refs<'a>);
+
+    fn for_each_with_entity<'a, F>(self, f: F)
+    where
+        Self: 'a,
+        F: FnMut((Entity, <Self::Get as QueryPart>::Refs<'a>));
 }
 
 impl<Q> Query for Q
@@ -64,5 +69,13 @@ where
         F: FnMut(<Self::Get as QueryPart>::Refs<'a>),
     {
         self.iter().for_each(f);
+    }
+
+    fn for_each_with_entity<'a, F>(self, f: F)
+    where
+        Self: 'a,
+        F: FnMut((Entity, <Self::Get as QueryPart>::Refs<'a>)),
+    {
+        self.iter().with_entity().for_each(f);
     }
 }

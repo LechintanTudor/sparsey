@@ -1,9 +1,12 @@
 mod dense_iter;
+mod entity_iter;
 mod sparse_iter;
 
 pub use self::dense_iter::*;
+pub use self::entity_iter::*;
 pub use self::sparse_iter::*;
 
+use crate::entity::Entity;
 use crate::query::{group_range, QueryPart};
 
 pub enum Iter<'a, G, I, E>
@@ -94,6 +97,30 @@ where
         match self {
             Self::Sparse(it) => it.fold(init, f),
             Self::Dense(it) => it.fold(init, f),
+        }
+    }
+}
+
+impl<'a, G, I, E> EntityIterator for Iter<'a, G, I, E>
+where
+    G: QueryPart + 'a,
+    I: QueryPart,
+    E: QueryPart,
+{
+    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
+        match self {
+            Self::Sparse(it) => it.next_with_entity(),
+            Self::Dense(it) => it.next_with_entity(),
+        }
+    }
+
+    fn fold_with_entity<B, F>(self, init: B, f: F) -> B
+    where
+        F: FnMut(B, (Entity, Self::Item)) -> B,
+    {
+        match self {
+            Self::Sparse(it) => it.fold_with_entity(init, f),
+            Self::Dense(it) => it.fold_with_entity(init, f),
         }
     }
 }
