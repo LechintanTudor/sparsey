@@ -34,6 +34,19 @@ pub trait Query: IntoQueryParts {
     where
         Self: 'a,
         F: FnMut((Entity, <Self::Get as QueryPart>::Refs<'a>));
+
+    #[must_use]
+    fn group_entities<'a>(self) -> Option<&'a [Entity]>
+    where
+        Self: 'a;
+
+    #[must_use]
+    fn group_components<'a>(self) -> Option<<Self::Get as QueryPart>::Slices<'a>>;
+
+    #[must_use]
+    fn group_data<'a>(self) -> Option<(&'a [Entity], <Self::Get as QueryPart>::Slices<'a>)>
+    where
+        Self: 'a;
 }
 
 impl<Q> Query for Q
@@ -77,5 +90,49 @@ where
         F: FnMut((Entity, <Self::Get as QueryPart>::Refs<'a>)),
     {
         self.iter().with_entity().for_each(f);
+    }
+
+    fn group_entities<'a>(self) -> Option<&'a [Entity]>
+    where
+        Self: 'a,
+    {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(&get, &include, &exclude)?;
+
+        let entities = unsafe {
+            if Self::Get::HAS_DATA {
+                get.get_entities_unchecked(range)
+            } else {
+                include.get_entities_unchecked(range)
+            }
+        };
+
+        Some(entities)
+    }
+
+    fn group_components<'a>(self) -> Option<<Self::Get as QueryPart>::Slices<'a>> {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(&get, &include, &exclude)?;
+        unsafe { Some(get.get_components_unchecked(range)) }
+    }
+
+    fn group_data<'a>(self) -> Option<(&'a [Entity], <Self::Get as QueryPart>::Slices<'a>)>
+    where
+        Self: 'a,
+    {
+        let (get, include, exclude) = self.into_query_parts();
+        let range = group_range(&get, &include, &exclude)?;
+
+        let (entities, components) = unsafe {
+            if Self::Get::HAS_DATA {
+                get.get_data_unchecked(range)
+            } else {
+                let entities = include.get_entities_unchecked(range.clone());
+                let (_, components) = get.get_data_unchecked(range);
+                (entities, components)
+            }
+        };
+
+        Some((entities, components))
     }
 }

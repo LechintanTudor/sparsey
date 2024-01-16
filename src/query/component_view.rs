@@ -1,10 +1,15 @@
 use crate::entity::{Comp, CompMut, Component, Entity, GroupInfo, SparseVec};
+use std::ops::Range;
 
 #[allow(clippy::len_without_is_empty)]
 pub unsafe trait ComponentView {
     type Ptr: Copy;
 
     type Ref<'a>
+    where
+        Self: 'a;
+
+    type Slice<'a>
     where
         Self: 'a;
 
@@ -34,6 +39,21 @@ pub unsafe trait ComponentView {
     unsafe fn get_from_ptr<'a>(ptr: Self::Ptr, index: usize) -> Self::Ref<'a>
     where
         Self: 'a;
+
+    #[must_use]
+    unsafe fn get_entities_unchecked<'a>(self, range: Range<usize>) -> &'a [Entity]
+    where
+        Self: 'a;
+
+    #[must_use]
+    unsafe fn get_components_unchecked<'a>(self, range: Range<usize>) -> Self::Slice<'a>
+    where
+        Self: 'a;
+
+    #[must_use]
+    unsafe fn get_data_unchecked<'a>(self, range: Range<usize>) -> (&'a [Entity], Self::Slice<'a>)
+    where
+        Self: 'a;
 }
 
 macro_rules! impl_comp_common {
@@ -45,6 +65,8 @@ macro_rules! impl_comp_common {
             type Ptr = *const T;
 
             type Ref<'a> = &'a T where Self: 'a;
+
+            type Slice<'a> = &'a [T] where Self: 'a;
 
             fn get<'a>(self, entity: Entity) -> Option<Self::Ref<'a>>
             where
@@ -83,6 +105,35 @@ macro_rules! impl_comp_common {
             {
                 &*ptr.add(index)
             }
+
+            unsafe fn get_entities_unchecked<'a>(self, range: Range<usize>) -> &'a [Entity]
+            where
+                Self: 'a,
+            {
+                $Comp::entities(self).get_unchecked(range)
+            }
+
+            unsafe fn get_components_unchecked<'a>(self, range: Range<usize>) -> Self::Slice<'a>
+            where
+                Self: 'a,
+            {
+                $Comp::as_slice(self).get_unchecked(range)
+            }
+
+            unsafe fn get_data_unchecked<'a>(
+                self,
+                range: Range<usize>,
+            ) -> (&'a [Entity], Self::Slice<'a>)
+            where
+                Self: 'a,
+            {
+                let (entities, _, components) = $Comp::split(self);
+
+                (
+                    entities.get_unchecked(range.clone()),
+                    components.get_unchecked(range),
+                )
+            }
         }
     };
 }
@@ -97,6 +148,8 @@ where
     type Ptr = *mut T;
 
     type Ref<'a> = &'a mut T where Self: 'a;
+
+    type Slice<'a> = &'a mut [T] where Self: 'a;
 
     fn get<'a>(self, entity: Entity) -> Option<Self::Ref<'a>>
     where
@@ -134,5 +187,31 @@ where
         Self: 'a,
     {
         &mut *ptr.add(index)
+    }
+
+    unsafe fn get_entities_unchecked<'a>(self, range: Range<usize>) -> &'a [Entity]
+    where
+        Self: 'a,
+    {
+        CompMut::entities(self).get_unchecked(range)
+    }
+
+    unsafe fn get_components_unchecked<'a>(self, range: Range<usize>) -> Self::Slice<'a>
+    where
+        Self: 'a,
+    {
+        CompMut::as_mut_slice(self).get_unchecked_mut(range)
+    }
+
+    unsafe fn get_data_unchecked<'a>(self, range: Range<usize>) -> (&'a [Entity], Self::Slice<'a>)
+    where
+        Self: 'a,
+    {
+        let (entities, _, components) = CompMut::split_mut(self);
+
+        (
+            entities.get_unchecked(range.clone()),
+            components.get_unchecked_mut(range),
+        )
     }
 }

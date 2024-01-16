@@ -1,5 +1,6 @@
 use crate::entity::{Entity, SparseVec};
 use crate::query::{ComponentView, QueryGroupInfo};
+use std::ops::Range;
 
 pub unsafe trait QueryPart {
     const HAS_DATA: bool;
@@ -9,6 +10,10 @@ pub unsafe trait QueryPart {
     type Ptrs: Copy;
 
     type Refs<'a>
+    where
+        Self: 'a;
+
+    type Slices<'a>
     where
         Self: 'a;
 
@@ -57,6 +62,21 @@ pub unsafe trait QueryPart {
 
     #[must_use]
     fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
+
+    #[must_use]
+    unsafe fn get_entities_unchecked<'a>(self, range: Range<usize>) -> &'a [Entity]
+    where
+        Self: 'a;
+
+    #[must_use]
+    unsafe fn get_components_unchecked<'a>(self, range: Range<usize>) -> Self::Slices<'a>
+    where
+        Self: 'a;
+
+    #[must_use]
+    unsafe fn get_data_unchecked<'a>(self, range: Range<usize>) -> (&'a [Entity], Self::Slices<'a>)
+    where
+        Self: 'a;
 }
 
 #[allow(unused_variables)]
@@ -69,6 +89,8 @@ unsafe impl QueryPart for () {
     type Ptrs = ();
 
     type Refs<'a> = ();
+
+    type Slices<'a> = ();
 
     #[inline(always)]
     fn get<'a>(self, entity: Entity) -> Option<Self::Refs<'a>> {
@@ -133,6 +155,24 @@ unsafe impl QueryPart for () {
     fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
         true
     }
+
+    #[inline(always)]
+    unsafe fn get_entities_unchecked<'a>(self, range: Range<usize>) -> &'a [Entity] {
+        &[]
+    }
+
+    #[inline(always)]
+    unsafe fn get_components_unchecked<'a>(self, range: Range<usize>) -> Self::Slices<'a> {
+        // Empty
+    }
+
+    #[inline(always)]
+    unsafe fn get_data_unchecked<'a>(
+        self,
+        range: Range<usize>,
+    ) -> (&'a [Entity], Self::Slices<'a>) {
+        (&[], ())
+    }
 }
 
 unsafe impl<C> QueryPart for C
@@ -146,6 +186,8 @@ where
     type Ptrs = <C as ComponentView>::Ptr;
 
     type Refs<'a> = <C as ComponentView>::Ref<'a> where Self: 'a;
+
+    type Slices<'a> = <C as ComponentView>::Slice<'a> where Self: 'a;
 
     fn get<'a>(self, entity: Entity) -> Option<Self::Refs<'a>> {
         ComponentView::get(self, entity)
@@ -214,6 +256,24 @@ where
     fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
         !sparse.contains(entity)
     }
+
+    unsafe fn get_entities_unchecked<'a>(self, range: Range<usize>) -> &'a [Entity]
+    where
+        Self: 'a,
+    {
+        ComponentView::get_entities_unchecked(self, range)
+    }
+
+    unsafe fn get_components_unchecked<'a>(self, range: Range<usize>) -> Self::Slices<'a> {
+        ComponentView::get_components_unchecked(self, range)
+    }
+
+    unsafe fn get_data_unchecked<'a>(
+        self,
+        range: Range<usize>,
+    ) -> (&'a [Entity], Self::Slices<'a>) {
+        ComponentView::get_data_unchecked(self, range)
+    }
 }
 
 macro_rules! impl_query_part {
@@ -229,6 +289,10 @@ macro_rules! impl_query_part {
             type Ptrs = ($($Comp::Ptr,)+);
 
             type Refs<'a> = ($($Comp::Ref<'a>,)+)
+            where
+                Self: 'a;
+
+            type Slices<'a> = ($($Comp::Slice<'a>,)+)
             where
                 Self: 'a;
 
@@ -312,6 +376,30 @@ macro_rules! impl_query_part {
                     !sparse.$idx.contains(entity)
                 )&&+
             }
+
+            unsafe fn get_entities_unchecked<'a>(self, range: Range<usize>) -> &'a [Entity]
+            where
+                Self: 'a,
+            {
+                self.0.get_entities_unchecked(range)
+            }
+
+            unsafe fn get_components_unchecked<'a>(self, range: Range<usize>) -> Self::Slices<'a>
+            where
+                Self: 'a,
+            {
+                ($(self.$idx.get_components_unchecked(range.clone()),)+)
+            }
+
+            unsafe fn get_data_unchecked<'a>(
+                self,
+                range: Range<usize>,
+            ) -> (&'a [Entity], Self::Slices<'a>)
+            where
+                Self: 'a,
+            {
+                get_data_unchecked!(range; $(self.$idx),+)
+            }
         }
     };
 }
@@ -389,6 +477,13 @@ macro_rules! split_filter {
         );
 
         (shortest_entities, sparse)
+    }};
+}
+
+macro_rules! get_data_unchecked {
+    ($range:ident; $first:expr $(, $other:expr)*) => {{
+        let (entities, first_comp) = $first.get_data_unchecked($range.clone());
+        (entities, (first_comp, $($other.get_components_unchecked($range.clone()),)*))
     }};
 }
 
