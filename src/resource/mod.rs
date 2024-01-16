@@ -8,7 +8,7 @@ use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use rustc_hash::FxHashMap;
 use std::any::TypeId;
 use std::collections::hash_map::Entry;
-use std::{fmt, mem};
+use std::{any, fmt, mem};
 
 #[derive(Default)]
 pub struct ResourceStorage {
@@ -58,7 +58,34 @@ impl ResourceStorage {
     }
 
     #[must_use]
-    pub fn get_mut<T>(&mut self) -> Option<&mut T>
+    pub fn get_mut<T>(&mut self) -> &mut T
+    where
+        T: Resource,
+    {
+        self.try_get_mut()
+            .unwrap_or_else(|| panic_missing_res::<T>())
+    }
+
+    #[must_use]
+    pub fn borrow<T>(&self) -> Res<T>
+    where
+        T: Resource,
+    {
+        self.try_borrow()
+            .unwrap_or_else(|| panic_missing_res::<T>())
+    }
+
+    #[must_use]
+    pub fn borrow_mut<T>(&self) -> ResMut<T>
+    where
+        T: Resource,
+    {
+        self.try_borrow_mut()
+            .unwrap_or_else(|| panic_missing_res::<T>())
+    }
+
+    #[must_use]
+    pub fn try_get_mut<T>(&mut self) -> Option<&mut T>
     where
         T: Resource,
     {
@@ -68,7 +95,7 @@ impl ResourceStorage {
     }
 
     #[must_use]
-    pub fn borrow<T>(&self) -> Option<Res<T>>
+    pub fn try_borrow<T>(&self) -> Option<Res<T>>
     where
         T: Resource,
     {
@@ -80,7 +107,7 @@ impl ResourceStorage {
     }
 
     #[must_use]
-    pub fn borrow_mut<T>(&self) -> Option<ResMut<T>>
+    pub fn try_borrow_mut<T>(&self) -> Option<ResMut<T>>
     where
         T: Resource,
     {
@@ -115,4 +142,16 @@ impl fmt::Debug for ResourceStorage {
             .field("type_ids", &self.resources.keys())
             .finish_non_exhaustive()
     }
+}
+
+#[cold]
+#[inline(never)]
+fn panic_missing_res<T>() -> !
+where
+    T: Resource,
+{
+    panic!(
+        "Tried to access missing resource of type '{}'",
+        any::type_name::<T>(),
+    );
 }

@@ -2,7 +2,6 @@ use crate::entity::{Comp, CompMut, Component, Entities, EntityStorage};
 use crate::resource::{Res, ResMut, Resource, ResourceStorage};
 use crate::system::SystemParam;
 use crate::World;
-use std::any;
 
 pub trait SystemBorrow<TRegistry = World>: SystemParam {
     #[must_use]
@@ -38,10 +37,7 @@ where
     T: Resource,
 {
     fn borrow(world: &World) -> Self::Param<'_> {
-        world
-            .resources
-            .borrow()
-            .unwrap_or_else(|| panic_missing_res::<T>())
+        world.resources.borrow()
     }
 }
 
@@ -50,10 +46,7 @@ where
     T: Resource,
 {
     fn borrow(world: &World) -> Self::Param<'_> {
-        world
-            .resources
-            .borrow_mut()
-            .unwrap_or_else(|| panic_missing_res::<T>())
+        world.resources.borrow_mut()
     }
 }
 
@@ -62,7 +55,7 @@ where
     T: Resource,
 {
     fn borrow(world: &World) -> Self::Param<'_> {
-        world.resources.borrow()
+        world.resources.try_borrow()
     }
 }
 
@@ -71,7 +64,7 @@ where
     T: Resource,
 {
     fn borrow(world: &World) -> Self::Param<'_> {
-        world.resources.borrow_mut()
+        world.resources.try_borrow_mut()
     }
 }
 
@@ -104,9 +97,7 @@ where
     T: Resource,
 {
     fn borrow(resources: &ResourceStorage) -> Self::Param<'_> {
-        resources
-            .borrow()
-            .unwrap_or_else(|| panic_missing_res::<T>())
+        resources.borrow()
     }
 }
 
@@ -115,9 +106,7 @@ where
     T: Resource,
 {
     fn borrow(resources: &ResourceStorage) -> Self::Param<'_> {
-        resources
-            .borrow_mut()
-            .unwrap_or_else(|| panic_missing_res::<T>())
+        resources.borrow_mut()
     }
 }
 
@@ -126,7 +115,7 @@ where
     T: Resource,
 {
     fn borrow(resources: &ResourceStorage) -> Self::Param<'_> {
-        resources.borrow()
+        resources.try_borrow()
     }
 }
 
@@ -135,18 +124,6 @@ where
     T: Resource,
 {
     fn borrow(resources: &ResourceStorage) -> Self::Param<'_> {
-        resources.borrow_mut()
+        resources.try_borrow_mut()
     }
-}
-
-#[cold]
-#[inline(never)]
-fn panic_missing_res<T>() -> !
-where
-    T: Resource,
-{
-    panic!(
-        "Tried to access missing resource of type '{}'",
-        any::type_name::<T>(),
-    );
 }
