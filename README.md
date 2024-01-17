@@ -20,38 +20,21 @@ use sparsey::prelude::*;
 
 struct Position(f32);
 struct Velocity(f32);
-struct Frozen;
-
-fn update_velocities(mut velocities: CompMut<Velocity>, frozen: Comp<Frozen>) {
-    (&mut velocities).include(&frozen).for_each(|velocity| {
-        velocity.0 = 0.0;
-    });
-}
-
-fn update_positions(mut positions: CompMut<Position>, velocities: Comp<Velocity>) {
-    (&mut positions, &velocities).for_each(|(position, velocity)| {
-        position.0 += velocity.0;
-    });
-} 
 
 fn main() {
-    let mut schedule = Schedule::builder()
-        .add_system(update_velocities)
-        .add_system(update_positions)
-        .build();
+    let mut entities = EntityStorage::default();
+    entities.register::<Position>();
+    entities.register::<Velocity>();
 
-    let mut world = World::default();
-    schedule.set_up(&mut world);
+    entities.create((Position(0), Velocity(1)));
+    entities.create((Position(0), Velocity(2)));
+    entities.create((Position(0), Velocity(3)));
 
-    world.create((Position(0.0), Velocity(1.0)));
-    world.create((Position(0.0), Velocity(2.0)));
-    world.create((Position(0.0), Velocity(3.0), Frozen));
-
-    let mut resources = Resources::default();
-
-    for _ in 0..5 {
-        schedule.run(&mut world, &mut resources);
-    }
+    entities.run(|mut positions: CompMut<Position>, velocities: Comp<Velocity>| {
+        (&mut positions, &velocities).for_each(|(position, velocity)| {
+            position.0 += velocity.0;
+        }); 
+    });
 }
 ```
 
@@ -59,9 +42,11 @@ fn main() {
 
 ### Easy to Use Systems
 
-Systems are plain functions that borrow data from `World` and `Resources`.
+Systems are plain functions.
 
 ```rust
+struct HealMultiplier(f32);
+
 fn update_positions(mut positions: CompMut<Position>, velocities: Comp<Velocity>) {
     (&mut positions, &velocities).for_each(|(position, velocity)| {
         position.0 += velocity.0;
@@ -73,17 +58,14 @@ fn update_hps(mut hps: CompMut<Hp>, heals: Comp<Heal>, heal_multipler: Res<HealM
         hp.0 += heal.0 * heal_multiplier.0;
     });
 }
-```
 
-Systems will be scheduled to run in parallel if their paramters don't conflict.
+let mut world = World::default();
+world.entities.register::<Position>();
+world.entities.register::<Velocity>();
+world.resources.insert(HealMultiplier(1.2));
 
-```rust
-let mut schedule = Schedule::builder()
-    .add_system(update_positions)
-    .add_system(update_hps)
-    .build();
-    
-schedule.run(&mut world, &mut resources);
+world.run(update_positions);
+world.run(update_hps);
 ```
 
 ### Expressive Queries
@@ -93,31 +75,39 @@ Get, include and exclude components using Sparsey's query API.
 ```rust
 fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
     // Iter components A and B from entities with A and B.
-    for (a, b) in (&a, &b).iter() {}
+    (&a, &b).for_each(|(a, b)| {
+        // ... 
+    });
 
     // Iter components A from entities with A and B.
-    for a in (&a).include(&b).iter() {}
+    (&a).include(&b).for_each(|a| {
+        // ...
+    });
 
     // Iter components A from entities with A and without B.
-    for a in (&a).exclude(&b).iter() {}
+    (&a).exclude(&b).for_each(|a| {
+        // ...
+    });
 
     // Iter components A from entities with A and B, without C.
-    for a in (&a).include(&b).exclude(&c).iter() {}
+    (&b).include(&b).exclude(&c).for_each(|a| {
+        // ...
+    });
 }
 ```
 
 ### Great Performance with Grouped Storages
 
 Sparsey allows the user to "group" component storages to greatly optimize
-iteration performance. Groups are created by setting a `Layout` on the `World`.
+iteration performance. Groups are created by setting a `GroupLayout`.
 
 ```rust
-let layout = Layout::builder()
-    .add_group(<(A, B)>::group())
-    .add_group(<(A, B, C, D>)>::group())
+let layout = GroupLayout::builder()
+    .add_group::<(A, B)>()
+    .add_group::<(A, B, C, D>)>()
     .build();
 
-let world = World::with_layout(&layout);
+let entities = EntityStorage::new(&layout);
 ```
 
 After the layout is set, iterators over the grouped storages become "dense",
@@ -125,16 +115,16 @@ greatly improving their performance. Additionally, grouped storages allow access
 to their components and entities as slices.
 
 ```rust
-fn dense_iterators(a: Comp<A>, b: Comp<B>) {
-    if let Some(entities) = (&a, &b).into_entities() {
+fn group_slices(a: Comp<A>, b: Comp<B>) {
+    if let Some(entities) = (&a, &b).group_entities() {
         // ...
     }
 
-    if let Some((a_slice, b_slice)) = (&a, &b).into_components() {
+    if let Some((a_slice, b_slice)) = (&a, &b).group_components() {
         // ...
     }
 
-    if let Some((entities, (a_slice, b_slice))) = (&a, &b).into_entities_and_components() {
+    if let Some((entities, (a_slice, b_slice))) = (&a, &b).group_data() {
         // ...
     }
 }
