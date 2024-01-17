@@ -27,6 +27,9 @@ pub use self::sparse_vec::*;
 
 pub(crate) use self::component_storage::*;
 
+use rustc_hash::FxHashMap;
+use std::mem;
+
 #[derive(Default, Debug)]
 pub struct EntityStorage {
     allocator: EntityAllocator,
@@ -38,11 +41,21 @@ impl EntityStorage {
     #[inline]
     #[must_use]
     pub fn new(layout: &GroupLayout) -> Self {
+        let components = unsafe { ComponentStorage::new(&[], layout, FxHashMap::default()) };
+
         Self {
             allocator: EntityAllocator::new(),
             entities: EntitySparseSet::new(),
-            components: ComponentStorage::new(layout),
+            components,
         }
+    }
+
+    #[inline]
+    pub fn set_layout(&mut self, layout: &GroupLayout) {
+        let sparse_sets = mem::take(&mut self.components).into_sparse_sets();
+
+        self.components =
+            unsafe { ComponentStorage::new(self.entities.as_slice(), layout, sparse_sets) };
     }
 
     pub fn register<T>(&mut self) -> bool

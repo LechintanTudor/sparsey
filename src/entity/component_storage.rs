@@ -1,12 +1,12 @@
 use crate::entity::{
-    ungroup_all, Comp, CompMut, Component, ComponentSparseSet, Entity, Group, GroupInfo,
+    group, ungroup_all, Comp, CompMut, Component, ComponentSparseSet, Entity, Group, GroupInfo,
     GroupLayout, GroupMask, GroupMetadata, QueryMask, StorageMask,
 };
 use atomic_refcell::AtomicRefCell;
 use rustc_hash::FxHashMap;
-use std::any;
-use std::any::TypeId;
+use std::any::{self, TypeId};
 use std::collections::hash_map::Entry;
+use std::mem;
 
 #[derive(Default, Debug)]
 pub(crate) struct ComponentStorage {
@@ -17,7 +17,11 @@ pub(crate) struct ComponentStorage {
 
 impl ComponentStorage {
     #[must_use]
-    pub fn new(layout: &GroupLayout) -> Self {
+    pub unsafe fn new(
+        entities: &[Entity],
+        layout: &GroupLayout,
+        mut sparse_sets: FxHashMap<TypeId, ComponentSparseSet>,
+    ) -> Self {
         let mut groups = Vec::new();
         let mut metadata = FxHashMap::default();
         let mut components = Vec::new();
@@ -59,10 +63,37 @@ impl ComponentStorage {
                         },
                     );
 
-                    components.push(AtomicRefCell::new(component.create_sparse_set()));
+                    let sparse_set = sparse_sets
+                        .remove(&component.type_id())
+                        .unwrap_or_else(|| component.create_sparse_set());
+
+                    components.push(AtomicRefCell::new(sparse_set));
                 }
 
                 prev_arity = arity;
+            }
+        }
+
+        for (type_id, sparse_set) in sparse_sets {
+            metadata.insert(
+                type_id,
+                ComponentMetadata {
+                    storage_index: components.len(),
+                    insert_mask: GroupMask::default(),
+                    delete_mask: GroupMask::default(),
+                    group_end: 0,
+                    storage_mask: StorageMask::default(),
+                },
+            );
+
+            components.push(AtomicRefCell::new(sparse_set));
+        }
+
+        let group_mask = GroupMask::from_to(0, groups.len());
+
+        for &entity in entities {
+            unsafe {
+                group(&mut components, &mut groups, group_mask, entity);
             }
         }
 
@@ -71,6 +102,21 @@ impl ComponentStorage {
             metadata,
             components,
         }
+    }
+
+    pub fn into_sparse_sets(mut self) -> FxHashMap<TypeId, ComponentSparseSet> {
+        let mut sparse_sets = FxHashMap::default();
+
+        for (type_id, metadata) in self.metadata {
+            let sparse_set = mem::replace(
+                self.components[metadata.storage_index].get_mut(),
+                ComponentSparseSet::new::<()>(),
+            );
+
+            sparse_sets.insert(type_id, sparse_set);
+        }
+
+        sparse_sets
     }
 
     pub fn register<T>(&mut self) -> bool
@@ -86,7 +132,7 @@ impl ComponentStorage {
             insert_mask: GroupMask::default(),
             delete_mask: GroupMask::default(),
             group_end: 0,
-            storage_mask: StorageMask(0),
+            storage_mask: StorageMask::default(),
         });
 
         self.components
