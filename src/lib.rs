@@ -3,6 +3,14 @@ pub mod query;
 pub mod resource;
 pub mod system;
 
+pub mod prelude {
+    pub use crate::entity::{Comp, CompMut, Entities, Entity, EntityStorage, GroupLayout};
+    pub use crate::query::{BuildCompoundQuery, IntoEntityIter, Query};
+    pub use crate::resource::{Res, ResMut, ResourceStorage};
+    pub use crate::system::{IntoSystem, Run, System};
+    pub use crate::World;
+}
+
 use crate::entity::{EntityStorage, GroupLayout};
 use crate::resource::ResourceStorage;
 
