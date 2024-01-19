@@ -2,6 +2,7 @@ use crate::entity::{Group, QueryMask, StorageMask};
 use std::ops::Range;
 use std::{cmp, ptr};
 
+/// Holds grouping information about a set of components.
 #[derive(Clone, Copy, Debug)]
 pub struct GroupInfo<'a> {
     groups: &'a [Group],
@@ -18,6 +19,9 @@ impl<'a> GroupInfo<'a> {
         }
     }
 
+    /// Tries to combine two group infos.
+    ///
+    /// Returns the combined group info or [`None`] if the group infos were incompatibe.
     #[inline]
     #[must_use]
     pub fn combine(&self, other: &Self) -> Option<Self> {
@@ -31,6 +35,7 @@ impl<'a> GroupInfo<'a> {
         })
     }
 
+    /// For complete groups, returns the group range of the components.
     #[inline]
     #[must_use]
     pub fn include_group_range(&self) -> Option<Range<usize>> {
@@ -44,6 +49,7 @@ impl<'a> GroupInfo<'a> {
         (mask == group.metadata.include_mask).then_some(0..group.len)
     }
 
+    /// For complete groups, returns the group range of the components.
     #[inline]
     #[must_use]
     pub fn exclude_group_range(&self, exclude: &GroupInfo) -> Option<Range<usize>> {

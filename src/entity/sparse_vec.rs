@@ -1,12 +1,14 @@
 use crate::entity::{DenseEntity, Entity};
 use std::{fmt, iter, mem};
 
+/// Maps entities to dense indexes.
 #[derive(Clone, Default)]
 pub struct SparseVec {
     entities: Vec<Option<DenseEntity>>,
 }
 
 impl SparseVec {
+    /// Creates a new sparse vec.
     #[inline]
     #[must_use]
     pub const fn new() -> Self {
@@ -15,6 +17,7 @@ impl SparseVec {
         }
     }
 
+    /// Returns the dense entity mapped to `entity`, if any.
     #[inline]
     #[must_use]
     pub fn get(&self, entity: Entity) -> Option<DenseEntity> {
@@ -23,6 +26,7 @@ impl SparseVec {
             .filter(|e| e.version == entity.version)
     }
 
+    /// Returns whether the sparse vec contains `entity`.
     #[inline]
     #[must_use]
     pub fn contains(&self, entity: Entity) -> bool {
@@ -32,6 +36,9 @@ impl SparseVec {
             .is_some_and(|e| e.version == entity.version)
     }
 
+    /// Removes `entity` from the sparse vec.
+    ///
+    /// Returns the removed dense entity, if any.
     #[inline]
     pub fn remove(&mut self, entity: Entity) -> Option<DenseEntity> {
         let entity_slot = self.entities.get_mut(entity.sparse())?;
@@ -43,12 +50,14 @@ impl SparseVec {
         }
     }
 
+    /// Returns the dense entity at the given sparse index, if any.
     #[inline]
     #[must_use]
     pub fn get_sparse(&self, sparse: usize) -> Option<DenseEntity> {
         *self.entities.get(sparse)?
     }
 
+    /// Returns the dense index at the given sparse index without checking if it valid.
     #[inline]
     #[must_use]
     pub unsafe fn get_sparse_unchecked(&self, sparse: usize) -> usize {
@@ -58,22 +67,28 @@ impl SparseVec {
             .dense()
     }
 
+    /// Returns whether the sparse vec contains the given sparse index.
     #[inline]
     #[must_use]
     pub fn contains_sparse(&self, sparse: usize) -> bool {
         self.entities.get(sparse).and_then(Option::as_ref).is_some()
     }
 
+    /// Removes the dense entity at the given sparse index.
+    ///
+    /// Returns the removed dense entity, if any.
     #[inline]
     pub fn remove_sparse(&mut self, sparse: usize) -> Option<DenseEntity> {
         self.entities.get_mut(sparse)?.take()
     }
 
+    /// Returns the entity slot at the given dense index without checking if it is valid.
     #[inline]
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<DenseEntity> {
         self.entities.get_unchecked_mut(index)
     }
 
+    /// Returns or allocates the entity slot at the given dense index.
     #[inline]
     pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<DenseEntity> {
         if index >= self.entities.len() {
@@ -86,6 +101,7 @@ impl SparseVec {
         unsafe { self.entities.get_unchecked_mut(index) }
     }
 
+    /// Swaps the entities at the given dense indexes without checking their validity.
     #[inline]
     pub unsafe fn swap(&mut self, a: usize, b: usize) {
         debug_assert!(a < self.entities.len());
@@ -97,6 +113,7 @@ impl SparseVec {
         mem::swap(entity_a, entity_b);
     }
 
+    /// Removes all entities from the storage.
     #[inline]
     pub fn clear(&mut self) {
         self.entities.clear();

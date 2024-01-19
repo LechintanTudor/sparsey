@@ -3,18 +3,29 @@ use crate::entity::{
 };
 use std::any::TypeId;
 
+/// Handles insert and remove operations for components stored in an
+/// [`EntitySotrage`](crate::entity::EntityStorage).
 pub unsafe trait ComponentSet {
+    /// The components returned by [`remove`](Self::remove).
     type Remove;
 
+    /// Adds the given `components` to `entity`.
     fn insert(entities: &mut EntityStorage, entity: Entity, components: Self);
 
+    /// Creates new entities from the components produced by the iterator.
+    ///
+    /// Returns the newly created entities as a slice.
     fn extend<TComponents>(entities: &mut EntityStorage, components: TComponents) -> &[Entity]
     where
         TComponents: IntoIterator<Item = Self>;
 
-    #[must_use]
+    /// Removes components from the given `entity`.
+    ///
+    /// Returns the components that were successfully removed.
+    #[must_use = "Use `delete` to discard the components."]
     fn remove(entities: &mut EntityStorage, entity: Entity) -> Self::Remove;
 
+    /// Removes components from the given `entity`.
     fn delete(entities: &mut EntityStorage, entity: Entity);
 }
 

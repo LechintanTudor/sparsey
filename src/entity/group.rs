@@ -3,13 +3,13 @@ use atomic_refcell::AtomicRefCell;
 use std::ops::Range;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Group {
+pub(crate) struct Group {
     pub metadata: GroupMetadata,
     pub len: usize,
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct GroupMetadata {
+pub(crate) struct GroupMetadata {
     pub storage_start: usize,
     pub new_storage_start: usize,
     pub storage_end: usize,

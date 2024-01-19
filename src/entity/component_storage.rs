@@ -149,13 +149,23 @@ impl ComponentStorage {
         self.metadata.contains_key(&TypeId::of::<T>())
     }
 
-    pub fn delete_all(&mut self, entity: Entity) {
+    pub fn strip(&mut self, entity: Entity) {
         unsafe {
             ungroup_all(&mut self.components, &mut self.groups, entity);
         }
 
         for sparse_set in &mut self.components {
             sparse_set.get_mut().delete_dyn(entity);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        for group in &mut self.groups {
+            group.len = 0;
+        }
+
+        for sparse_set in &mut self.components {
+            sparse_set.get_mut().clear();
         }
     }
 

@@ -2,12 +2,15 @@ use std::cmp::{Ord, Ordering, PartialOrd};
 use std::fmt;
 use std::num::NonZeroU32;
 
+/// Version used for recylcling entity indexes.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct Version(pub NonZeroU32);
 
 impl Version {
+    /// The first valid version.
     pub const FIRST: Self = unsafe { Self(NonZeroU32::new_unchecked(1)) };
 
+    /// Creates a new version. Returns [`None`] if the `index` is zero.
     #[inline]
     #[must_use]
     pub const fn new(index: u32) -> Option<Self> {
@@ -17,12 +20,14 @@ impl Version {
         }
     }
 
+    /// Creates a new version without checking if the `index` is non-zero.
     #[inline]
     #[must_use]
     pub const unsafe fn new_unchecked(index: u32) -> Self {
         Self(NonZeroU32::new_unchecked(index))
     }
 
+    /// Returns the next valid version, if any.
     #[inline]
     #[must_use]
     pub const fn next(&self) -> Option<Self> {
@@ -40,14 +45,18 @@ impl Default for Version {
     }
 }
 
+/// Uniquely identifies a set of components in an [`EntityStorage`](crate::entity::EntityStorage).
 #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Entity {
+    /// Sparse index for accessing [`SparseVec`](crate::entity::SparseVec).
     pub index: u32,
+    /// Version used for recycling entity indexes.
     pub version: Version,
 }
 
 impl Entity {
+    /// Returns [`index`](Entity::index) extended to a [`usize`].
     #[inline]
     #[must_use]
     pub const fn sparse(&self) -> usize {
@@ -55,14 +64,18 @@ impl Entity {
     }
 }
 
+/// Versioned index stored in [`SparseVec`](crate::entity::SparseVec).
 #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DenseEntity {
+    /// Dense index used for accessing packed data in sparse sets.
     pub index: u32,
+    /// Version used for recycling entity indexes.
     pub version: Version,
 }
 
 impl DenseEntity {
+    /// Returns [`index`](Self::index) extended to a [`usize`].
     #[inline]
     #[must_use]
     pub const fn dense(&self) -> usize {
@@ -73,12 +86,15 @@ impl DenseEntity {
 macro_rules! impl_entity_common {
     ($Entity:ident) => {
         impl $Entity {
+            /// Creates a new entity with the given `index` and `version`.
             #[inline]
             #[must_use]
             pub const fn new(index: u32, version: Version) -> Self {
                 Self { index, version }
             }
 
+            /// Creates a new entity with the given `index` and default
+            /// [`Version`](crate::entity::Version).
             #[inline]
             #[must_use]
             pub const fn with_index(index: u32) -> Self {

@@ -2,7 +2,7 @@ use crate::entity::{DenseEntity, Entity, SparseVec};
 use std::{fmt, mem};
 
 #[derive(Clone, Default)]
-pub struct EntitySparseSet {
+pub(crate) struct EntitySparseSet {
     sparse: SparseVec,
     entities: Vec<Entity>,
 }

@@ -5,6 +5,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 
+/// Marker trait for components that can be added to entities.
 pub trait Component: Send + Sync + 'static {
     // Empty
 }
@@ -16,10 +17,12 @@ where
     // Empty
 }
 
+/// Holds information about a component type.
 #[derive(Clone, Copy)]
 pub struct ComponentData(&'static dyn AbstractComponentData);
 
 impl ComponentData {
+    /// Returns the component data for components of type `T`.
     #[must_use]
     pub const fn new<T>() -> Self
     where
@@ -28,12 +31,14 @@ impl ComponentData {
         Self(&ComponentDataImpl::<T>(PhantomData))
     }
 
+    /// Returns the type id of the component type used in [`new`](Self::new).
     #[inline]
     #[must_use]
     pub fn type_id(&self) -> TypeId {
         self.0.type_id()
     }
 
+    /// Returns the type name of the component type used in [`new`](Self::new).
     #[inline]
     #[must_use]
     pub fn type_name(&self) -> &'static str {
@@ -42,7 +47,7 @@ impl ComponentData {
 
     #[inline]
     #[must_use]
-    pub fn create_sparse_set(&self) -> ComponentSparseSet {
+    pub(crate) fn create_sparse_set(&self) -> ComponentSparseSet {
         self.0.create_sparse_set()
     }
 }

@@ -1,4 +1,6 @@
+#[forbid(missing_docs)]
 pub mod entity;
+
 pub mod query;
 pub mod resource;
 pub mod system;

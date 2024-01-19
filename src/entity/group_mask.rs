@@ -3,16 +3,9 @@ use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct GroupMask(pub u64);
+pub(crate) struct GroupMask(pub u64);
 
 impl GroupMask {
-    #[inline]
-    #[must_use]
-    pub const fn single(index: usize) -> Self {
-        assert!(index < MAX_GROUP_COUNT);
-        Self(1 << index)
-    }
-
     #[inline]
     #[must_use]
     pub const fn from_to(from: usize, to: usize) -> Self {
@@ -78,7 +71,7 @@ impl fmt::Debug for GroupMask {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub struct StorageMask(pub u16);
+pub(crate) struct StorageMask(pub u16);
 
 impl StorageMask {
     #[inline]
@@ -123,7 +116,7 @@ impl fmt::Debug for StorageMask {
 
 #[repr(align(4))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
-pub struct QueryMask {
+pub(crate) struct QueryMask {
     pub include: StorageMask,
     pub exclude: StorageMask,
 }
@@ -150,7 +143,7 @@ impl QueryMask {
 
 #[must_use]
 #[derive(Clone, Debug)]
-pub struct BitIndexIter(pub u64);
+pub(crate) struct BitIndexIter(pub u64);
 
 impl Iterator for BitIndexIter {
     type Item = u32;

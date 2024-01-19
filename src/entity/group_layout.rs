@@ -1,20 +1,29 @@
 use crate::entity::{Component, ComponentData};
 
-pub const MAX_GROUP_COUNT: usize = 64;
+/// Minimum number of component types required to form a group.
 pub const MIN_GROUP_ARITY: usize = 2;
+
+/// Maximum number of component types that can form a group.
 pub const MAX_GROUP_ARITY: usize = 16;
 
+/// Maximum number of groups that can be set on an [`EntityStorage`](crate::entity::EntityStorage).
+pub const MAX_GROUP_COUNT: usize = 64;
+
+/// Describes the layout of the component groups that can be set on an
+/// [`EntityStorage`](crate::entity::EntityStorage).
 #[derive(Clone, Default, Debug)]
 pub struct GroupLayout {
     families: Vec<GroupFamily>,
 }
 
 impl GroupLayout {
+    /// Returns a builder that can be used to construct a new [`GroupLayout`].
     #[inline]
     pub fn builder() -> GroupLayoutBuilder {
         GroupLayoutBuilder::default()
     }
 
+    /// Returns the group families of this layout.
     #[inline]
     #[must_use]
     pub fn families(&self) -> &[GroupFamily] {
@@ -22,6 +31,7 @@ impl GroupLayout {
     }
 }
 
+/// Describes a set of related component groups.
 #[derive(Clone, Debug)]
 pub struct GroupFamily {
     components: Vec<ComponentData>,
@@ -36,12 +46,14 @@ impl GroupFamily {
         }
     }
 
+    /// Returns the components that are part of the group family.
     #[inline]
     #[must_use]
     pub fn components(&self) -> &[ComponentData] {
         &self.components
     }
 
+    /// Returns the arities of the groups that form the group family.
     #[inline]
     #[must_use]
     pub fn arities(&self) -> &[usize] {
@@ -88,6 +100,7 @@ impl GroupFamily {
     }
 }
 
+/// Builder that can be used to construct a new [`GroupLayout`].
 #[must_use]
 #[derive(Clone, Default, Debug)]
 pub struct GroupLayoutBuilder {
@@ -95,6 +108,7 @@ pub struct GroupLayoutBuilder {
 }
 
 impl GroupLayoutBuilder {
+    /// Adds a new group to the layout.
     pub fn add_group<G>(&mut self) -> &mut Self
     where
         G: GroupDescriptor,
@@ -102,6 +116,7 @@ impl GroupLayoutBuilder {
         self.add_group_dyn(G::COMPONENTS)
     }
 
+    /// Adds a new group to the layout, created from the given `components`.
     pub fn add_group_dyn(&mut self, components: &[ComponentData]) -> &mut Self {
         let mut group = Vec::from(components);
         group.sort_unstable();
@@ -127,6 +142,7 @@ impl GroupLayoutBuilder {
         self
     }
 
+    /// Builds the group layout from the previously added groups.
     pub fn build(&mut self) -> GroupLayout {
         self.groups.sort_by_key(Vec::len);
 
@@ -156,7 +172,9 @@ impl GroupLayoutBuilder {
     }
 }
 
+/// Helper trait for creating groups in a [`GroupLayout`](crate::entity::GroupLayout).
 pub trait GroupDescriptor {
+    /// Slice containing the component data of the components present in the group.
     const COMPONENTS: &'static [ComponentData];
 }
 

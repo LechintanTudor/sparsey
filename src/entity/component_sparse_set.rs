@@ -3,7 +3,7 @@ use std::alloc::{alloc, dealloc, handle_alloc_error, Layout, LayoutError};
 use std::ptr::NonNull;
 use std::{fmt, mem, ptr, slice};
 
-pub struct ComponentSparseSet {
+pub(crate) struct ComponentSparseSet {
     sparse: SparseVec,
     entities: NonNull<Entity>,
     components: NonNull<u8>,

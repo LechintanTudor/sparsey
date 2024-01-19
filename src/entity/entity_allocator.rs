@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 #[derive(Default, Debug)]
-pub struct EntityAllocator {
+pub(crate) struct EntityAllocator {
     next_index_to_allocate: AtomicU64,
     last_maintained_index: u64,
     recycled: VecDeque<Entity>,
