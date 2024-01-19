@@ -3,7 +3,9 @@ use crate::resource::{Res, ResMut, Resource, ResourceStorage};
 use crate::system::SystemParam;
 use crate::World;
 
+/// Helper trait for borrowing data from a registry.
 pub trait SystemBorrow<TRegistry = World>: SystemParam {
+    /// Borrows data from the given `registry`.
     #[must_use]
     fn borrow(registry: &TRegistry) -> Self::Param<'_>;
 }

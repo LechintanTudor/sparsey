@@ -1,16 +1,24 @@
 use crate::entity::{Comp, CompMut, Component, ComponentData, Entities};
 use crate::resource::{Res, ResMut, Resource};
 
+/// The kind of data that can be borrowed from a registry.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum SystemParamKind {
+    /// View over all entities in an [`EntityStorage`](crate::entity::EntityStorage).
     Entities,
+    /// Shared view over all components of a given type.
     Comp(ComponentData),
+    /// Exclusive view over all components of a given type.
     CompMut(ComponentData),
+    /// Shared view over a resource of a given type.
     Res(ComponentData),
+    /// Exclusive view over a resource of a given type.
     ResMut(ComponentData),
 }
 
 impl SystemParamKind {
+    /// Returns whether two system parameter kinds conflict, thus preventing two systems from
+    /// running in parallel.
     #[inline]
     #[must_use]
     pub fn conflicts_with(self, other: Self) -> bool {
@@ -27,9 +35,12 @@ impl SystemParamKind {
     }
 }
 
+/// Trait implemented by types that can be borrowed by systems during execution.
 pub trait SystemParam {
+    /// The kind of system parameter.
     const KIND: SystemParamKind;
 
+    /// The system parameter generic over the lifetime `'a`.
     type Param<'a>;
 }
 

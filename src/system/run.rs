@@ -3,25 +3,31 @@ use crate::resource::ResourceStorage;
 use crate::system::{SystemBorrow, SystemParam, SystemParamKind};
 use crate::World;
 
+/// Trait implemented by functions that borrow data from a registry.
 pub trait Run<TRegistry, TParams, TReturn> {
+    /// The data that the system borrows from the registry during execution
     const PARAMS: &'static [SystemParamKind];
 
+    /// Runs the function in the given `registry`.
     fn run(self, registry: &TRegistry) -> TReturn;
 }
 
 impl World {
+    /// Runs the function with data borrowed from `self`.
     pub fn run<TParams, TReturn>(&self, f: impl Run<Self, TParams, TReturn>) -> TReturn {
         Run::run(f, self)
     }
 }
 
 impl EntityStorage {
+    /// Runs the function with data borrowed from `self`.
     pub fn run<TParams, TReturn>(&self, f: impl Run<Self, TParams, TReturn>) -> TReturn {
         Run::run(f, self)
     }
 }
 
 impl ResourceStorage {
+    /// Runs the function with data borrowed from `self`.
     pub fn run<TParams, TReturn>(&self, f: impl Run<Self, TParams, TReturn>) -> TReturn {
         Run::run(f, self)
     }

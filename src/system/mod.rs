@@ -1,3 +1,5 @@
+//! Hadles functions that borrow data from a registry during execution.
+
 mod borrow;
 mod param;
 mod run;
@@ -10,28 +12,34 @@ use crate::entity::EntityStorage;
 use crate::resource::ResourceStorage;
 use crate::World;
 
+/// Encapsulates a function that borrows data from a registry during execution.
 pub struct System<TRegistry = World, TReturn = ()> {
     system_fn: Box<dyn FnMut(&TRegistry) -> TReturn + Send + Sync + 'static>,
     params: &'static [SystemParamKind],
 }
 
 impl<TRegistry, TReturn> System<TRegistry, TReturn> {
+    /// Creates a new system from the given runnable function.
     #[must_use]
     pub fn new<TParams>(f: impl IntoSystem<TRegistry, TParams, TReturn>) -> Self {
         f.system()
     }
 
+    /// Runs the system in the given `registry`.
     pub fn run(&mut self, registry: &TRegistry) -> TReturn {
         (self.system_fn)(registry)
     }
 
+    /// Returns the data that the system borrows from the registry during execution.
     #[must_use]
     pub fn params(&self) -> &[SystemParamKind] {
         self.params
     }
 }
 
+/// Helper trait for creating systems.
 pub trait IntoSystem<TRegistry, TParams, TReturn> {
+    /// Creates a new system from the given runnable function.
     #[must_use]
     fn system(self) -> System<TRegistry, TReturn>;
 }
