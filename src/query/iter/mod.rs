@@ -9,13 +9,16 @@ pub use self::sparse_iter::*;
 use crate::entity::Entity;
 use crate::query::{group_range, QueryPart};
 
+/// Iterator over all components that match a query.
 pub enum Iter<'a, G, I, E>
 where
     G: QueryPart,
     I: QueryPart,
     E: QueryPart,
 {
+    /// Iterator over ungrouped queries.
     Sparse(SparseIter<'a, G, I, E>),
+    /// Iterator over grouped queries. Very fast.
     Dense(DenseIter<'a, G>),
 }
 
@@ -64,11 +67,13 @@ where
         }
     }
 
+    /// Returns whether the iterator is sparse.
     #[must_use]
     pub const fn is_sparse(&self) -> bool {
         matches!(self, Self::Sparse(_))
     }
 
+    /// Returns whether the iterator is dense.
     #[must_use]
     pub const fn is_dense(&self) -> bool {
         matches!(self, Self::Dense(_))

@@ -2,17 +2,24 @@ use crate::entity::GroupInfo;
 use crate::query::QueryPart;
 use std::ops::Range;
 
+/// Holds grouping information about a query.
 #[derive(Clone, Copy, Debug)]
 pub enum QueryGroupInfo<'a> {
+    /// The query is empty.
     Empty,
+    /// The query has a single component view.
     Single {
+        /// The number of components in the component view.
         len: usize,
+        /// The group info of the component view, if any.
         group_info: Option<GroupInfo<'a>>,
     },
+    /// The query has multiple component views.
     Multiple(GroupInfo<'a>),
 }
 
 impl<'a> QueryGroupInfo<'a> {
+    /// Returns the inner group info, if any.
     #[inline]
     #[must_use]
     pub const fn as_group_info(self) -> Option<GroupInfo<'a>> {
@@ -24,6 +31,7 @@ impl<'a> QueryGroupInfo<'a> {
     }
 }
 
+/// Returns the group range of the query described by the given parts.
 #[must_use]
 pub fn group_range<G, I, E>(get: &G, include: &I, exclude: &E) -> Option<Range<usize>>
 where

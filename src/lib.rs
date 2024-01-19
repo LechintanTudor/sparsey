@@ -1,10 +1,13 @@
 #[forbid(missing_docs)]
 pub mod entity;
 
+#[forbid(missing_docs)]
 pub mod query;
+
 pub mod resource;
 pub mod system;
 
+/// Re-exports the most commonly used items.
 pub mod prelude {
     pub use crate::entity::{Comp, CompMut, Entities, Entity, EntityStorage, GroupLayout};
     pub use crate::query::{BuildCompoundQuery, IntoEntityIter, Query};

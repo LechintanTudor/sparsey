@@ -1,3 +1,5 @@
+//! Handles querying and iterating sets of components.
+
 mod component_view;
 mod compound_query;
 mod into_query_parts;
@@ -14,35 +16,44 @@ pub use self::query_part::*;
 
 use crate::entity::Entity;
 
+/// Trait for all queries that can be performed on component views.
 pub trait Query: IntoQueryParts {
+    /// Return the components mapped to `entity`, if `entity` matches the query.
     #[must_use]
     fn get<'a>(self, entity: Entity) -> Option<<Self::Get as QueryPart>::Refs<'a>>;
 
+    /// Returns whether `entity` matches the query.
     #[must_use]
     fn matches(self, entity: Entity) -> bool;
 
+    /// Returns an iterator over all components that match the entity.
     fn iter<'a>(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>
     where
         Self: 'a;
 
+    /// Runs a function for each component set that matches the query.
     fn for_each<'a, F>(self, f: F)
     where
         Self: 'a,
         F: FnMut(<Self::Get as QueryPart>::Refs<'a>);
 
+    /// Runs a function for each entity and component set that matches the query.
     fn for_each_with_entity<'a, F>(self, f: F)
     where
         Self: 'a,
         F: FnMut((Entity, <Self::Get as QueryPart>::Refs<'a>));
 
+    /// Returns the entities that match the query, if the query is grouped.
     #[must_use]
     fn group_entities<'a>(self) -> Option<&'a [Entity]>
     where
         Self: 'a;
 
+    /// Returns the components that match the query, if the query is grouped.
     #[must_use]
     fn group_components<'a>(self) -> Option<<Self::Get as QueryPart>::Slices<'a>>;
 
+    /// Returns the entities and components that match the query, if the query is grouped.
     #[must_use]
     fn group_data<'a>(self) -> Option<(&'a [Entity], <Self::Get as QueryPart>::Slices<'a>)>
     where

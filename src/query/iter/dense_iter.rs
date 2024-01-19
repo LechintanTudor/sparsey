@@ -1,6 +1,7 @@
 use crate::entity::Entity;
 use crate::query::{EntityIterator, QueryPart};
 
+/// Iterator over packed component arrays.
 pub struct DenseIter<'a, G>
 where
     G: QueryPart,

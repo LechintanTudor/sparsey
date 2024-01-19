@@ -2,48 +2,62 @@ use crate::entity::{Entity, SparseVec};
 use crate::query::{ComponentView, QueryGroupInfo};
 use std::ops::Range;
 
+/// Helper trait for describing query parts.
 pub unsafe trait QueryPart {
+    /// Whether the query part has any component view.
     const HAS_DATA: bool;
 
+    /// The sparse vecs of the component views that form the query part.
     type Sparse<'a>: Copy;
 
+    /// Pointers to the components that form the query part.
     type Ptrs: Copy;
 
+    /// References to the components returned by the query part.
     type Refs<'a>
     where
         Self: 'a;
 
+    /// Slices of components returned by the query part.
     type Slices<'a>
     where
         Self: 'a;
 
+    /// Returns references to the components mapped to `entity`, if `entity` matches the query.
     #[must_use]
     fn get<'a>(self, entity: Entity) -> Option<Self::Refs<'a>>;
 
+    /// Returns whether all sparse vecs contain `entity`.
     #[must_use]
     fn contains_all(self, entity: Entity) -> bool;
 
+    /// Returns whether none of the sparse vecs contain `entity`.
     #[must_use]
     fn contains_none(self, entity: Entity) -> bool;
 
+    /// Returns the combined group info of all component views.
     #[must_use]
     fn group_info(&self) -> Option<QueryGroupInfo>;
 
+    /// Splits the query part for sparse iteration.
     #[must_use]
     fn split_sparse<'a>(self) -> (&'a [Entity], Self::Sparse<'a>, Self::Ptrs)
     where
         Self: 'a;
 
+    /// Splits the query part for dense iteration.
     #[must_use]
     fn split_dense<'a>(self) -> (&'a [Entity], Self::Ptrs)
     where
         Self: 'a;
 
+    /// Splits the query part for usage as a filter.
     #[must_use]
     fn split_filter<'a>(self) -> (&'a [Entity], Self::Sparse<'a>)
     where
         Self: 'a;
 
+    /// Returns references to the components at the given sparse index, if they are present.
     #[must_use]
     unsafe fn get_sparse<'a>(
         sparse: Self::Sparse<'_>,
@@ -51,28 +65,35 @@ pub unsafe trait QueryPart {
         sparse_index: usize,
     ) -> Option<Self::Refs<'a>>;
 
+    /// Offsets the given pointers by `index`.
     #[must_use]
     unsafe fn add_to_ptrs(ptrs: Self::Ptrs, index: usize) -> Self::Ptrs;
 
+    /// Returns references to the components at the given dense index.
     #[must_use]
     unsafe fn get_dense<'a>(ptrs: Self::Ptrs, index: usize) -> Self::Refs<'a>;
 
+    /// Returns whether all sparse vecs contain `entity`.
     #[must_use]
     fn sparse_contains_all(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
 
+    /// Returns whether none of the sparse vecs contain `entity`.
     #[must_use]
     fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
 
+    /// Returns the entities at the given `range`.
     #[must_use]
     unsafe fn get_entities_unchecked<'a>(self, range: Range<usize>) -> &'a [Entity]
     where
         Self: 'a;
 
+    /// Returns the components at the given `range`.
     #[must_use]
     unsafe fn get_components_unchecked<'a>(self, range: Range<usize>) -> Self::Slices<'a>
     where
         Self: 'a;
 
+    /// Returns the entities and components at the given `range`.
     #[must_use]
     unsafe fn get_data_unchecked<'a>(self, range: Range<usize>) -> (&'a [Entity], Self::Slices<'a>)
     where

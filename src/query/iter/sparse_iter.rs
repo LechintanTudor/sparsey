@@ -2,6 +2,7 @@ use crate::entity::Entity;
 use crate::query::{EntityIterator, QueryPart};
 use std::slice::Iter as SliceIter;
 
+/// Iterator over sparse component sets.
 pub struct SparseIter<'a, G, I, E>
 where
     G: QueryPart,

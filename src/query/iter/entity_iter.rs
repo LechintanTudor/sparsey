@@ -1,8 +1,11 @@
 use crate::entity::Entity;
 
+/// Component iterator able to yield the entities to which the components belong.
 pub trait EntityIterator: Iterator {
+    /// Returns the next entity and its associated components, if any.
     fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)>;
 
+    /// Folds all entities and their associated components into an accumulator.
     fn fold_with_entity<B, F>(mut self, mut init: B, mut f: F) -> B
     where
         Self: Sized,
@@ -16,6 +19,7 @@ pub trait EntityIterator: Iterator {
     }
 }
 
+/// Component iterator that also yields the entities to which the components belong.
 #[must_use]
 pub struct EntityIter<I>(I);
 
@@ -38,7 +42,9 @@ where
     }
 }
 
+/// Helper trait for building an [`EntityIter`].
 pub trait IntoEntityIter: Sized + EntityIterator {
+    /// Makes the iterator return the entities to which the components belong.
     fn with_entity(self) -> EntityIter<Self>;
 }
 

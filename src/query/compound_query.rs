@@ -1,10 +1,13 @@
 use crate::query::{IntoQueryParts, QueryPart};
 
+/// Helper trait for building compound queries.
 pub trait BuildCompoundQuery: Sized {
+    /// Applies an "include filter" to the initial query.
     fn include<I>(self, include: I) -> IncludeQuery<Self, I>
     where
         I: QueryPart;
 
+    /// Applies an "exclude filter" to the initial query.
     fn exclude<E>(self, exclude: E) -> IncludeExcludeQuery<Self, (), E>
     where
         E: QueryPart;
@@ -33,13 +36,17 @@ where
     }
 }
 
+/// Compound query that applies an "include filter" to the results.
 #[must_use]
 pub struct IncludeQuery<G, I> {
+    /// The component views from which to return components.
     pub get: G,
+    /// The component view that act as an "include filter".
     pub include: I,
 }
 
 impl<G, I> IncludeQuery<G, I> {
+    /// Applies an "exclude filter" to the query.
     pub fn exclude<E>(self, exclude: E) -> IncludeExcludeQuery<G, I, E>
     where
         E: QueryPart,
@@ -66,10 +73,14 @@ where
     }
 }
 
+/// Compound query that applies an "include filter" and an "exclude filter" to the results.
 #[must_use]
 pub struct IncludeExcludeQuery<G, I, E> {
+    /// The component views from which to return components.
     pub get: G,
+    /// The component view that act as an "include filter".
     pub include: I,
+    /// The component view that act as an "exclude filter".
     pub exclude: E,
 }
 
