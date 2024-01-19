@@ -1,3 +1,5 @@
+//! Manages resources.
+
 mod borrow;
 mod resource;
 
@@ -10,12 +12,16 @@ use std::any::TypeId;
 use std::collections::hash_map::Entry;
 use std::{any, fmt, mem};
 
+/// Storage for resources.
 #[derive(Default)]
 pub struct ResourceStorage {
     resources: FxHashMap<TypeId, AtomicRefCell<Box<dyn Resource>>>,
 }
 
 impl ResourceStorage {
+    /// Insert a new resource of type `T` into the storage.
+    ///
+    /// Returns the previous resource, if any.
     pub fn insert<T>(&mut self, resource: T) -> Option<T>
     where
         T: Resource,
@@ -40,6 +46,9 @@ impl ResourceStorage {
         }
     }
 
+    /// Removes a resource of type `T` from the storage, if it exists.
+    ///
+    /// Returns the removed resource, if it was present.
     pub fn remove<T>(&mut self) -> Option<T>
     where
         T: Resource,
@@ -49,6 +58,7 @@ impl ResourceStorage {
             .map(|cell| unsafe { *cell.into_inner().downcast().unwrap_unchecked() })
     }
 
+    /// Returns whether the storage contains a resource of type `T`.
     #[must_use]
     pub fn contains<T>(&self) -> bool
     where
@@ -57,6 +67,7 @@ impl ResourceStorage {
         self.resources.contains_key(&TypeId::of::<T>())
     }
 
+    /// Returns a mutable reference to a resource of type `T`.
     #[must_use]
     pub fn get_mut<T>(&mut self) -> &mut T
     where
@@ -66,6 +77,7 @@ impl ResourceStorage {
             .unwrap_or_else(|| panic_missing_res::<T>())
     }
 
+    /// Borrows a resource of type `T` from the storage.
     #[must_use]
     pub fn borrow<T>(&self) -> Res<T>
     where
@@ -75,6 +87,7 @@ impl ResourceStorage {
             .unwrap_or_else(|| panic_missing_res::<T>())
     }
 
+    /// Mutably borrows a resource of type `T` from the storage.
     #[must_use]
     pub fn borrow_mut<T>(&self) -> ResMut<T>
     where
@@ -84,6 +97,7 @@ impl ResourceStorage {
             .unwrap_or_else(|| panic_missing_res::<T>())
     }
 
+    /// Gets a mutable reference to a resource of type `T`, if it exists.
     #[must_use]
     pub fn try_get_mut<T>(&mut self) -> Option<&mut T>
     where
@@ -94,6 +108,7 @@ impl ResourceStorage {
             .map(|cell| unsafe { cell.get_mut().downcast_mut().unwrap_unchecked() })
     }
 
+    /// Borrows a resource of type `T` from the storage, if it exists.
     #[must_use]
     pub fn try_borrow<T>(&self) -> Option<Res<T>>
     where
@@ -106,6 +121,7 @@ impl ResourceStorage {
         })
     }
 
+    /// Mutably borrow a resource of type `T` from the storage, if it exists.
     #[must_use]
     pub fn try_borrow_mut<T>(&self) -> Option<ResMut<T>>
     where
@@ -118,18 +134,21 @@ impl ResourceStorage {
         })
     }
 
+    /// Returns whether the storage contains any resources.
     #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.resources.is_empty()
     }
 
+    /// Returns the number of resources in the storage.
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
         self.resources.len()
     }
 
+    /// Removes all resources from the storage.
     #[inline]
     pub fn clear(&mut self) {
         self.resources.clear();

@@ -4,7 +4,9 @@ pub mod entity;
 #[forbid(missing_docs)]
 pub mod query;
 
+#[forbid(missing_docs)]
 pub mod resource;
+
 pub mod system;
 
 /// Re-exports the most commonly used items.

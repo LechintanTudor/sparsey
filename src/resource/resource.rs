@@ -1,12 +1,17 @@
 use std::any::Any;
 
+/// Trait implemented by all types that can be stored in
+/// [`ResourceStorage`](crate::resource::ResourceStorage).
 pub trait Resource: Send + Sync + 'static {
+    /// Upcasts `self`.
     #[must_use]
     fn into_any(self: Box<Self>) -> Box<dyn Any>;
 
+    /// Upcasts `self`.
     #[must_use]
     fn as_any(&self) -> &dyn Any;
 
+    /// Upcasts `self`.
     #[must_use]
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
@@ -29,6 +34,7 @@ where
 }
 
 impl dyn Resource {
+    /// Returns whether the resource is of type `T`.
     #[must_use]
     pub fn is<T>(&self) -> bool
     where
@@ -37,6 +43,7 @@ impl dyn Resource {
         self.as_any().is::<T>()
     }
 
+    /// Tries to downcast `self` to a resource of type `T`.
     pub fn downcast<T>(self: Box<Self>) -> Result<Box<T>, Box<Self>>
     where
         T: Resource,
@@ -48,6 +55,7 @@ impl dyn Resource {
         }
     }
 
+    /// Tries to downcast `self` to a resource of type `T`.
     #[must_use]
     pub fn downcast_ref<T>(&self) -> Option<&T>
     where
@@ -56,6 +64,7 @@ impl dyn Resource {
         self.as_any().downcast_ref()
     }
 
+    /// Tries to downcast `self` to a resource of type `T`.
     #[must_use]
     pub fn downcast_mut<T>(&mut self) -> Option<&mut T>
     where

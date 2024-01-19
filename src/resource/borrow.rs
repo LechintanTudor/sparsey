@@ -2,8 +2,10 @@ use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
+/// Shared borrow over a resource of type `T`.
 pub struct Res<'a, T>(pub(crate) AtomicRef<'a, T>);
 
+/// Exclusive borrow over a resource of type `T`.
 pub struct ResMut<'a, T>(pub(crate) AtomicRefMut<'a, T>);
 
 impl<T> DerefMut for ResMut<'_, T> {
