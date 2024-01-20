@@ -6,6 +6,8 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
 pub(crate) struct GroupMask(pub u64);
 
 impl GroupMask {
+    pub const EMPTY: Self = Self(0);
+
     #[inline]
     #[must_use]
     pub const fn from_to(from: usize, to: usize) -> Self {
@@ -27,7 +29,7 @@ impl GroupMask {
     }
 
     #[inline]
-    pub const fn iter_bit_indexes(&self) -> BitIndexIter {
+    pub const fn iter_bit_indexes(self) -> BitIndexIter {
         BitIndexIter(self.0)
     }
 }
@@ -74,6 +76,8 @@ impl fmt::Debug for GroupMask {
 pub(crate) struct StorageMask(pub u16);
 
 impl StorageMask {
+    pub const EMPTY: Self = Self(0);
+
     #[inline]
     #[must_use]
     pub const fn single(index: usize) -> Self {
@@ -127,7 +131,7 @@ impl QueryMask {
     pub const fn include(arity: usize) -> Self {
         Self {
             include: StorageMask::from_to(0, arity),
-            exclude: StorageMask(0),
+            exclude: StorageMask::EMPTY,
         }
     }
 

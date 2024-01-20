@@ -43,7 +43,7 @@ impl<'a> GroupInfo<'a> {
 
         let mask = QueryMask {
             include: self.storage_mask,
-            exclude: StorageMask(0),
+            exclude: StorageMask::EMPTY,
         };
 
         (mask == group.metadata.include_mask).then_some(0..group.len)

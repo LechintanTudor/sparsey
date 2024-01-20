@@ -38,7 +38,7 @@ macro_rules! impl_component_set {
             type Remove = ($(Option<$Comp>,)*);
 
             fn insert(entities: &mut EntityStorage, entity: Entity, components: Self) {
-                let mut group_mask = GroupMask(0);
+                let mut group_mask = GroupMask::EMPTY;
 
                 $({
                     let metadata = entities
@@ -75,7 +75,7 @@ macro_rules! impl_component_set {
             where
                 TComponents: IntoIterator<Item = Self>,
             {
-                let mut group_mask = GroupMask(0);
+                let mut group_mask = GroupMask::EMPTY;
 
                 let sparse_sets = ($({
                     let metadata = entities
@@ -125,7 +125,7 @@ macro_rules! impl_component_set {
             }
 
             fn remove(entities: &mut EntityStorage, entity: Entity) -> Self::Remove {
-                let mut group_mask = GroupMask(0);
+                let mut group_mask = GroupMask::EMPTY;
 
                 let sparse_sets = ($({
                     let metadata = entities
@@ -162,7 +162,7 @@ macro_rules! impl_component_set {
             }
 
             fn delete(entities: &mut EntityStorage, entity: Entity) {
-                let mut group_mask = GroupMask(0);
+                let mut group_mask = GroupMask::EMPTY;
 
                 let sparse_sets = ($({
                     let metadata = entities
