@@ -36,13 +36,14 @@ fn update_fallen_in_lava(
 }
 
 fn destroy_fallen_in_lava(world: &mut World) {
-    let fallen_in_lava = world.resources.get_mut::<FallenInLava>();
-
-    fallen_in_lava.entities.drain(..).for_each(|entity| {
-        world.entities.destroy(entity);
-    });
-
-    fallen_in_lava.entities.clear();
+    world
+        .resources
+        .get_mut::<FallenInLava>()
+        .entities
+        .drain(..)
+        .for_each(|entity| {
+            world.entities.destroy(entity);
+        });
 }
 
 fn main() {
