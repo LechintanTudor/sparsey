@@ -106,7 +106,9 @@ macro_rules! impl_component_set {
                     )*}
                 });
 
-                let new_entities = &entities.entities.as_slice()[start_entity..];
+                let new_entities = unsafe {
+                    entities.entities.as_slice().get_unchecked(start_entity..)
+                };
 
                 if group_mask.0 != 0 {
                     for &entity in new_entities {
@@ -220,7 +222,7 @@ unsafe impl ComponentSet for () {
             let _ = entities.create_empty_entity();
         });
 
-        &entities.entities.as_slice()[start_entity..]
+        unsafe { entities.entities.as_slice().get_unchecked(start_entity..) }
     }
 
     #[inline(always)]
