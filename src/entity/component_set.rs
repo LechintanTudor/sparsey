@@ -84,7 +84,7 @@ macro_rules! impl_component_set {
                         .get(&TypeId::of::<$Comp>())
                         .unwrap_or_else(|| panic_missing_comp::<$Comp>());
 
-                    group_mask |= metadata.delete_mask;
+                    group_mask |= metadata.insert_mask;
 
                     unsafe {
                         entities
