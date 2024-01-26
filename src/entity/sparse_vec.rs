@@ -89,7 +89,6 @@ impl SparseVec {
     }
 
     /// Returns or allocates the entity slot at the given dense index.
-    #[inline]
     pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<DenseEntity> {
         if index >= self.entities.len() {
             let extra_len =
