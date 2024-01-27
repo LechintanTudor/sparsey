@@ -13,13 +13,3 @@ readme = "README.md"
 [dependencies]
 atomic_refcell = "0.1.13"
 rustc-hash = "1.1"
-
-[lints.clippy]
-cast_lossless = { level = "allow", priority = 1 }
-cast_possible_truncation = { level = "allow", priority = 1 }
-missing_errors_doc = { level = "allow", priority = 1 }
-missing_panics_doc = { level = "allow", priority = 1 }
-missing_safety_doc = { level = "allow", priority = 1 }
-module_inception = { level = "allow", priority = 1 }
-module_name_repetitions = { level = "allow", priority = 1 }
-wildcard_imports = { level = "allow", priority = 1 }

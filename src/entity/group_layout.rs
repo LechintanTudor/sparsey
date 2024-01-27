@@ -1,4 +1,5 @@
-use crate::entity::{Component, ComponentData};
+use crate::entity::Component;
+use crate::util::TypeData;
 
 /// Minimum number of component types required to form a group.
 pub const MIN_GROUP_ARITY: usize = 2;
@@ -34,12 +35,12 @@ impl GroupLayout {
 /// Describes a set of related component groups.
 #[derive(Clone, Debug)]
 pub(crate) struct GroupFamily {
-    components: Vec<ComponentData>,
+    components: Vec<TypeData>,
     arities: Vec<usize>,
 }
 
 impl GroupFamily {
-    fn new(components: Vec<ComponentData>) -> Self {
+    fn new(components: Vec<TypeData>) -> Self {
         Self {
             arities: vec![components.len()],
             components,
@@ -49,7 +50,7 @@ impl GroupFamily {
     /// Returns the components that are part of the group family.
     #[inline]
     #[must_use]
-    pub fn components(&self) -> &[ComponentData] {
+    pub fn components(&self) -> &[TypeData] {
         &self.components
     }
 
@@ -60,7 +61,7 @@ impl GroupFamily {
         &self.arities
     }
 
-    fn try_add_group(&mut self, components: &[ComponentData]) -> bool {
+    fn try_add_group(&mut self, components: &[TypeData]) -> bool {
         assert!(
             components.len() >= self.components.len(),
             "Groups must be added from least restrictive to most restrictive",
@@ -90,12 +91,12 @@ impl GroupFamily {
     }
 
     #[must_use]
-    fn is_disjoint(&self, components: &[ComponentData]) -> bool {
+    fn is_disjoint(&self, components: &[TypeData]) -> bool {
         !self.components.iter().any(|c| components.contains(c))
     }
 
     #[must_use]
-    fn is_subset_of(&self, components: &[ComponentData]) -> bool {
+    fn is_subset_of(&self, components: &[TypeData]) -> bool {
         self.components.iter().all(|c| components.contains(c))
     }
 }
@@ -104,7 +105,7 @@ impl GroupFamily {
 #[must_use]
 #[derive(Clone, Default, Debug)]
 pub struct GroupLayoutBuilder {
-    groups: Vec<Vec<ComponentData>>,
+    groups: Vec<Vec<TypeData>>,
 }
 
 impl GroupLayoutBuilder {
@@ -117,7 +118,7 @@ impl GroupLayoutBuilder {
     }
 
     /// Adds a new group to the layout, created from the given `components`.
-    pub fn add_group_dyn(&mut self, components: &[ComponentData]) -> &mut Self {
+    pub fn add_group_dyn(&mut self, components: &[TypeData]) -> &mut Self {
         let mut group = Vec::from(components);
         group.sort_unstable();
         group.dedup();
@@ -175,7 +176,7 @@ impl GroupLayoutBuilder {
 /// Helper trait for creating groups in a [`GroupLayout`](crate::entity::GroupLayout).
 pub trait GroupDescriptor {
     /// Slice containing the component data of the components present in the group.
-    const COMPONENTS: &'static [ComponentData];
+    const COMPONENTS: &'static [TypeData];
 }
 
 macro_rules! impl_group_descriptor {
@@ -184,8 +185,8 @@ macro_rules! impl_group_descriptor {
         where
             $($Comp: Component,)*
         {
-            const COMPONENTS: &'static [ComponentData] = &[
-                $(ComponentData::new::<$Comp>(),)*
+            const COMPONENTS: &'static [TypeData] = &[
+                $(TypeData::new::<$Comp>(),)*
             ];
         }
     };

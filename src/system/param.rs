@@ -1,5 +1,6 @@
-use crate::entity::{Comp, CompMut, Component, ComponentData, Entities};
+use crate::entity::{Comp, CompMut, Component, Entities};
 use crate::resource::{Res, ResMut, Resource};
+use crate::util::TypeData;
 
 /// The kind of data that can be borrowed from a registry.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -7,13 +8,13 @@ pub enum SystemParamKind {
     /// View over all entities in an [`EntityStorage`](crate::entity::EntityStorage).
     Entities,
     /// Shared view over all components of a given type.
-    Comp(ComponentData),
+    Comp(TypeData),
     /// Exclusive view over all components of a given type.
-    CompMut(ComponentData),
+    CompMut(TypeData),
     /// Shared view over a resource of a given type.
-    Res(ComponentData),
+    Res(TypeData),
     /// Exclusive view over a resource of a given type.
-    ResMut(ComponentData),
+    ResMut(TypeData),
 }
 
 impl SystemParamKind {
@@ -54,7 +55,7 @@ impl<T> SystemParam for Comp<'_, T>
 where
     T: Component,
 {
-    const KIND: SystemParamKind = SystemParamKind::Comp(ComponentData::new::<T>());
+    const KIND: SystemParamKind = SystemParamKind::Comp(TypeData::new::<T>());
 
     type Param<'a> = Comp<'a, T>;
 }
@@ -63,7 +64,7 @@ impl<T> SystemParam for CompMut<'_, T>
 where
     T: Component,
 {
-    const KIND: SystemParamKind = SystemParamKind::CompMut(ComponentData::new::<T>());
+    const KIND: SystemParamKind = SystemParamKind::CompMut(TypeData::new::<T>());
 
     type Param<'a> = CompMut<'a, T>;
 }
@@ -72,7 +73,7 @@ impl<T> SystemParam for Res<'_, T>
 where
     T: Resource,
 {
-    const KIND: SystemParamKind = SystemParamKind::Res(ComponentData::new::<T>());
+    const KIND: SystemParamKind = SystemParamKind::Res(TypeData::new::<T>());
 
     type Param<'a> = Res<'a, T>;
 }
@@ -81,7 +82,7 @@ impl<T> SystemParam for ResMut<'_, T>
 where
     T: Resource,
 {
-    const KIND: SystemParamKind = SystemParamKind::ResMut(ComponentData::new::<T>());
+    const KIND: SystemParamKind = SystemParamKind::ResMut(TypeData::new::<T>());
 
     type Param<'a> = ResMut<'a, T>;
 }
@@ -90,7 +91,7 @@ impl<T> SystemParam for Option<Res<'_, T>>
 where
     T: Resource,
 {
-    const KIND: SystemParamKind = SystemParamKind::Res(ComponentData::new::<T>());
+    const KIND: SystemParamKind = SystemParamKind::Res(TypeData::new::<T>());
 
     type Param<'a> = Option<Res<'a, T>>;
 }
@@ -99,7 +100,7 @@ impl<T> SystemParam for Option<ResMut<'_, T>>
 where
     T: Resource,
 {
-    const KIND: SystemParamKind = SystemParamKind::ResMut(ComponentData::new::<T>());
+    const KIND: SystemParamKind = SystemParamKind::ResMut(TypeData::new::<T>());
 
     type Param<'a> = Option<ResMut<'a, T>>;
 }

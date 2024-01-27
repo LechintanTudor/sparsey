@@ -29,6 +29,7 @@ pub mod entity;
 pub mod query;
 pub mod resource;
 pub mod system;
+pub mod util;
 
 /// Re-exports the most commonly used items.
 pub mod prelude {
