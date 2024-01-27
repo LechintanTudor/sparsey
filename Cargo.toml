@@ -13,3 +13,7 @@ readme = "README.md"
 [dependencies]
 atomic_refcell = "0.1.13"
 rustc-hash = "1.1"
+
+[lints.clippy]
+missing_safety_doc = "allow"
+module_inception = "allow"
