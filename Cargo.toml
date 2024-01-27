@@ -1,6 +1,6 @@
 [package]
 name = "sparsey"
-version = "0.11.1"
+version = "0.12.0"
 edition = "2021"
 description = "Sparse set-based entity component system"
 authors = ["Tudor-Cristian Lechințan <lechintantudor02@gmail.com>"]
@@ -15,7 +15,6 @@ atomic_refcell = "0.1.13"
 rustc-hash = "1.1"
 
 [lints.clippy]
-pedantic = "warn"
 cast_lossless = { level = "allow", priority = 1 }
 cast_possible_truncation = { level = "allow", priority = 1 }
 missing_errors_doc = { level = "allow", priority = 1 }
