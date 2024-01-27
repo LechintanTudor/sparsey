@@ -1,0 +1,77 @@
+name: CI
+
+on: [ pull_request, push ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        toolchain: [ stable, nightly ]
+        os: [ windows-latest, ubuntu-latest, macos-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-build-${{ matrix.toolchain }}-${{ hashFiles('**/Cargo.toml') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          override: true
+      - name: Check all-targets
+        run: cargo check --all-features --all-targets
+      - name: Run tests
+        run: cargo test
+
+  build-wasm:
+    strategy:
+      matrix:
+        toolchain: [ stable, nightly ]
+        os: [ ubuntu-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-build-wasm-${{ matrix.toolchain }}-${{ hashFiles('**/Cargo.toml') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          target: wasm32-unknown-unknown
+          override: true
+      - name: Check wasm
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --target wasm32-unknown-unknown --no-default-features
+
+  check-doc:
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Installs cargo-deadlinks
+        run: cargo install --force cargo-deadlinks
+      - name: Build and check doc
+        run: RUSTDOCFLAGS='-D warnings' cargo doc --all-features
+      - name: Checks dead links
+        run: cargo deadlinks --dir target/doc/sparsey
+        continue-on-error: true
