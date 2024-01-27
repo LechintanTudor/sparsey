@@ -89,12 +89,10 @@ impl SparseVec {
     }
 
     /// Returns or allocates the entity slot at the given dense index.
+    #[inline]
     pub fn get_mut_or_allocate_at(&mut self, index: usize) -> &mut Option<DenseEntity> {
         if index >= self.entities.len() {
-            let extra_len =
-                index.checked_next_power_of_two().unwrap_or(index) - self.entities.len() + 1;
-
-            self.entities.extend(iter::repeat(None).take(extra_len));
+            self.extend_to_index(index);
         }
 
         unsafe { self.entities.get_unchecked_mut(index) }
@@ -116,6 +114,14 @@ impl SparseVec {
     #[inline]
     pub fn clear(&mut self) {
         self.entities.clear();
+    }
+
+    #[cold]
+    fn extend_to_index(&mut self, index: usize) {
+        let extra_len =
+            index.checked_next_power_of_two().unwrap_or(index) - self.entities.len() + 1;
+
+        self.entities.extend(iter::repeat(None).take(extra_len));
     }
 }
 
