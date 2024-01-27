@@ -8,6 +8,21 @@ pub(crate) struct Group {
     pub len: usize,
 }
 
+/// Example:
+///
+/// Say we have a family made of two groups:
+/// - Group 0: (A, B)
+/// - Group 1: (A, B, C, D)
+///
+/// For 'Group 1', we get such a `GroupMetadata` struct:
+///
+/// ```text
+/// storages: A B C D
+///           ^   ^   ^
+///           |   |   +-- storage_end = storage_start + 4
+///           |   +------ new_storage_start = storage_start + 2
+///           +---------- storage_start
+/// ```
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct GroupMetadata {
     pub storage_start: usize,
