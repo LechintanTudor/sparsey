@@ -12,7 +12,7 @@ pub unsafe trait ComponentView {
     where
         Self: 'a;
 
-    /// Slice of element of the underlying component type.
+    /// Slice of elements of the underlying component type.
     type Slice<'a>
     where
         Self: 'a;
@@ -27,7 +27,7 @@ pub unsafe trait ComponentView {
     #[must_use]
     fn contains(self, entity: Entity) -> bool;
 
-    /// Returns the number of component in the view.
+    /// Returns the number of components in the view.
     #[must_use]
     fn len(&self) -> usize;
 

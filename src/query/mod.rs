@@ -26,7 +26,7 @@ pub trait Query: IntoQueryParts {
     #[must_use]
     fn matches(self, entity: Entity) -> bool;
 
-    /// Returns an iterator over all components that match the entity.
+    /// Returns an iterator over all components that match the query.
     fn iter<'a>(self) -> Iter<'a, Self::Get, Self::Include, Self::Exclude>
     where
         Self: 'a;

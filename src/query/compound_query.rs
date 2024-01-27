@@ -41,7 +41,7 @@ where
 pub struct IncludeQuery<G, I> {
     /// The component views from which to return components.
     pub get: G,
-    /// The component view that act as an "include filter".
+    /// The component views that act as an "include filter".
     pub include: I,
 }
 
@@ -78,9 +78,9 @@ where
 pub struct IncludeExcludeQuery<G, I, E> {
     /// The component views from which to return components.
     pub get: G,
-    /// The component view that act as an "include filter".
+    /// The component views that act as an "include filter".
     pub include: I,
-    /// The component view that act as an "exclude filter".
+    /// The component views that act as an "exclude filter".
     pub exclude: E,
 }
 

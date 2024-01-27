@@ -26,14 +26,14 @@ impl GroupLayout {
     /// Returns the group families of this layout.
     #[inline]
     #[must_use]
-    pub fn families(&self) -> &[GroupFamily] {
+    pub(crate) fn families(&self) -> &[GroupFamily] {
         &self.families
     }
 }
 
 /// Describes a set of related component groups.
 #[derive(Clone, Debug)]
-pub struct GroupFamily {
+pub(crate) struct GroupFamily {
     components: Vec<ComponentData>,
     arities: Vec<usize>,
 }
