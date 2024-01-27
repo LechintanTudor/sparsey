@@ -14,6 +14,9 @@ readme = "README.md"
 atomic_refcell = "0.1.13"
 rustc-hash = "1.1"
 
+[lints.rust]
+missing_docs = "forbid"
+
 [lints.clippy]
 missing_safety_doc = "allow"
 module_inception = "allow"
