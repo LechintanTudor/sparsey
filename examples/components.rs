@@ -1,3 +1,5 @@
+//! Components example.
+
 use sparsey::prelude::*;
 
 #[derive(Clone, Copy, Debug)]

@@ -1,3 +1,5 @@
+//! Group layout example.
+
 use sparsey::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -10,7 +12,7 @@ struct Sprite {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct Transparent;
+struct Transparent;
 
 fn print_sprites(
     positions: Comp<Position>,

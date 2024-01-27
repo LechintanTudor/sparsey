@@ -1,3 +1,5 @@
+//! Resources example.
+
 use sparsey::prelude::*;
 
 #[derive(Clone, Copy, Default, Debug)]
