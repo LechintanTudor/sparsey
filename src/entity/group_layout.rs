@@ -152,7 +152,7 @@ impl GroupLayoutBuilder {
         for group in self.groups.drain(..) {
             let successes = families
                 .iter_mut()
-                .map(|f| f.try_add_group(&group) as usize)
+                .map(|f| usize::from(f.try_add_group(&group)))
                 .sum::<usize>();
 
             if successes == 0 {

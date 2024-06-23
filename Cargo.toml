@@ -15,8 +15,14 @@ atomic_refcell = "0.1.13"
 rustc-hash = "1.1"
 
 [lints.rust]
-missing_docs = "forbid"
+missing-docs = "forbid"
 
 [lints.clippy]
-missing_safety_doc = "allow"
-module_inception = "allow"
+pedantic = { level = "warn", priority = -1 }
+cast-possible-truncation = "allow"
+missing-errors-doc = "allow"
+missing-panics-doc = "allow"
+missing-safety_doc = "allow"
+module-inception = "allow"
+module-name-repetitions = "allow"
+wildcard-imports = "allow"
