@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 atomic_refcell = "0.1.13"
-rustc-hash = "1.1"
+rustc-hash = "2.0"
 
 [lints.rust]
 missing-docs = "forbid"
