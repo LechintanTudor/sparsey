@@ -1,3 +1,9 @@
+# 0.12.1 (2024-06-29)
+
+## Changed
+
+- Updated `rustc-hash` to `v2.0.0`.
+
 # 0.12.0 (2024-01-27)
 
 Complete rewrite improving performance in all benchmarks.
