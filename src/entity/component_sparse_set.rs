@@ -154,6 +154,25 @@ impl ComponentSparseSet {
 
     #[inline]
     #[must_use]
+    pub unsafe fn get_ptr<T>(&self, entity: Entity) -> Option<NonNull<T>>
+    where
+        T: Component,
+    {
+        let dense = self.sparse.get(entity)?.dense();
+        Some(self.components.cast::<T>().add(dense))
+    }
+
+    #[inline]
+    #[must_use]
+    pub unsafe fn get_ptr_unchecked<T>(&self, index: usize) -> NonNull<T>
+    where
+        T: Component,
+    {
+        self.components.cast::<T>().add(index)
+    }
+
+    #[inline]
+    #[must_use]
     pub fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
     }

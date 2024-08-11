@@ -1,12 +1,14 @@
 use crate::entity::{
-    group, ungroup_all, Comp, CompMut, Component, ComponentSparseSet, Entity, Group, GroupInfo,
-    GroupLayout, GroupMask, GroupMetadata, QueryMask, StorageMask,
+    group, ungroup_all, Comp, CompMut, Component, ComponentSparseSet, Entity, Group, GroupLayout,
+    GroupMask, GroupMetadata, NonZeroStorageMask, QueryMask, StorageMask,
 };
+use crate::query::{GroupInfo, QueryGroupInfo};
 use atomic_refcell::AtomicRefCell;
 use rustc_hash::FxHashMap;
 use std::any::{self, TypeId};
 use std::collections::hash_map::Entry;
-use std::mem;
+use std::ops::Range;
+use std::{cmp, mem};
 
 #[derive(Default, Debug)]
 pub(crate) struct ComponentStorage {
@@ -58,8 +60,11 @@ impl ComponentStorage {
                             storage_index: components.len(),
                             insert_mask: GroupMask::from_to(group_start, group_end),
                             delete_mask: GroupMask::from_to(new_group_start, group_end),
-                            group_end: groups.len(),
-                            storage_mask: StorageMask::single(local_storage_index),
+                            group_info: Some(GroupInfo {
+                                group_start: group_start as u8,
+                                group_end: groups.len() as u8,
+                                storage_mask: NonZeroStorageMask::single(local_storage_index),
+                            }),
                         },
                     );
 
@@ -81,8 +86,7 @@ impl ComponentStorage {
                     storage_index: components.len(),
                     insert_mask: GroupMask::default(),
                     delete_mask: GroupMask::default(),
-                    group_end: 0,
-                    storage_mask: StorageMask::default(),
+                    group_info: None,
                 },
             );
 
@@ -131,8 +135,7 @@ impl ComponentStorage {
             storage_index: self.components.len(),
             insert_mask: GroupMask::default(),
             delete_mask: GroupMask::default(),
-            group_end: 0,
-            storage_mask: StorageMask::default(),
+            group_info: None,
         });
 
         self.components
@@ -178,19 +181,11 @@ impl ComponentStorage {
             panic_missing_comp::<T>();
         };
 
-        let group_info = (metadata.storage_mask.0 != 0).then(|| unsafe {
-            GroupInfo::new(
-                self.groups.get_unchecked(0..metadata.group_end),
-                metadata.storage_mask,
-            )
-        });
-
         unsafe {
             Comp::new(
                 self.components
                     .get_unchecked(metadata.storage_index)
                     .borrow(),
-                group_info,
             )
         }
     }
@@ -204,21 +199,113 @@ impl ComponentStorage {
             panic_missing_comp::<T>();
         };
 
-        let group_info = (metadata.storage_mask.0 != 0).then(|| unsafe {
-            GroupInfo::new(
-                self.groups.get_unchecked(0..metadata.group_end),
-                metadata.storage_mask,
-            )
-        });
-
         unsafe {
             CompMut::new(
                 self.components
                     .get_unchecked(metadata.storage_index)
                     .borrow_mut(),
-                group_info,
             )
         }
+    }
+
+    #[must_use]
+    pub fn borrow_with_group_info<T>(&self) -> (Comp<T>, Option<GroupInfo>)
+    where
+        T: Component,
+    {
+        let Some(metadata) = self.metadata.get(&TypeId::of::<T>()) else {
+            panic_missing_comp::<T>();
+        };
+
+        let view = unsafe {
+            Comp::new(
+                self.components
+                    .get_unchecked(metadata.storage_index)
+                    .borrow(),
+            )
+        };
+
+        (view, metadata.group_info)
+    }
+
+    #[must_use]
+    pub fn borrow_with_group_info_mut<T>(&self) -> (CompMut<T>, Option<GroupInfo>)
+    where
+        T: Component,
+    {
+        let Some(metadata) = self.metadata.get(&TypeId::of::<T>()) else {
+            panic_missing_comp::<T>();
+        };
+
+        let view = unsafe {
+            CompMut::new(
+                self.components
+                    .get_unchecked(metadata.storage_index)
+                    .borrow_mut(),
+            )
+        };
+
+        (view, metadata.group_info)
+    }
+
+    #[must_use]
+    pub unsafe fn group_range(
+        &self,
+        include: &QueryGroupInfo,
+        exclude: &QueryGroupInfo,
+    ) -> Option<Range<usize>> {
+        type Info = QueryGroupInfo;
+
+        match (include, exclude) {
+            (Info::One(view), Info::Empty) => Some(0..view.len),
+            (Info::Many(include), Info::Empty) => self.include_group_range(*include),
+            (include, exclude) => {
+                let include = include.group_info()?;
+                let exclude = exclude.group_info()?;
+                self.exclude_group_range(include, exclude)
+            }
+        }
+    }
+
+    #[must_use]
+    unsafe fn include_group_range(&self, include: GroupInfo) -> Option<Range<usize>> {
+        let group = unsafe {
+            self.groups
+                .get_unchecked(usize::from(include.group_end) - 1)
+        };
+
+        let mask = QueryMask {
+            include: include.storage_mask.into(),
+            exclude: StorageMask::EMPTY,
+        };
+
+        (mask == group.metadata.include_mask).then_some(0..group.len)
+    }
+
+    #[must_use]
+    unsafe fn exclude_group_range(
+        &self,
+        include: GroupInfo,
+        exclude: GroupInfo,
+    ) -> Option<Range<usize>> {
+        if include.group_start != exclude.group_start {
+            return None;
+        }
+
+        let group_end = cmp::max(include.group_end, exclude.group_end);
+        let child_group = unsafe { self.groups.get_unchecked(usize::from(group_end) - 1) };
+
+        let mask = QueryMask {
+            include: include.storage_mask.into(),
+            exclude: StorageMask::EMPTY,
+        };
+
+        if mask != child_group.metadata.exclude_mask {
+            return None;
+        }
+
+        let parent_group = unsafe { self.groups.get_unchecked(usize::from(group_end) - 2) };
+        Some(child_group.len..parent_group.len)
     }
 }
 
@@ -227,8 +314,7 @@ pub(crate) struct ComponentMetadata {
     pub storage_index: usize,
     pub insert_mask: GroupMask,
     pub delete_mask: GroupMask,
-    pub group_end: usize,
-    pub storage_mask: StorageMask,
+    pub group_info: Option<GroupInfo>,
 }
 
 #[cold]

@@ -1,19 +1,20 @@
-use crate::entity::{Component, ComponentSparseSet, Entity, EntityStorage, GroupInfo, SparseVec};
+use crate::entity::{Component, ComponentSparseSet, Entity, SparseVec, World};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
+use std::ptr::NonNull;
 
 /// View over all entities in the storage.
 #[derive(Clone, Copy)]
 pub struct Entities<'a> {
-    entities: &'a EntityStorage,
+    entities: &'a World,
 }
 
 impl<'a> Entities<'a> {
     #[inline]
     #[must_use]
-    pub(crate) fn new(entities: &'a EntityStorage) -> Self {
+    pub(crate) fn new(entities: &'a World) -> Self {
         Self { entities }
     }
 
@@ -44,20 +45,15 @@ impl fmt::Debug for Entities<'_> {
 /// Shared view over all components of type `T` in the storage.
 pub struct Comp<'a, T> {
     components: AtomicRef<'a, ComponentSparseSet>,
-    group_info: Option<GroupInfo<'a>>,
     _phantom: PhantomData<&'a [T]>,
 }
 
 impl<'a, T> Comp<'a, T> {
     #[inline]
     #[must_use]
-    pub(crate) unsafe fn new(
-        components: AtomicRef<'a, ComponentSparseSet>,
-        group_info: Option<GroupInfo<'a>>,
-    ) -> Self {
+    pub(crate) fn new(components: AtomicRef<'a, ComponentSparseSet>) -> Self {
         Self {
             components,
-            group_info,
             _phantom: PhantomData,
         }
     }
@@ -66,7 +62,6 @@ impl<'a, T> Comp<'a, T> {
 /// Exclusive view over all components of type `T` in the storage.
 pub struct CompMut<'a, T> {
     components: AtomicRefMut<'a, ComponentSparseSet>,
-    group_info: Option<GroupInfo<'a>>,
     _phantom: PhantomData<&'a mut [T]>,
 }
 
@@ -76,20 +71,16 @@ where
 {
     #[inline]
     #[must_use]
-    pub(crate) unsafe fn new(
-        components: AtomicRefMut<'a, ComponentSparseSet>,
-        group_info: Option<GroupInfo<'a>>,
-    ) -> Self {
+    pub(crate) fn new(components: AtomicRefMut<'a, ComponentSparseSet>) -> Self {
         Self {
             components,
-            group_info,
             _phantom: PhantomData,
         }
     }
 
     /// Returns a mutable reference to the component mapped to `entity` if it exists.
     #[must_use]
-    pub fn get_mut(&self, entity: Entity) -> Option<&mut T> {
+    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
         unsafe { self.components.get_mut(entity) }
     }
 
@@ -117,7 +108,7 @@ where
 
 macro_rules! impl_comp_common {
     ($Comp:ident) => {
-        impl<T> $Comp<'_, T>
+        impl<'a, T> $Comp<'a, T>
         where
             T: Component,
         {
@@ -125,6 +116,16 @@ macro_rules! impl_comp_common {
             #[must_use]
             pub fn get(&self, entity: Entity) -> Option<&T> {
                 unsafe { self.components.get(entity) }
+            }
+
+            #[must_use]
+            pub fn get_ptr(&self, entity: Entity) -> Option<NonNull<T>> {
+                unsafe { self.components.get_ptr(entity) }
+            }
+
+            #[must_use]
+            pub fn get_ptr_unchecked(&self, index: usize) -> NonNull<T> {
+                unsafe { self.components.get_ptr_unchecked(index) }
             }
 
             /// Returns whether `entity` is present in the view.
@@ -143,12 +144,6 @@ macro_rules! impl_comp_common {
             #[must_use]
             pub fn is_empty(&self) -> bool {
                 self.components.is_empty()
-            }
-
-            /// Returns the group info of the view.
-            #[must_use]
-            pub fn group_info(&self) -> Option<GroupInfo<'_>> {
-                self.group_info
             }
 
             /// Returns all entities in the view as a slice.

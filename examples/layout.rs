@@ -19,6 +19,8 @@ fn print_sprites(
     sprites: Comp<Sprite>,
     transparencies: Comp<Transparent>,
 ) {
+    println!("{}", std::mem::size_of_val(&positions));
+
     let (position_slice, sprite_slice) = (&positions, &sprites)
         .group_components()
         .expect("Not a group");

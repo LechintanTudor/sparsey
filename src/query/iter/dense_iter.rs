@@ -1,99 +1,47 @@
 use crate::entity::Entity;
-use crate::query::{EntityIterator, QueryPart};
+use crate::query::Query;
+use std::ops::Range;
+use std::ptr::NonNull;
 
-/// Iterator over packed component arrays.
-pub struct DenseIter<'a, G>
+pub struct DenseIter<'query, 'view, G>
 where
-    G: QueryPart,
+    G: Query,
 {
-    index: usize,
-    entities: &'a [Entity],
-    ptrs: G::Ptrs,
+    range: Range<usize>,
+    entities: NonNull<Entity>,
+    get: &'query mut G::View<'view>,
 }
 
-impl<'a, G> DenseIter<'a, G>
+impl<'query, 'view, G> DenseIter<'query, 'view, G>
 where
-    G: QueryPart,
+    G: Query,
 {
-    pub(crate) unsafe fn new(entities: &'a [Entity], ptrs: G::Ptrs) -> Self {
+    pub(crate) unsafe fn new(
+        range: Range<usize>,
+        entities: NonNull<Entity>,
+        get: &'query mut G::View<'view>,
+    ) -> Self {
         Self {
-            index: 0,
+            range,
             entities,
-            ptrs,
+            get,
         }
     }
 }
 
-impl<'a, G> Iterator for DenseIter<'a, G>
+impl<'query, G> Iterator for DenseIter<'query, '_, G>
 where
-    G: QueryPart + 'a,
+    G: Query,
 {
-    type Item = G::Refs<'a>;
+    type Item = G::Item<'query>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let index = self.index;
-
-        if index >= self.entities.len() {
-            return None;
-        }
-
-        self.index += 1;
-
-        unsafe { Some(G::get_dense(self.ptrs, index)) }
-    }
-
-    fn fold<B, F>(mut self, mut init: B, mut f: F) -> B
-    where
-        F: FnMut(B, Self::Item) -> B,
-    {
-        while self.index < self.entities.len() {
-            init = unsafe { f(init, G::get_dense(self.ptrs, self.index)) };
-            self.index += 1;
-        }
-
-        init
-    }
-}
-
-impl<'a, G> EntityIterator for DenseIter<'a, G>
-where
-    G: QueryPart + 'a,
-{
-    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
-        let index = self.index;
-
-        if index >= self.entities.len() {
-            return None;
-        }
-
-        self.index += 1;
+        let index = self.range.next()?;
 
         unsafe {
-            Some((
-                *self.entities.get_unchecked(index),
-                G::get_dense(self.ptrs, index),
-            ))
+            let entity = self.entities.add(index).read();
+            let ptr = G::get_ptr_unchecked(self.get, entity, index);
+            Some(G::deref_ptr(ptr))
         }
-    }
-
-    fn fold_with_entity<B, F>(mut self, mut init: B, mut f: F) -> B
-    where
-        F: FnMut(B, (Entity, Self::Item)) -> B,
-    {
-        while self.index < self.entities.len() {
-            init = unsafe {
-                f(
-                    init,
-                    (
-                        *self.entities.get_unchecked(self.index),
-                        G::get_dense(self.ptrs, self.index),
-                    ),
-                )
-            };
-
-            self.index += 1;
-        }
-
-        init
     }
 }

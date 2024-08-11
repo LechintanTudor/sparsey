@@ -1,21 +1,19 @@
-use crate::entity::{
-    group, panic_missing_comp, ungroup, Component, Entity, EntityStorage, GroupMask,
-};
+use crate::entity::{group, panic_missing_comp, ungroup, Component, Entity, GroupMask, World};
 use std::any::TypeId;
 
 /// Handles insert and remove operations for components stored in an
-/// [`EntitySotrage`](crate::entity::EntityStorage).
+/// [`EntitySotrage`](crate::entity::World).
 pub unsafe trait ComponentSet {
     /// The components returned by [`remove`](Self::remove).
     type Remove;
 
     /// Adds the given `components` to `entity`.
-    fn insert(entities: &mut EntityStorage, entity: Entity, components: Self);
+    fn insert(world: &mut World, entity: Entity, components: Self);
 
     /// Creates new entities from the components produced by the iterator.
     ///
     /// Returns the newly created entities as a slice.
-    fn extend<TComponents>(entities: &mut EntityStorage, components: TComponents) -> &[Entity]
+    fn extend<TComponents>(world: &mut World, components: TComponents) -> &[Entity]
     where
         TComponents: IntoIterator<Item = Self>;
 
@@ -23,10 +21,10 @@ pub unsafe trait ComponentSet {
     ///
     /// Returns the components that were successfully removed.
     #[must_use = "Use `delete` to discard the components."]
-    fn remove(entities: &mut EntityStorage, entity: Entity) -> Self::Remove;
+    fn remove(world: &mut World, entity: Entity) -> Self::Remove;
 
     /// Removes components from the given `entity`.
-    fn delete(entities: &mut EntityStorage, entity: Entity);
+    fn delete(world: &mut World, entity: Entity);
 }
 
 macro_rules! impl_component_set {
@@ -37,11 +35,11 @@ macro_rules! impl_component_set {
         {
             type Remove = ($(Option<$Comp>,)*);
 
-            fn insert(entities: &mut EntityStorage, entity: Entity, components: Self) {
+            fn insert(world: &mut World, entity: Entity, components: Self) {
                 let mut group_mask = GroupMask::EMPTY;
 
                 $({
-                    let metadata = entities
+                    let metadata = world
                         .components
                         .metadata
                         .get(&TypeId::of::<$Comp>())
@@ -50,7 +48,7 @@ macro_rules! impl_component_set {
                     group_mask |= metadata.insert_mask;
 
                     unsafe {
-                        entities
+                        world
                             .components
                             .components
                             .get_unchecked_mut(metadata.storage_index)
@@ -62,8 +60,8 @@ macro_rules! impl_component_set {
                 if group_mask.0 != 0 {
                     unsafe {
                         group(
-                            &mut entities.components.components,
-                            &mut entities.components.groups,
+                            &mut world.components.components,
+                            &mut world.components.groups,
                             group_mask,
                             entity,
                         );
@@ -71,14 +69,14 @@ macro_rules! impl_component_set {
                 }
             }
 
-            fn extend<TComponents>(entities: &mut EntityStorage, components: TComponents) -> &[Entity]
+            fn extend<TComponents>(world: &mut World, components: TComponents) -> &[Entity]
             where
                 TComponents: IntoIterator<Item = Self>,
             {
                 let mut group_mask = GroupMask::EMPTY;
 
                 let sparse_sets = ($({
-                    let metadata = entities
+                    let metadata = world
                         .components
                         .metadata
                         .get(&TypeId::of::<$Comp>())
@@ -87,7 +85,7 @@ macro_rules! impl_component_set {
                     group_mask |= metadata.insert_mask;
 
                     unsafe {
-                        entities
+                        world
                             .components
                             .components
                             .get_unchecked(metadata.storage_index)
@@ -95,8 +93,8 @@ macro_rules! impl_component_set {
                     }
                 },)*);
 
-                let start_entity = entities.entities.len();
-                let mut allocate_entity = || entities.create_empty_entity();
+                let start_entity = world.entities.len();
+                let mut allocate_entity = || world.create_empty_entity();
 
                 components.into_iter().for_each(move |components| {
                     let entity = allocate_entity();
@@ -107,15 +105,15 @@ macro_rules! impl_component_set {
                 });
 
                 let new_entities = unsafe {
-                    entities.entities.as_slice().get_unchecked(start_entity..)
+                    world.entities.as_slice().get_unchecked(start_entity..)
                 };
 
                 if group_mask.0 != 0 {
                     for &entity in new_entities {
                         unsafe {
                             group(
-                                &mut entities.components.components,
-                                &mut entities.components.groups,
+                                &mut world.components.components,
+                                &mut world.components.groups,
                                 group_mask,
                                 entity,
                             );
@@ -126,11 +124,11 @@ macro_rules! impl_component_set {
                 new_entities
             }
 
-            fn remove(entities: &mut EntityStorage, entity: Entity) -> Self::Remove {
+            fn remove(world: &mut World, entity: Entity) -> Self::Remove {
                 let mut group_mask = GroupMask::EMPTY;
 
                 let sparse_sets = ($({
-                    let metadata = entities
+                    let metadata = world
                         .components
                         .metadata
                         .get(&TypeId::of::<$Comp>())
@@ -139,7 +137,7 @@ macro_rules! impl_component_set {
                     group_mask |= metadata.delete_mask;
 
                     unsafe {
-                        entities
+                        world
                             .components
                             .components
                             .get_unchecked(metadata.storage_index)
@@ -150,8 +148,8 @@ macro_rules! impl_component_set {
                 unsafe {
                     if group_mask.0 != 0 {
                         ungroup(
-                            &mut entities.components.components,
-                            &mut entities.components.groups,
+                            &mut world.components.components,
+                            &mut world.components.groups,
                             group_mask,
                             entity,
                         );
@@ -163,11 +161,11 @@ macro_rules! impl_component_set {
                 }
             }
 
-            fn delete(entities: &mut EntityStorage, entity: Entity) {
+            fn delete(world: &mut World, entity: Entity) {
                 let mut group_mask = GroupMask::EMPTY;
 
                 let sparse_sets = ($({
-                    let metadata = entities
+                    let metadata = world
                         .components
                         .metadata
                         .get(&TypeId::of::<$Comp>())
@@ -176,7 +174,7 @@ macro_rules! impl_component_set {
                     group_mask |= metadata.delete_mask;
 
                     unsafe {
-                        entities
+                        world
                             .components
                             .components
                             .get_unchecked(metadata.storage_index)
@@ -187,8 +185,8 @@ macro_rules! impl_component_set {
                 unsafe {
                     if group_mask.0 != 0 {
                         ungroup(
-                            &mut entities.components.components,
-                            &mut entities.components.groups,
+                            &mut world.components.components,
+                            &mut world.components.groups,
                             group_mask,
                             entity,
                         );
@@ -208,30 +206,30 @@ unsafe impl ComponentSet for () {
     type Remove = ();
 
     #[inline(always)]
-    fn insert(entities: &mut EntityStorage, entity: Entity, components: Self) {
+    fn insert(world: &mut World, entity: Entity, components: Self) {
         // Empty
     }
 
-    fn extend<TComponents>(entities: &mut EntityStorage, components: TComponents) -> &[Entity]
+    fn extend<TComponents>(world: &mut World, components: TComponents) -> &[Entity]
     where
         TComponents: IntoIterator<Item = Self>,
     {
-        let start_entity = entities.entities.len();
+        let start_entity = world.entities.len();
 
         components.into_iter().for_each(|()| {
-            let _ = entities.create_empty_entity();
+            let _ = world.create_empty_entity();
         });
 
-        unsafe { entities.entities.as_slice().get_unchecked(start_entity..) }
+        unsafe { world.entities.as_slice().get_unchecked(start_entity..) }
     }
 
     #[inline(always)]
-    fn remove(entities: &mut EntityStorage, entity: Entity) -> Self::Remove {
+    fn remove(world: &mut World, entity: Entity) -> Self::Remove {
         // Empty
     }
 
     #[inline(always)]
-    fn delete(entities: &mut EntityStorage, entity: Entity) {
+    fn delete(world: &mut World, entity: Entity) {
         // Empty
     }
 }

@@ -1,4 +1,4 @@
-use crate::entity::{MAX_GROUP_ARITY, MAX_GROUP_COUNT};
+use crate::entity::{StorageMask, MAX_GROUP_COUNT};
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
 
@@ -72,52 +72,6 @@ impl fmt::Debug for GroupMask {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub(crate) struct StorageMask(pub u16);
-
-impl StorageMask {
-    pub const EMPTY: Self = Self(0);
-
-    #[inline]
-    #[must_use]
-    pub const fn single(index: usize) -> Self {
-        assert!(index < MAX_GROUP_ARITY);
-        Self(1 << index)
-    }
-
-    #[inline]
-    #[must_use]
-    pub const fn from_to(from: usize, to: usize) -> Self {
-        assert!(from < MAX_GROUP_ARITY);
-        assert!(to < MAX_GROUP_ARITY);
-        assert!(from <= to);
-
-        Self(((1 << (to - from)) - 1) << from)
-    }
-}
-
-impl BitOr for StorageMask {
-    type Output = Self;
-
-    #[inline]
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Self(self.0 | rhs.0)
-    }
-}
-
-impl BitOrAssign for StorageMask {
-    #[inline]
-    fn bitor_assign(&mut self, rhs: Self) {
-        self.0 |= rhs.0;
-    }
-}
-
-impl fmt::Debug for StorageMask {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:0>16b}", self.0)
-    }
-}
-
 #[repr(align(4))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
 pub(crate) struct QueryMask {
@@ -128,7 +82,7 @@ pub(crate) struct QueryMask {
 impl QueryMask {
     #[inline]
     #[must_use]
-    pub const fn include(arity: usize) -> Self {
+    pub fn include(arity: usize) -> Self {
         Self {
             include: StorageMask::from_to(0, arity),
             exclude: StorageMask::EMPTY,
@@ -137,7 +91,7 @@ impl QueryMask {
 
     #[inline]
     #[must_use]
-    pub const fn exclude(prev_arity: usize, arity: usize) -> Self {
+    pub fn exclude(prev_arity: usize, arity: usize) -> Self {
         Self {
             include: StorageMask::from_to(0, prev_arity),
             exclude: StorageMask::from_to(prev_arity, arity),

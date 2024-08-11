@@ -1,55 +1,28 @@
-//! Components example.
-
-use sparsey::prelude::*;
+use sparsey::entity::{Entity, GroupLayout, World};
 
 #[derive(Clone, Copy, Debug)]
-struct Position(i32, i32);
-
-#[derive(Clone, Copy, Debug)]
-struct Velocity(i32, i32);
-
-#[derive(Clone, Copy, Debug)]
-struct Frozen;
-
-fn update_velocities(mut velocities: CompMut<Velocity>, frozens: Comp<Frozen>) {
-    println!("[Update velocities]");
-
-    (&mut velocities)
-        .include(&frozens)
-        .for_each_with_entity(|(entity, velocity)| {
-            println!("{:?} is frozen. Set its velocity to (0, 0)", entity);
-
-            *velocity = Velocity(0, 0);
-        });
-
-    println!();
+pub struct Position {
+    pub x: i32,
+    pub y: i32,
 }
 
-fn update_positions(mut positions: CompMut<Position>, velocities: Comp<Velocity>) {
-    println!("[Update positions]");
-
-    (&mut positions, &velocities).for_each_with_entity(|(entities, (position, velocity))| {
-        position.0 += velocity.0;
-        position.1 += velocity.1;
-
-        println!("{:?}, {:?}, {:?}", entities, *position, velocity);
-    });
-
-    println!();
+#[derive(Clone, Copy, Debug)]
+pub struct Speed {
+    pub x: i32,
+    pub y: i32,
 }
 
 fn main() {
-    let mut entities = EntityStorage::default();
-    entities.register::<Position>();
-    entities.register::<Velocity>();
-    entities.register::<Frozen>();
+    let layout = GroupLayout::builder()
+        .add_group::<(Position, Speed)>()
+        .build();
 
-    entities.create((Position(0, 0), Velocity(1, 1)));
-    entities.create((Position(0, 0), Velocity(2, 2)));
-    entities.create((Position(0, 0), Velocity(3, 3), Frozen));
+    let mut world = World::new(&layout);
 
-    for _ in 0..3 {
-        entities.run(update_velocities);
-        entities.run(update_positions);
+    let e0 = world.create((Position { x: 0, y: 0 }, Speed { x: 1, y: 2 }));
+    let e1 = world.create((Position { x: 0, y: 0 }, Speed { x: 2, y: 1 }));
+
+    for item in &mut world.query_all::<(Entity, &Position, &Speed)>() {
+        println!("{item:#?}\n");
     }
 }

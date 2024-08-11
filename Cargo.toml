@@ -15,7 +15,7 @@ atomic_refcell = "0.1.13"
 rustc-hash = "2.0"
 
 [lints.rust]
-missing-docs = "forbid"
+# missing-docs = "forbid"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }

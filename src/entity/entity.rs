@@ -8,7 +8,10 @@ pub struct Version(pub NonZeroU32);
 
 impl Version {
     /// The first valid version.
-    pub const FIRST: Self = unsafe { Self(NonZeroU32::new_unchecked(1)) };
+    pub const FIRST: Self = Self(NonZeroU32::MIN);
+
+    /// The last valid version.
+    pub const LAST: Self = Self(NonZeroU32::MAX);
 
     /// Creates a new version. Returns [`None`] if the `index` is zero.
     #[inline]

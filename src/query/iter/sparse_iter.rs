@@ -1,142 +1,78 @@
 use crate::entity::Entity;
-use crate::query::{EntityIterator, QueryPart};
+use crate::query::{Query, WorldQueryAll};
+use std::ptr;
 use std::slice::Iter as SliceIter;
 
-/// Iterator over sparse component sets.
-pub struct SparseIter<'a, G, I, E>
+pub struct SparseIter<'query, 'view, G, I, E>
 where
-    G: QueryPart,
-    I: QueryPart,
-    E: QueryPart,
+    G: Query,
+    I: Query,
+    E: Query,
 {
-    entities: SliceIter<'a, Entity>,
-    sparse: G::Sparse<'a>,
-    include: I::Sparse<'a>,
-    exclude: E::Sparse<'a>,
-    ptrs: G::Ptrs,
+    entities: SliceIter<'query, Entity>,
+    query: &'query mut WorldQueryAll<'view, G, I, E>,
 }
 
-impl<'a, G, I, E> SparseIter<'a, G, I, E>
+impl<'query, 'view, G, I, E> SparseIter<'query, 'view, G, I, E>
 where
-    G: QueryPart,
-    I: QueryPart,
-    E: QueryPart,
+    G: Query,
+    I: Query,
+    E: Query,
 {
-    pub(crate) unsafe fn new(
-        entities: &'a [Entity],
-        sparse: G::Sparse<'a>,
-        include: I::Sparse<'a>,
-        exclude: E::Sparse<'a>,
-        ptrs: G::Ptrs,
-    ) -> Self {
+    pub fn new(query: &'query mut WorldQueryAll<'view, G, I, E>) -> Self {
+        let entities = {
+            let mut entities = G::entities(&query.get);
+
+            if let Some(include_entities) = I::entities(&query.include) {
+                match entities {
+                    Some(old_entities) => {
+                        if include_entities.len() < old_entities.len() {
+                            entities = Some(include_entities);
+                        }
+                    }
+                    None => entities = Some(include_entities),
+                }
+            };
+
+            unsafe { &*ptr::from_ref(entities.unwrap_or(query.world.entities())) }
+        };
+
         Self {
             entities: entities.iter(),
-            sparse,
-            include,
-            exclude,
-            ptrs,
+            query,
         }
     }
 }
 
-impl<'a, G, I, E> Iterator for SparseIter<'a, G, I, E>
+impl<'query, G, I, E> Iterator for SparseIter<'query, '_, G, I, E>
 where
-    G: QueryPart + 'a,
-    I: QueryPart,
-    E: QueryPart,
+    G: Query,
+    I: Query,
+    E: Query,
 {
-    type Item = G::Refs<'a>;
+    type Item = G::Item<'query>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let entity = *self.entities.next()?;
+            let Some(&entity) = self.entities.next() else {
+                break None;
+            };
 
-            if !I::sparse_contains_all(self.include, entity) {
+            if !E::contains_none(&self.query.exclude, entity) {
                 continue;
             }
 
-            if !E::sparse_contains_none(self.exclude, entity) {
+            if !I::contains_all(&self.query.include, entity) {
                 continue;
             }
 
-            if let Some(components) =
-                unsafe { G::get_sparse(self.sparse, self.ptrs, entity.sparse()) }
-            {
-                return Some(components);
+            unsafe {
+                let Some(ptr) = G::get_ptr(&self.query.get, entity) else {
+                    continue;
+                };
+
+                break Some(G::deref_ptr(ptr));
             }
         }
-    }
-
-    fn fold<B, F>(self, mut init: B, mut f: F) -> B
-    where
-        F: FnMut(B, Self::Item) -> B,
-    {
-        for &entity in self.entities {
-            if !E::sparse_contains_none(self.exclude, entity) {
-                continue;
-            }
-
-            if !I::sparse_contains_all(self.include, entity) {
-                continue;
-            }
-
-            if let Some(components) =
-                unsafe { G::get_sparse(self.sparse, self.ptrs, entity.sparse()) }
-            {
-                init = f(init, components);
-            }
-        }
-
-        init
-    }
-}
-
-impl<'a, G, I, E> EntityIterator for SparseIter<'a, G, I, E>
-where
-    G: QueryPart + 'a,
-    I: QueryPart,
-    E: QueryPart,
-{
-    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
-        loop {
-            let entity = *self.entities.next()?;
-
-            if !I::sparse_contains_all(self.include, entity) {
-                continue;
-            }
-
-            if !E::sparse_contains_none(self.exclude, entity) {
-                continue;
-            }
-
-            if let Some(components) =
-                unsafe { G::get_sparse(self.sparse, self.ptrs, entity.sparse()) }
-            {
-                return Some((entity, components));
-            }
-        }
-    }
-
-    fn fold_with_entity<B, F>(self, mut init: B, mut f: F) -> B
-    where
-        F: FnMut(B, (Entity, Self::Item)) -> B,
-    {
-        for &entity in self.entities {
-            if !E::sparse_contains_none(self.exclude, entity) {
-                continue;
-            }
-
-            if !I::sparse_contains_all(self.include, entity) {
-                continue;
-            }
-
-            if let Some(components) =
-                unsafe { G::get_sparse(self.sparse, self.ptrs, entity.sparse()) }
-            {
-                init = f(init, (entity, components));
-            }
-        }
-
-        init
     }
 }

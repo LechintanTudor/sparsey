@@ -1,97 +1,73 @@
 mod dense_iter;
-mod entity_iter;
 mod sparse_iter;
 
 pub use self::dense_iter::*;
-pub use self::entity_iter::*;
 pub use self::sparse_iter::*;
 
 use crate::entity::Entity;
-use crate::query::{group_range, QueryPart};
+use crate::query::{Query, WorldQueryAll};
+use std::ops::Range;
+use std::ptr::NonNull;
 
-/// Iterator over all components that match a query.
-pub enum Iter<'a, G, I, E>
+pub enum Iter<'query, 'view, G, I, E>
 where
-    G: QueryPart,
-    I: QueryPart,
-    E: QueryPart,
+    G: Query,
+    I: Query,
+    E: Query,
 {
-    /// Iterator over ungrouped queries.
-    Sparse(SparseIter<'a, G, I, E>),
-    /// Iterator over grouped queries. Very fast.
-    Dense(DenseIter<'a, G>),
+    Sparse(SparseIter<'query, 'view, G, I, E>),
+    Dense(DenseIter<'query, 'view, G>),
 }
 
-impl<'a, G, I, E> Iter<'a, G, I, E>
+impl<'query, 'view, G, I, E> Iter<'query, 'view, G, I, E>
 where
-    G: QueryPart + 'a,
-    I: QueryPart + 'a,
-    E: QueryPart + 'a,
+    G: Query,
+    I: Query,
+    E: Query,
 {
-    pub(crate) fn new(get: G, include: I, exclude: E) -> Self {
-        if let Some(range) = group_range(&get, &include, &exclude) {
-            let (entities, ptrs) = get.split_dense();
+    pub fn new(query: &'query mut WorldQueryAll<'view, G, I, E>) -> Self {
+        let dense_data = (|| -> Option<(Range<usize>, NonNull<Entity>)> {
+            let get_info = query.get_info?;
+            let include_info = query.include_info?;
+            let exclude_info = query.exclude_info?;
 
-            let entities = if G::HAS_DATA {
-                entities
-            } else {
-                debug_assert!(I::HAS_DATA);
-                let (entities, _, _) = include.split_sparse();
-                entities
+            let range = unsafe {
+                query
+                    .world
+                    .components
+                    .group_range(&get_info.add_query(&include_info)?, &exclude_info)?
             };
 
-            unsafe {
-                let ptrs = G::add_to_ptrs(ptrs, range.start);
-                let entities = entities.get_unchecked(range);
-                Self::Dense(DenseIter::new(entities, ptrs))
-            }
-        } else {
-            let (get_entities, sparse, ptrs) = get.split_sparse();
-            let (sparse_entities, include) = include.split_filter();
-            let (_, exclude) = exclude.split_filter();
+            let entities = G::entities(&query.get)
+                .or_else(|| I::entities(&query.include))
+                .unwrap_or(query.world.entities())
+                .as_ptr()
+                .cast_mut();
 
-            let entities = match (G::HAS_DATA, I::HAS_DATA) {
-                (true, false) => get_entities,
-                (false, true) => sparse_entities,
-                (true, true) => {
-                    if get_entities.len() >= sparse_entities.len() {
-                        get_entities
-                    } else {
-                        sparse_entities
-                    }
-                }
-                (false, false) => panic!("Cannot iterate over an empty Query"),
-            };
+            unsafe { Some((range, NonNull::new_unchecked(entities))) }
+        })();
 
-            unsafe { Self::Sparse(SparseIter::new(entities, sparse, include, exclude, ptrs)) }
+        match dense_data {
+            Some((range, entities)) => unsafe {
+                Self::Dense(DenseIter::new(range, entities, &mut query.get))
+            },
+            None => Self::Sparse(SparseIter::new(query)),
         }
     }
-
-    /// Returns whether the iterator is sparse.
-    #[must_use]
-    pub const fn is_sparse(&self) -> bool {
-        matches!(self, Self::Sparse(_))
-    }
-
-    /// Returns whether the iterator is dense.
-    #[must_use]
-    pub const fn is_dense(&self) -> bool {
-        matches!(self, Self::Dense(_))
-    }
 }
 
-impl<'a, G, I, E> Iterator for Iter<'a, G, I, E>
+impl<'query, G, I, E> Iterator for Iter<'query, '_, G, I, E>
 where
-    G: QueryPart + 'a,
-    I: QueryPart,
-    E: QueryPart,
+    G: Query,
+    I: Query,
+    E: Query,
 {
-    type Item = G::Refs<'a>;
+    type Item = G::Item<'query>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Self::Sparse(it) => it.next(),
-            Self::Dense(it) => it.next(),
+            Self::Sparse(iter) => iter.next(),
+            Self::Dense(iter) => iter.next(),
         }
     }
 
@@ -100,32 +76,8 @@ where
         F: FnMut(B, Self::Item) -> B,
     {
         match self {
-            Self::Sparse(it) => it.fold(init, f),
-            Self::Dense(it) => it.fold(init, f),
-        }
-    }
-}
-
-impl<'a, G, I, E> EntityIterator for Iter<'a, G, I, E>
-where
-    G: QueryPart + 'a,
-    I: QueryPart,
-    E: QueryPart,
-{
-    fn next_with_entity(&mut self) -> Option<(Entity, Self::Item)> {
-        match self {
-            Self::Sparse(it) => it.next_with_entity(),
-            Self::Dense(it) => it.next_with_entity(),
-        }
-    }
-
-    fn fold_with_entity<B, F>(self, init: B, f: F) -> B
-    where
-        F: FnMut(B, (Entity, Self::Item)) -> B,
-    {
-        match self {
-            Self::Sparse(it) => it.fold_with_entity(init, f),
-            Self::Dense(it) => it.fold_with_entity(init, f),
+            Self::Sparse(iter) => iter.fold(init, f),
+            Self::Dense(iter) => iter.fold(init, f),
         }
     }
 }

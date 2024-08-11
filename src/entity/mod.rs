@@ -9,16 +9,15 @@ mod entity;
 mod entity_allocator;
 mod entity_sparse_set;
 mod group;
-mod group_info;
 mod group_layout;
 mod group_mask;
 mod sparse_vec;
+mod storage_mask;
 
 pub use self::borrow::*;
 pub use self::component::*;
 pub use self::component_set::*;
 pub use self::entity::*;
-pub use self::group_info::*;
 pub use self::group_layout::*;
 pub use self::sparse_vec::*;
 
@@ -28,19 +27,21 @@ pub(crate) use self::entity_allocator::*;
 pub(crate) use self::entity_sparse_set::*;
 pub(crate) use self::group::*;
 pub(crate) use self::group_mask::*;
+pub(crate) use self::storage_mask::*;
 
+use crate::query::{GroupInfo, Query, QueryGroupInfo, WorldQuery, WorldQueryAll};
 use rustc_hash::FxHashMap;
 use std::mem;
 
 /// Storage for entities and components.
 #[derive(Default, Debug)]
-pub struct EntityStorage {
-    allocator: EntityAllocator,
-    entities: EntitySparseSet,
-    components: ComponentStorage,
+pub struct World {
+    pub(crate) allocator: EntityAllocator,
+    pub(crate) entities: EntitySparseSet,
+    pub(crate) components: ComponentStorage,
 }
 
-impl EntityStorage {
+impl World {
     /// Creates a new `EntityStorage` with the given `GroupLayout`.
     #[inline]
     #[must_use]
@@ -51,6 +52,38 @@ impl EntityStorage {
             allocator: EntityAllocator::new(),
             entities: EntitySparseSet::new(),
             components,
+        }
+    }
+
+    #[inline]
+    pub fn with_layout() -> GroupLayoutBuilder {
+        GroupLayout::builder()
+    }
+
+    pub fn query<G>(&self) -> WorldQuery<G, (), ()>
+    where
+        G: Query,
+    {
+        WorldQuery {
+            world: self,
+            get: G::borrow(self),
+            include: (),
+            exclude: (),
+        }
+    }
+
+    pub fn query_all<G>(&self) -> WorldQueryAll<G, (), ()>
+    where
+        G: Query,
+    {
+        WorldQueryAll {
+            world: self,
+            get: G::borrow(self),
+            include: (),
+            exclude: (),
+            get_info: Some(QueryGroupInfo::Empty),
+            include_info: Some(QueryGroupInfo::Empty),
+            exclude_info: Some(QueryGroupInfo::Empty),
         }
     }
 
@@ -240,6 +273,22 @@ impl EntityStorage {
         T: Component,
     {
         self.components.borrow_mut::<T>()
+    }
+
+    #[must_use]
+    pub fn borrow_with_group_info<T>(&self) -> (Comp<T>, Option<GroupInfo>)
+    where
+        T: Component,
+    {
+        self.components.borrow_with_group_info()
+    }
+
+    #[must_use]
+    pub fn borrow_with_group_info_mut<T>(&self) -> (CompMut<T>, Option<GroupInfo>)
+    where
+        T: Component,
+    {
+        self.components.borrow_with_group_info_mut()
     }
 
     #[inline]
