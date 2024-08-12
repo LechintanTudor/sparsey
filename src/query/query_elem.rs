@@ -1,11 +1,9 @@
 use crate::entity::{Comp, CompMut, Component, Entity, World};
 use crate::query::ViewGroupInfo;
-use std::ptr::NonNull;
 
 pub unsafe trait QueryElem {
     type View<'a>;
     type Item<'a>;
-    type Ptr;
 
     #[must_use]
     fn borrow(world: &World) -> Self::View<'_>;
@@ -20,22 +18,19 @@ pub unsafe trait QueryElem {
     fn contains(view: &Self::View<'_>, entity: Entity) -> bool;
 
     #[must_use]
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>>;
+    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>>;
 
     #[must_use]
-    fn get_ptr(view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr>;
-
-    #[must_use]
-    unsafe fn get_ptr_unchecked(view: &Self::View<'_>, entity: Entity, index: usize) -> Self::Ptr;
-
-    #[must_use]
-    unsafe fn deref_ptr<'a>(ptr: Self::Ptr) -> Self::Item<'a>;
+    unsafe fn get_by_index<'a>(
+        view: &Self::View<'_>,
+        entity: Entity,
+        index: usize,
+    ) -> Self::Item<'a>;
 }
 
 unsafe impl QueryElem for Entity {
     type View<'a> = ();
     type Item<'a> = Entity;
-    type Ptr = Entity;
 
     #[inline]
     fn borrow(_world: &World) -> Self::View<'_> {}
@@ -56,27 +51,17 @@ unsafe impl QueryElem for Entity {
     }
 
     #[inline]
-    fn get<'a>(_view: &'a mut Self::View<'a>, entity: Entity) -> Option<Self::Item<'a>> {
+    unsafe fn get<'a>(_view: &Self::View<'a>, entity: Entity) -> Option<Self::Item<'a>> {
         Some(entity)
     }
 
     #[inline]
-    fn get_ptr(_view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr> {
-        Some(entity)
-    }
-
-    #[inline]
-    unsafe fn get_ptr_unchecked(
+    unsafe fn get_by_index<'a>(
         _view: &Self::View<'_>,
         entity: Entity,
         _index: usize,
-    ) -> Self::Ptr {
+    ) -> Self::Item<'a> {
         entity
-    }
-
-    #[inline]
-    unsafe fn deref_ptr<'a>(ptr: Self::Ptr) -> Self::Item<'a> {
-        ptr
     }
 }
 
@@ -86,7 +71,6 @@ where
 {
     type View<'a> = Comp<'a, T>;
     type Item<'a> = &'a T;
-    type Ptr = NonNull<T>;
 
     fn borrow(world: &World) -> Self::View<'_> {
         world.borrow::<T>()
@@ -111,20 +95,16 @@ where
         view.contains(entity)
     }
 
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        view.get(entity)
+    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+        view.get_ptr(entity).map(|ptr| ptr.as_ref())
     }
 
-    fn get_ptr(view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr> {
-        view.get_ptr(entity)
-    }
-
-    unsafe fn get_ptr_unchecked(view: &Self::View<'_>, _entity: Entity, index: usize) -> Self::Ptr {
-        view.get_ptr_unchecked(index)
-    }
-
-    unsafe fn deref_ptr<'a>(ptr: Self::Ptr) -> Self::Item<'a> {
-        ptr.as_ref()
+    unsafe fn get_by_index<'a>(
+        view: &Self::View<'_>,
+        _entity: Entity,
+        index: usize,
+    ) -> Self::Item<'a> {
+        view.get_ptr_unchecked(index).as_ref()
     }
 }
 
@@ -134,7 +114,6 @@ where
 {
     type View<'a> = CompMut<'a, T>;
     type Item<'a> = &'a mut T;
-    type Ptr = NonNull<T>;
 
     fn borrow(world: &World) -> Self::View<'_> {
         world.borrow_mut()
@@ -159,20 +138,16 @@ where
         view.contains(entity)
     }
 
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        view.get_mut(entity)
+    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+        view.get_ptr(entity).map(|mut ptr| ptr.as_mut())
     }
 
-    fn get_ptr(view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr> {
-        view.get_ptr(entity)
-    }
-
-    unsafe fn get_ptr_unchecked(view: &Self::View<'_>, _entity: Entity, index: usize) -> Self::Ptr {
-        view.get_ptr_unchecked(index)
-    }
-
-    unsafe fn deref_ptr<'a>(mut ptr: Self::Ptr) -> Self::Item<'a> {
-        ptr.as_mut()
+    unsafe fn get_by_index<'a>(
+        view: &Self::View<'_>,
+        _entity: Entity,
+        index: usize,
+    ) -> Self::Item<'a> {
+        view.get_ptr_unchecked(index).as_mut()
     }
 }
 
@@ -182,7 +157,6 @@ where
 {
     type View<'a> = Comp<'a, T>;
     type Item<'a> = Option<&'a T>;
-    type Ptr = Option<NonNull<T>>;
 
     fn borrow(world: &World) -> Self::View<'_> {
         world.borrow()
@@ -200,20 +174,16 @@ where
         true
     }
 
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        Some(view.get(entity))
+    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+        Some(view.get_ptr(entity).map(|ptr| ptr.as_ref()))
     }
 
-    fn get_ptr(view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr> {
-        Some(view.get_ptr(entity))
-    }
-
-    unsafe fn get_ptr_unchecked(view: &Self::View<'_>, entity: Entity, _index: usize) -> Self::Ptr {
-        view.get_ptr(entity)
-    }
-
-    unsafe fn deref_ptr<'a>(ptr: Self::Ptr) -> Self::Item<'a> {
-        ptr.map(|ptr| ptr.as_ref())
+    unsafe fn get_by_index<'a>(
+        view: &Self::View<'_>,
+        entity: Entity,
+        _index: usize,
+    ) -> Self::Item<'a> {
+        view.get_ptr(entity).map(|ptr| ptr.as_ref())
     }
 }
 
@@ -223,7 +193,6 @@ where
 {
     type View<'a> = CompMut<'a, T>;
     type Item<'a> = Option<&'a mut T>;
-    type Ptr = Option<NonNull<T>>;
 
     fn borrow(world: &World) -> Self::View<'_> {
         world.borrow_mut()
@@ -241,19 +210,15 @@ where
         true
     }
 
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        Some(view.get_mut(entity))
+    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+        Some(view.get_ptr(entity).map(|mut ptr| ptr.as_mut()))
     }
 
-    fn get_ptr(view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr> {
-        Some(view.get_ptr(entity))
-    }
-
-    unsafe fn get_ptr_unchecked(view: &Self::View<'_>, entity: Entity, _index: usize) -> Self::Ptr {
-        view.get_ptr(entity)
-    }
-
-    unsafe fn deref_ptr<'a>(ptr: Self::Ptr) -> Self::Item<'a> {
-        ptr.map(|mut ptr| ptr.as_mut())
+    unsafe fn get_by_index<'a>(
+        view: &Self::View<'_>,
+        entity: Entity,
+        _index: usize,
+    ) -> Self::Item<'a> {
+        view.get_ptr(entity).map(|mut ptr| ptr.as_mut())
     }
 }

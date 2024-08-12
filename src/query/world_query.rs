@@ -66,7 +66,7 @@ where
             return None;
         }
 
-        G::get(&mut self.get, entity)
+        unsafe { G::get(&mut self.get, entity) }
     }
 
     #[must_use]
@@ -107,6 +107,13 @@ where
 {
     pub fn iter(&mut self) -> Iter<'_, 'a, G, I, E> {
         Iter::new(self)
+    }
+
+    pub fn for_each<F>(&mut self, f: F)
+    where
+        F: FnMut(G::Item<'_>),
+    {
+        Iter::new(self).for_each(f)
     }
 }
 

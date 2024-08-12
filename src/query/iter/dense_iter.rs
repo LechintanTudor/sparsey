@@ -1,5 +1,6 @@
 use crate::entity::Entity;
 use crate::query::Query;
+use std::mem;
 use std::ops::Range;
 use std::ptr::NonNull;
 
@@ -39,9 +40,8 @@ where
         let index = self.range.next()?;
 
         unsafe {
-            let entity = self.entities.add(index).read();
-            let ptr = G::get_ptr_unchecked(self.get, entity, index);
-            Some(G::deref_ptr(ptr))
+            let entity = *self.entities.add(index).as_ref();
+            mem::transmute(G::get(self.get, entity))
         }
     }
 }

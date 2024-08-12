@@ -87,6 +87,13 @@ impl World {
         }
     }
 
+    pub fn for_each<G>(&self, f: impl FnMut(G::Item<'_>))
+    where
+        G: Query,
+    {
+        self.query_all().for_each(f);
+    }
+
     /// Sets a new `GroupLayout`.
     ///
     /// This function iterates over all entities in the storage, so it is best called when the

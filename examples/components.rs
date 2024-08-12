@@ -18,11 +18,23 @@ fn main() {
         .build();
 
     let mut world = World::new(&layout);
+    world.create((Position { x: 0, y: 0 }, Speed { x: 1, y: 2 }));
+    world.create((Position { x: 0, y: 0 }, Speed { x: 2, y: 1 }));
 
-    let e0 = world.create((Position { x: 0, y: 0 }, Speed { x: 1, y: 2 }));
-    let e1 = world.create((Position { x: 0, y: 0 }, Speed { x: 2, y: 1 }));
+    world
+        .query_all::<(Entity, &Position, &Speed)>()
+        .iter()
+        .for_each(|item| println!("{item:#?}\n"));
 
-    for item in &mut world.query_all::<(Entity, &Position, &Speed)>() {
-        println!("{item:#?}\n");
-    }
+    println!("=====");
+
+    world
+        .query_all::<(Entity, &Position, &Speed)>()
+        .for_each(|item| println!("{item:#?}\n"));
+
+    println!("=====");
+
+    world.for_each::<(Entity, &Position, &Speed)>(|(entity, position, speed)| {
+        println!("{:#?}\n", (entity, position, speed))
+    });
 }

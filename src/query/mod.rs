@@ -13,7 +13,6 @@ use crate::entity::{Entity, World};
 pub trait Query {
     type View<'a>;
     type Item<'a>;
-    type Ptr;
 
     #[must_use]
     fn borrow(world: &World) -> Self::View<'_>;
@@ -31,62 +30,56 @@ pub trait Query {
     fn contains_none(view: &Self::View<'_>, entity: Entity) -> bool;
 
     #[must_use]
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>>;
+    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>>;
 
     #[must_use]
-    fn get_ptr(view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr>;
-
-    #[must_use]
-    unsafe fn get_ptr_unchecked(view: &Self::View<'_>, entity: Entity, index: usize) -> Self::Ptr;
-
-    #[must_use]
-    unsafe fn deref_ptr<'a>(ptr: Self::Ptr) -> Self::Item<'a>;
+    unsafe fn get_by_index<'a>(
+        view: &Self::View<'_>,
+        entity: Entity,
+        index: usize,
+    ) -> Self::Item<'a>;
 }
 
-#[allow(unused_variables)]
 impl Query for () {
     type View<'a> = ();
     type Item<'a> = ();
-    type Ptr = ();
 
     #[inline]
-    fn borrow(world: &World) -> Self::View<'_> {}
+    fn borrow(_world: &World) -> Self::View<'_> {}
 
     #[inline]
-    fn borrow_with_group_info(world: &World) -> (Self::View<'_>, Option<QueryGroupInfo>) {
+    fn borrow_with_group_info(_world: &World) -> (Self::View<'_>, Option<QueryGroupInfo>) {
         ((), Some(QueryGroupInfo::Empty))
     }
 
     #[inline]
-    fn entities<'a>(view: &'a Self::View<'_>) -> Option<&'a [Entity]> {
+    fn entities<'a>(_view: &'a Self::View<'_>) -> Option<&'a [Entity]> {
         None
     }
 
     #[inline]
-    fn contains_all(view: &Self::View<'_>, entity: Entity) -> bool {
+    fn contains_all(_view: &Self::View<'_>, _entity: Entity) -> bool {
         true
     }
 
     #[inline]
-    fn contains_none(view: &Self::View<'_>, entity: Entity) -> bool {
+    fn contains_none(_view: &Self::View<'_>, _entity: Entity) -> bool {
         true
     }
 
     #[inline]
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+    unsafe fn get<'a>(_view: &Self::View<'_>, _entity: Entity) -> Option<Self::Item<'a>> {
         Some(())
     }
 
     #[inline]
-    fn get_ptr(view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr> {
-        Some(())
+    unsafe fn get_by_index<'a>(
+        _view: &Self::View<'_>,
+        _entity: Entity,
+        _index: usize,
+    ) -> Self::Item<'a> {
+        // Empty
     }
-
-    #[inline]
-    unsafe fn get_ptr_unchecked(view: &Self::View<'_>, entity: Entity, index: usize) -> Self::Ptr {}
-
-    #[inline]
-    unsafe fn deref_ptr<'a>(ptr: Self::Ptr) -> Self::Item<'a> {}
 }
 
 macro_rules! impl_query {
@@ -97,7 +90,6 @@ macro_rules! impl_query {
         {
             type View<'a> = ($($Ty::View<'a>,)+);
             type Item<'a> = ($($Ty::Item<'a>,)+);
-            type Ptr = ($($Ty::Ptr,)+);
 
             fn borrow(world: &World) -> Self::View<'_> {
                 ($($Ty::borrow(world),)+)
@@ -149,20 +141,16 @@ macro_rules! impl_query {
                 $(!$Ty::contains(&view.$idx, entity))&&+
             }
 
-            fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-                Some(($($Ty::get(&mut view.$idx, entity)?,)+))
+            unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+                Some(($($Ty::get(&view.$idx, entity)?,)+))
             }
 
-            fn get_ptr(view: &Self::View<'_>, entity: Entity) -> Option<Self::Ptr> {
-                Some(($($Ty::get_ptr(&view.$idx, entity)?,)+))
-            }
-
-            unsafe fn get_ptr_unchecked(view: &Self::View<'_>, entity: Entity, index: usize) -> Self::Ptr {
-                ($($Ty::get_ptr_unchecked(&view.$idx, entity, index),)+)
-            }
-
-            unsafe fn deref_ptr<'a>(ptr: Self::Ptr) -> Self::Item<'a> {
-                ($($Ty::deref_ptr(ptr.$idx),)+)
+            unsafe fn get_by_index<'a>(
+                view: &Self::View<'_>,
+                entity: Entity,
+                index: usize,
+            ) -> Self::Item<'a> {
+                ($($Ty::get_by_index(&view.$idx, entity, index),)+)
             }
         }
     };

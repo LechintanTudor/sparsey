@@ -124,7 +124,7 @@ macro_rules! impl_comp_common {
             }
 
             #[must_use]
-            pub fn get_ptr_unchecked(&self, index: usize) -> NonNull<T> {
+            pub unsafe fn get_ptr_unchecked(&self, index: usize) -> NonNull<T> {
                 unsafe { self.components.get_ptr_unchecked(index) }
             }
 
