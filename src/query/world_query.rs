@@ -66,11 +66,11 @@ where
             return None;
         }
 
-        unsafe { G::get(&mut self.get, entity) }
+        unsafe { G::get(&self.get, entity) }
     }
 
     #[must_use]
-    pub fn contains(&mut self, entity: Entity) -> bool {
+    pub fn contains(&self, entity: Entity) -> bool {
         if !E::contains_none(&self.exclude, entity) {
             return false;
         }
@@ -113,7 +113,7 @@ where
     where
         F: FnMut(G::Item<'_>),
     {
-        Iter::new(self).for_each(f)
+        Iter::new(self).for_each(f);
     }
 }
 

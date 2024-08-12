@@ -9,10 +9,12 @@ pub use self::query_elem::*;
 pub use self::world_query::*;
 
 use crate::entity::{Entity, World};
+use std::ops::Range;
 
 pub trait Query {
     type View<'a>;
     type Item<'a>;
+    type Slice<'a>;
 
     #[must_use]
     fn borrow(world: &World) -> Self::View<'_>;
@@ -38,11 +40,19 @@ pub trait Query {
         entity: Entity,
         index: usize,
     ) -> Self::Item<'a>;
+
+    #[must_use]
+    unsafe fn slice<'a>(
+        view: &'a Self::View<'_>,
+        entities: &'a [Entity],
+        range: Range<usize>,
+    ) -> Self::Slice<'a>;
 }
 
 impl Query for () {
     type View<'a> = ();
     type Item<'a> = ();
+    type Slice<'a> = ();
 
     #[inline]
     fn borrow(_world: &World) -> Self::View<'_> {}
@@ -80,6 +90,15 @@ impl Query for () {
     ) -> Self::Item<'a> {
         // Empty
     }
+
+    #[inline]
+    unsafe fn slice<'a>(
+        _view: &'a Self::View<'_>,
+        _entities: &'a [Entity],
+        _range: Range<usize>,
+    ) -> Self::Slice<'a> {
+        // Empty
+    }
 }
 
 macro_rules! impl_query {
@@ -90,6 +109,7 @@ macro_rules! impl_query {
         {
             type View<'a> = ($($Ty::View<'a>,)+);
             type Item<'a> = ($($Ty::Item<'a>,)+);
+            type Slice<'a> = ($($Ty::Slice<'a>,)+);
 
             fn borrow(world: &World) -> Self::View<'_> {
                 ($($Ty::borrow(world),)+)
@@ -151,6 +171,15 @@ macro_rules! impl_query {
                 index: usize,
             ) -> Self::Item<'a> {
                 ($($Ty::get_by_index(&view.$idx, entity, index),)+)
+            }
+
+            #[inline]
+            unsafe fn slice<'a>(
+                view: &'a Self::View<'_>,
+                entities: &'a [Entity],
+                range: Range<usize>,
+            ) -> Self::Slice<'a> {
+                ($($Ty::slice(&view.$idx, entities, range.clone()),)+)
             }
         }
     };

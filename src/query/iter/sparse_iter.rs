@@ -1,7 +1,7 @@
 use crate::entity::Entity;
 use crate::query::{Query, WorldQueryAll};
+use std::ptr;
 use std::slice::Iter as SliceIter;
-use std::{mem, ptr};
 
 pub struct SparseIter<'query, 'view, G, I, E>
 where
@@ -67,11 +67,11 @@ where
             }
 
             unsafe {
-                let Some(item) = G::get(&mut self.query.get, entity) else {
+                let Some(item) = G::get(&self.query.get, entity) else {
                     continue;
                 };
 
-                break Some(mem::transmute(item));
+                break Some(item);
             }
         }
     }

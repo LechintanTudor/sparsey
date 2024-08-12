@@ -1,9 +1,12 @@
 use crate::entity::{Comp, CompMut, Component, Entity, World};
 use crate::query::ViewGroupInfo;
+use std::ops::Range;
+use std::slice;
 
 pub unsafe trait QueryElem {
     type View<'a>;
     type Item<'a>;
+    type Slice<'a>;
 
     #[must_use]
     fn borrow(world: &World) -> Self::View<'_>;
@@ -26,11 +29,19 @@ pub unsafe trait QueryElem {
         entity: Entity,
         index: usize,
     ) -> Self::Item<'a>;
+
+    #[must_use]
+    unsafe fn slice<'a>(
+        view: &'a Self::View<'_>,
+        entities: &'a [Entity],
+        range: Range<usize>,
+    ) -> Self::Slice<'a>;
 }
 
 unsafe impl QueryElem for Entity {
     type View<'a> = ();
     type Item<'a> = Entity;
+    type Slice<'a> = &'a [Entity];
 
     #[inline]
     fn borrow(_world: &World) -> Self::View<'_> {}
@@ -63,6 +74,15 @@ unsafe impl QueryElem for Entity {
     ) -> Self::Item<'a> {
         entity
     }
+
+    #[inline]
+    unsafe fn slice<'a>(
+        _view: &'a Self::View<'_>,
+        entities: &'a [Entity],
+        range: Range<usize>,
+    ) -> Self::Slice<'a> {
+        entities.get_unchecked(range)
+    }
 }
 
 unsafe impl<T> QueryElem for &'_ T
@@ -71,6 +91,7 @@ where
 {
     type View<'a> = Comp<'a, T>;
     type Item<'a> = &'a T;
+    type Slice<'a> = &'a [T];
 
     fn borrow(world: &World) -> Self::View<'_> {
         world.borrow::<T>()
@@ -106,6 +127,15 @@ where
     ) -> Self::Item<'a> {
         view.get_ptr_unchecked(index).as_ref()
     }
+
+    unsafe fn slice<'a>(
+        view: &'a Self::View<'_>,
+        _entities: &'a [Entity],
+        range: Range<usize>,
+    ) -> Self::Slice<'a> {
+        let data = view.get_ptr_unchecked(range.start).as_ptr();
+        slice::from_raw_parts(data, range.end - range.start)
+    }
 }
 
 unsafe impl<T> QueryElem for &'_ mut T
@@ -114,6 +144,7 @@ where
 {
     type View<'a> = CompMut<'a, T>;
     type Item<'a> = &'a mut T;
+    type Slice<'a> = &'a mut [T];
 
     fn borrow(world: &World) -> Self::View<'_> {
         world.borrow_mut()
@@ -149,6 +180,15 @@ where
     ) -> Self::Item<'a> {
         view.get_ptr_unchecked(index).as_mut()
     }
+
+    unsafe fn slice<'a>(
+        view: &'a Self::View<'_>,
+        _entities: &'a [Entity],
+        range: Range<usize>,
+    ) -> Self::Slice<'a> {
+        let data = view.get_ptr_unchecked(range.start).as_ptr();
+        slice::from_raw_parts_mut(data, range.end - range.start)
+    }
 }
 
 unsafe impl<T> QueryElem for Option<&'_ T>
@@ -157,6 +197,7 @@ where
 {
     type View<'a> = Comp<'a, T>;
     type Item<'a> = Option<&'a T>;
+    type Slice<'a> = ();
 
     fn borrow(world: &World) -> Self::View<'_> {
         world.borrow()
@@ -185,6 +226,14 @@ where
     ) -> Self::Item<'a> {
         view.get_ptr(entity).map(|ptr| ptr.as_ref())
     }
+
+    unsafe fn slice<'a>(
+        _view: &Self::View<'_>,
+        _entities: &'a [Entity],
+        _range: Range<usize>,
+    ) -> Self::Slice<'a> {
+        // Empty
+    }
 }
 
 unsafe impl<T> QueryElem for Option<&'_ mut T>
@@ -193,6 +242,7 @@ where
 {
     type View<'a> = CompMut<'a, T>;
     type Item<'a> = Option<&'a mut T>;
+    type Slice<'a> = ();
 
     fn borrow(world: &World) -> Self::View<'_> {
         world.borrow_mut()
@@ -220,5 +270,13 @@ where
         _index: usize,
     ) -> Self::Item<'a> {
         view.get_ptr(entity).map(|mut ptr| ptr.as_mut())
+    }
+
+    unsafe fn slice<'a>(
+        _view: &Self::View<'_>,
+        _entities: &'a [Entity],
+        _range: Range<usize>,
+    ) -> Self::Slice<'a> {
+        // Empty
     }
 }
