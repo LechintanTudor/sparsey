@@ -76,12 +76,14 @@ impl World {
     where
         G: Query,
     {
+        let (get, get_info) = G::borrow_with_group_info(self);
+
         WorldQueryAll {
             world: self,
-            get: G::borrow(self),
+            get,
             include: (),
             exclude: (),
-            get_info: Some(QueryGroupInfo::Empty),
+            get_info,
             include_info: Some(QueryGroupInfo::Empty),
             exclude_info: Some(QueryGroupInfo::Empty),
         }

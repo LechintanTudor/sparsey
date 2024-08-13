@@ -1,5 +1,8 @@
+use std::ops::Range;
+use std::ptr::NonNull;
+
 use crate::entity::{Entity, World};
-use crate::query::{Iter, Query, QueryGroupInfo};
+use crate::query::{DenseIter, Iter, Query, QueryGroupInfo, SparseIter};
 
 #[must_use]
 pub struct WorldQuery<'a, G, I, E>
@@ -106,14 +109,45 @@ where
     E: Query,
 {
     pub fn iter(&mut self) -> Iter<'_, 'a, G, I, E> {
-        Iter::new(self)
+        match self.get_range_and_entities() {
+            Some((range, entities)) => unsafe {
+                let entities = NonNull::new_unchecked(entities.as_ptr().cast_mut());
+                Iter::Dense(DenseIter::new(range, entities, &mut self.get))
+            },
+            None => Iter::Sparse(SparseIter::new(self)),
+        }
     }
 
     pub fn for_each<F>(&mut self, f: F)
     where
         F: FnMut(G::Item<'_>),
     {
-        Iter::new(self).for_each(f);
+        self.iter().for_each(f);
+    }
+
+    #[must_use]
+    pub fn slice(&mut self) -> Option<G::Slice<'_>> {
+        let (range, entities) = self.get_range_and_entities()?;
+        unsafe { Some(G::slice(&self.get, entities, range)) }
+    }
+
+    #[must_use]
+    fn get_range_and_entities(&self) -> Option<(Range<usize>, &[Entity])> {
+        let get_info = dbg!(self.get_info?);
+        let include_info = dbg!(self.include_info?);
+        let exclude_info = dbg!(self.exclude_info?);
+
+        let range = unsafe {
+            self.world
+                .components
+                .group_range(&get_info.add_query(&include_info)?, &exclude_info)?
+        };
+
+        let entities = G::entities(&self.get)
+            .or_else(|| I::entities(&self.include))
+            .unwrap_or(self.world.entities());
+
+        Some((range, entities))
     }
 }
 
@@ -174,6 +208,6 @@ where
     type IntoIter = Iter<'query, 'view, G, I, E>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self)
+        self.iter()
     }
 }

@@ -19,7 +19,7 @@ where
     I: Query,
     E: Query,
 {
-    pub fn new(query: &'query mut WorldQueryAll<'view, G, I, E>) -> Self {
+    pub(crate) fn new(query: &'query mut WorldQueryAll<'view, G, I, E>) -> Self {
         let entities = {
             let mut entities = G::entities(&query.get);
 
