@@ -101,6 +101,57 @@ impl Query for () {
     }
 }
 
+impl<Q> Query for Q
+where
+    Q: QueryElem,
+{
+    type View<'a> = <Q as QueryElem>::View<'a>;
+    type Item<'a> = <Q as QueryElem>::Item<'a>;
+    type Slice<'a> = <Q as QueryElem>::Slice<'a>;
+
+    fn borrow(world: &World) -> Self::View<'_> {
+        <Q as QueryElem>::borrow(world)
+    }
+
+    fn borrow_with_group_info(world: &World) -> (Self::View<'_>, Option<QueryGroupInfo>) {
+        let (view, info) = <Q as QueryElem>::borrow_with_group_info(world);
+        let info = info.map_or(QueryGroupInfo::Empty, QueryGroupInfo::One);
+        (view, Some(info))
+    }
+
+    fn entities<'a>(view: &'a Self::View<'_>) -> Option<&'a [Entity]> {
+        <Q as QueryElem>::entities(view)
+    }
+
+    fn contains_all(view: &Self::View<'_>, entity: Entity) -> bool {
+        <Q as QueryElem>::contains(view, entity)
+    }
+
+    fn contains_none(view: &Self::View<'_>, entity: Entity) -> bool {
+        !<Q as QueryElem>::contains(view, entity)
+    }
+
+    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+        <Q as QueryElem>::get(view, entity)
+    }
+
+    unsafe fn get_by_index<'a>(
+        view: &Self::View<'_>,
+        entity: Entity,
+        index: usize,
+    ) -> Self::Item<'a> {
+        <Q as QueryElem>::get_by_index(view, entity, index)
+    }
+
+    unsafe fn slice<'a>(
+        view: &'a Self::View<'_>,
+        entities: &'a [Entity],
+        range: Range<usize>,
+    ) -> Self::Slice<'a> {
+        <Q as QueryElem>::slice(view, entities, range)
+    }
+}
+
 macro_rules! impl_query {
     ($(($Ty:ident, $idx:tt)),+) => {
         impl<$($Ty),+> Query for ($($Ty,)+)
