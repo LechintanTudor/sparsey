@@ -5,10 +5,11 @@ pub mod query;
 pub(crate) mod util;
 
 use crate::component::{
-    Component, ComponentSet, ComponentStorage, GroupLayout, GroupLayoutBuilder, View, ViewMut,
+    Component, ComponentSet, ComponentStorage, GroupInfo, GroupLayout, GroupLayoutBuilder,
+    QueryGroupInfo, View, ViewMut,
 };
 use crate::entity::{Entity, EntityAllocator, EntitySparseSet};
-use crate::query::{GroupInfo, Query, QueryGroupInfo, WorldQuery, WorldQueryAll};
+use crate::query::{Query, WorldQuery, WorldQueryAll};
 use rustc_hash::FxHashMap;
 use std::mem;
 

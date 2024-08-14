@@ -1,6 +1,5 @@
-use crate::component::{Component, View, ViewMut};
+use crate::component::{Component, View, ViewGroupInfo, ViewMut};
 use crate::entity::Entity;
-use crate::query::ViewGroupInfo;
 use crate::World;
 use std::ops::Range;
 use std::slice;

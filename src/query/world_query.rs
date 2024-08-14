@@ -1,8 +1,9 @@
 use std::ops::Range;
 use std::ptr::NonNull;
 
+use crate::component::QueryGroupInfo;
 use crate::entity::Entity;
-use crate::query::{DenseIter, Iter, Query, QueryGroupInfo, SparseIter};
+use crate::query::{DenseIter, Iter, Query, SparseIter};
 use crate::World;
 
 #[must_use]

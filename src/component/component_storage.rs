@@ -1,9 +1,8 @@
 use crate::component::{
-    group, ungroup_all, Component, ComponentSparseSet, Group, GroupLayout, GroupMask,
-    GroupMetadata, NonZeroStorageMask, QueryMask, StorageMask, View, ViewMut,
+    group, ungroup_all, Component, ComponentSparseSet, Group, GroupInfo, GroupLayout, GroupMask,
+    GroupMetadata, NonZeroStorageMask, QueryGroupInfo, QueryMask, StorageMask, View, ViewMut,
 };
 use crate::entity::Entity;
-use crate::query::{GroupInfo, QueryGroupInfo};
 use atomic_refcell::AtomicRefCell;
 use rustc_hash::FxHashMap;
 use std::any::{self, TypeId};

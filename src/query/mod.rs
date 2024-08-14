@@ -1,13 +1,12 @@
-mod group_info;
 mod iter;
 mod query_elem;
 mod world_query;
 
-pub use self::group_info::*;
 pub use self::iter::*;
 pub use self::query_elem::*;
 pub use self::world_query::*;
 
+use crate::component::QueryGroupInfo;
 use crate::entity::Entity;
 use crate::World;
 use std::ops::Range;
