@@ -1,8 +1,9 @@
 use std::ops::Range;
 use std::ptr::NonNull;
 
-use crate::entity::{Entity, World};
+use crate::entity::Entity;
 use crate::query::{DenseIter, Iter, Query, QueryGroupInfo, SparseIter};
+use crate::World;
 
 #[must_use]
 pub struct WorldQuery<'a, G, I, E>

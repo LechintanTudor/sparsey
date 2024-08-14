@@ -1,4 +1,4 @@
-use crate::entity::ComponentSparseSet;
+use crate::component::ComponentSparseSet;
 use std::any::{self, TypeId};
 use std::cmp::Ordering;
 use std::fmt;

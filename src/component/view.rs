@@ -1,4 +1,5 @@
-use crate::entity::{Component, ComponentSparseSet, Entity};
+use crate::component::{Component, ComponentSparseSet};
+use crate::entity::Entity;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::fmt;
 use std::marker::PhantomData;

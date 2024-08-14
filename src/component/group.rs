@@ -1,4 +1,5 @@
-use crate::entity::{ComponentSparseSet, Entity, GroupMask, QueryMask};
+use crate::component::{ComponentSparseSet, GroupMask, QueryMask};
+use crate::entity::Entity;
 use atomic_refcell::AtomicRefCell;
 use std::ops::Range;
 

@@ -1,4 +1,4 @@
-use crate::entity::{StorageMask, MAX_GROUP_COUNT};
+use crate::component::{StorageMask, MAX_GROUP_COUNT};
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
 

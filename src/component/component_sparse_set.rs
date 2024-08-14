@@ -1,4 +1,5 @@
-use crate::entity::{Component, DenseEntity, Entity, SparseVec};
+use crate::component::Component;
+use crate::entity::{DenseEntity, Entity, SparseVec};
 use std::alloc::{alloc, dealloc, handle_alloc_error, Layout, LayoutError};
 use std::ptr::NonNull;
 use std::{fmt, mem, ptr, slice};

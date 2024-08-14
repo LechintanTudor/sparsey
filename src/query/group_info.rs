@@ -1,4 +1,4 @@
-use crate::entity::NonZeroStorageMask;
+use crate::component::NonZeroStorageMask;
 use std::cmp;
 
 #[derive(Clone, Copy, Default, Debug)]

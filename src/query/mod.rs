@@ -8,7 +8,8 @@ pub use self::iter::*;
 pub use self::query_elem::*;
 pub use self::world_query::*;
 
-use crate::entity::{Entity, World};
+use crate::entity::Entity;
+use crate::World;
 use std::ops::Range;
 
 pub trait Query {

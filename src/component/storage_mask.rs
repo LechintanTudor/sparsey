@@ -1,4 +1,4 @@
-use crate::entity::MAX_GROUP_ARITY;
+use crate::component::MAX_GROUP_ARITY;
 use std::num::NonZeroU16;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]

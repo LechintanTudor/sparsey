@@ -1,4 +1,4 @@
-use crate::entity::Component;
+use crate::component::Component;
 use crate::util::TypeData;
 
 /// Minimum number of component types required to form a group.
