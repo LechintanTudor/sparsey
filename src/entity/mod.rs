@@ -256,16 +256,6 @@ impl World {
         self.entities.as_slice()
     }
 
-    /// Borrows a view over all entities in the storage.
-    ///
-    /// This view supports the creation of new entities without requiring exclusive access to the
-    /// storage.
-    #[inline]
-    #[must_use]
-    pub fn borrow_entities(&self) -> Entities {
-        Entities::new(self)
-    }
-
     /// Borrows a shared view over all components of type `T` in the storage.
     #[must_use]
     pub fn borrow<T>(&self) -> Comp<T>

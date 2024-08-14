@@ -1,46 +1,9 @@
-use crate::entity::{Component, ComponentSparseSet, Entity, SparseVec, World};
+use crate::entity::{Component, ComponentSparseSet, Entity, SparseVec};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use std::fmt;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
 use std::ptr::NonNull;
-
-/// View over all entities in the storage.
-#[derive(Clone, Copy)]
-pub struct Entities<'a> {
-    entities: &'a World,
-}
-
-impl<'a> Entities<'a> {
-    #[inline]
-    #[must_use]
-    pub(crate) fn new(entities: &'a World) -> Self {
-        Self { entities }
-    }
-
-    /// Creates a new entity without requiring exclusive access to the storage. The entity is not
-    /// added to the storage until [`maintain`](EntityStorage::maintain) is called.
-    ///
-    /// Returns the newly created entity.
-    #[inline]
-    #[must_use]
-    pub fn create_atomic(&self) -> Entity {
-        self.entities.create_atomic()
-    }
-
-    /// Returns all entities in the storage as a slice.
-    #[inline]
-    #[must_use]
-    pub fn as_slice(&self) -> &[Entity] {
-        self.entities.entities()
-    }
-}
-
-impl fmt::Debug for Entities<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_list().entries(self.as_slice()).finish()
-    }
-}
 
 /// Shared view over all components of type `T` in the storage.
 pub struct Comp<'a, T> {
