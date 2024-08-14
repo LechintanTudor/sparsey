@@ -5,8 +5,8 @@ pub mod query;
 pub(crate) mod util;
 
 use crate::component::{
-    Component, ComponentSet, ComponentStorage, GroupInfo, GroupLayout, GroupLayoutBuilder,
-    QueryGroupInfo, View, ViewMut,
+    Component, ComponentSet, ComponentStorage, GroupInfo, GroupLayout, GroupLayoutBuilder, View,
+    ViewMut,
 };
 use crate::entity::{Entity, EntityAllocator, EntitySparseSet};
 use crate::query::{Query, WorldQuery, WorldQueryAll};
@@ -44,29 +44,22 @@ impl World {
     where
         G: Query,
     {
-        WorldQuery {
-            world: self,
-            get: G::borrow(self),
-            include: (),
-            exclude: (),
-        }
+        WorldQuery::new(self)
     }
 
     pub fn query_all<G>(&self) -> WorldQueryAll<G, (), ()>
     where
         G: Query,
     {
-        let (get, get_info) = G::borrow_with_group_info(self);
+        WorldQueryAll::new(self)
+    }
 
-        WorldQueryAll {
-            world: self,
-            get,
-            include: (),
-            exclude: (),
-            get_info,
-            include_info: Some(QueryGroupInfo::Empty),
-            exclude_info: Some(QueryGroupInfo::Empty),
-        }
+    #[must_use]
+    pub fn contains<G>(&self, entity: Entity) -> bool
+    where
+        G: Query,
+    {
+        WorldQuery::<G, (), ()>::new(self).contains(entity)
     }
 
     pub fn for_each<G>(&self, f: impl FnMut(G::Item<'_>))
@@ -225,7 +218,7 @@ impl World {
     /// Returns wether `entity` is present in the storage.
     #[inline]
     #[must_use]
-    pub fn contains(&self, entity: Entity) -> bool {
+    pub fn contains_entity(&self, entity: Entity) -> bool {
         self.entities.contains(entity)
     }
 

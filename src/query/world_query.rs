@@ -19,6 +19,20 @@ where
     pub(crate) exclude: E::View<'a>,
 }
 
+impl<'a, G> WorldQuery<'a, G, (), ()>
+where
+    G: Query,
+{
+    pub(crate) fn new(world: &'a World) -> Self {
+        Self {
+            world,
+            get: G::borrow(world),
+            include: (),
+            exclude: (),
+        }
+    }
+}
+
 impl<'a, G, E> WorldQuery<'a, G, (), E>
 where
     G: Query,
@@ -102,6 +116,25 @@ where
     pub(crate) get_info: Option<QueryGroupInfo>,
     pub(crate) include_info: Option<QueryGroupInfo>,
     pub(crate) exclude_info: Option<QueryGroupInfo>,
+}
+
+impl<'a, G> WorldQueryAll<'a, G, (), ()>
+where
+    G: Query,
+{
+    pub(crate) fn new(world: &'a World) -> Self {
+        let (get, get_info) = G::borrow_with_group_info(world);
+
+        Self {
+            world,
+            get,
+            include: (),
+            exclude: (),
+            get_info,
+            include_info: Some(QueryGroupInfo::Empty),
+            exclude_info: Some(QueryGroupInfo::Empty),
+        }
+    }
 }
 
 impl<'a, G, I, E> WorldQueryAll<'a, G, I, E>
