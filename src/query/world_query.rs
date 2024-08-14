@@ -76,6 +76,19 @@ where
     E: Query,
 {
     #[must_use]
+    pub fn contains(&self, entity: Entity) -> bool {
+        if !E::contains_none(&self.exclude, entity) {
+            return false;
+        }
+
+        if !I::contains_all(&self.include, entity) {
+            return false;
+        }
+
+        G::contains_all(&self.get, entity)
+    }
+
+    #[must_use]
     pub fn get(&mut self, entity: Entity) -> Option<G::Item<'_>> {
         if !E::contains_none(&self.exclude, entity) {
             return None;
@@ -89,16 +102,11 @@ where
     }
 
     #[must_use]
-    pub fn contains(&self, entity: Entity) -> bool {
-        if !E::contains_none(&self.exclude, entity) {
-            return false;
-        }
-
-        if !I::contains_all(&self.include, entity) {
-            return false;
-        }
-
-        G::contains_all(&self.get, entity)
+    pub fn map<T, F>(&mut self, entity: Entity, f: F) -> Option<T>
+    where
+        F: FnOnce(G::Item<'_>) -> T,
+    {
+        self.get(entity).map(f)
     }
 }
 

@@ -1,4 +1,13 @@
-use sparsey::entity::{Entity, GroupLayout, World};
+use sparsey::component::GroupLayout;
+use sparsey::World;
+
+pub struct Handler<'a>(Vec<(&'a mut Position,)>);
+
+impl Drop for Handler<'_> {
+    fn drop(&mut self) {
+        println!("{:#?}", self.0);
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct Position {
@@ -15,26 +24,14 @@ pub struct Speed {
 fn main() {
     let layout = GroupLayout::builder()
         .add_group::<(Position, Speed)>()
-        .build();
+        .build_layout();
 
     let mut world = World::new(&layout);
-    world.create((Position { x: 0, y: 0 }, Speed { x: 1, y: 2 }));
-    world.create((Position { x: 0, y: 0 }, Speed { x: 2, y: 1 }));
+    world.create((Position { x: -1, y: -1 },));
+    world.create((Position { x: 0, y: 0 }, Speed { x: 0, y: 0 }));
+    world.create((Position { x: 1, y: 1 }, Speed { x: 1, y: 1 }));
 
-    world
-        .query_all::<(Entity, &Position, &Speed)>()
-        .iter()
-        .for_each(|item| println!("{item:#?}\n"));
-
-    println!("=====");
-
-    world
-        .query_all::<(Entity, &Position, &Speed)>()
-        .for_each(|item| println!("{item:#?}\n"));
-
-    println!("=====");
-
-    world.for_each::<(Entity, &Position, &Speed)>(|(entity, position, speed)| {
-        println!("{:#?}\n", (entity, position, speed))
+    world.for_each::<&Position>(|position| {
+        println!("{position:#?}");
     });
 }

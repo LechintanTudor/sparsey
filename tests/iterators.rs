@@ -1,93 +1,66 @@
 mod common;
 
 use common::*;
-use sparsey::prelude::*;
+use sparsey::entity::Entity;
+use sparsey::query::Query;
+use sparsey::World;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
 #[test]
 fn test_sparse() {
-    let mut entities = EntityStorage::default();
-    entities.register::<A>();
-    entities.register::<B>();
-    entities.register::<C>();
-    entities.register::<D>();
+    let mut world = World::default();
+    world.register::<A>();
+    world.register::<B>();
+    world.register::<C>();
+    world.register::<D>();
 
-    let e0 = entities.create((A(0), B(0)));
-    let e1 = entities.create((A(1), B(1), C(1)));
-    let e2 = entities.create((A(2), B(2), C(2), D(2)));
+    let e0 = world.create((A(0), B(0)));
+    let e1 = world.create((A(1), B(1), C(1)));
+    let e2 = world.create((A(2), B(2), C(2), D(2)));
 
-    let a = entities.borrow::<A>();
-    let b = entities.borrow::<B>();
-    let c = entities.borrow::<C>();
-    let d = entities.borrow::<D>();
-
-    let i = (&a, &b).iter();
-    assert!(i.is_sparse());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e0, e1, e2]));
-
-    let i = (&a, &b, &c).iter();
-    assert!(i.is_sparse());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e1, e2]));
-
-    let i = (&a, &b, &c, &d).iter();
-    assert!(i.is_sparse());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e2]));
-
-    let i = (&a, &b).exclude(&c).iter();
-    assert!(i.is_sparse());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e0]));
-
-    let i = (&a, &b, &c).exclude(&d).iter();
-    assert!(i.is_sparse());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e1]));
+    let world = &mut world;
+    test_iter::<(&A, &B), ()>(world, false, &[e0, e1, e2]);
+    test_iter::<(&A, &B, &C), ()>(world, false, &[e1, e2]);
+    test_iter::<(&A, &B, &C, &D), ()>(world, false, &[e2]);
+    test_iter::<(&A, &B), &C>(world, false, &[e0]);
+    test_iter::<(&A, &B, &C), &D>(world, false, &[e1]);
 }
 
 #[test]
 fn test_dense() {
-    let layout = GroupLayout::builder()
+    let mut world = World::with_layout()
         .add_group::<(A, B)>()
         .add_group::<(A, B, C)>()
         .add_group::<(A, B, C, D)>()
         .build();
 
-    let mut entities = EntityStorage::new(&layout);
-    let e0 = entities.create((A(0), B(0)));
-    let e1 = entities.create((A(1), B(1), C(1)));
-    let e2 = entities.create((A(2), B(2), C(2), D(2)));
+    let e0 = world.create((A(0), B(0)));
+    let e1 = world.create((A(1), B(1), C(1)));
+    let e2 = world.create((A(2), B(2), C(2), D(2)));
 
-    let a = entities.borrow::<A>();
-    let b = entities.borrow::<B>();
-    let c = entities.borrow::<C>();
-    let d = entities.borrow::<D>();
+    let world = &mut world;
+    test_iter::<(&A, &B), ()>(world, true, &[e0, e1, e2]);
+    test_iter::<(&A, &B, &C), ()>(world, true, &[e1, e2]);
+    test_iter::<(&A, &B, &C, &D), ()>(world, true, &[e2]);
+    test_iter::<(&A, &B), &C>(world, true, &[e0]);
+    test_iter::<(&A, &B, &C), &D>(world, true, &[e1]);
+}
 
-    let i = (&a, &b).iter();
-    assert!(i.is_dense());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e0, e1, e2]));
+#[track_caller]
+fn test_iter<I, E>(world: &World, is_dense: bool, expected_entities: &[Entity])
+where
+    I: Query,
+    E: Query,
+{
+    let mut query = world.query_all::<Entity>().include::<I>().exclude::<E>();
 
-    let i = (&a, &b, &c).iter();
-    assert!(i.is_dense());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e1, e2]));
+    let iter = query.iter();
+    assert_eq!(iter.is_dense(), is_dense);
 
-    let i = (&a, &b, &c, &d).iter();
-    assert!(i.is_dense());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e2]));
-
-    let i = (&a, &b).exclude(&c).iter();
-    assert!(i.is_dense());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e0]));
-
-    let i = (&a, &b, &c).exclude(&d).iter();
-    assert!(i.is_dense());
-    let e = i.with_entity().map(|(e, _)| e).collect::<HashSet<_>>();
-    assert_eq!(e, HashSet::from_iter([e1]));
+    let entities = iter.collect::<HashSet<_>>();
+    assert_eq!(
+        entities,
+        HashSet::from_iter(expected_entities.iter().copied()),
+    );
 }

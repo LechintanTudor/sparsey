@@ -1,40 +1,40 @@
-use sparsey::prelude::*;
+use sparsey::World;
 
 #[test]
 fn test_entities_crud() {
-    let mut entities = EntityStorage::default();
+    let mut world = World::default();
 
     // World is empty at creation
-    assert!(entities.is_empty());
-    assert_eq!(entities.entities(), &[]);
+    assert!(world.is_empty());
+    assert_eq!(world.entities(), &[]);
 
     // Create an entity
-    let e0 = entities.create(());
-    assert!(!entities.is_empty());
-    assert!(entities.contains(e0));
-    assert_eq!(entities.entities(), &[e0]);
+    let e0 = world.create(());
+    assert!(!world.is_empty());
+    assert!(world.contains_entity(e0));
+    assert_eq!(world.entities(), &[e0]);
 
     // Create a second entity
-    let e1 = entities.create(());
-    assert!(!entities.is_empty());
-    assert!(entities.contains(e0));
-    assert!(entities.contains(e1));
-    assert_eq!(entities.entities(), &[e0, e1]);
+    let e1 = world.create(());
+    assert!(!world.is_empty());
+    assert!(world.contains_entity(e0));
+    assert!(world.contains_entity(e1));
+    assert_eq!(world.entities(), &[e0, e1]);
 
     // Destroy first entity
-    assert!(entities.destroy(e0));
-    assert!(!entities.is_empty());
-    assert!(!entities.contains(e0));
-    assert!(entities.contains(e1));
-    assert_eq!(entities.entities(), &[e1]);
+    assert!(world.destroy(e0));
+    assert!(!world.is_empty());
+    assert!(!world.contains_entity(e0));
+    assert!(world.contains_entity(e1));
+    assert_eq!(world.entities(), &[e1]);
 
     // Try to destroy missing entity
-    assert!(!entities.destroy(e0));
+    assert!(!world.destroy(e0));
 
     // Remove all entities
-    entities.clear();
-    assert!(entities.is_empty());
-    assert!(!entities.contains(e0));
-    assert!(!entities.contains(e1));
-    assert_eq!(entities.entities(), &[]);
+    world.clear();
+    assert!(world.is_empty());
+    assert!(!world.contains_entity(e0));
+    assert!(!world.contains_entity(e1));
+    assert_eq!(world.entities(), &[]);
 }

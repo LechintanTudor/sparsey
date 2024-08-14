@@ -1,32 +1,32 @@
 mod common;
 
 use self::common::*;
-use sparsey::prelude::*;
+use sparsey::World;
 
 #[test]
 fn test_components_register() {
-    let mut entities = EntityStorage::default();
+    let mut world = World::default();
 
     // No components are registered at creation
-    assert!(!entities.is_registered::<A>());
-    assert!(!entities.is_registered::<B>());
+    assert!(!world.is_registered::<A>());
+    assert!(!world.is_registered::<B>());
 
     // Register component A
-    entities.register::<A>();
-    assert!(entities.is_registered::<A>());
+    world.register::<A>();
+    assert!(world.is_registered::<A>());
 
     // Register component B
-    entities.register::<B>();
-    assert!(entities.is_registered::<A>());
-    assert!(entities.is_registered::<B>());
+    world.register::<B>();
+    assert!(world.is_registered::<A>());
+    assert!(world.is_registered::<B>());
 
     // Components remain registered even after clear
-    entities.clear();
-    assert!(entities.is_registered::<A>());
-    assert!(entities.is_registered::<B>());
+    world.clear();
+    assert!(world.is_registered::<A>());
+    assert!(world.is_registered::<B>());
 
     // Components remain registered even after reset
-    entities.reset();
-    assert!(entities.is_registered::<A>());
-    assert!(entities.is_registered::<B>());
+    world.reset();
+    assert!(world.is_registered::<A>());
+    assert!(world.is_registered::<B>());
 }

@@ -1,5 +1,6 @@
 use crate::component::Component;
 use crate::util::TypeData;
+use crate::World;
 
 /// Minimum number of component types required to form a group.
 pub const MIN_GROUP_ARITY: usize = 2;
@@ -144,7 +145,7 @@ impl GroupLayoutBuilder {
     }
 
     /// Builds the group layout from the previously added groups.
-    pub fn build(&mut self) -> GroupLayout {
+    pub fn build_layout(&mut self) -> GroupLayout {
         self.groups.sort_by_key(Vec::len);
 
         let mut families = Vec::<GroupFamily>::new();
@@ -170,6 +171,11 @@ impl GroupLayoutBuilder {
         );
 
         GroupLayout { families }
+    }
+
+    #[must_use]
+    pub fn build(&mut self) -> World {
+        World::new(&self.build_layout())
     }
 }
 
