@@ -1,4 +1,4 @@
-use crate::entity::{Comp, CompMut, Component, Entity, World};
+use crate::entity::{Component, Entity, View, ViewMut, World};
 use crate::query::ViewGroupInfo;
 use std::ops::Range;
 use std::slice;
@@ -89,7 +89,7 @@ unsafe impl<T> QueryElem for &'_ T
 where
     T: Component,
 {
-    type View<'a> = Comp<'a, T>;
+    type View<'a> = View<'a, T>;
     type Item<'a> = &'a T;
     type Slice<'a> = &'a [T];
 
@@ -142,7 +142,7 @@ unsafe impl<T> QueryElem for &'_ mut T
 where
     T: Component,
 {
-    type View<'a> = CompMut<'a, T>;
+    type View<'a> = ViewMut<'a, T>;
     type Item<'a> = &'a mut T;
     type Slice<'a> = &'a mut [T];
 
@@ -195,7 +195,7 @@ unsafe impl<T> QueryElem for Option<&'_ T>
 where
     T: Component,
 {
-    type View<'a> = Comp<'a, T>;
+    type View<'a> = View<'a, T>;
     type Item<'a> = Option<&'a T>;
     type Slice<'a> = ();
 
@@ -240,7 +240,7 @@ unsafe impl<T> QueryElem for Option<&'_ mut T>
 where
     T: Component,
 {
-    type View<'a> = CompMut<'a, T>;
+    type View<'a> = ViewMut<'a, T>;
     type Item<'a> = Option<&'a mut T>;
     type Slice<'a> = ();
 

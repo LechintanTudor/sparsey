@@ -1,6 +1,5 @@
 //! Manages entities and their associated components.
 
-mod borrow;
 mod component;
 mod component_set;
 mod component_sparse_set;
@@ -13,13 +12,14 @@ mod group_layout;
 mod group_mask;
 mod sparse_vec;
 mod storage_mask;
+mod view;
 
-pub use self::borrow::*;
 pub use self::component::*;
 pub use self::component_set::*;
 pub use self::entity::*;
 pub use self::group_layout::*;
 pub use self::sparse_vec::*;
+pub use self::view::*;
 
 pub(crate) use self::component_sparse_set::*;
 pub(crate) use self::component_storage::*;
@@ -258,7 +258,7 @@ impl World {
 
     /// Borrows a shared view over all components of type `T` in the storage.
     #[must_use]
-    pub fn borrow<T>(&self) -> Comp<T>
+    pub fn borrow<T>(&self) -> View<T>
     where
         T: Component,
     {
@@ -267,7 +267,7 @@ impl World {
 
     /// Borrows an exclusive view over all components of type `T` in the storage.
     #[must_use]
-    pub fn borrow_mut<T>(&self) -> CompMut<T>
+    pub fn borrow_mut<T>(&self) -> ViewMut<T>
     where
         T: Component,
     {
@@ -275,7 +275,7 @@ impl World {
     }
 
     #[must_use]
-    pub fn borrow_with_group_info<T>(&self) -> (Comp<T>, Option<GroupInfo>)
+    pub fn borrow_with_group_info<T>(&self) -> (View<T>, Option<GroupInfo>)
     where
         T: Component,
     {
@@ -283,7 +283,7 @@ impl World {
     }
 
     #[must_use]
-    pub fn borrow_with_group_info_mut<T>(&self) -> (CompMut<T>, Option<GroupInfo>)
+    pub fn borrow_with_group_info_mut<T>(&self) -> (ViewMut<T>, Option<GroupInfo>)
     where
         T: Component,
     {

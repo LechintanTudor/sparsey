@@ -38,13 +38,13 @@ impl ComponentSparseSet {
             Some(dense_entity) => {
                 let index = dense_entity.dense();
 
-                self.entities.as_ptr().add(index).write(entity);
+                self.entities.add(index).as_ptr().write(entity);
 
                 Some(
                     self.components
-                        .as_ptr()
                         .cast::<T>()
                         .add(index)
+                        .as_ptr()
                         .replace(component),
                 )
             }
@@ -58,12 +58,12 @@ impl ComponentSparseSet {
                     self.grow();
                 }
 
-                self.entities.as_ptr().add(self.len).write(entity);
+                self.entities.add(self.len).as_ptr().write(entity);
 
                 self.components
                     .cast::<T>()
-                    .as_ptr()
                     .add(self.len)
+                    .as_ptr()
                     .write(component);
 
                 self.len += 1;
@@ -79,8 +79,8 @@ impl ComponentSparseSet {
         let index = self.sparse.remove(entity)?.dense();
         self.len -= 1;
 
-        let last_entity = *self.entities.as_ptr().add(self.len);
-        *self.entities.as_ptr().add(index) = last_entity;
+        let last_entity = *self.entities.add(self.len).as_ref();
+        *self.entities.add(index).as_mut() = last_entity;
 
         if index < self.len {
             *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(DenseEntity {
@@ -89,8 +89,8 @@ impl ComponentSparseSet {
             });
         }
 
-        let removed_ptr = self.components.cast::<T>().as_ptr().add(index);
-        let last_ptr = self.components.cast::<T>().as_ptr().add(self.len);
+        let removed_ptr = self.components.cast::<T>().add(index).as_ptr();
+        let last_ptr = self.components.cast::<T>().add(self.len).as_ptr();
 
         let component = removed_ptr.read();
         ptr::copy(last_ptr, removed_ptr, 1);
@@ -108,8 +108,8 @@ impl ComponentSparseSet {
 
         self.len -= 1;
 
-        let last_entity = *self.entities.as_ptr().add(self.len);
-        *self.entities.as_ptr().add(index) = last_entity;
+        let last_entity = *self.entities.add(self.len).as_ref();
+        *self.entities.add(index).as_mut() = last_entity;
 
         if index < self.len {
             *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(DenseEntity {
@@ -118,10 +118,10 @@ impl ComponentSparseSet {
             });
         }
 
-        let dropped_ptr = self.components.cast::<T>().as_ptr().add(index);
+        let dropped_ptr = self.components.cast::<T>().add(index).as_ptr();
         dropped_ptr.drop_in_place();
 
-        let last_ptr = self.components.cast::<T>().as_ptr().add(self.len);
+        let last_ptr = self.components.cast::<T>().add(self.len).as_ptr();
         ptr::copy(last_ptr, dropped_ptr, 1);
     }
 
@@ -139,7 +139,7 @@ impl ComponentSparseSet {
         T: Component,
     {
         let dense = self.sparse.get(entity)?.dense();
-        Some(&*self.components.cast::<T>().as_ptr().add(dense))
+        Some(self.components.cast::<T>().add(dense).as_ref())
     }
 
     #[inline]
@@ -149,7 +149,7 @@ impl ComponentSparseSet {
         T: Component,
     {
         let dense = self.sparse.get(entity)?.dense();
-        Some(&mut *self.components.cast::<T>().as_ptr().add(dense))
+        Some(self.components.cast::<T>().add(dense).as_mut())
     }
 
     #[inline]
@@ -205,32 +205,6 @@ impl ComponentSparseSet {
         T: Component,
     {
         slice::from_raw_parts_mut(self.components.cast::<T>().as_ptr(), self.len)
-    }
-
-    #[inline]
-    #[must_use]
-    pub unsafe fn split<T>(&self) -> (&[Entity], &SparseVec, &[T])
-    where
-        T: Component,
-    {
-        (
-            slice::from_raw_parts(self.entities.as_ptr(), self.len),
-            &self.sparse,
-            slice::from_raw_parts(self.components.cast::<T>().as_ptr(), self.len),
-        )
-    }
-
-    #[inline]
-    #[must_use]
-    pub unsafe fn split_mut<T>(&mut self) -> (&[Entity], &SparseVec, &mut [T])
-    where
-        T: Component,
-    {
-        (
-            slice::from_raw_parts(self.entities.as_ptr(), self.len),
-            &self.sparse,
-            slice::from_raw_parts_mut(self.components.cast::<T>().as_ptr(), self.len),
-        )
     }
 
     #[inline]
@@ -325,8 +299,8 @@ impl ComponentSparseSet {
         debug_assert_ne!(a, b);
 
         let (sparse_a, sparse_b) = {
-            let entity_a = &mut *self.entities.as_ptr().add(a);
-            let entity_b = &mut *self.entities.as_ptr().add(b);
+            let entity_a = self.entities.add(a).as_mut();
+            let entity_b = self.entities.add(b).as_mut();
             mem::swap(entity_a, entity_b);
 
             (entity_a.sparse(), entity_b.sparse())
@@ -334,8 +308,8 @@ impl ComponentSparseSet {
 
         self.sparse.swap(sparse_a, sparse_b);
 
-        let component_a = &mut *self.components.cast::<T>().as_ptr().add(a);
-        let component_b = &mut *self.components.cast::<T>().as_ptr().add(b);
+        let component_a = self.components.cast::<T>().add(a).as_mut();
+        let component_b = self.components.cast::<T>().add(b).as_mut();
         mem::swap(component_a, component_b);
     }
 
@@ -348,7 +322,7 @@ impl ComponentSparseSet {
         if mem::needs_drop::<T>() {
             for i in 0..self.len {
                 unsafe {
-                    self.components.cast::<T>().as_ptr().add(i).drop_in_place();
+                    self.components.cast::<T>().add(i).as_ptr().drop_in_place();
                 }
             }
         }
@@ -363,14 +337,14 @@ impl ComponentSparseSet {
         if mem::needs_drop::<T>() {
             for i in 0..self.len {
                 unsafe {
-                    self.components.cast::<T>().as_ptr().add(i).drop_in_place();
+                    self.components.cast::<T>().add(i).as_ptr().drop_in_place();
                 }
             }
         }
 
         if self.cap != 0 {
             let (layout, _) = Self::compute_layout::<T>(self.cap).unwrap();
-            dealloc(self.entities.cast().as_ptr(), layout);
+            dealloc(self.entities.cast::<u8>().as_ptr(), layout);
         }
     }
 

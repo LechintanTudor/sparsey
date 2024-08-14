@@ -1,6 +1,6 @@
 use crate::entity::{
-    group, ungroup_all, Comp, CompMut, Component, ComponentSparseSet, Entity, Group, GroupLayout,
-    GroupMask, GroupMetadata, NonZeroStorageMask, QueryMask, StorageMask,
+    group, ungroup_all, Component, ComponentSparseSet, Entity, Group, GroupLayout, GroupMask,
+    GroupMetadata, NonZeroStorageMask, QueryMask, StorageMask, View, ViewMut,
 };
 use crate::query::{GroupInfo, QueryGroupInfo};
 use atomic_refcell::AtomicRefCell;
@@ -173,7 +173,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn borrow<T>(&self) -> Comp<T>
+    pub fn borrow<T>(&self) -> View<T>
     where
         T: Component,
     {
@@ -182,7 +182,7 @@ impl ComponentStorage {
         };
 
         unsafe {
-            Comp::new(
+            View::new(
                 self.components
                     .get_unchecked(metadata.storage_index)
                     .borrow(),
@@ -191,7 +191,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn borrow_mut<T>(&self) -> CompMut<T>
+    pub fn borrow_mut<T>(&self) -> ViewMut<T>
     where
         T: Component,
     {
@@ -200,7 +200,7 @@ impl ComponentStorage {
         };
 
         unsafe {
-            CompMut::new(
+            ViewMut::new(
                 self.components
                     .get_unchecked(metadata.storage_index)
                     .borrow_mut(),
@@ -209,7 +209,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn borrow_with_group_info<T>(&self) -> (Comp<T>, Option<GroupInfo>)
+    pub fn borrow_with_group_info<T>(&self) -> (View<T>, Option<GroupInfo>)
     where
         T: Component,
     {
@@ -218,7 +218,7 @@ impl ComponentStorage {
         };
 
         let view = unsafe {
-            Comp::new(
+            View::new(
                 self.components
                     .get_unchecked(metadata.storage_index)
                     .borrow(),
@@ -229,7 +229,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn borrow_with_group_info_mut<T>(&self) -> (CompMut<T>, Option<GroupInfo>)
+    pub fn borrow_with_group_info_mut<T>(&self) -> (ViewMut<T>, Option<GroupInfo>)
     where
         T: Component,
     {
@@ -238,7 +238,7 @@ impl ComponentStorage {
         };
 
         let view = unsafe {
-            CompMut::new(
+            ViewMut::new(
                 self.components
                     .get_unchecked(metadata.storage_index)
                     .borrow_mut(),

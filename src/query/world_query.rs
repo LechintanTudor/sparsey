@@ -133,9 +133,9 @@ where
 
     #[must_use]
     fn get_range_and_entities(&self) -> Option<(Range<usize>, &[Entity])> {
-        let get_info = dbg!(self.get_info?);
-        let include_info = dbg!(self.include_info?);
-        let exclude_info = dbg!(self.exclude_info?);
+        let get_info = self.get_info?;
+        let include_info = self.include_info?;
+        let exclude_info = self.exclude_info?;
 
         let range = unsafe {
             self.world
