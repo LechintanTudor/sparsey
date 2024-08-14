@@ -297,7 +297,7 @@ impl ComponentStorage {
 
         let mask = QueryMask {
             include: include.storage_mask.into(),
-            exclude: StorageMask::EMPTY,
+            exclude: exclude.storage_mask.into(),
         };
 
         if mask != child_group.metadata.exclude_mask {
