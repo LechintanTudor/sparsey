@@ -2,8 +2,6 @@ pub mod component;
 pub mod entity;
 pub mod query;
 
-pub(crate) mod util;
-
 use crate::component::{
     Component, ComponentSet, ComponentStorage, GroupInfo, GroupLayout, GroupLayoutBuilder, View,
     ViewMut,

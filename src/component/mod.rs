@@ -1,3 +1,4 @@
+mod component_data;
 mod component_set;
 mod component_sparse_set;
 mod component_storage;
@@ -13,6 +14,7 @@ pub use self::group_info::*;
 pub use self::group_layout::*;
 pub use self::view::*;
 
+pub(crate) use self::component_data::*;
 pub(crate) use self::component_sparse_set::*;
 pub(crate) use self::component_storage::*;
 pub(crate) use self::group::*;

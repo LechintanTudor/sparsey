@@ -7,9 +7,9 @@ use std::marker::PhantomData;
 
 /// Holds information about a type.
 #[derive(Clone, Copy)]
-pub struct TypeData(&'static dyn AbstractTypeData);
+pub struct ComponentData(&'static dyn AbstractComponentData);
 
-impl TypeData {
+impl ComponentData {
     /// Returns the type data for type `T`.
     #[must_use]
     pub const fn new<T>() -> Self
@@ -40,32 +40,32 @@ impl TypeData {
     }
 }
 
-impl PartialEq for TypeData {
+impl PartialEq for ComponentData {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.type_id().eq(&other.type_id())
     }
 }
 
-impl Eq for TypeData {
+impl Eq for ComponentData {
     // Empty
 }
 
-impl PartialOrd for TypeData {
+impl PartialOrd for ComponentData {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for TypeData {
+impl Ord for ComponentData {
     #[inline]
     fn cmp(&self, other: &Self) -> Ordering {
         self.type_id().cmp(&other.0.type_id())
     }
 }
 
-impl Hash for TypeData {
+impl Hash for ComponentData {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
@@ -74,7 +74,7 @@ impl Hash for TypeData {
     }
 }
 
-impl fmt::Debug for TypeData {
+impl fmt::Debug for ComponentData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct(stringify!(ComponentData))
             .field("type_id", &self.type_id())
@@ -83,7 +83,7 @@ impl fmt::Debug for TypeData {
     }
 }
 
-unsafe trait AbstractTypeData: Send + Sync + 'static {
+unsafe trait AbstractComponentData: Send + Sync + 'static {
     #[must_use]
     fn type_id(&self) -> TypeId;
 
@@ -104,7 +104,7 @@ unsafe impl<T> Sync for ComponentDataImpl<T> {
     // Empty
 }
 
-unsafe impl<T> AbstractTypeData for ComponentDataImpl<T>
+unsafe impl<T> AbstractComponentData for ComponentDataImpl<T>
 where
     T: Send + Sync + 'static,
 {
