@@ -1,3 +1,7 @@
+#![no_std]
+
+extern crate alloc;
+
 pub mod component;
 pub mod entity;
 pub mod query;
@@ -8,8 +12,7 @@ use crate::component::{
 };
 use crate::entity::{Entity, EntityAllocator, EntitySparseSet};
 use crate::query::{Query, WorldQuery, WorldQueryAll};
-use rustc_hash::FxHashMap;
-use std::mem;
+use core::mem;
 
 /// Storage for entities and components.
 #[derive(Default, Debug)]
@@ -24,12 +27,10 @@ impl World {
     #[inline]
     #[must_use]
     pub fn new(layout: &GroupLayout) -> Self {
-        let components = unsafe { ComponentStorage::new(&[], layout, FxHashMap::default()) };
-
         Self {
             allocator: EntityAllocator::new(),
             entities: EntitySparseSet::new(),
-            components,
+            components: ComponentStorage::new(layout),
         }
     }
 
@@ -76,7 +77,7 @@ impl World {
         let sparse_sets = mem::take(&mut self.components).into_sparse_sets();
 
         self.components =
-            unsafe { ComponentStorage::new(self.entities.as_slice(), layout, sparse_sets) };
+            unsafe { ComponentStorage::recycled(layout, self.entities.as_slice(), sparse_sets) };
     }
 
     /// Registers a new component type.

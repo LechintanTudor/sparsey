@@ -1,5 +1,7 @@
 use crate::component::{Component, ComponentData};
 use crate::World;
+use alloc::vec;
+use alloc::vec::Vec;
 
 /// Minimum number of component types required to form a group.
 pub const MIN_GROUP_ARITY: usize = 2;

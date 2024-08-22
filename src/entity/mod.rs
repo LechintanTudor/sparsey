@@ -9,9 +9,9 @@ pub use self::sparse_vec::*;
 pub(crate) use self::entity_allocator::*;
 pub(crate) use self::entity_sparse_set::*;
 
-use std::cmp::Ordering;
-use std::fmt;
-use std::num::NonZeroU32;
+use core::cmp::Ordering;
+use core::fmt;
+use core::num::NonZeroU32;
 
 /// Version used for recylcling entity indexes.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]

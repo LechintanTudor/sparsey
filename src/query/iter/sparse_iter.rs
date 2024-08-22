@@ -1,7 +1,7 @@
 use crate::entity::Entity;
 use crate::query::{Query, WorldQueryAll};
-use std::ptr;
-use std::slice::Iter as SliceIter;
+use core::ptr;
+use core::slice::Iter as SliceIter;
 
 pub struct SparseIter<'query, 'view, G, I, E>
 where

@@ -1,6 +1,6 @@
 use crate::component::{StorageMask, MAX_GROUP_COUNT};
-use std::fmt;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
+use core::fmt;
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub(crate) struct GroupMask(pub u64);

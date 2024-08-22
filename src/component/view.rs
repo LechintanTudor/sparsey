@@ -1,10 +1,10 @@
 use crate::component::{Component, ComponentSparseSet};
 use crate::entity::Entity;
 use atomic_refcell::{AtomicRef, AtomicRefMut};
-use std::fmt;
-use std::marker::PhantomData;
-use std::ops::{Index, IndexMut};
-use std::ptr::NonNull;
+use core::fmt;
+use core::marker::PhantomData;
+use core::ops::{Index, IndexMut};
+use core::ptr::NonNull;
 
 /// Shared view over all components of type `T` in the storage.
 pub struct View<'a, T> {

@@ -1,8 +1,8 @@
 use crate::component::Component;
 use crate::entity::{DenseEntity, Entity, SparseVec};
-use std::alloc::{alloc, dealloc, handle_alloc_error, Layout, LayoutError};
-use std::ptr::NonNull;
-use std::{fmt, mem, ptr, slice};
+use alloc::{alloc, Layout, LayoutError};
+use core::ptr::NonNull;
+use core::{fmt, mem, ptr, slice};
 
 pub(crate) struct ComponentSparseSet {
     sparse: SparseVec,
@@ -259,10 +259,10 @@ impl ComponentSparseSet {
             let (new_layout, new_components_offset) =
                 Self::compute_layout::<T>(new_cap).expect("Failed to compute new component layout");
 
-            let new_data = alloc(new_layout);
+            let new_data = alloc::alloc(new_layout);
 
             if new_data.is_null() {
-                handle_alloc_error(new_layout);
+                alloc::handle_alloc_error(new_layout);
             }
 
             #[allow(clippy::cast_ptr_alignment)]
@@ -283,7 +283,7 @@ impl ComponentSparseSet {
 
         if self.cap != 0 {
             let (layout, _) = Self::compute_layout::<T>(self.cap).unwrap();
-            dealloc(self.entities.cast().as_ptr(), layout);
+            alloc::dealloc(self.entities.cast().as_ptr(), layout);
         }
 
         self.entities = new_entities;
@@ -345,7 +345,7 @@ impl ComponentSparseSet {
 
         if self.cap != 0 {
             let (layout, _) = Self::compute_layout::<T>(self.cap).unwrap();
-            dealloc(self.entities.cast::<u8>().as_ptr(), layout);
+            alloc::dealloc(self.entities.cast::<u8>().as_ptr(), layout);
         }
     }
 

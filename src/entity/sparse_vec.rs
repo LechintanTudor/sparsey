@@ -1,5 +1,6 @@
 use crate::entity::{DenseEntity, Entity};
-use std::{fmt, iter, mem};
+use alloc::vec::Vec;
+use core::{fmt, iter, mem};
 
 /// Maps entities to dense indexes.
 #[derive(Clone, Default)]

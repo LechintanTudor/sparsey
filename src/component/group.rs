@@ -1,7 +1,7 @@
 use crate::component::{ComponentSparseSet, GroupMask, QueryMask};
 use crate::entity::Entity;
 use atomic_refcell::AtomicRefCell;
-use std::ops::Range;
+use core::ops::Range;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Group {

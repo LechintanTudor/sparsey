@@ -1,6 +1,6 @@
 use crate::entity::Entity;
-use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use alloc::collections::VecDeque;
+use core::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 #[derive(Default, Debug)]
 pub(crate) struct EntityAllocator {

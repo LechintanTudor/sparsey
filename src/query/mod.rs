@@ -9,7 +9,7 @@ pub use self::world_query::*;
 use crate::component::QueryGroupInfo;
 use crate::entity::Entity;
 use crate::World;
-use std::ops::Range;
+use core::ops::Range;
 
 pub trait Query {
     type View<'a>;

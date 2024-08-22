@@ -1,5 +1,5 @@
 use crate::component::MAX_GROUP_ARITY;
-use std::num::NonZeroU16;
+use core::num::NonZeroU16;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub(crate) struct StorageMask(u16);
@@ -39,7 +39,7 @@ impl NonZeroStorageMask {
 
 macro_rules! impl_common {
     ($Ty:ty) => {
-        impl ::std::ops::BitOr for $Ty {
+        impl ::core::ops::BitOr for $Ty {
             type Output = Self;
 
             #[inline]
@@ -48,16 +48,16 @@ macro_rules! impl_common {
             }
         }
 
-        impl ::std::ops::BitOrAssign for $Ty {
+        impl ::core::ops::BitOrAssign for $Ty {
             #[inline]
             fn bitor_assign(&mut self, rhs: Self) {
                 self.0 |= rhs.0;
             }
         }
 
-        impl ::std::fmt::Debug for $Ty {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                ::std::write!(f, "{:0>16b}", self.0)
+        impl ::core::fmt::Debug for $Ty {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                ::core::write!(f, "{:0>16b}", self.0)
             }
         }
     };

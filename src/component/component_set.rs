@@ -1,7 +1,7 @@
 use crate::component::{group, panic_missing_comp, ungroup, Component, GroupMask};
 use crate::entity::Entity;
 use crate::World;
-use std::any::TypeId;
+use core::any::TypeId;
 
 /// Handles insert and remove operations for components stored in an
 /// [`EntitySotrage`](crate::entity::World).

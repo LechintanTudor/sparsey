@@ -1,5 +1,5 @@
 use crate::component::NonZeroStorageMask;
-use std::cmp;
+use core::cmp;
 
 #[derive(Clone, Copy, Default, Debug)]
 pub enum QueryGroupInfo {

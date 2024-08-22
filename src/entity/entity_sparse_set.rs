@@ -1,5 +1,6 @@
 use crate::entity::{DenseEntity, Entity, SparseVec};
-use std::{fmt, mem};
+use alloc::vec::Vec;
+use core::{fmt, mem};
 
 #[derive(Clone, Default)]
 pub(crate) struct EntitySparseSet {

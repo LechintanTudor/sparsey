@@ -1,7 +1,7 @@
 use crate::entity::Entity;
 use crate::query::Query;
-use std::ops::Range;
-use std::ptr::NonNull;
+use core::ops::Range;
+use core::ptr::NonNull;
 
 pub struct DenseIter<'query, 'view, G>
 where

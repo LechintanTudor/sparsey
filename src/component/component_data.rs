@@ -1,9 +1,9 @@
 use crate::component::ComponentSparseSet;
-use std::any::{self, TypeId};
-use std::cmp::Ordering;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::marker::PhantomData;
+use core::any::{self, TypeId};
+use core::cmp::Ordering;
+use core::fmt;
+use core::hash::{Hash, Hasher};
+use core::marker::PhantomData;
 
 /// Holds information about a type.
 #[derive(Clone, Copy)]

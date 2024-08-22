@@ -3,12 +3,16 @@ use crate::component::{
     GroupMetadata, NonZeroStorageMask, QueryGroupInfo, QueryMask, StorageMask, View, ViewMut,
 };
 use crate::entity::Entity;
+use alloc::vec::Vec;
 use atomic_refcell::AtomicRefCell;
-use rustc_hash::FxHashMap;
-use std::any::{self, TypeId};
-use std::collections::hash_map::Entry;
-use std::ops::Range;
-use std::{cmp, mem};
+use core::any::{self, TypeId};
+use core::ops::Range;
+use core::{cmp, mem};
+use hashbrown::hash_map::Entry;
+use hashbrown::HashMap;
+use rustc_hash::FxBuildHasher;
+
+type FxHashMap<K, V> = HashMap<K, V, FxBuildHasher>;
 
 #[derive(Default, Debug)]
 pub(crate) struct ComponentStorage {
@@ -19,9 +23,14 @@ pub(crate) struct ComponentStorage {
 
 impl ComponentStorage {
     #[must_use]
-    pub unsafe fn new(
-        entities: &[Entity],
+    pub fn new(layout: &GroupLayout) -> Self {
+        unsafe { Self::recycled(layout, &[], FxHashMap::default()) }
+    }
+
+    #[must_use]
+    pub unsafe fn recycled(
         layout: &GroupLayout,
+        entities: &[Entity],
         mut sparse_sets: FxHashMap<TypeId, ComponentSparseSet>,
     ) -> Self {
         let mut groups = Vec::new();

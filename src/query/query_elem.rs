@@ -1,8 +1,8 @@
 use crate::component::{Component, View, ViewGroupInfo, ViewMut};
 use crate::entity::Entity;
 use crate::World;
-use std::ops::Range;
-use std::slice;
+use core::ops::Range;
+use core::slice;
 
 pub unsafe trait QueryElem {
     type View<'a>;
