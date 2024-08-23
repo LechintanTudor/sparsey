@@ -67,12 +67,33 @@ where
             }
 
             unsafe {
-                let Some(item) = G::get(&self.query.get, entity) else {
-                    continue;
+                if let Some(item) = G::get(&self.query.get, entity) {
+                    break Some(item);
                 };
-
-                break Some(item);
             }
         }
+    }
+
+    fn fold<B, F>(self, mut init: B, mut f: F) -> B
+    where
+        F: FnMut(B, Self::Item) -> B,
+    {
+        for &entity in self.entities {
+            if !E::contains_none(&self.query.exclude, entity) {
+                continue;
+            }
+
+            if !I::contains_all(&self.query.include, entity) {
+                continue;
+            }
+
+            unsafe {
+                if let Some(item) = G::get(&self.query.get, entity) {
+                    init = f(init, item);
+                };
+            }
+        }
+
+        init
     }
 }

@@ -40,7 +40,21 @@ where
 
         unsafe {
             let entity = *self.entities.add(index).as_ref();
-            G::get(self.get, entity)
+            Some(G::get_by_index(self.get, entity, index))
         }
+    }
+
+    fn fold<B, F>(self, mut init: B, mut f: F) -> B
+    where
+        F: FnMut(B, Self::Item) -> B,
+    {
+        for i in self.range {
+            unsafe {
+                let entity = *self.entities.add(i).as_ref();
+                init = f(init, G::get_by_index(self.get, entity, i));
+            }
+        }
+
+        init
     }
 }
