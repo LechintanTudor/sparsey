@@ -36,11 +36,11 @@ where
     type Item = G::Item<'query>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let index = self.range.next()?;
+        let i = self.range.next()?;
 
         unsafe {
-            let entity = *self.entities.add(index).as_ref();
-            Some(G::get_by_index(self.get, entity, index))
+            let entity = *self.entities.add(i).as_ref();
+            Some(G::get_by_index(self.get, entity, i))
         }
     }
 
