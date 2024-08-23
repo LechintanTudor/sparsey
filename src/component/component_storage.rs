@@ -24,31 +24,30 @@ pub(crate) struct ComponentStorage {
 impl ComponentStorage {
     #[must_use]
     pub fn new(layout: &GroupLayout) -> Self {
-        unsafe { Self::recycled(layout, &[], FxHashMap::default()) }
+        let mut storage = Self::default();
+
+        unsafe {
+            storage.set_layout(layout, &[]);
+        }
+
+        storage
     }
 
-    #[must_use]
-    pub unsafe fn recycled(
-        layout: &GroupLayout,
-        entities: &[Entity],
-        mut sparse_sets: FxHashMap<TypeId, ComponentSparseSet>,
-    ) -> Self {
-        let mut groups = Vec::new();
-        let mut metadata = FxHashMap::default();
-        let mut components = Vec::new();
+    pub unsafe fn set_layout(&mut self, layout: &GroupLayout, entities: &[Entity]) {
+        let mut sparse_sets = self.extract_sparse_sets();
 
         for family in layout.families() {
-            let storage_start = components.len();
-            let group_start = groups.len();
+            let storage_start = self.components.len();
+            let group_start = self.groups.len();
             let group_end = group_start + family.arities().len();
 
             let mut prev_arity = 0;
 
             for &arity in family.arities() {
                 let storage_end = storage_start + arity;
-                let new_group_start = groups.len();
+                let new_group_start = self.groups.len();
 
-                groups.push(Group {
+                self.groups.push(Group {
                     metadata: GroupMetadata {
                         storage_start,
                         new_storage_start: storage_start + prev_arity,
@@ -63,15 +62,15 @@ impl ComponentStorage {
                 for local_storage_index in prev_arity..arity {
                     let component = &family.components()[local_storage_index];
 
-                    metadata.insert(
+                    self.metadata.insert(
                         component.type_id(),
                         ComponentMetadata {
-                            storage_index: components.len(),
+                            storage_index: self.components.len(),
                             insert_mask: GroupMask::from_to(group_start, group_end),
                             delete_mask: GroupMask::from_to(new_group_start, group_end),
                             group_info: Some(GroupInfo {
                                 group_start: group_start as u8,
-                                group_end: groups.len() as u8,
+                                group_end: self.groups.len() as u8,
                                 storage_mask: NonZeroStorageMask::single(local_storage_index),
                             }),
                         },
@@ -81,7 +80,7 @@ impl ComponentStorage {
                         .remove(&component.type_id())
                         .unwrap_or_else(|| component.create_sparse_set());
 
-                    components.push(AtomicRefCell::new(sparse_set));
+                    self.components.push(AtomicRefCell::new(sparse_set));
                 }
 
                 prev_arity = arity;
@@ -89,47 +88,26 @@ impl ComponentStorage {
         }
 
         for (type_id, sparse_set) in sparse_sets {
-            metadata.insert(
+            self.metadata.insert(
                 type_id,
                 ComponentMetadata {
-                    storage_index: components.len(),
+                    storage_index: self.components.len(),
                     insert_mask: GroupMask::default(),
                     delete_mask: GroupMask::default(),
                     group_info: None,
                 },
             );
 
-            components.push(AtomicRefCell::new(sparse_set));
+            self.components.push(AtomicRefCell::new(sparse_set));
         }
 
-        let group_mask = GroupMask::from_to(0, groups.len());
+        let group_mask = GroupMask::from_to(0, self.groups.len());
 
         for &entity in entities {
             unsafe {
-                group(&mut components, &mut groups, group_mask, entity);
+                group(&mut self.components, &mut self.groups, group_mask, entity);
             }
         }
-
-        Self {
-            groups,
-            metadata,
-            components,
-        }
-    }
-
-    pub fn into_sparse_sets(mut self) -> FxHashMap<TypeId, ComponentSparseSet> {
-        let mut sparse_sets = FxHashMap::default();
-
-        for (type_id, metadata) in self.metadata {
-            let sparse_set = mem::replace(
-                self.components[metadata.storage_index].get_mut(),
-                ComponentSparseSet::new::<()>(),
-            );
-
-            sparse_sets.insert(type_id, sparse_set);
-        }
-
-        sparse_sets
     }
 
     pub fn register<T>(&mut self) -> bool
@@ -315,6 +293,27 @@ impl ComponentStorage {
 
         let parent_group = unsafe { self.groups.get_unchecked(usize::from(group_end) - 2) };
         Some(child_group.len..parent_group.len)
+    }
+
+    #[must_use]
+    fn extract_sparse_sets(&mut self) -> FxHashMap<TypeId, ComponentSparseSet> {
+        let sparse_sets = self
+            .metadata
+            .drain()
+            .map(|(type_id, metadata)| {
+                let sparse_set = mem::replace(
+                    self.components[metadata.storage_index].get_mut(),
+                    ComponentSparseSet::new::<()>(),
+                );
+
+                (type_id, sparse_set)
+            })
+            .collect::<FxHashMap<_, _>>();
+
+        self.groups.clear();
+        self.metadata.clear();
+
+        sparse_sets
     }
 }
 

@@ -12,7 +12,6 @@ use crate::component::{
 };
 use crate::entity::{Entity, EntityAllocator, EntitySparseSet};
 use crate::query::{Query, WorldQuery, WorldQueryAll};
-use core::mem;
 
 /// Storage for entities and components.
 #[derive(Default, Debug)]
@@ -74,10 +73,9 @@ impl World {
     /// storage is empty.
     #[inline]
     pub fn set_layout(&mut self, layout: &GroupLayout) {
-        let sparse_sets = mem::take(&mut self.components).into_sparse_sets();
-
-        self.components =
-            unsafe { ComponentStorage::recycled(layout, self.entities.as_slice(), sparse_sets) };
+        unsafe {
+            self.components.set_layout(layout, self.entities.as_slice());
+        }
     }
 
     /// Registers a new component type.
