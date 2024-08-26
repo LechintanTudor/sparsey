@@ -9,9 +9,10 @@ where
     E: Query,
 {
     entities: SliceIter<'a, Entity>,
-    get_parts: G::SparseParts<'a>,
-    include_sparse: I::Sparse<'a>,
     exclude_sparse: E::Sparse<'a>,
+    include_sparse: I::Sparse<'a>,
+    get_sparse: G::Sparse<'a>,
+    get_data: G::Data<'a>,
 }
 
 impl<'a, G, I, E> SparseIter<'a, G, I, E>
@@ -22,15 +23,17 @@ where
 {
     pub(crate) fn new(
         entities: &'a [Entity],
-        get_parts: G::SparseParts<'a>,
-        include_sparse: I::Sparse<'a>,
         exclude_sparse: E::Sparse<'a>,
+        include_sparse: I::Sparse<'a>,
+        get_sparse: G::Sparse<'a>,
+        get_data: G::Data<'a>,
     ) -> Self {
         Self {
             entities: entities.iter(),
-            get_parts,
-            include_sparse,
             exclude_sparse,
+            include_sparse,
+            get_sparse,
+            get_data,
         }
     }
 }
@@ -58,7 +61,7 @@ where
             }
 
             unsafe {
-                if let Some(item) = G::get_sparse(self.get_parts, entity) {
+                if let Some(item) = G::get_sparse(self.get_sparse, self.get_data, entity) {
                     break Some(item);
                 };
             }
@@ -79,7 +82,7 @@ where
             }
 
             unsafe {
-                if let Some(item) = G::get_sparse(self.get_parts, entity) {
+                if let Some(item) = G::get_sparse(self.get_sparse, self.get_data, entity) {
                     init = f(init, item);
                 };
             }

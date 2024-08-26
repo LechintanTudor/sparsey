@@ -152,22 +152,35 @@ where
     pub fn iter(&mut self) -> Iter<'_, G, I, E> {
         match self.get_group_range() {
             Some(range) => {
-                let (get_entities, get_parts) = G::split_dense_parts(&self.get);
+                let (get_entities, get_data) = G::split_dense_data(&self.get);
                 let (include_entities, _) = I::split_sparse(&self.include);
                 let entities = get_entities.or(include_entities).unwrap();
-                unsafe { Iter::Dense(DenseIter::new(range, entities, get_parts)) }
+                unsafe { Iter::Dense(DenseIter::new(range, entities, get_data)) }
             }
             None => {
-                let (get_entities, get_parts) = G::split_sparse_parts(&self.get);
+                let (get_entities, get_sparse, get_data) = G::split_sparse_data(&self.get);
                 let (include_entities, include_sparse) = I::split_sparse(&self.include);
                 let (_, exclude_sparse) = E::split_sparse(&self.exclude);
-                let entities = get_entities.or(include_entities).unwrap();
+
+                let entities = match (get_entities, include_entities) {
+                    (Some(get_entities), Some(include_entities)) => {
+                        if get_entities.len() <= include_entities.len() {
+                            get_entities
+                        } else {
+                            include_entities
+                        }
+                    }
+                    (Some(get_entities), None) => get_entities,
+                    (None, Some(include_entities)) => include_entities,
+                    (None, None) => &[],
+                };
 
                 Iter::Sparse(SparseIter::new(
                     entities,
-                    get_parts,
-                    include_sparse,
                     exclude_sparse,
+                    include_sparse,
+                    get_sparse,
+                    get_data,
                 ))
             }
         }
@@ -183,9 +196,9 @@ where
     #[must_use]
     pub fn slice(&mut self) -> Option<G::Slice<'_>> {
         let range = self.get_group_range()?;
-        let (get_entities, get_parts) = G::split_dense_parts(&self.get);
+        let (get_entities, get_parts) = G::split_dense_data(&self.get);
         let (include_entities, _) = I::split_sparse(&self.include);
-        let entities = get_entities.or(include_entities).unwrap();
+        let entities = get_entities.or(include_entities).unwrap_or(&[]);
         unsafe { Some(G::slice(get_parts, entities, range)) }
     }
 
@@ -250,14 +263,14 @@ where
 }
 
 #[allow(clippy::into_iter_without_iter)]
-impl<'query, 'view, G, I, E> IntoIterator for &'query mut WorldQueryAll<'view, G, I, E>
+impl<'a, G, I, E> IntoIterator for &'a mut WorldQueryAll<'_, G, I, E>
 where
     G: Query,
     I: Query,
     E: Query,
 {
-    type Item = <Iter<'query, G, I, E> as Iterator>::Item;
-    type IntoIter = Iter<'query, G, I, E>;
+    type Item = <Iter<'a, G, I, E> as Iterator>::Item;
+    type IntoIter = Iter<'a, G, I, E>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

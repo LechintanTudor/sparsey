@@ -9,7 +9,7 @@ where
 {
     range: Range<usize>,
     entities: NonNull<Entity>,
-    get_parts: G::DenseParts<'a>,
+    get_data: G::Data<'a>,
 }
 
 impl<'a, G> DenseIter<'a, G>
@@ -19,14 +19,14 @@ where
     pub(crate) unsafe fn new(
         range: Range<usize>,
         entities: &'a [Entity],
-        get_parts: G::DenseParts<'a>,
+        get_data: G::Data<'a>,
     ) -> Self {
         let entities = NonNull::new_unchecked(entities.as_ptr().cast_mut());
 
         Self {
             range,
             entities,
-            get_parts,
+            get_data,
         }
     }
 }
@@ -42,7 +42,7 @@ where
 
         unsafe {
             let entity = *self.entities.add(i).as_ref();
-            Some(G::get_dense(self.get_parts, i, entity))
+            Some(G::get_dense(self.get_data, i, entity))
         }
     }
 
@@ -53,7 +53,7 @@ where
         for i in self.range {
             unsafe {
                 let entity = *self.entities.add(i).as_ref();
-                init = f(init, G::get_dense(self.get_parts, i, entity));
+                init = f(init, G::get_dense(self.get_data, i, entity));
             }
         }
 
