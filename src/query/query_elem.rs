@@ -194,7 +194,7 @@ where
         (sparse, ptr): Self::SparseParts<'a>,
         entity: Entity,
     ) -> Option<Self::Item<'a>> {
-        let i = sparse.get(entity)?.index as usize;
+        let i = sparse.get_sparse(entity.sparse())?.dense();
         Some(ptr.add(i).as_ref())
     }
 
@@ -276,7 +276,7 @@ where
         (sparse, ptr): Self::SparseParts<'a>,
         entity: Entity,
     ) -> Option<Self::Item<'a>> {
-        let i = sparse.get(entity)?.index as usize;
+        let i = sparse.get_sparse(entity.sparse())?.dense();
         Some(ptr.add(i).as_mut())
     }
 
@@ -350,8 +350,8 @@ where
     ) -> Option<Self::Item<'a>> {
         Some(
             sparse
-                .get(entity)
-                .map(|dense| ptr.add(dense.index as usize).as_ref()),
+                .get_sparse(entity.sparse())
+                .map(|entity| ptr.add(entity.dense()).as_ref()),
         )
     }
 
@@ -367,8 +367,8 @@ where
         entity: Entity,
     ) -> Self::Item<'a> {
         sparse
-            .get(entity)
-            .map(|dense| ptr.add(dense.index as usize).as_ref())
+            .get_sparse(entity.sparse())
+            .map(|entity| ptr.add(entity.dense()).as_ref())
     }
 
     unsafe fn slice<'a>(
@@ -427,8 +427,8 @@ where
     ) -> Option<Self::Item<'a>> {
         Some(
             sparse
-                .get(entity)
-                .map(|dense| ptr.add(dense.index as usize).as_mut()),
+                .get_sparse(entity.sparse())
+                .map(|entity| ptr.add(entity.dense()).as_mut()),
         )
     }
 
@@ -444,8 +444,8 @@ where
         entity: Entity,
     ) -> Self::Item<'a> {
         sparse
-            .get(entity)
-            .map(|dense| ptr.add(dense.index as usize).as_mut())
+            .get_sparse(entity.sparse())
+            .map(|entity| ptr.add(entity.dense()).as_mut())
     }
 
     unsafe fn slice<'a>(
