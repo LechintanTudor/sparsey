@@ -11,10 +11,10 @@ where
     I: Query,
     E: Query,
 {
-    pub(crate) world: &'a World,
-    pub(crate) get: G::View<'a>,
-    pub(crate) include: I::View<'a>,
-    pub(crate) exclude: E::View<'a>,
+    world: &'a World,
+    get: G::View<'a>,
+    include: I::View<'a>,
+    exclude: E::View<'a>,
 }
 
 impl<'a, G> WorldQuery<'a, G, (), ()>
@@ -115,13 +115,13 @@ where
     I: Query,
     E: Query,
 {
-    pub(crate) world: &'a World,
-    pub(crate) get: G::View<'a>,
-    pub(crate) include: I::View<'a>,
-    pub(crate) exclude: E::View<'a>,
-    pub(crate) get_info: Option<QueryGroupInfo>,
-    pub(crate) include_info: Option<QueryGroupInfo>,
-    pub(crate) exclude_info: Option<QueryGroupInfo>,
+    world: &'a World,
+    get: G::View<'a>,
+    include: I::View<'a>,
+    exclude: E::View<'a>,
+    get_info: Option<QueryGroupInfo>,
+    include_info: Option<QueryGroupInfo>,
+    exclude_info: Option<QueryGroupInfo>,
 }
 
 impl<'a, G> WorldQueryAll<'a, G, (), ()>

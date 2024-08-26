@@ -31,7 +31,5 @@ fn main() {
     world.create((Position { x: 0, y: 0 }, Speed { x: 0, y: 0 }));
     world.create((Position { x: 1, y: 1 }, Speed { x: 1, y: 1 }));
 
-    world.for_each::<&Position>(|position| {
-        println!("{position:#?}");
-    });
+    dbg!(world.query_all::<&mut Position>().iter().is_dense());
 }
