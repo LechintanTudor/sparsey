@@ -6,6 +6,7 @@ pub use self::sparse_iter::*;
 
 use crate::query::Query;
 
+#[must_use]
 pub enum Iter<'a, G, I, E>
 where
     G: Query,

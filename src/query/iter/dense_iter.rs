@@ -3,6 +3,7 @@ use crate::query::Query;
 use core::ops::Range;
 use core::ptr::NonNull;
 
+#[must_use]
 pub struct DenseIter<'a, G>
 where
     G: Query,

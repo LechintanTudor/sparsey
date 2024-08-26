@@ -2,9 +2,15 @@ mod iter;
 mod query_part;
 mod world_query;
 
+#[cfg(feature = "parallel")]
+mod par_iter;
+
 pub use self::iter::*;
 pub use self::query_part::*;
 pub use self::world_query::*;
+
+#[cfg(feature = "parallel")]
+pub use self::par_iter::*;
 
 use crate::component::QueryGroupInfo;
 use crate::entity::Entity;

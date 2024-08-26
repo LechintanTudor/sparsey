@@ -4,6 +4,12 @@ use crate::query::{DenseIter, Iter, Query, SparseIter};
 use crate::World;
 use core::ops::Range;
 
+#[cfg(feature = "parallel")]
+use {
+    crate::query::{DenseParIter, ParIter, SparseParIter},
+    rayon::iter::ParallelIterator,
+};
+
 #[must_use]
 pub struct WorldQuery<'a, G, I, E>
 where
@@ -191,6 +197,53 @@ where
         F: FnMut(G::Item<'_>),
     {
         self.iter().for_each(f);
+    }
+
+    #[cfg(feature = "parallel")]
+    pub fn par_iter(&mut self) -> ParIter<'_, G, I, E> {
+        match self.get_group_range() {
+            Some(range) => {
+                let (get_entities, get_data) = G::split_dense_data(&self.get);
+                let (include_entities, _) = I::split_sparse(&self.include);
+                let entities = get_entities.or(include_entities).unwrap();
+                unsafe { ParIter::Dense(DenseParIter::new(range, entities, get_data)) }
+            }
+            None => {
+                let (get_entities, get_sparse, get_data) = G::split_sparse_data(&self.get);
+                let (include_entities, include_sparse) = I::split_sparse(&self.include);
+                let (_, exclude_sparse) = E::split_sparse(&self.exclude);
+
+                let entities = match (get_entities, include_entities) {
+                    (Some(get_entities), Some(include_entities)) => {
+                        if get_entities.len() <= include_entities.len() {
+                            get_entities
+                        } else {
+                            include_entities
+                        }
+                    }
+                    (Some(get_entities), None) => get_entities,
+                    (None, Some(include_entities)) => include_entities,
+                    (None, None) => &[],
+                };
+
+                ParIter::Sparse(SparseParIter::new(
+                    entities,
+                    exclude_sparse,
+                    include_sparse,
+                    get_sparse,
+                    get_data,
+                ))
+            }
+        }
+    }
+
+    #[cfg(feature = "parallel")]
+    pub fn par_for_each<F>(&mut self, f: F)
+    where
+        for<'b> G::Item<'b>: Send,
+        F: Fn(G::Item<'_>) + Send + Sync,
+    {
+        self.par_iter().for_each(f);
     }
 
     #[must_use]

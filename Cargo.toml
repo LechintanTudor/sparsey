@@ -12,12 +12,18 @@ readme = "README.md"
 
 [dependencies]
 atomic_refcell = "0.1.13"
+rayon = { version = "1.10", optional = true }
 rustc-hash = { version = "2.0", default-features = false }
 
 [dependencies.hashbrown]
 version = "0.14"
 default-features = false
 features = ["inline-more"]
+
+[features]
+default = ["std"]
+std = []
+parallel = ["std", "dep:rayon"]
 
 [lints.rust]
 # missing-docs = "forbid"
