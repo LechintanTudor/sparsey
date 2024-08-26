@@ -15,6 +15,9 @@ pub trait Query {
     type View<'a>;
     type Item<'a>;
     type Slice<'a>;
+    type Sparse<'a>: Copy;
+    type SparseParts<'a>: Copy;
+    type DenseParts<'a>: Copy;
 
     #[must_use]
     fn borrow(world: &World) -> Self::View<'_>;
@@ -23,27 +26,49 @@ pub trait Query {
     fn borrow_with_group_info(world: &World) -> (Self::View<'_>, Option<QueryGroupInfo>);
 
     #[must_use]
-    fn entities<'a>(view: &'a Self::View<'_>) -> Option<&'a [Entity]>;
-
-    #[must_use]
     fn contains_all(view: &Self::View<'_>, entity: Entity) -> bool;
 
     #[must_use]
     fn contains_none(view: &Self::View<'_>, entity: Entity) -> bool;
 
     #[must_use]
-    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>>;
+    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>>;
 
     #[must_use]
-    unsafe fn get_by_index<'a>(
-        view: &Self::View<'_>,
+    fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>);
+
+    #[must_use]
+    fn sparse_contains_all(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
+
+    #[must_use]
+    fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
+
+    #[must_use]
+    fn split_sparse_parts<'a>(
+        view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::SparseParts<'a>);
+
+    #[must_use]
+    unsafe fn get_sparse<'a>(
+        parts: Self::SparseParts<'a>,
         entity: Entity,
+    ) -> Option<Self::Item<'a>>;
+
+    #[must_use]
+    fn split_dense_parts<'a>(
+        view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::DenseParts<'a>);
+
+    #[must_use]
+    unsafe fn get_dense<'a>(
+        parts: Self::DenseParts<'a>,
         index: usize,
+        entity: Entity,
     ) -> Self::Item<'a>;
 
     #[must_use]
     unsafe fn slice<'a>(
-        view: &'a Self::View<'_>,
+        parts: Self::DenseParts<'a>,
         entities: &'a [Entity],
         range: Range<usize>,
     ) -> Self::Slice<'a>;
@@ -53,18 +78,18 @@ impl Query for () {
     type View<'a> = ();
     type Item<'a> = ();
     type Slice<'a> = ();
+    type Sparse<'a> = ();
+    type SparseParts<'a> = ();
+    type DenseParts<'a> = ();
 
     #[inline]
-    fn borrow(_world: &World) -> Self::View<'_> {}
+    fn borrow(_world: &World) -> Self::View<'_> {
+        ()
+    }
 
     #[inline]
     fn borrow_with_group_info(_world: &World) -> (Self::View<'_>, Option<QueryGroupInfo>) {
         ((), Some(QueryGroupInfo::Empty))
-    }
-
-    #[inline]
-    fn entities<'a>(_view: &'a Self::View<'_>) -> Option<&'a [Entity]> {
-        None
     }
 
     #[inline]
@@ -78,26 +103,63 @@ impl Query for () {
     }
 
     #[inline]
-    unsafe fn get<'a>(_view: &Self::View<'_>, _entity: Entity) -> Option<Self::Item<'a>> {
+    fn get<'a>(_view: &'a mut Self::View<'_>, _entity: Entity) -> Option<Self::Item<'a>> {
         Some(())
     }
 
     #[inline]
-    unsafe fn get_by_index<'a>(
-        _view: &Self::View<'_>,
+    fn split_sparse<'a>(_view: &'a Self::View<'a>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
+        (None, ())
+    }
+
+    #[inline]
+    fn sparse_contains_all(_sparse: Self::Sparse<'_>, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline]
+    fn sparse_contains_none(_sparse: Self::Sparse<'_>, _entity: Entity) -> bool {
+        true
+    }
+
+    #[inline]
+    fn split_sparse_parts<'a>(
+        _view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::SparseParts<'a>) {
+        (None, ())
+    }
+
+    #[inline]
+    unsafe fn get_sparse<'a>(
+        _parts: Self::SparseParts<'a>,
         _entity: Entity,
+    ) -> Option<Self::Item<'a>> {
+        Some(())
+    }
+
+    #[inline]
+    fn split_dense_parts<'a>(
+        _view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::DenseParts<'a>) {
+        (None, ())
+    }
+
+    #[inline]
+    unsafe fn get_dense<'a>(
+        _part: Self::DenseParts<'a>,
         _index: usize,
+        _entity: Entity,
     ) -> Self::Item<'a> {
-        // Empty
+        ()
     }
 
     #[inline]
     unsafe fn slice<'a>(
-        _view: &'a Self::View<'_>,
+        _parts: Self::DenseParts<'a>,
         _entities: &'a [Entity],
         _range: Range<usize>,
     ) -> Self::Slice<'a> {
-        // Empty
+        ()
     }
 }
 
@@ -108,6 +170,9 @@ where
     type View<'a> = <Q as QueryElem>::View<'a>;
     type Item<'a> = <Q as QueryElem>::Item<'a>;
     type Slice<'a> = <Q as QueryElem>::Slice<'a>;
+    type Sparse<'a> = <Q as QueryElem>::Sparse<'a>;
+    type SparseParts<'a> = <Q as QueryElem>::SparseParts<'a>;
+    type DenseParts<'a> = <Q as QueryElem>::DenseParts<'a>;
 
     fn borrow(world: &World) -> Self::View<'_> {
         <Q as QueryElem>::borrow(world)
@@ -119,10 +184,6 @@ where
         (view, Some(info))
     }
 
-    fn entities<'a>(view: &'a Self::View<'_>) -> Option<&'a [Entity]> {
-        <Q as QueryElem>::entities(view)
-    }
-
     fn contains_all(view: &Self::View<'_>, entity: Entity) -> bool {
         <Q as QueryElem>::contains(view, entity)
     }
@@ -131,24 +192,55 @@ where
         !<Q as QueryElem>::contains(view, entity)
     }
 
-    unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
         <Q as QueryElem>::get(view, entity)
     }
 
-    unsafe fn get_by_index<'a>(
-        view: &Self::View<'_>,
+    fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
+        <Q as QueryElem>::split_sparse(view)
+    }
+
+    fn sparse_contains_all(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
+        <Q as QueryElem>::sparse_contains(sparse, entity)
+    }
+
+    fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
+        !<Q as QueryElem>::sparse_contains(sparse, entity)
+    }
+
+    fn split_sparse_parts<'a>(
+        view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::SparseParts<'a>) {
+        <Q as QueryElem>::split_sparse_parts(view)
+    }
+
+    unsafe fn get_sparse<'a>(
+        parts: Self::SparseParts<'a>,
         entity: Entity,
+    ) -> Option<Self::Item<'a>> {
+        <Q as QueryElem>::get_sparse(parts, entity)
+    }
+
+    fn split_dense_parts<'a>(
+        view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::DenseParts<'a>) {
+        <Q as QueryElem>::split_dense_parts(view)
+    }
+
+    unsafe fn get_dense<'a>(
+        parts: Self::DenseParts<'a>,
         index: usize,
+        entity: Entity,
     ) -> Self::Item<'a> {
-        <Q as QueryElem>::get_by_index(view, entity, index)
+        <Q as QueryElem>::get_dense(parts, index, entity)
     }
 
     unsafe fn slice<'a>(
-        view: &'a Self::View<'_>,
+        parts: Self::DenseParts<'a>,
         entities: &'a [Entity],
         range: Range<usize>,
     ) -> Self::Slice<'a> {
-        <Q as QueryElem>::slice(view, entities, range)
+        <Q as QueryElem>::slice(parts, entities, range)
     }
 }
 
@@ -161,6 +253,9 @@ macro_rules! impl_query {
             type View<'a> = ($($Ty::View<'a>,)+);
             type Item<'a> = ($($Ty::Item<'a>,)+);
             type Slice<'a> = ($($Ty::Slice<'a>,)+);
+            type Sparse<'a> = ($($Ty::Sparse<'a>,)+);
+            type SparseParts<'a> = ($($Ty::SparseParts<'a>,)+);
+            type DenseParts<'a> = ($($Ty::DenseParts<'a>,)+);
 
             fn borrow(world: &World) -> Self::View<'_> {
                 ($($Ty::borrow(world),)+)
@@ -187,23 +282,6 @@ macro_rules! impl_query {
                 )
             }
 
-            #[allow(unused_assignments)]
-            fn entities<'a>(view: &'a Self::View<'_>) -> Option<&'a [Entity]> {
-                let mut entities = Option::<&[Entity]>::None;
-                let mut min_len = usize::MAX;
-
-                $(
-                    if let Some(view_entities) = $Ty::entities(&view.$idx) {
-                        if view_entities.len() < min_len {
-                            entities = Some(view_entities);
-                            min_len = view_entities.len();
-                        }
-                    }
-                )+
-
-                entities
-            }
-
             fn contains_all(view: &Self::View<'_>, entity: Entity) -> bool {
                 $($Ty::contains(&view.$idx, entity))&&+
             }
@@ -212,25 +290,105 @@ macro_rules! impl_query {
                 $(!$Ty::contains(&view.$idx, entity))&&+
             }
 
-            unsafe fn get<'a>(view: &Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-                Some(($($Ty::get(&view.$idx, entity)?,)+))
+            fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+                Some(($($Ty::get(&mut view.$idx, entity)?,)+))
             }
 
-            unsafe fn get_by_index<'a>(
-                view: &Self::View<'_>,
-                entity: Entity,
-                index: usize,
-            ) -> Self::Item<'a> {
-                ($($Ty::get_by_index(&view.$idx, entity, index),)+)
-            }
-
-            #[inline]
-            unsafe fn slice<'a>(
+            fn split_sparse<'a>(
                 view: &'a Self::View<'_>,
+            ) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
+                let mut entities = Option::<&[Entity]>::None;
+
+                let sparse = ($({
+                    let (view_entities, sparse) = $Ty::split_sparse(&view.$idx);
+
+                    if let Some(view_entities) = view_entities {
+                        if let Some(old_entities) = entities {
+                            if view_entities.len() < old_entities.len() {
+                                entities = Some(view_entities);
+                            }
+                        } else {
+                            entities = Some(view_entities);
+                        }
+                    }
+
+                    sparse
+                },)+);
+
+                (entities, sparse)
+            }
+
+            fn sparse_contains_all(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
+                $($Ty::sparse_contains(sparse.$idx, entity))&&+
+            }
+
+            fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
+                $(!$Ty::sparse_contains(sparse.$idx, entity))&&+
+            }
+
+            fn split_sparse_parts<'a>(
+                view: &'a Self::View<'_>,
+            ) -> (Option<&'a [Entity]>, Self::SparseParts<'a>) {
+                let mut entities = Option::<&[Entity]>::None;
+
+                let part = ($({
+                    let (view_entities, part) = $Ty::split_sparse_parts(&view.$idx);
+
+                    if let Some(view_entities) = view_entities {
+                        if let Some(old_entities) = entities {
+                            if view_entities.len() < old_entities.len() {
+                                entities = Some(view_entities);
+                            }
+                        } else {
+                            entities = Some(view_entities);
+                        }
+                    }
+
+                    part
+                },)+);
+
+                (entities, part)
+            }
+
+            unsafe fn get_sparse<'a>(
+                parts: Self::SparseParts<'a>,
+                entity: Entity,
+            ) -> Option<Self::Item<'a>> {
+                Some(($($Ty::get_sparse(parts.$idx, entity)?,)+))
+            }
+
+            fn split_dense_parts<'a>(
+                view: &'a Self::View<'_>,
+            ) -> (Option<&'a [Entity]>, Self::DenseParts<'a>) {
+                let mut entities = Option::<&[Entity]>::None;
+
+                let part = ($({
+                    let (view_entities, part) = $Ty::split_dense_parts(&view.$idx);
+
+                    if entities.is_none() && view_entities.is_some() {
+                        entities = view_entities;
+                    }
+
+                    part
+                },)+);
+
+                (entities, part)
+            }
+
+            unsafe fn get_dense<'a>(
+                parts: Self::DenseParts<'a>,
+                index: usize,
+                entity: Entity,
+            ) -> Self::Item<'a> {
+                ($($Ty::get_dense(parts.$idx, index, entity),)+)
+            }
+
+            unsafe fn slice<'a>(
+                parts: Self::DenseParts<'a>,
                 entities: &'a [Entity],
                 range: Range<usize>,
             ) -> Self::Slice<'a> {
-                ($($Ty::slice(&view.$idx, entities, range.clone()),)+)
+               ($($Ty::slice(parts.$idx, entities, range.clone()),)+)
             }
         }
     };

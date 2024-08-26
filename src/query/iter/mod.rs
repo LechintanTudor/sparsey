@@ -6,17 +6,17 @@ pub use self::sparse_iter::*;
 
 use crate::query::Query;
 
-pub enum Iter<'query, 'view, G, I, E>
+pub enum Iter<'a, G, I, E>
 where
     G: Query,
     I: Query,
     E: Query,
 {
-    Sparse(SparseIter<'query, 'view, G, I, E>),
-    Dense(DenseIter<'query, 'view, G>),
+    Sparse(SparseIter<'a, G, I, E>),
+    Dense(DenseIter<'a, G>),
 }
 
-impl<G, I, E> Iter<'_, '_, G, I, E>
+impl<G, I, E> Iter<'_, G, I, E>
 where
     G: Query,
     I: Query,
@@ -33,13 +33,13 @@ where
     }
 }
 
-impl<'query, G, I, E> Iterator for Iter<'query, '_, G, I, E>
+impl<'a, G, I, E> Iterator for Iter<'a, G, I, E>
 where
     G: Query,
     I: Query,
     E: Query,
 {
-    type Item = G::Item<'query>;
+    type Item = G::Item<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -56,5 +56,27 @@ where
             Self::Sparse(iter) => iter.fold(init, f),
             Self::Dense(iter) => iter.fold(init, f),
         }
+    }
+}
+
+impl<'a, G, I, E> From<SparseIter<'a, G, I, E>> for Iter<'a, G, I, E>
+where
+    G: Query,
+    I: Query,
+    E: Query,
+{
+    fn from(iter: SparseIter<'a, G, I, E>) -> Self {
+        Self::Sparse(iter)
+    }
+}
+
+impl<'a, G, I, E> From<DenseIter<'a, G>> for Iter<'a, G, I, E>
+where
+    G: Query,
+    I: Query,
+    E: Query,
+{
+    fn from(iter: DenseIter<'a, G>) -> Self {
+        Self::Dense(iter)
     }
 }

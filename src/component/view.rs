@@ -1,5 +1,5 @@
 use crate::component::{Component, ComponentSparseSet};
-use crate::entity::Entity;
+use crate::entity::{Entity, SparseVec};
 use atomic_refcell::{AtomicRef, AtomicRefMut};
 use core::fmt;
 use core::marker::PhantomData;
@@ -76,16 +76,6 @@ macro_rules! impl_view_common {
                 unsafe { self.components.get(entity) }
             }
 
-            #[must_use]
-            pub(crate) fn get_ptr(&self, entity: Entity) -> Option<NonNull<T>> {
-                unsafe { self.components.get_ptr(entity) }
-            }
-
-            #[must_use]
-            pub(crate) unsafe fn get_ptr_unchecked(&self, index: usize) -> NonNull<T> {
-                unsafe { self.components.get_ptr_unchecked(index) }
-            }
-
             /// Returns whether `entity` is present in the view.
             #[must_use]
             pub fn contains(&self, entity: Entity) -> bool {
@@ -110,10 +100,20 @@ macro_rules! impl_view_common {
                 self.components.entities()
             }
 
+            #[must_use]
+            pub fn sparse(&self) -> &SparseVec {
+                self.components.sparse()
+            }
+
             /// Returns all components in the view as a slice.
             #[must_use]
             pub fn as_slice(&self) -> &[T] {
                 unsafe { self.components.as_slice() }
+            }
+
+            #[must_use]
+            pub fn as_non_null_ptr(&self) -> NonNull<T> {
+                unsafe { self.components.as_non_null_ptr::<T>() }
             }
         }
 

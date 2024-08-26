@@ -3,44 +3,46 @@ use crate::query::Query;
 use core::ops::Range;
 use core::ptr::NonNull;
 
-pub struct DenseIter<'query, 'view, G>
+pub struct DenseIter<'a, G>
 where
     G: Query,
 {
     range: Range<usize>,
     entities: NonNull<Entity>,
-    get: &'query mut G::View<'view>,
+    get_parts: G::DenseParts<'a>,
 }
 
-impl<'query, 'view, G> DenseIter<'query, 'view, G>
+impl<'a, G> DenseIter<'a, G>
 where
     G: Query,
 {
     pub(crate) unsafe fn new(
         range: Range<usize>,
-        entities: NonNull<Entity>,
-        get: &'query mut G::View<'view>,
+        entities: &'a [Entity],
+        get_parts: G::DenseParts<'a>,
     ) -> Self {
+        let entities = NonNull::new_unchecked(entities.as_ptr().cast_mut());
+
         Self {
             range,
             entities,
-            get,
+            get_parts,
         }
     }
 }
 
-impl<'query, G> Iterator for DenseIter<'query, '_, G>
+impl<'a, G> Iterator for DenseIter<'a, G>
 where
     G: Query,
 {
-    type Item = G::Item<'query>;
+    type Item = G::Item<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let i = self.range.next()?;
 
         unsafe {
             let entity = *self.entities.add(i).as_ref();
-            Some(G::get_by_index(self.get, entity, i))
+            Some(G::get_dense(self.get_parts, i, entity))
         }
     }
 
@@ -51,7 +53,7 @@ where
         for i in self.range {
             unsafe {
                 let entity = *self.entities.add(i).as_ref();
-                init = f(init, G::get_by_index(self.get, entity, i));
+                init = f(init, G::get_dense(self.get_parts, i, entity));
             }
         }
 

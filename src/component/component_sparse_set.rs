@@ -155,25 +155,6 @@ impl ComponentSparseSet {
 
     #[inline]
     #[must_use]
-    pub unsafe fn get_ptr<T>(&self, entity: Entity) -> Option<NonNull<T>>
-    where
-        T: Component,
-    {
-        let dense = self.sparse.get(entity)?.dense();
-        Some(self.components.cast::<T>().add(dense))
-    }
-
-    #[inline]
-    #[must_use]
-    pub unsafe fn get_ptr_unchecked<T>(&self, index: usize) -> NonNull<T>
-    where
-        T: Component,
-    {
-        self.components.cast::<T>().add(index)
-    }
-
-    #[inline]
-    #[must_use]
     pub fn contains(&self, entity: Entity) -> bool {
         self.sparse.contains(entity)
     }
@@ -206,6 +187,15 @@ impl ComponentSparseSet {
         T: Component,
     {
         slice::from_raw_parts_mut(self.components.cast::<T>().as_ptr(), self.len)
+    }
+
+    #[inline]
+    #[must_use]
+    pub unsafe fn as_non_null_ptr<T>(&self) -> NonNull<T>
+    where
+        T: Component,
+    {
+        self.components.cast::<T>()
     }
 
     #[inline]

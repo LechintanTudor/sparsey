@@ -3,7 +3,6 @@ use crate::entity::Entity;
 use crate::query::{DenseIter, Iter, Query, SparseIter};
 use crate::World;
 use core::ops::Range;
-use core::ptr::NonNull;
 
 #[must_use]
 pub struct WorldQuery<'a, G, I, E>
@@ -97,7 +96,7 @@ where
             return None;
         }
 
-        unsafe { G::get(&self.get, entity) }
+        G::get(&mut self.get, entity)
     }
 
     #[must_use]
@@ -150,13 +149,27 @@ where
     I: Query,
     E: Query,
 {
-    pub fn iter(&mut self) -> Iter<'_, 'a, G, I, E> {
-        match self.get_range_and_entities() {
-            Some((range, entities)) => unsafe {
-                let entities = NonNull::new_unchecked(entities.as_ptr().cast_mut());
-                Iter::Dense(DenseIter::new(range, entities, &mut self.get))
-            },
-            None => Iter::Sparse(SparseIter::new(self)),
+    pub fn iter(&mut self) -> Iter<'_, G, I, E> {
+        match self.get_group_range() {
+            Some(range) => {
+                let (get_entities, get_parts) = G::split_dense_parts(&self.get);
+                let (include_entities, _) = I::split_sparse(&self.include);
+                let entities = get_entities.or(include_entities).unwrap();
+                unsafe { Iter::Dense(DenseIter::new(range, entities, get_parts)) }
+            }
+            None => {
+                let (get_entities, get_parts) = G::split_sparse_parts(&self.get);
+                let (include_entities, include_sparse) = I::split_sparse(&self.include);
+                let (_, exclude_sparse) = E::split_sparse(&self.exclude);
+                let entities = get_entities.or(include_entities).unwrap();
+
+                Iter::Sparse(SparseIter::new(
+                    entities,
+                    get_parts,
+                    include_sparse,
+                    exclude_sparse,
+                ))
+            }
         }
     }
 
@@ -169,27 +182,24 @@ where
 
     #[must_use]
     pub fn slice(&mut self) -> Option<G::Slice<'_>> {
-        let (range, entities) = self.get_range_and_entities()?;
-        unsafe { Some(G::slice(&self.get, entities, range)) }
+        let range = self.get_group_range()?;
+        let (get_entities, get_parts) = G::split_dense_parts(&self.get);
+        let (include_entities, _) = I::split_sparse(&self.include);
+        let entities = get_entities.or(include_entities).unwrap();
+        unsafe { Some(G::slice(get_parts, entities, range)) }
     }
 
     #[must_use]
-    fn get_range_and_entities(&self) -> Option<(Range<usize>, &[Entity])> {
+    fn get_group_range(&self) -> Option<Range<usize>> {
         let get_info = self.get_info?;
         let include_info = self.include_info?;
         let exclude_info = self.exclude_info?;
 
-        let range = unsafe {
+        unsafe {
             self.world
                 .components
-                .group_range(&get_info.add_query(&include_info)?, &exclude_info)?
-        };
-
-        let entities = G::entities(&self.get)
-            .or_else(|| I::entities(&self.include))
-            .unwrap_or(self.world.entities());
-
-        Some((range, entities))
+                .group_range(&get_info.add_query(&include_info)?, &exclude_info)
+        }
     }
 }
 
@@ -246,8 +256,8 @@ where
     I: Query,
     E: Query,
 {
-    type Item = <Iter<'query, 'view, G, I, E> as Iterator>::Item;
-    type IntoIter = Iter<'query, 'view, G, I, E>;
+    type Item = <Iter<'query, G, I, E> as Iterator>::Item;
+    type IntoIter = Iter<'query, G, I, E>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

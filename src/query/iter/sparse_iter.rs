@@ -1,56 +1,47 @@
 use crate::entity::Entity;
-use crate::query::{Query, WorldQueryAll};
-use core::ptr;
+use crate::query::Query;
 use core::slice::Iter as SliceIter;
 
-pub struct SparseIter<'query, 'view, G, I, E>
+pub struct SparseIter<'a, G, I, E>
 where
     G: Query,
     I: Query,
     E: Query,
 {
-    entities: SliceIter<'query, Entity>,
-    query: &'query mut WorldQueryAll<'view, G, I, E>,
+    entities: SliceIter<'a, Entity>,
+    get_parts: G::SparseParts<'a>,
+    include_sparse: I::Sparse<'a>,
+    exclude_sparse: E::Sparse<'a>,
 }
 
-impl<'query, 'view, G, I, E> SparseIter<'query, 'view, G, I, E>
+impl<'a, G, I, E> SparseIter<'a, G, I, E>
 where
     G: Query,
     I: Query,
     E: Query,
 {
-    pub(crate) fn new(query: &'query mut WorldQueryAll<'view, G, I, E>) -> Self {
-        let entities = {
-            let mut entities = G::entities(&query.get);
-
-            if let Some(include_entities) = I::entities(&query.include) {
-                match entities {
-                    Some(old_entities) => {
-                        if include_entities.len() < old_entities.len() {
-                            entities = Some(include_entities);
-                        }
-                    }
-                    None => entities = Some(include_entities),
-                }
-            };
-
-            unsafe { &*ptr::from_ref(entities.unwrap_or(query.world.entities())) }
-        };
-
+    pub(crate) fn new(
+        entities: &'a [Entity],
+        get_parts: G::SparseParts<'a>,
+        include_sparse: I::Sparse<'a>,
+        exclude_sparse: E::Sparse<'a>,
+    ) -> Self {
         Self {
             entities: entities.iter(),
-            query,
+            get_parts,
+            include_sparse,
+            exclude_sparse,
         }
     }
 }
 
-impl<'query, G, I, E> Iterator for SparseIter<'query, '_, G, I, E>
+impl<'a, G, I, E> Iterator for SparseIter<'a, G, I, E>
 where
     G: Query,
     I: Query,
     E: Query,
 {
-    type Item = G::Item<'query>;
+    type Item = G::Item<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -58,16 +49,16 @@ where
                 break None;
             };
 
-            if !E::contains_none(&self.query.exclude, entity) {
+            if !E::sparse_contains_none(self.exclude_sparse, entity) {
                 continue;
             }
 
-            if !I::contains_all(&self.query.include, entity) {
+            if !I::sparse_contains_all(self.include_sparse, entity) {
                 continue;
             }
 
             unsafe {
-                if let Some(item) = G::get(&self.query.get, entity) {
+                if let Some(item) = G::get_sparse(self.get_parts, entity) {
                     break Some(item);
                 };
             }
@@ -79,16 +70,16 @@ where
         F: FnMut(B, Self::Item) -> B,
     {
         for &entity in self.entities {
-            if !E::contains_none(&self.query.exclude, entity) {
+            if !E::sparse_contains_none(self.exclude_sparse, entity) {
                 continue;
             }
 
-            if !I::contains_all(&self.query.include, entity) {
+            if !I::sparse_contains_all(self.include_sparse, entity) {
                 continue;
             }
 
             unsafe {
-                if let Some(item) = G::get(&self.query.get, entity) {
+                if let Some(item) = G::get_sparse(self.get_parts, entity) {
                     init = f(init, item);
                 };
             }
