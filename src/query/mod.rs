@@ -66,7 +66,7 @@ pub trait Query {
     fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>);
 
     #[must_use]
-    unsafe fn get_dense<'a>(data: Self::Data<'a>, index: usize, entity: Entity) -> Self::Item<'a>;
+    unsafe fn get_dense(data: Self::Data<'_>, index: usize, entity: Entity) -> Self::Item<'_>;
 
     #[must_use]
     unsafe fn slice<'a>(
@@ -76,6 +76,7 @@ pub trait Query {
     ) -> Self::Slice<'a>;
 }
 
+#[allow(clippy::unused_unit)]
 impl Query for () {
     type View<'a> = ();
     type Item<'a> = ();
@@ -85,7 +86,7 @@ impl Query for () {
 
     #[inline]
     fn borrow(_world: &World) -> Self::View<'_> {
-        ()
+        // Empty
     }
 
     #[inline]
@@ -145,12 +146,8 @@ impl Query for () {
     }
 
     #[inline]
-    unsafe fn get_dense<'a>(
-        _data: Self::Data<'a>,
-        _index: usize,
-        _entity: Entity,
-    ) -> Self::Item<'a> {
-        ()
+    unsafe fn get_dense(_data: Self::Data<'_>, _index: usize, _entity: Entity) -> Self::Item<'_> {
+        // Empty
     }
 
     #[inline]
@@ -159,7 +156,7 @@ impl Query for () {
         _entities: &'a [Entity],
         _range: Range<usize>,
     ) -> Self::Slice<'a> {
-        ()
+        // Empty
     }
 }
 
@@ -226,7 +223,7 @@ where
         <Q as QueryPart>::split_dense_data(view)
     }
 
-    unsafe fn get_dense<'a>(data: Self::Data<'a>, index: usize, entity: Entity) -> Self::Item<'a> {
+    unsafe fn get_dense(data: Self::Data<'_>, index: usize, entity: Entity) -> Self::Item<'_> {
         <Q as QueryPart>::get_dense(data, index, entity)
     }
 
@@ -379,11 +376,11 @@ macro_rules! impl_query {
                 (entities, data)
             }
 
-            unsafe fn get_dense<'a>(
-                data: Self::Data<'a>,
+            unsafe fn get_dense(
+                data: Self::Data<'_>,
                 index: usize,
                 entity: Entity,
-            ) -> Self::Item<'a> {
+            ) -> Self::Item<'_> {
                 ($($Ty::get_dense(data.$idx, index, entity),)+)
             }
 

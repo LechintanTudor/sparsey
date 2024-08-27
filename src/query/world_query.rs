@@ -156,39 +156,36 @@ where
     E: Query,
 {
     pub fn iter(&mut self) -> Iter<'_, G, I, E> {
-        match self.get_group_range() {
-            Some(range) => {
-                let (get_entities, get_data) = G::split_dense_data(&self.get);
-                let (include_entities, _) = I::split_sparse(&self.include);
-                let entities = get_entities.or(include_entities).unwrap();
-                unsafe { Iter::Dense(DenseIter::new(range, entities, get_data)) }
-            }
-            None => {
-                let (get_entities, get_sparse, get_data) = G::split_sparse_data(&self.get);
-                let (include_entities, include_sparse) = I::split_sparse(&self.include);
-                let (_, exclude_sparse) = E::split_sparse(&self.exclude);
+        if let Some(range) = self.get_group_range() {
+            let (get_entities, get_data) = G::split_dense_data(&self.get);
+            let (include_entities, _) = I::split_sparse(&self.include);
+            let entities = get_entities.or(include_entities).unwrap();
+            unsafe { Iter::Dense(DenseIter::new(range, entities, get_data)) }
+        } else {
+            let (get_entities, get_sparse, get_data) = G::split_sparse_data(&self.get);
+            let (include_entities, include_sparse) = I::split_sparse(&self.include);
+            let (_, exclude_sparse) = E::split_sparse(&self.exclude);
 
-                let entities = match (get_entities, include_entities) {
-                    (Some(get_entities), Some(include_entities)) => {
-                        if get_entities.len() <= include_entities.len() {
-                            get_entities
-                        } else {
-                            include_entities
-                        }
+            let entities = match (get_entities, include_entities) {
+                (Some(get_entities), Some(include_entities)) => {
+                    if get_entities.len() <= include_entities.len() {
+                        get_entities
+                    } else {
+                        include_entities
                     }
-                    (Some(get_entities), None) => get_entities,
-                    (None, Some(include_entities)) => include_entities,
-                    (None, None) => &[],
-                };
+                }
+                (Some(get_entities), None) => get_entities,
+                (None, Some(include_entities)) => include_entities,
+                (None, None) => &[],
+            };
 
-                Iter::Sparse(SparseIter::new(
-                    entities,
-                    exclude_sparse,
-                    include_sparse,
-                    get_sparse,
-                    get_data,
-                ))
-            }
+            Iter::Sparse(SparseIter::new(
+                entities,
+                exclude_sparse,
+                include_sparse,
+                get_sparse,
+                get_data,
+            ))
         }
     }
 
@@ -201,39 +198,36 @@ where
 
     #[cfg(feature = "parallel")]
     pub fn par_iter(&mut self) -> ParIter<'_, G, I, E> {
-        match self.get_group_range() {
-            Some(range) => {
-                let (get_entities, get_data) = G::split_dense_data(&self.get);
-                let (include_entities, _) = I::split_sparse(&self.include);
-                let entities = get_entities.or(include_entities).unwrap();
-                unsafe { ParIter::Dense(DenseParIter::new(range, entities, get_data)) }
-            }
-            None => {
-                let (get_entities, get_sparse, get_data) = G::split_sparse_data(&self.get);
-                let (include_entities, include_sparse) = I::split_sparse(&self.include);
-                let (_, exclude_sparse) = E::split_sparse(&self.exclude);
+        if let Some(range) = self.get_group_range() {
+            let (get_entities, get_data) = G::split_dense_data(&self.get);
+            let (include_entities, _) = I::split_sparse(&self.include);
+            let entities = get_entities.or(include_entities).unwrap();
+            unsafe { ParIter::Dense(DenseParIter::new(range, entities, get_data)) }
+        } else {
+            let (get_entities, get_sparse, get_data) = G::split_sparse_data(&self.get);
+            let (include_entities, include_sparse) = I::split_sparse(&self.include);
+            let (_, exclude_sparse) = E::split_sparse(&self.exclude);
 
-                let entities = match (get_entities, include_entities) {
-                    (Some(get_entities), Some(include_entities)) => {
-                        if get_entities.len() <= include_entities.len() {
-                            get_entities
-                        } else {
-                            include_entities
-                        }
+            let entities = match (get_entities, include_entities) {
+                (Some(get_entities), Some(include_entities)) => {
+                    if get_entities.len() <= include_entities.len() {
+                        get_entities
+                    } else {
+                        include_entities
                     }
-                    (Some(get_entities), None) => get_entities,
-                    (None, Some(include_entities)) => include_entities,
-                    (None, None) => &[],
-                };
+                }
+                (Some(get_entities), None) => get_entities,
+                (None, Some(include_entities)) => include_entities,
+                (None, None) => &[],
+            };
 
-                ParIter::Sparse(SparseParIter::new(
-                    entities,
-                    exclude_sparse,
-                    include_sparse,
-                    get_sparse,
-                    get_data,
-                ))
-            }
+            ParIter::Sparse(SparseParIter::new(
+                entities,
+                exclude_sparse,
+                include_sparse,
+                get_sparse,
+                get_data,
+            ))
         }
     }
 
