@@ -67,6 +67,15 @@ impl World {
         self.query_all().for_each(f);
     }
 
+    #[cfg(feature = "parallel")]
+    pub fn par_for_each<G>(&self, f: impl Fn(G::Item<'_>) + Send + Sync)
+    where
+        G: Query,
+        for<'a> G::Item<'a>: Send,
+    {
+        self.query_all().par_for_each(f);
+    }
+
     /// Sets a new `GroupLayout`.
     ///
     /// This function iterates over all entities in the storage, so it is best called when the
