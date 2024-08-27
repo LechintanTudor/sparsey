@@ -2,12 +2,14 @@
 
 mod entity_allocator;
 mod entity_sparse_set;
+mod entity_storage;
 mod sparse_vec;
 
 pub use self::sparse_vec::*;
 
 pub(crate) use self::entity_allocator::*;
 pub(crate) use self::entity_sparse_set::*;
+pub(crate) use self::entity_storage::*;
 
 use core::cmp::Ordering;
 use core::fmt;

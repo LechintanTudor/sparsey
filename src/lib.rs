@@ -10,14 +10,13 @@ use crate::component::{
     Component, ComponentSet, ComponentStorage, GroupInfo, GroupLayout, GroupLayoutBuilder, View,
     ViewMut,
 };
-use crate::entity::{Entity, EntityAllocator, EntitySparseSet};
+use crate::entity::{Entity, EntityStorage};
 use crate::query::{Query, WorldQuery, WorldQueryAll};
 
 /// Storage for entities and components.
 #[derive(Default, Debug)]
 pub struct World {
-    pub(crate) allocator: EntityAllocator,
-    pub(crate) entities: EntitySparseSet,
+    pub(crate) entities: EntityStorage,
     pub(crate) components: ComponentStorage,
 }
 
@@ -27,8 +26,7 @@ impl World {
     #[must_use]
     pub fn new(layout: &GroupLayout) -> Self {
         Self {
-            allocator: EntityAllocator::new(),
-            entities: EntitySparseSet::new(),
+            entities: EntityStorage::default(),
             components: ComponentStorage::new(layout),
         }
     }
@@ -113,7 +111,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        let entity = self.create_empty_entity();
+        let entity = self.entities.create();
         C::insert(self, entity, components);
         entity
     }
@@ -135,9 +133,7 @@ impl World {
     /// Returns the newly created entity.
     #[inline]
     pub fn create_atomic(&self) -> Entity {
-        self.allocator
-            .allocate_atomic()
-            .expect("Failed to create a new Entity")
+        self.entities.create_atomic()
     }
 
     /// Adds the given `components` to `entity` if `entity` is present in the storage.
@@ -183,7 +179,6 @@ impl World {
             return false;
         }
 
-        self.allocator.recycle(entity);
         self.components.strip(entity);
         true
     }
@@ -208,17 +203,14 @@ impl World {
     /// After this call, the storage is allowed to return previously allocated entities.
     #[inline]
     pub fn reset(&mut self) {
-        self.allocator.reset();
-        self.entities.clear();
+        self.entities.reset();
         self.components.clear();
     }
 
     /// Adds the entities allocated with [`create_atomic`](Self::create_atomic) to the storage.
     #[inline]
     pub fn maintain(&mut self) {
-        self.allocator.maintain().for_each(|entity| {
-            self.entities.insert(entity);
-        });
+        self.entities.maintain();
     }
 
     /// Returns wether `entity` is present in the storage.
@@ -267,17 +259,5 @@ impl World {
         T: Component,
     {
         self.components.borrow_with_group_info_mut()
-    }
-
-    #[inline]
-    #[must_use]
-    fn create_empty_entity(&mut self) -> Entity {
-        let entity = self
-            .allocator
-            .allocate()
-            .expect("Failed to create a new Entity");
-
-        self.entities.insert(entity);
-        entity
     }
 }

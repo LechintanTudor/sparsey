@@ -96,10 +96,9 @@ macro_rules! impl_component_set {
                 },)*);
 
                 let start_entity = world.entities.len();
-                let mut allocate_entity = || world.create_empty_entity();
 
-                components.into_iter().for_each(move |components| {
-                    let entity = allocate_entity();
+                components.into_iter().for_each(|components| {
+                    let entity = world.entities.create();
 
                     unsafe {$(
                         (*sparse_sets.$idx).insert(entity, components.$idx);
@@ -219,7 +218,7 @@ unsafe impl ComponentSet for () {
         let start_entity = world.entities.len();
 
         components.into_iter().for_each(|()| {
-            let _ = world.create_empty_entity();
+            let _ = world.entities.create();
         });
 
         unsafe { world.entities.as_slice().get_unchecked(start_entity..) }

@@ -9,15 +9,6 @@ pub(crate) struct EntitySparseSet {
 }
 
 impl EntitySparseSet {
-    #[inline]
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            sparse: SparseVec::new(),
-            entities: Vec::new(),
-        }
-    }
-
     pub fn insert(&mut self, entity: Entity) -> Option<Entity> {
         let dense_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
 

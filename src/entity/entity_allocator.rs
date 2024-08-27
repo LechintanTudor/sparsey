@@ -11,17 +11,6 @@ pub(crate) struct EntityAllocator {
 }
 
 impl EntityAllocator {
-    #[inline]
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            next_index_to_allocate: AtomicU64::new(0),
-            last_maintained_index: 0,
-            recycled: VecDeque::new(),
-            recycled_since_maintain: AtomicUsize::new(0),
-        }
-    }
-
     #[must_use]
     pub fn allocate(&mut self) -> Option<Entity> {
         let recycled_since_maintain = *self.recycled_since_maintain.get_mut();
