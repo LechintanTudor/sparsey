@@ -9,11 +9,12 @@ use std::iter::FromIterator;
 
 #[test]
 fn test_sparse() {
-    let mut world = World::default();
-    world.register::<A>();
-    world.register::<B>();
-    world.register::<C>();
-    world.register::<D>();
+    let mut world = World::builder()
+        .register::<A>()
+        .register::<B>()
+        .register::<C>()
+        .register::<D>()
+        .build();
 
     let e0 = world.create((A(0), B(0)));
     let e1 = world.create((A(1), B(1), C(1)));
@@ -29,7 +30,7 @@ fn test_sparse() {
 
 #[test]
 fn test_dense() {
-    let mut world = World::with_layout()
+    let mut world = World::builder()
         .add_group::<(A, B)>()
         .add_group::<(A, B, C)>()
         .add_group::<(A, B, C, D)>()

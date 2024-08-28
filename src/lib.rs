@@ -7,11 +7,12 @@ pub mod entity;
 pub mod query;
 
 use crate::component::{
-    Component, ComponentSet, ComponentStorage, GroupInfo, GroupLayout, GroupLayoutBuilder, View,
-    ViewMut,
+    Component, ComponentData, ComponentSet, ComponentStorage, GroupDescriptor, GroupInfo,
+    GroupLayout, View, ViewMut,
 };
 use crate::entity::{Entity, EntityStorage};
 use crate::query::{Query, WorldQuery, WorldQueryAll};
+use alloc::vec::Vec;
 
 /// Storage for entities and components.
 #[derive(Default, Debug)]
@@ -31,9 +32,8 @@ impl World {
         }
     }
 
-    #[inline]
-    pub fn with_layout() -> GroupLayoutBuilder {
-        GroupLayout::builder()
+    pub fn builder() -> WorldBuilder {
+        WorldBuilder::default()
     }
 
     pub fn query<G>(&self) -> WorldQuery<G, (), ()>
@@ -93,6 +93,11 @@ impl World {
         T: Component,
     {
         self.components.register::<T>()
+    }
+
+    #[inline]
+    pub fn register_dyn(&mut self, component: ComponentData) -> bool {
+        self.components.register_dyn(component)
     }
 
     /// Returns whether component type `T` is registered.
@@ -259,5 +264,57 @@ impl World {
         T: Component,
     {
         self.components.borrow_with_group_info_mut()
+    }
+}
+
+#[must_use]
+#[derive(Clone, Default, Debug)]
+pub struct WorldBuilder {
+    layout: GroupLayout,
+    components: Vec<ComponentData>,
+}
+
+impl WorldBuilder {
+    #[inline]
+    pub fn set_layout(&mut self, layout: GroupLayout) -> &mut Self {
+        self.layout = layout;
+        self
+    }
+
+    pub fn add_group<G>(&mut self) -> &mut Self
+    where
+        G: GroupDescriptor,
+    {
+        self.add_group_dyn(G::COMPONENTS)
+    }
+
+    #[inline]
+    pub fn add_group_dyn(&mut self, components: &[ComponentData]) -> &mut Self {
+        self.layout.add_group_dyn(components);
+        self
+    }
+
+    pub fn register<T>(&mut self) -> &mut Self
+    where
+        T: Component,
+    {
+        self.register_dyn(ComponentData::new::<T>())
+    }
+
+    #[inline]
+    pub fn register_dyn(&mut self, component: ComponentData) -> &mut Self {
+        self.components.push(component);
+        self
+    }
+
+    #[must_use]
+    pub fn build(&self) -> World {
+        let mut world = World::new(&self.layout);
+
+        for &component in &self.components {
+            world.register_dyn(component);
+        }
+
+        world
     }
 }

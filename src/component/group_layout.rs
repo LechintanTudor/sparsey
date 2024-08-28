@@ -1,7 +1,7 @@
 use crate::component::{Component, ComponentData};
-use crate::World;
 use alloc::vec;
 use alloc::vec::Vec;
+use core::cmp::Ordering;
 
 /// Minimum number of component types required to form a group.
 pub const MIN_GROUP_ARITY: usize = 2;
@@ -20,10 +20,41 @@ pub struct GroupLayout {
 }
 
 impl GroupLayout {
-    /// Returns a builder that can be used to construct a new [`GroupLayout`].
-    #[inline]
-    pub fn builder() -> GroupLayoutBuilder {
-        GroupLayoutBuilder::default()
+    pub fn add_group<G>(&mut self)
+    where
+        G: GroupDescriptor,
+    {
+        self.add_group_dyn(G::COMPONENTS);
+    }
+
+    pub fn add_group_dyn(&mut self, components: &[ComponentData]) {
+        let mut components = Vec::from(components);
+        components.sort_unstable();
+        components.dedup();
+
+        if components.len() <= 1 {
+            return;
+        }
+
+        assert!(
+            components.len() <= MAX_GROUP_ARITY,
+            "Groups must have at most {MAX_GROUP_ARITY} component types",
+        );
+
+        let successes = self
+            .families
+            .iter_mut()
+            .map(|f| usize::from(f.try_add_group(&components)))
+            .sum::<usize>();
+
+        if successes == 0 {
+            self.families.push(GroupFamily::new(components));
+        } else {
+            assert_eq!(
+                successes, 1,
+                "Groups families may not have any component types in common",
+            );
+        }
     }
 
     /// Returns the group families of this layout.
@@ -63,120 +94,71 @@ impl GroupFamily {
         &self.arities
     }
 
+    #[must_use]
     fn try_add_group(&mut self, components: &[ComponentData]) -> bool {
-        assert!(
-            components.len() >= self.components.len(),
-            "Groups must be added from least restrictive to most restrictive",
-        );
-
-        // Group should form a separate family
-        if self.is_disjoint(components) {
+        // Check if groups are disjoint.
+        if self.components.iter().all(|c| !components.contains(c)) {
             return false;
         }
 
-        assert!(self.is_subset_of(components), "Groups must fully overlap");
+        // Find insertion index for new group.
+        let mut index = Option::<usize>::None;
 
-        // Group was already added to this family
-        if self.components.len() == components.len() {
-            return true;
-        }
+        for (i, &arity) in self.arities.iter().enumerate() {
+            let prev_arity = i.checked_sub(1).map_or(0, |i| self.arities[i]);
 
-        let mut new_components = components
-            .iter()
-            .filter(|c| !self.components.contains(c))
-            .copied()
-            .collect();
+            match arity.cmp(&components.len()) {
+                Ordering::Less => {
+                    let is_subset = self.components[prev_arity..arity]
+                        .iter()
+                        .all(|c| components.contains(c));
 
-        self.components.append(&mut new_components);
-        self.arities.push(components.len());
-        true
-    }
+                    if !is_subset {
+                        panic_incompatible_groups(components, &self.components[..arity]);
+                    }
+                }
+                Ordering::Equal => {
+                    let is_equal = self.components[prev_arity..arity]
+                        .iter()
+                        .all(|c| components.contains(c));
 
-    #[must_use]
-    fn is_disjoint(&self, components: &[ComponentData]) -> bool {
-        !self.components.iter().any(|c| components.contains(c))
-    }
+                    if !is_equal {
+                        panic_incompatible_groups(components, &self.components[..arity]);
+                    }
 
-    #[must_use]
-    fn is_subset_of(&self, components: &[ComponentData]) -> bool {
-        self.components.iter().all(|c| components.contains(c))
-    }
-}
+                    return true;
+                }
+                Ordering::Greater => {
+                    let is_superset = self.components[prev_arity..arity]
+                        .iter()
+                        .all(|c| !components.contains(c));
 
-/// Builder that can be used to construct a new [`GroupLayout`].
-#[must_use]
-#[derive(Clone, Default, Debug)]
-pub struct GroupLayoutBuilder {
-    groups: Vec<Vec<ComponentData>>,
-}
+                    if !is_superset {
+                        panic_incompatible_groups(components, &self.components[..arity]);
+                    }
 
-impl GroupLayoutBuilder {
-    /// Adds a new group to the layout.
-    pub fn add_group<G>(&mut self) -> &mut Self
-    where
-        G: GroupDescriptor,
-    {
-        self.add_group_dyn(G::COMPONENTS)
-    }
-
-    /// Adds a new group to the layout, created from the given `components`.
-    pub fn add_group_dyn(&mut self, components: &[ComponentData]) -> &mut Self {
-        let mut group = Vec::from(components);
-        group.sort_unstable();
-        group.dedup();
-
-        assert_eq!(
-            group.len(),
-            components.len(),
-            "Group has duplicate components",
-        );
-
-        assert!(
-            group.len() >= MIN_GROUP_ARITY,
-            "Group has less than {MIN_GROUP_ARITY} components",
-        );
-
-        assert!(
-            group.len() <= MAX_GROUP_ARITY,
-            "Group has more than {MAX_GROUP_ARITY} component",
-        );
-
-        self.groups.push(group);
-        self
-    }
-
-    /// Builds the group layout from the previously added groups.
-    pub fn build_layout(&mut self) -> GroupLayout {
-        self.groups.sort_by_key(Vec::len);
-
-        let mut families = Vec::<GroupFamily>::new();
-
-        for group in self.groups.drain(..) {
-            let successes = families
-                .iter_mut()
-                .map(|f| usize::from(f.try_add_group(&group)))
-                .sum::<usize>();
-
-            if successes == 0 {
-                families.push(GroupFamily::new(group));
-            } else {
-                assert_eq!(successes, 1, "Group must belong to a single family");
+                    index = Some(i);
+                    break;
+                }
             }
         }
 
-        let group_count = families.iter().map(|f| f.arities.len()).sum::<usize>();
+        // Insert new group.
+        if let Some(index) = index {
+            let next_arity = self.arities[index];
+            self.components[..next_arity].sort_by_cached_key(|c| components.contains(c));
+            self.arities.insert(index, components.len());
+        } else {
+            for component in components {
+                if !self.components.contains(component) {
+                    self.components.push(*component);
+                }
+            }
 
-        assert!(
-            group_count <= MAX_GROUP_COUNT,
-            "Group layouts must have at most {MAX_GROUP_COUNT} groups",
-        );
+            self.arities.push(components.len());
+        }
 
-        GroupLayout { families }
-    }
-
-    #[must_use]
-    pub fn build(&mut self) -> World {
-        World::new(&self.build_layout())
+        true
     }
 }
 
@@ -184,6 +166,12 @@ impl GroupLayoutBuilder {
 pub trait GroupDescriptor {
     /// Slice containing the component data of the components present in the group.
     const COMPONENTS: &'static [ComponentData];
+}
+
+#[cold]
+#[inline(never)]
+fn panic_incompatible_groups(new_group: &[ComponentData], old_group: &[ComponentData]) -> ! {
+    panic!("Cannot create GroupLayout due to incomptaible groups:\n -> {new_group:#?}\n -> {old_group:#?}")
 }
 
 macro_rules! impl_group_descriptor {

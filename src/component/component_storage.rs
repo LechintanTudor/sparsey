@@ -1,6 +1,7 @@
 use crate::component::{
-    group, ungroup_all, Component, ComponentSparseSet, Group, GroupInfo, GroupLayout, GroupMask,
-    GroupMetadata, NonZeroStorageMask, QueryGroupInfo, QueryMask, StorageMask, View, ViewMut,
+    group, ungroup_all, Component, ComponentData, ComponentSparseSet, Group, GroupInfo,
+    GroupLayout, GroupMask, GroupMetadata, NonZeroStorageMask, QueryGroupInfo, QueryMask,
+    StorageMask, View, ViewMut,
 };
 use crate::entity::Entity;
 use alloc::vec::Vec;
@@ -114,7 +115,11 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        let Entry::Vacant(entry) = self.metadata.entry(TypeId::of::<T>()) else {
+        self.register_dyn(ComponentData::new::<T>())
+    }
+
+    pub fn register_dyn(&mut self, component: ComponentData) -> bool {
+        let Entry::Vacant(entry) = self.metadata.entry(component.type_id()) else {
             return false;
         };
 
@@ -126,7 +131,7 @@ impl ComponentStorage {
         });
 
         self.components
-            .push(AtomicRefCell::new(ComponentSparseSet::new::<T>()));
+            .push(AtomicRefCell::new(component.create_sparse_set()));
 
         true
     }
