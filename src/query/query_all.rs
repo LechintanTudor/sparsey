@@ -1,121 +1,9 @@
-use crate::component::QueryGroupInfo;
-use crate::entity::Entity;
-use crate::query::{DenseIter, Iter, Query, SparseIter};
+use crate::query::{DenseIter, Iter, Query, QueryGroupInfo, SparseIter};
 use crate::World;
 use core::ops::Range;
 
-#[cfg(feature = "parallel")]
-use {
-    crate::query::{DenseParIter, ParIter, SparseParIter},
-    rayon::iter::ParallelIterator,
-};
-
 #[must_use]
-pub struct WorldQuery<'a, G, I, E>
-where
-    G: Query,
-    I: Query,
-    E: Query,
-{
-    world: &'a World,
-    get: G::View<'a>,
-    include: I::View<'a>,
-    exclude: E::View<'a>,
-}
-
-impl<'a, G> WorldQuery<'a, G, (), ()>
-where
-    G: Query,
-{
-    pub(crate) fn new(world: &'a World) -> Self {
-        Self {
-            world,
-            get: G::borrow(world),
-            include: (),
-            exclude: (),
-        }
-    }
-}
-
-impl<'a, G, E> WorldQuery<'a, G, (), E>
-where
-    G: Query,
-    E: Query,
-{
-    pub fn include<I>(self) -> WorldQuery<'a, G, I, E>
-    where
-        I: Query,
-    {
-        WorldQuery {
-            world: self.world,
-            get: self.get,
-            include: I::borrow(self.world),
-            exclude: self.exclude,
-        }
-    }
-}
-
-impl<'a, G, I> WorldQuery<'a, G, I, ()>
-where
-    G: Query,
-    I: Query,
-{
-    pub fn exclude<E>(self) -> WorldQuery<'a, G, I, E>
-    where
-        E: Query,
-    {
-        WorldQuery {
-            world: self.world,
-            get: self.get,
-            include: self.include,
-            exclude: E::borrow(self.world),
-        }
-    }
-}
-
-impl<'a, G, I, E> WorldQuery<'a, G, I, E>
-where
-    G: Query,
-    I: Query,
-    E: Query,
-{
-    #[must_use]
-    pub fn contains(&self, entity: Entity) -> bool {
-        if !E::contains_none(&self.exclude, entity) {
-            return false;
-        }
-
-        if !I::contains_all(&self.include, entity) {
-            return false;
-        }
-
-        G::contains_all(&self.get, entity)
-    }
-
-    #[must_use]
-    pub fn get(&mut self, entity: Entity) -> Option<G::Item<'_>> {
-        if !E::contains_none(&self.exclude, entity) {
-            return None;
-        }
-
-        if !I::contains_all(&self.include, entity) {
-            return None;
-        }
-
-        G::get(&mut self.get, entity)
-    }
-
-    #[must_use]
-    pub fn map<T, F>(&mut self, entity: Entity, f: F) -> Option<T>
-    where
-        F: FnOnce(G::Item<'_>) -> T,
-    {
-        self.get(entity).map(f)
-    }
-}
-
-#[must_use]
-pub struct WorldQueryAll<'a, G, I, E>
+pub struct QueryAll<'a, G, I, E>
 where
     G: Query,
     I: Query,
@@ -130,7 +18,7 @@ where
     exclude_info: Option<QueryGroupInfo>,
 }
 
-impl<'a, G> WorldQueryAll<'a, G, (), ()>
+impl<'a, G> QueryAll<'a, G, (), ()>
 where
     G: Query,
 {
@@ -149,7 +37,7 @@ where
     }
 }
 
-impl<'a, G, I, E> WorldQueryAll<'a, G, I, E>
+impl<'a, G, I, E> QueryAll<'a, G, I, E>
 where
     G: Query,
     I: Query,
@@ -263,18 +151,18 @@ where
     }
 }
 
-impl<'a, G, E> WorldQueryAll<'a, G, (), E>
+impl<'a, G, E> QueryAll<'a, G, (), E>
 where
     G: Query,
     E: Query,
 {
-    pub fn include<I>(self) -> WorldQueryAll<'a, G, I, E>
+    pub fn include<I>(self) -> QueryAll<'a, G, I, E>
     where
         I: Query,
     {
         let (include, include_info) = I::borrow_with_group_info(self.world);
 
-        WorldQueryAll {
+        QueryAll {
             world: self.world,
             get: self.get,
             include,
@@ -286,18 +174,18 @@ where
     }
 }
 
-impl<'a, G, I> WorldQueryAll<'a, G, I, ()>
+impl<'a, G, I> QueryAll<'a, G, I, ()>
 where
     G: Query,
     I: Query,
 {
-    pub fn exclude<E>(self) -> WorldQueryAll<'a, G, I, E>
+    pub fn exclude<E>(self) -> QueryAll<'a, G, I, E>
     where
         E: Query,
     {
         let (exclude, exclude_info) = E::borrow_with_group_info(self.world);
 
-        WorldQueryAll {
+        QueryAll {
             world: self.world,
             get: self.get,
             include: self.include,
@@ -310,7 +198,7 @@ where
 }
 
 #[allow(clippy::into_iter_without_iter)]
-impl<'a, G, I, E> IntoIterator for &'a mut WorldQueryAll<'_, G, I, E>
+impl<'a, G, I, E> IntoIterator for &'a mut QueryAll<'_, G, I, E>
 where
     G: Query,
     I: Query,
