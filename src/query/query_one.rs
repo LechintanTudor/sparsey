@@ -2,12 +2,6 @@ use crate::entity::Entity;
 use crate::query::Query;
 use crate::World;
 
-#[cfg(feature = "parallel")]
-use {
-    crate::query::{DenseParIter, ParIter, SparseParIter},
-    rayon::iter::ParallelIterator,
-};
-
 #[must_use]
 pub struct QueryOne<'a, G, I, E>
 where

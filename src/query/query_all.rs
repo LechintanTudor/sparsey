@@ -2,6 +2,12 @@ use crate::query::{DenseIter, Iter, Query, QueryGroupInfo, SparseIter};
 use crate::World;
 use core::ops::Range;
 
+#[cfg(feature = "parallel")]
+use {
+    crate::query::{DenseParIter, ParIter, SparseParIter},
+    rayon::iter::ParallelIterator,
+};
+
 #[must_use]
 pub struct QueryAll<'a, G, I, E>
 where
