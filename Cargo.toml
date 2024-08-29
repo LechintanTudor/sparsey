@@ -2,7 +2,7 @@
 name = "sparsey"
 version = "0.12.1"
 edition = "2021"
-description = "Sparse set-based entity component system"
+description = "Entity Component System based on sparse sets"
 authors = ["Tudor-Cristian Lechințan <lechintantudor02@gmail.com>"]
 repository = "https://github.com/LechintanTudor/sparsey"
 keywords = ["component", "ecs", "entity", "gamedev", "system"]
@@ -22,11 +22,8 @@ features = ["inline-more"]
 
 [features]
 default = ["std"]
-std = []
+std = ["rustc-hash/std"]
 parallel = ["std", "dep:rayon"]
-
-[lints.rust]
-# missing-docs = "forbid"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
