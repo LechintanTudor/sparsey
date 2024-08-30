@@ -111,13 +111,6 @@ impl ComponentStorage {
         }
     }
 
-    pub fn register<T>(&mut self) -> bool
-    where
-        T: Component,
-    {
-        self.register_dyn(ComponentData::new::<T>())
-    }
-
     pub fn register_dyn(&mut self, component: ComponentData) -> bool {
         let Entry::Vacant(entry) = self.metadata.entry(component.type_id()) else {
             return false;
@@ -134,14 +127,6 @@ impl ComponentStorage {
             .push(AtomicRefCell::new(component.create_sparse_set()));
 
         true
-    }
-
-    #[must_use]
-    pub fn is_registered<T>(&self) -> bool
-    where
-        T: Component,
-    {
-        self.is_registered_dyn(TypeId::of::<T>())
     }
 
     #[inline]
