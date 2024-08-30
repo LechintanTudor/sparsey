@@ -1,4 +1,4 @@
-//! Manages entities and their associated components.
+//! Entity storage and allocation.
 
 mod entity_allocator;
 mod entity_sparse_set;
@@ -15,7 +15,7 @@ use core::cmp::Ordering;
 use core::fmt;
 use core::num::NonZeroU32;
 
-/// Version used for recylcling entity indexes.
+/// Version used to distinguish between entities with the same index.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct Version(pub NonZeroU32);
 
@@ -26,24 +26,7 @@ impl Version {
     /// The last valid version.
     pub const LAST: Self = Self(NonZeroU32::MAX);
 
-    /// Creates a new version. Returns [`None`] if the `index` is zero.
-    #[inline]
-    #[must_use]
-    pub const fn new(index: u32) -> Option<Self> {
-        match NonZeroU32::new(index) {
-            Some(version) => Some(Self(version)),
-            None => None,
-        }
-    }
-
-    /// Creates a new version without checking if the `index` is non-zero.
-    #[inline]
-    #[must_use]
-    pub const unsafe fn new_unchecked(index: u32) -> Self {
-        Self(NonZeroU32::new_unchecked(index))
-    }
-
-    /// Returns the next valid version, if any.
+    /// Returns the next available version, if any.
     #[inline]
     #[must_use]
     pub const fn next(&self) -> Option<Self> {
@@ -61,18 +44,19 @@ impl Default for Version {
     }
 }
 
-/// Uniquely identifies a set of components in an [`EntityStorage`](crate::entity::EntityStorage).
+/// Uniquely identifies a set of components in a
+/// [`World`](crate::world::World).
 #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Entity {
-    /// Sparse index for accessing [`SparseVec`](crate::entity::SparseVec).
+    /// The sparse index of the entity.
     pub index: u32,
-    /// Version used for recycling entity indexes.
+    /// The version of the entity.
     pub version: Version,
 }
 
 impl Entity {
-    /// Returns [`index`](Entity::index) extended to a [`usize`].
+    /// Returns the index of the entity extended to a [`usize`].
     #[inline]
     #[must_use]
     pub const fn sparse(&self) -> usize {
@@ -80,18 +64,18 @@ impl Entity {
     }
 }
 
-/// Versioned index stored in [`SparseVec`](crate::entity::SparseVec).
+/// Used internally by [`SparseVec`] to map sparse indexes to dense indexes.
 #[cfg_attr(target_pointer_width = "64", repr(align(8)))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DenseEntity {
-    /// Dense index used for accessing packed data in sparse sets.
+    /// The dense index of the entity.
     pub index: u32,
-    /// Version used for recycling entity indexes.
+    /// The version of the entity.
     pub version: Version,
 }
 
 impl DenseEntity {
-    /// Returns [`index`](Self::index) extended to a [`usize`].
+    /// Returns the index of the entity extended to a [`usize`].
     #[inline]
     #[must_use]
     pub const fn dense(&self) -> usize {
@@ -110,7 +94,7 @@ macro_rules! impl_entity_common {
             }
 
             /// Creates a new entity with the given `index` and default
-            /// [`Version`](crate::entity::Version).
+            /// version.
             #[inline]
             #[must_use]
             pub const fn with_index(index: u32) -> Self {
