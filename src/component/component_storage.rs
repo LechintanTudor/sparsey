@@ -141,7 +141,13 @@ impl ComponentStorage {
     where
         T: Component,
     {
-        self.metadata.contains_key(&TypeId::of::<T>())
+        self.is_registered_dyn(TypeId::of::<T>())
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn is_registered_dyn(&self, type_id: TypeId) -> bool {
+        self.metadata.contains_key(&type_id)
     }
 
     pub fn strip(&mut self, entity: Entity) {
