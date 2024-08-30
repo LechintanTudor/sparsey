@@ -164,7 +164,7 @@ impl GroupFamily {
     }
 }
 
-/// Helper trait for creating groups in a [`GroupLayout`](crate::entity::GroupLayout).
+/// Helper trait for creating groups in a [`GroupLayout`].
 pub trait GroupDescriptor {
     /// Slice containing the component data of the components present in the group.
     const COMPONENTS: &'static [ComponentData];
