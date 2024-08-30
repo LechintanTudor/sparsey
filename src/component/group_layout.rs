@@ -9,17 +9,18 @@ pub const MIN_GROUP_ARITY: usize = 2;
 /// Maximum number of component types that can form a group.
 pub const MAX_GROUP_ARITY: usize = 16;
 
-/// Maximum number of groups that can be set on an [`EntityStorage`](crate::entity::EntityStorage).
+/// Maximum number of groups that can be set on a [`World`](crate::world::World).
 pub const MAX_GROUP_COUNT: usize = 64;
 
-/// Describes the layout of the component groups that can be set on an
-/// [`EntityStorage`](crate::entity::EntityStorage).
+/// Describes the layout of the component groups that can be set on a
+/// [`World`](crate::world::World).
 #[derive(Clone, Default, Debug)]
 pub struct GroupLayout {
     families: Vec<GroupFamily>,
 }
 
 impl GroupLayout {
+    /// Adds a new group to the layout.
     pub fn add_group<G>(&mut self)
     where
         G: GroupDescriptor,
@@ -27,6 +28,7 @@ impl GroupLayout {
         self.add_group_dyn(G::COMPONENTS);
     }
 
+    /// Adds a new group to the layout.
     pub fn add_group_dyn(&mut self, components: &[ComponentData]) {
         let mut components = Vec::from(components);
         components.sort_unstable();

@@ -1,15 +1,22 @@
 use crate::component::NonZeroStorageMask;
 use core::cmp;
 
+/// Grouping information for any number of views in a query.
 #[derive(Clone, Copy, Default, Debug)]
 pub enum QueryGroupInfo {
+    /// The query is empty.
     #[default]
     Empty,
+    /// The query has one view.
     One(ViewGroupInfo),
+    /// The query has multiple compatible views.
     Many(GroupInfo),
 }
 
 impl QueryGroupInfo {
+    /// Tries to add two group infos.
+    ///
+    /// Returns the new group info if the operands were compatible.
     #[inline]
     #[must_use]
     pub fn add_query(&self, other: &Self) -> Option<Self> {
@@ -26,6 +33,9 @@ impl QueryGroupInfo {
         Some(query)
     }
 
+    /// Tries to add a view to the current group info.
+    ///
+    /// Returns the new group info if the operands were compatible.
     #[inline]
     #[must_use]
     pub fn add_view(&self, view: &ViewGroupInfo) -> Option<Self> {
@@ -48,6 +58,7 @@ impl QueryGroupInfo {
         }
     }
 
+    /// Returns the group info of this query, if any.
     #[inline]
     #[must_use]
     pub fn group_info(&self) -> Option<GroupInfo> {
@@ -59,12 +70,16 @@ impl QueryGroupInfo {
     }
 }
 
+/// Stores the length and grouping information for a component view.
 #[derive(Clone, Copy, Debug)]
 pub struct ViewGroupInfo {
+    /// The group info of the view, if any.
     pub info: Option<GroupInfo>,
+    /// The number of components in the view.
     pub len: usize,
 }
 
+/// Grouping information for one or more views.
 #[derive(Clone, Copy, Debug)]
 pub struct GroupInfo {
     pub(crate) group_start: u8,
@@ -73,6 +88,9 @@ pub struct GroupInfo {
 }
 
 impl GroupInfo {
+    /// Tries to add two group infos.
+    ///
+    /// Returns the new group info if the operands were compatible.
     #[inline]
     #[must_use]
     pub fn add_group(self, other: GroupInfo) -> Option<GroupInfo> {

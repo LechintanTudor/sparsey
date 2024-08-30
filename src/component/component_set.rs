@@ -3,10 +3,9 @@ use crate::entity::Entity;
 use crate::World;
 use core::any::TypeId;
 
-/// Handles insert and remove operations for components stored in an
-/// [`EntitySotrage`](crate::entity::World).
+/// Handles insert and remove operations for components stored in a [`World`].
 pub unsafe trait ComponentSet {
-    /// The components returned by [`remove`](Self::remove).
+    /// The components returned by [`remove`](Self::remove) operations.
     type Remove;
 
     /// Adds the given `components` to `entity`.

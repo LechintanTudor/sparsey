@@ -6,7 +6,7 @@ use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;
 
-/// Shared view over all components of type `T` in the storage.
+/// Shared view over all components of type `T` in a [`World`](crate::world::World).
 pub struct View<'a, T> {
     components: AtomicRef<'a, ComponentSparseSet>,
     _phantom: PhantomData<&'a [T]>,
@@ -23,7 +23,7 @@ impl<'a, T> View<'a, T> {
     }
 }
 
-/// Exclusive view over all components of type `T` in the storage.
+/// Exclusive view over all components of type `T` in a [`World`](crate::world::World).
 pub struct ViewMut<'a, T> {
     components: AtomicRefMut<'a, ComponentSparseSet>,
     _phantom: PhantomData<&'a mut [T]>,
@@ -42,16 +42,16 @@ where
         }
     }
 
-    /// Returns a mutable reference to the component mapped to `entity` if it exists.
+    /// Returns a mutable reference to the component mapped to `entity`, if it exists.
     #[must_use]
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
-        unsafe { self.components.get_mut(entity) }
+        unsafe { self.components.get_mut::<T>(entity) }
     }
 
-    /// Returns all components in the storage as a mutable slice.
+    /// Returns a mutable slice of all components in the view.
     #[must_use]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
-        unsafe { self.components.as_mut_slice() }
+        unsafe { self.components.as_mut_slice::<T>() }
     }
 }
 
@@ -73,7 +73,7 @@ macro_rules! impl_view_common {
             /// Returns a reference to the component mapped to `entity` if it exists.
             #[must_use]
             pub fn get(&self, entity: Entity) -> Option<&T> {
-                unsafe { self.components.get(entity) }
+                unsafe { self.components.get::<T>(entity) }
             }
 
             /// Returns whether `entity` is present in the view.
@@ -82,7 +82,7 @@ macro_rules! impl_view_common {
                 self.components.contains(entity)
             }
 
-            /// Returns the number of entities present in the view.
+            /// Returns the number of entities in the view.
             #[must_use]
             pub fn len(&self) -> usize {
                 self.components.len()
@@ -94,25 +94,25 @@ macro_rules! impl_view_common {
                 self.components.is_empty()
             }
 
-            /// Returns all entities in the view as a slice.
+            /// Returns a slice of all entities in the view.
             #[must_use]
             pub fn entities(&self) -> &[Entity] {
                 self.components.entities()
             }
 
+            /// Returns a slice of all components in the view.
             #[must_use]
-            pub fn sparse(&self) -> &SparseVec {
+            pub fn as_slice(&self) -> &[T] {
+                unsafe { self.components.as_slice::<T>() }
+            }
+
+            #[must_use]
+            pub(crate) fn sparse(&self) -> &SparseVec {
                 self.components.sparse()
             }
 
-            /// Returns all components in the view as a slice.
             #[must_use]
-            pub fn as_slice(&self) -> &[T] {
-                unsafe { self.components.as_slice() }
-            }
-
-            #[must_use]
-            pub fn as_non_null_ptr(&self) -> NonNull<T> {
+            pub(crate) fn as_non_null_ptr(&self) -> NonNull<T> {
                 unsafe { self.components.as_non_null_ptr::<T>() }
             }
         }
