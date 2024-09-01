@@ -16,118 +16,104 @@ Sparsey is a sparse set-based
 ## Example
 
 ```rust
-use sparsey::prelude::*;
+    use sparsey::World;
 
-struct Position(f32);
-struct Velocity(f32);
+    struct Position(i32, i32);
+    struct Velocity(i32, i32);
 
-fn main() {
-    let mut entities = EntityStorage::default();
-    entities.register::<Position>();
-    entities.register::<Velocity>();
+    fn main() {
+        let mut world = World::builder()
+            .register::<Position>()
+            .register::<Velocity>()
+            .build();
 
-    entities.create((Position(0), Velocity(1)));
-    entities.create((Position(0), Velocity(2)));
-    entities.create((Position(0), Velocity(3)));
-
-    entities.run(|mut positions: CompMut<Position>, velocities: Comp<Velocity>| {
-        (&mut positions, &velocities).for_each(|(position, velocity)| {
+        world.create((Position(0, 0), Velocity(1, 2)));
+        world.create((Position(0, 0), Velocity(2, 3)));
+    
+        world.for_each::<(&mut Position, &Velocity)>(|(position, velocity)| {
             position.0 += velocity.0;
-        }); 
-    });
-}
+            position.1 += velocity.1;
+        });
+    }
 ```
 
 ## Features
 
-### Easy to Use Systems
-
-Systems are plain functions.
-
-```rust
-struct HealMultiplier(f32);
-
-fn update_positions(mut positions: CompMut<Position>, velocities: Comp<Velocity>) {
-    (&mut positions, &velocities).for_each(|(position, velocity)| {
-        position.0 += velocity.0;
-    });
-}
-
-fn update_hps(mut hps: CompMut<Hp>, heals: Comp<Heal>, heal_multipler: Res<HealMultiplier>) {
-    (&mut hps, &heals).for_each(|(hp, heal)| {
-        hp.0 += heal.0 * heal_multiplier.0;
-    });
-}
-
-let mut world = World::default();
-world.entities.register::<Position>();
-world.entities.register::<Velocity>();
-world.resources.insert(HealMultiplier(1.2));
-
-world.run(update_positions);
-world.run(update_hps);
-```
-
-### Expressive Queries
+### Powerful Queries
 
 Get, include and exclude components using Sparsey's query API.
 
 ```rust
-fn queries(a: Comp<A>, b: Comp<B>, c: Comp<C>, d: Comp<D>, e: Comp<E>) {
-    // Iter components A and B from entities with A and B.
-    (&a, &b).for_each(|(a, b)| {
-        // ... 
-    });
+// Iter components A and B from entities with A and B.
+world
+    .query_all::<(&A, &B)>()
+    .for_each(|_| ());
 
-    // Iter components A from entities with A and B.
-    (&a).include(&b).for_each(|a| {
-        // ...
-    });
+// Iter components A from entities with A and B.
+world
+    .query_all::<&A>()
+    .include::<&B>()
+    .for_each(|_| ());
 
-    // Iter components A from entities with A and without B.
-    (&a).exclude(&b).for_each(|a| {
-        // ...
-    });
-
-    // Iter components A from entities with A and B, without C.
-    (&b).include(&b).exclude(&c).for_each(|a| {
-        // ...
-    });
-}
+// Iter components A from entities with A and without B.
+world
+    .query_all::<&A>()
+    .exclude::<&B>()
+    .for_each(|_| ());
+    
+// Iter components A from entities with A and B, without C.
+world
+    .query_all::<&A>()
+    .include::<&B>()
+    .exclude::<&C>()
+    .for_each(|_| ());
 ```
 
 ### Great Performance with Grouped Storages
 
-Sparsey allows the user to "group" component storages to greatly optimize
-iteration performance. Groups are created by setting a `GroupLayout`.
+Sparsey allows the user to "group" components to greatly optimize iteration
+performance. When a component group is formed, the `World` ensures that all
+components that belong to that group are stored in order at the beginning of
+their storages, making the iteration process a traversal of densely-packed
+arrays.
 
 ```rust
-let layout = GroupLayout::builder()
+let mut world = World::builder()
     .add_group::<(A, B)>()
     .add_group::<(A, B, C, D>)>()
     .build();
-
-let entities = EntityStorage::new(&layout);
 ```
 
-After the layout is set, iterators over the grouped storages become "dense",
-greatly improving their performance. Additionally, grouped storages allow access
-to their components and entities as slices.
+Additionally, grouped components can be accessed as slices.
 
 ```rust
-fn group_slices(a: Comp<A>, b: Comp<B>) {
-    if let Some(entities) = (&a, &b).group_entities() {
-        // ...
-    }
+/// Get all entities with A and B as a slice.
+world
+    .query_all::<Entity>()
+    .include::<(&A, &B)>
+    .slice()
+    .map(|_| ());
 
-    if let Some((a_slice, b_slice)) = (&a, &b).group_components() {
-        // ...
-    }
+/// Get all A and B components of entities with A and B as a tuple of slices.
+world
+    .query_all::<(&A, &B)>()
+    .slice()
+    .map(|_| ());
 
-    if let Some((entities, (a_slice, b_slice))) = (&a, &b).group_data() {
-        // ...
-    }
-}
+/// Get all entities and A and B components of entities with A and B as a tuple
+/// of slices.
+world
+    .query_all::<(Entity, &A, &B)>()
+    .slice()
+    .map(|_| ());
+
+/// Get all A and B components of entities with A and B, and without C and D as
+/// a tuple.
+world
+    .query_all::<(&A, &B)>()
+    .exclude::<(&C, &D)>()
+    .slice()
+    .map(|_| ());
 ```
 
 ## Thanks
