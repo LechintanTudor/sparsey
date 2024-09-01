@@ -5,6 +5,7 @@ use core::ptr::NonNull;
 use rayon::iter::plumbing::{Consumer, ProducerCallback, UnindexedConsumer};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
+/// Dense parallel iterator over all items that match a query. Extremely fast.
 #[must_use]
 pub struct DenseParIter<'a, G>
 where

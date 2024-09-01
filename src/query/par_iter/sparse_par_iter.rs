@@ -3,6 +3,7 @@ use crate::query::Query;
 use rayon::iter::plumbing::UnindexedConsumer;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+/// Sparse parallel iterator over all items that match a query.
 #[must_use]
 pub struct SparseParIter<'a, G, I, E>
 where
