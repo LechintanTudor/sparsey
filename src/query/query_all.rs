@@ -44,6 +44,54 @@ where
     }
 }
 
+impl<'a, G, E> QueryAll<'a, G, (), E>
+where
+    G: Query,
+    E: Query,
+{
+    /// Applies an "include" filter to the query.
+    pub fn include<I>(self) -> QueryAll<'a, G, I, E>
+    where
+        I: Query,
+    {
+        let (include, include_info) = I::borrow_with_group_info(self.world);
+
+        QueryAll {
+            world: self.world,
+            get: self.get,
+            include,
+            exclude: self.exclude,
+            get_info: self.get_info,
+            include_info,
+            exclude_info: self.exclude_info,
+        }
+    }
+}
+
+impl<'a, G, I> QueryAll<'a, G, I, ()>
+where
+    G: Query,
+    I: Query,
+{
+    /// Applies an "exclude" filter to the query.
+    pub fn exclude<E>(self) -> QueryAll<'a, G, I, E>
+    where
+        E: Query,
+    {
+        let (exclude, exclude_info) = E::borrow_with_group_info(self.world);
+
+        QueryAll {
+            world: self.world,
+            get: self.get,
+            include: self.include,
+            exclude,
+            get_info: self.get_info,
+            include_info: self.include_info,
+            exclude_info,
+        }
+    }
+}
+
 impl<'a, G, I, E> QueryAll<'a, G, I, E>
 where
     G: Query,
@@ -159,52 +207,6 @@ where
             self.world
                 .components
                 .group_range(&get_info.add_query(&include_info)?, &exclude_info)
-        }
-    }
-}
-
-impl<'a, G, E> QueryAll<'a, G, (), E>
-where
-    G: Query,
-    E: Query,
-{
-    pub fn include<I>(self) -> QueryAll<'a, G, I, E>
-    where
-        I: Query,
-    {
-        let (include, include_info) = I::borrow_with_group_info(self.world);
-
-        QueryAll {
-            world: self.world,
-            get: self.get,
-            include,
-            exclude: self.exclude,
-            get_info: self.get_info,
-            include_info,
-            exclude_info: self.exclude_info,
-        }
-    }
-}
-
-impl<'a, G, I> QueryAll<'a, G, I, ()>
-where
-    G: Query,
-    I: Query,
-{
-    pub fn exclude<E>(self) -> QueryAll<'a, G, I, E>
-    where
-        E: Query,
-    {
-        let (exclude, exclude_info) = E::borrow_with_group_info(self.world);
-
-        QueryAll {
-            world: self.world,
-            get: self.get,
-            include: self.include,
-            exclude,
-            get_info: self.get_info,
-            include_info: self.include_info,
-            exclude_info,
         }
     }
 }

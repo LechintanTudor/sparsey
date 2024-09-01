@@ -2,6 +2,7 @@
 //! based on [sparse sets](https://www.geeksforgeeks.org/sparse-set/).
 //!
 //! # Example
+//!
 //! ```rust
 //! use sparsey::World;
 //!
