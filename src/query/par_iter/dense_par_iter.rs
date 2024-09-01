@@ -57,7 +57,6 @@ where
 impl<'a, G> ParallelIterator for DenseParIter<'a, G>
 where
     G: Query,
-    G::Item<'a>: Send,
 {
     type Item = G::Item<'a>;
 
@@ -80,7 +79,6 @@ where
 impl<'a, G> IndexedParallelIterator for DenseParIter<'a, G>
 where
     G: Query,
-    G::Item<'a>: Send,
 {
     fn drive<C>(self, consumer: C) -> C::Result
     where

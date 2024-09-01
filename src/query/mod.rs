@@ -1,3 +1,5 @@
+//! Query and iterate entities and components.
+
 mod iter;
 mod query_all;
 mod query_one;
@@ -21,42 +23,67 @@ use core::mem::MaybeUninit;
 use core::ops::Range;
 use core::ptr;
 
-pub trait Query {
+/// Trait for querying and iterating one or more views.
+///
+/// # Safety
+///
+/// This trait is considered an implementation detail and cannot be safely
+/// implemented outside the crate.
+pub unsafe trait Query {
+    /// View borrowed from a [`World`].
     type View<'a>;
-    type Item<'a>;
+
+    /// Item type returned by queries.
+    type Item<'a>: Send;
+
+    /// Type returned by [`slice`](Self::slice) operations.
     type Slice<'a>;
+
+    /// [`SparseVec`](crate::entity::SparseVec) type used for sparse iteration.
     type Sparse<'a>: Copy;
+
+    /// Data used for sparse and dense iteration.
     type Data<'a>: Copy;
 
+    /// Borrows a view from the `world`.
     #[must_use]
     fn borrow(world: &World) -> Self::View<'_>;
 
+    /// Borrows a view from the `world` along with grouping information.
     #[must_use]
     fn borrow_with_group_info(world: &World) -> (Self::View<'_>, Option<QueryGroupInfo>);
 
+    /// Returns whether `entity` is present in all parts of the `view`.
     #[must_use]
     fn contains_all(view: &Self::View<'_>, entity: Entity) -> bool;
 
+    /// Returns whether `entity` is present in none of the parts of the `view`.
     #[must_use]
     fn contains_none(view: &Self::View<'_>, entity: Entity) -> bool;
 
+    /// Returns the item mapped to `entity`, if any.
     #[must_use]
     fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>>;
 
+    /// Splits the view into its entities and sparse vecs.
     #[must_use]
     fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>);
 
+    /// Returns whether `entity` is present in all sparse vecs.
     #[must_use]
     fn sparse_contains_all(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
 
+    /// Returns whether `entity` is present in none of the sparse vecs.
     #[must_use]
     fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
 
+    /// Splits the view into its entities, sparse vecs and data.
     #[must_use]
     fn split_sparse_data<'a>(
         view: &'a Self::View<'_>,
     ) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Data<'a>);
 
+    /// Returns the item mapped to `entity`, if any.
     #[must_use]
     unsafe fn get_sparse<'a>(
         sparse: Self::Sparse<'a>,
@@ -64,12 +91,15 @@ pub trait Query {
         entity: Entity,
     ) -> Option<Self::Item<'a>>;
 
+    /// Splits the view into its entities and data.
     #[must_use]
     fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>);
 
+    /// Returns the item mapped to `index` or `entity`.
     #[must_use]
     unsafe fn get_dense(data: Self::Data<'_>, index: usize, entity: Entity) -> Self::Item<'_>;
 
+    /// Slices the data at the given `range`.
     #[must_use]
     unsafe fn slice<'a>(
         data: Self::Data<'a>,
@@ -79,7 +109,7 @@ pub trait Query {
 }
 
 #[allow(clippy::unused_unit)]
-impl Query for () {
+unsafe impl Query for () {
     type View<'a> = ();
     type Item<'a> = ();
     type Slice<'a> = ();
@@ -162,7 +192,7 @@ impl Query for () {
     }
 }
 
-impl<Q> Query for Q
+unsafe impl<Q> Query for Q
 where
     Q: QueryPart,
 {
@@ -217,7 +247,7 @@ where
         data: Self::Data<'a>,
         entity: Entity,
     ) -> Option<Self::Item<'a>> {
-        let key = <Q as QueryPart>::get_sparse_key(sparse, entity)?;
+        let key = <Q as QueryPart>::get_dense_key(sparse, entity)?;
         Some(<Q as QueryPart>::get_sparse(data, key))
     }
 
@@ -240,7 +270,7 @@ where
 
 macro_rules! impl_query {
     ($(($Ty:ident, $idx:tt)),+) => {
-        impl<$($Ty),+> Query for ($($Ty,)+)
+        unsafe impl<$($Ty),+> Query for ($($Ty,)+)
         where
             $($Ty: QueryPart,)+
         {
@@ -356,7 +386,7 @@ macro_rules! impl_query {
                 data: Self::Data<'a>,
                 entity: Entity,
             ) -> Option<Self::Item<'a>> {
-                let key = ($($Ty::get_sparse_key(sparse.$idx, entity)?,)+);
+                let key = ($($Ty::get_dense_key(sparse.$idx, entity)?,)+);
                 Some(($($Ty::get_sparse(data.$idx, key.$idx),)+))
             }
 

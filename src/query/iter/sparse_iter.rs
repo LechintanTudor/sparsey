@@ -2,6 +2,7 @@ use crate::entity::Entity;
 use crate::query::Query;
 use core::slice::Iter as SliceIter;
 
+/// Sparse iterator over all items that match a query.
 #[must_use]
 pub struct SparseIter<'a, G, I, E>
 where

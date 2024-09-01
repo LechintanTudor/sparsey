@@ -3,6 +3,7 @@ use crate::query::Query;
 use core::ops::Range;
 use core::ptr::NonNull;
 
+/// Dense iterator over all items that match a query. Extremely fast.
 #[must_use]
 pub struct DenseIter<'a, G>
 where
@@ -59,5 +60,9 @@ where
         }
 
         init
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.range.size_hint()
     }
 }

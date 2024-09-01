@@ -8,6 +8,7 @@ use {
     rayon::iter::ParallelIterator,
 };
 
+/// Queries all items that match a query.
 #[must_use]
 pub struct QueryAll<'a, G, I, E>
 where
@@ -49,6 +50,7 @@ where
     I: Query,
     E: Query,
 {
+    /// Returns an iterator over all items that match the query.
     pub fn iter(&mut self) -> Iter<'_, G, I, E> {
         if let Some(range) = self.get_group_range() {
             let (get_entities, get_data) = G::split_dense_data(&self.get);
@@ -83,6 +85,7 @@ where
         }
     }
 
+    /// Calls `f` for all items that match the query.
     pub fn for_each<F>(&mut self, f: F)
     where
         F: FnMut(G::Item<'_>),
@@ -90,6 +93,7 @@ where
         self.iter().for_each(f);
     }
 
+    /// Returns a parallel iterator over all items that match the query.
     #[cfg(feature = "parallel")]
     pub fn par_iter(&mut self) -> ParIter<'_, G, I, E> {
         if let Some(range) = self.get_group_range() {
@@ -125,15 +129,17 @@ where
         }
     }
 
+    /// Calls `f` in parallel for all items that match the query.
     #[cfg(feature = "parallel")]
     pub fn par_for_each<F>(&mut self, f: F)
     where
-        for<'b> G::Item<'b>: Send,
         F: Fn(G::Item<'_>) + Send + Sync,
     {
         self.par_iter().for_each(f);
     }
 
+    /// Returns ordered slices of all items that match the query, if the query
+    // is grouped.
     #[must_use]
     pub fn slice(&mut self) -> Option<G::Slice<'_>> {
         let range = self.get_group_range()?;

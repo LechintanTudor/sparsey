@@ -6,7 +6,8 @@ use core::marker::PhantomData;
 use core::ops::{Index, IndexMut};
 use core::ptr::NonNull;
 
-/// Shared view over all components of type `T` in a [`World`](crate::world::World).
+/// Shared view over all components of type `T` in a
+/// [`World`](crate::world::World).
 pub struct View<'a, T> {
     components: AtomicRef<'a, ComponentSparseSet>,
     _phantom: PhantomData<&'a [T]>,
@@ -23,7 +24,8 @@ impl<'a, T> View<'a, T> {
     }
 }
 
-/// Exclusive view over all components of type `T` in a [`World`](crate::world::World).
+/// Exclusive view over all components of type `T` in a
+/// [`World`](crate::world::World).
 pub struct ViewMut<'a, T> {
     components: AtomicRefMut<'a, ComponentSparseSet>,
     _phantom: PhantomData<&'a mut [T]>,
@@ -42,7 +44,8 @@ where
         }
     }
 
-    /// Returns a mutable reference to the component mapped to `entity`, if it exists.
+    /// Returns a mutable reference to the component mapped to `entity`, if it
+    /// exists.
     #[must_use]
     pub fn get_mut(&mut self, entity: Entity) -> Option<&mut T> {
         unsafe { self.components.get_mut::<T>(entity) }

@@ -2,8 +2,6 @@
 
 mod builder;
 
-use core::any::TypeId;
-
 pub use self::builder::*;
 
 use crate::component::{
@@ -11,6 +9,7 @@ use crate::component::{
 };
 use crate::entity::{Entity, EntityStorage};
 use crate::query::{Query, QueryAll, QueryOne};
+use core::any::TypeId;
 
 /// Collection for entities and their associated components.
 #[derive(Default, Debug)]
@@ -210,7 +209,6 @@ impl World {
     pub fn par_for_each<G>(&self, f: impl Fn(G::Item<'_>) + Send + Sync)
     where
         G: Query,
-        for<'a> G::Item<'a>: Send,
     {
         self.query_all().par_for_each(f);
     }

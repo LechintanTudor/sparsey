@@ -9,7 +9,8 @@ pub const MIN_GROUP_ARITY: usize = 2;
 /// Maximum number of component types that can form a group.
 pub const MAX_GROUP_ARITY: usize = 16;
 
-/// Maximum number of groups that can be set on a [`World`](crate::world::World).
+/// Maximum number of groups that can be set on a
+/// [`World`](crate::world::World).
 pub const MAX_GROUP_COUNT: usize = 64;
 
 /// Describes the layout of the component groups that can be set on a
@@ -166,7 +167,8 @@ impl GroupFamily {
 
 /// Helper trait for creating groups in a [`GroupLayout`].
 pub trait GroupDescriptor {
-    /// Slice containing the component data of the components present in the group.
+    /// Slice containing the component data of the components present in the
+    /// group.
     const COMPONENTS: &'static [ComponentData];
 }
 

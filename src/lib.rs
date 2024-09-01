@@ -31,10 +31,11 @@
 //!
 //! # Usage
 //!
-//! The most important items from Sparsey crate are [`World`] and [`Entity`], which are re-exported
-//! at the root of the crate for easy access. A [`World`] is a collection of entities and components
-//! thas supports create/read/update/delete (CRUD) operations, while an [`Entity`] is a versioned
-//! index used to reference components within a [`World`].
+//! The most important items from Sparsey crate are [`World`] and [`Entity`],
+//! which are re-exported at the root of the crate for easy access. A [`World`]
+//! is a collection of entities and components thas supports
+//! create/read/update/delete (CRUD) operations, while an [`Entity`] is a
+//! versioned index used to reference components within a [`World`].
 
 #![cfg_attr(not(feature = "std"), no_std)]
 

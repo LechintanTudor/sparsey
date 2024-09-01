@@ -58,7 +58,8 @@ impl SparseVec {
         *self.entities.get(sparse)?
     }
 
-    /// Returns the dense index at the given sparse index without checking if it valid.
+    /// Returns the dense index at the given sparse index without checking if it
+    /// valid.
     #[inline]
     #[must_use]
     pub unsafe fn get_sparse_unchecked(&self, sparse: usize) -> usize {
@@ -83,7 +84,8 @@ impl SparseVec {
         self.entities.get_mut(sparse)?.take()
     }
 
-    /// Returns the entity slot at the given dense index without checking if it is valid.
+    /// Returns the entity slot at the given dense index without checking if it
+    /// is valid.
     #[inline]
     pub unsafe fn get_unchecked_mut(&mut self, index: usize) -> &mut Option<DenseEntity> {
         self.entities.get_unchecked_mut(index)
@@ -99,7 +101,8 @@ impl SparseVec {
         unsafe { self.entities.get_unchecked_mut(index) }
     }
 
-    /// Swaps the entities at the given dense indexes without checking their validity.
+    /// Swaps the entities at the given dense indexes without checking their
+    /// validity.
     #[inline]
     pub unsafe fn swap(&mut self, a: usize, b: usize) {
         debug_assert!(a < self.entities.len());
