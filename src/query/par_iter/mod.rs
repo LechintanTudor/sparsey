@@ -46,7 +46,6 @@ where
     G: Query,
     I: Query,
     E: Query,
-    G::Item<'a>: Send,
 {
     type Item = G::Item<'a>;
 
