@@ -88,7 +88,11 @@ impl World {
         C: ComponentSet,
     {
         let entity = self.entities.create();
-        C::insert(self, entity, components);
+
+        unsafe {
+            C::insert(self, entity, components);
+        }
+
         entity
     }
 
@@ -147,7 +151,10 @@ impl World {
             return false;
         }
 
-        C::insert(self, entity, components);
+        unsafe {
+            C::insert(self, entity, components);
+        }
+
         true
     }
 
@@ -158,7 +165,7 @@ impl World {
     where
         C: ComponentSet,
     {
-        C::remove(self, entity)
+        unsafe { C::remove(self, entity) }
     }
 
     /// Removes components from the `entity`, without returning them.
@@ -168,7 +175,9 @@ impl World {
     where
         C: ComponentSet,
     {
-        C::delete(self, entity);
+        unsafe {
+            C::delete(self, entity);
+        }
     }
 
     /// Queries an entity with the given components.

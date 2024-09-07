@@ -14,7 +14,7 @@ pub unsafe trait ComponentSet {
     type Remove;
 
     /// Adds the given `components` to `entity`.
-    fn insert(world: &mut World, entity: Entity, components: Self);
+    unsafe fn insert(world: &mut World, entity: Entity, components: Self);
 
     /// Creates new entities from the components produced by the iterator.
     ///
@@ -27,10 +27,10 @@ pub unsafe trait ComponentSet {
     ///
     /// Returns the components that were successfully removed.
     #[must_use = "Use `delete` to discard the components."]
-    fn remove(world: &mut World, entity: Entity) -> Self::Remove;
+    unsafe fn remove(world: &mut World, entity: Entity) -> Self::Remove;
 
     /// Removes components from the given `entity`.
-    fn delete(world: &mut World, entity: Entity);
+    unsafe fn delete(world: &mut World, entity: Entity);
 }
 
 macro_rules! impl_component_set {
@@ -41,7 +41,7 @@ macro_rules! impl_component_set {
         {
             type Remove = ($(Option<$Comp>,)*);
 
-            fn insert(world: &mut World, entity: Entity, components: Self) {
+            unsafe fn insert(world: &mut World, entity: Entity, components: Self) {
                 let mut group_mask = GroupMask::EMPTY;
 
                 $({
@@ -63,7 +63,7 @@ macro_rules! impl_component_set {
                     }
                 })*
 
-                if group_mask.0 != 0 {
+                if group_mask != GroupMask::EMPTY {
                     unsafe {
                         group(
                             &mut world.components.components,
@@ -113,7 +113,7 @@ macro_rules! impl_component_set {
                     world.entities.as_slice().get_unchecked(start_entity..)
                 };
 
-                if group_mask.0 != 0 {
+                if group_mask != GroupMask::EMPTY {
                     for &entity in new_entities {
                         unsafe {
                             group(
@@ -129,7 +129,7 @@ macro_rules! impl_component_set {
                 new_entities
             }
 
-            fn remove(world: &mut World, entity: Entity) -> Self::Remove {
+            unsafe fn remove(world: &mut World, entity: Entity) -> Self::Remove {
                 let mut group_mask = GroupMask::EMPTY;
 
                 let sparse_sets = ($({
@@ -166,7 +166,7 @@ macro_rules! impl_component_set {
                 }
             }
 
-            fn delete(world: &mut World, entity: Entity) {
+            unsafe fn delete(world: &mut World, entity: Entity) {
                 let mut group_mask = GroupMask::EMPTY;
 
                 let sparse_sets = ($({
@@ -210,7 +210,7 @@ unsafe impl ComponentSet for () {
     type Remove = ();
 
     #[inline(always)]
-    fn insert(_world: &mut World, _entity: Entity, _components: Self) {
+    unsafe fn insert(_world: &mut World, _entity: Entity, _components: Self) {
         // Empty
     }
 
@@ -228,12 +228,12 @@ unsafe impl ComponentSet for () {
     }
 
     #[inline(always)]
-    fn remove(_world: &mut World, _entity: Entity) -> Self::Remove {
+    unsafe fn remove(_world: &mut World, _entity: Entity) -> Self::Remove {
         // Empty
     }
 
     #[inline(always)]
-    fn delete(_world: &mut World, _entity: Entity) {
+    unsafe fn delete(_world: &mut World, _entity: Entity) {
         // Empty
     }
 }
