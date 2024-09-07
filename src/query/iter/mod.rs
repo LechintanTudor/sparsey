@@ -63,6 +63,13 @@ where
             Self::Dense(iter) => iter.fold(init, f),
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            Self::Sparse(iter) => iter.size_hint(),
+            Self::Dense(iter) => iter.size_hint(),
+        }
+    }
 }
 
 impl<'a, G, I, E> From<SparseIter<'a, G, I, E>> for Iter<'a, G, I, E>
