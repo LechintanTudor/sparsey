@@ -4,6 +4,11 @@ use crate::World;
 use core::any::TypeId;
 
 /// Handles insert and remove operations for components stored in a [`World`].
+///
+/// # Safety
+///
+/// This trait is considered an implementation detail and cannot be safely
+/// implemented outside the crate.
 pub unsafe trait ComponentSet {
     /// The components returned by [`remove`](Self::remove) operations.
     type Remove;
@@ -146,7 +151,7 @@ macro_rules! impl_component_set {
                 },)*);
 
                 unsafe {
-                    if group_mask.0 != 0 {
+                    if group_mask != GroupMask::EMPTY {
                         ungroup(
                             &mut world.components.components,
                             &mut world.components.groups,
@@ -183,7 +188,7 @@ macro_rules! impl_component_set {
                 },)*);
 
                 unsafe {
-                    if group_mask.0 != 0 {
+                    if group_mask != GroupMask::EMPTY {
                         ungroup(
                             &mut world.components.components,
                             &mut world.components.groups,
@@ -201,12 +206,11 @@ macro_rules! impl_component_set {
     };
 }
 
-#[allow(unused_variables)]
 unsafe impl ComponentSet for () {
     type Remove = ();
 
     #[inline(always)]
-    fn insert(world: &mut World, entity: Entity, components: Self) {
+    fn insert(_world: &mut World, _entity: Entity, _components: Self) {
         // Empty
     }
 
@@ -224,12 +228,12 @@ unsafe impl ComponentSet for () {
     }
 
     #[inline(always)]
-    fn remove(world: &mut World, entity: Entity) -> Self::Remove {
+    fn remove(_world: &mut World, _entity: Entity) -> Self::Remove {
         // Empty
     }
 
     #[inline(always)]
-    fn delete(world: &mut World, entity: Entity) {
+    fn delete(_world: &mut World, _entity: Entity) {
         // Empty
     }
 }

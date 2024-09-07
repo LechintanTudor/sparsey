@@ -2,7 +2,7 @@ use crate::component::Component;
 use crate::entity::{DenseEntity, Entity, SparseVec};
 use alloc::{alloc, Layout, LayoutError};
 use core::ptr::NonNull;
-use core::{fmt, mem, ptr, slice};
+use core::{fmt, mem, slice};
 
 pub(crate) struct ComponentSparseSet {
     sparse: SparseVec,
@@ -39,15 +39,9 @@ impl ComponentSparseSet {
             Some(dense_entity) => {
                 let index = dense_entity.dense();
 
-                self.entities.add(index).as_ptr().write(entity);
-
-                Some(
-                    self.components
-                        .cast::<T>()
-                        .add(index)
-                        .as_ptr()
-                        .replace(component),
-                )
+                // Replace existing entity and component.
+                *self.entities.add(index).as_mut() = entity;
+                Some(self.components.cast::<T>().add(index).replace(component))
             }
             None => {
                 *dense_entity = Some(DenseEntity {
@@ -59,13 +53,9 @@ impl ComponentSparseSet {
                     self.grow();
                 }
 
-                self.entities.add(self.len).as_ptr().write(entity);
-
-                self.components
-                    .cast::<T>()
-                    .add(self.len)
-                    .as_ptr()
-                    .write(component);
+                // Write entity and component to uninitialized memory.
+                self.entities.add(self.len).write(entity);
+                self.components.cast::<T>().add(self.len).write(component);
 
                 self.len += 1;
                 None
@@ -90,11 +80,12 @@ impl ComponentSparseSet {
             });
         }
 
-        let removed_ptr = self.components.cast::<T>().add(index).as_ptr();
-        let last_ptr = self.components.cast::<T>().add(self.len).as_ptr();
+        let removed_ptr = self.components.cast::<T>().add(index);
+        let last_ptr = self.components.cast::<T>().add(self.len);
 
+        // Replace removed component with last component.
         let component = removed_ptr.read();
-        ptr::copy(last_ptr, removed_ptr, 1);
+        last_ptr.copy_to(removed_ptr, 1);
         Some(component)
     }
 
@@ -119,11 +110,11 @@ impl ComponentSparseSet {
             });
         }
 
-        let dropped_ptr = self.components.cast::<T>().add(index).as_ptr();
+        let dropped_ptr = self.components.cast::<T>().add(index);
         dropped_ptr.drop_in_place();
 
-        let last_ptr = self.components.cast::<T>().add(self.len).as_ptr();
-        ptr::copy(last_ptr, dropped_ptr, 1);
+        let last_ptr = self.components.cast::<T>().add(self.len);
+        last_ptr.copy_to(dropped_ptr, 1);
     }
 
     #[inline]
@@ -231,76 +222,72 @@ impl ComponentSparseSet {
         }
     }
 
+    #[cold]
+    #[inline(never)]
     unsafe fn grow_typed<T>(&mut self)
     where
         T: Component,
     {
+        // Allocate new storage for entities and components.
         let (new_entities, new_components, new_cap) = {
             let new_cap = match self.cap {
                 0 => 4,
-                cap => cap.saturating_add(cap),
+                cap => {
+                    let new_cap = cap.saturating_add(cap);
+                    assert_ne!(new_cap, self.cap, "Cannot grow sparse set");
+                    new_cap
+                }
             };
 
-            assert_ne!(
-                new_cap, self.cap,
-                "Cannot allocate space for more components",
-            );
+            let (new_layout, new_components_offset) = Self::compute_layout::<T>(new_cap);
 
-            let (new_layout, new_components_offset) =
-                Self::compute_layout::<T>(new_cap).expect("Failed to compute new component layout");
-
-            let new_data = alloc::alloc(new_layout);
-
-            if new_data.is_null() {
+            let Some(new_data) = NonNull::new(alloc::alloc(new_layout)) else {
                 alloc::handle_alloc_error(new_layout);
-            }
+            };
 
-            #[allow(clippy::cast_ptr_alignment)]
             (
-                NonNull::new_unchecked(new_data.cast::<Entity>()),
-                NonNull::new_unchecked(new_data.byte_add(new_components_offset)),
+                new_data.cast::<Entity>(),
+                new_data.byte_add(new_components_offset).cast::<T>(),
                 new_cap,
             )
         };
 
-        ptr::copy_nonoverlapping(self.entities.as_ptr(), new_entities.as_ptr(), self.len);
+        // Copy old entities and components to new location.
+        self.entities.copy_to_nonoverlapping(new_entities, self.len);
 
-        ptr::copy_nonoverlapping::<T>(
-            self.components.cast().as_ptr(),
-            new_components.cast().as_ptr(),
-            self.len,
-        );
+        self.components
+            .cast::<T>()
+            .copy_to_nonoverlapping(new_components, self.len);
 
+        // Deallocate old storage, if any.
         if self.cap != 0 {
-            let (layout, _) = Self::compute_layout::<T>(self.cap).unwrap();
+            let (layout, _) = Self::compute_layout::<T>(self.cap);
             alloc::dealloc(self.entities.cast().as_ptr(), layout);
         }
 
+        // Update pointers and capacity.
         self.entities = new_entities;
-        self.components = new_components;
+        self.components = new_components.cast();
         self.cap = new_cap;
     }
 
-    unsafe fn swap_typed<T>(&mut self, a: usize, b: usize)
+    unsafe fn swap_typed<T>(&mut self, dense_a: usize, dense_b: usize)
     where
         T: Component,
     {
-        debug_assert!(a < self.len);
-        debug_assert!(b < self.len);
-        debug_assert_ne!(a, b);
+        debug_assert!(dense_a < self.len);
+        debug_assert!(dense_b < self.len);
+        debug_assert_ne!(dense_a, dense_b);
 
-        let (sparse_a, sparse_b) = {
-            let entity_a = self.entities.add(a).as_mut();
-            let entity_b = self.entities.add(b).as_mut();
-            mem::swap(entity_a, entity_b);
+        // Swap entities.
+        let entity_a = self.entities.add(dense_a).as_mut();
+        let entity_b = self.entities.add(dense_b).as_mut();
+        self.sparse.swap(entity_a.sparse(), entity_b.sparse());
+        mem::swap(entity_a, entity_b);
 
-            (entity_a.sparse(), entity_b.sparse())
-        };
-
-        self.sparse.swap(sparse_a, sparse_b);
-
-        let component_a = self.components.cast::<T>().add(a).as_mut();
-        let component_b = self.components.cast::<T>().add(b).as_mut();
+        // Swap components.
+        let component_a = self.components.cast::<T>().add(dense_a).as_mut();
+        let component_b = self.components.cast::<T>().add(dense_b).as_mut();
         mem::swap(component_a, component_b);
     }
 
@@ -313,7 +300,7 @@ impl ComponentSparseSet {
         if mem::needs_drop::<T>() {
             for i in 0..self.len {
                 unsafe {
-                    self.components.cast::<T>().add(i).as_ptr().drop_in_place();
+                    self.components.cast::<T>().add(i).drop_in_place();
                 }
             }
         }
@@ -328,21 +315,28 @@ impl ComponentSparseSet {
         if mem::needs_drop::<T>() {
             for i in 0..self.len {
                 unsafe {
-                    self.components.cast::<T>().add(i).as_ptr().drop_in_place();
+                    self.components.cast::<T>().add(i).drop_in_place();
                 }
             }
         }
 
         if self.cap != 0 {
-            let (layout, _) = Self::compute_layout::<T>(self.cap).unwrap();
+            let (layout, _) = Self::compute_layout::<T>(self.cap);
             alloc::dealloc(self.entities.cast::<u8>().as_ptr(), layout);
         }
     }
 
-    fn compute_layout<T>(cap: usize) -> Result<(Layout, usize), LayoutError> {
-        let entities_layout = Layout::array::<Entity>(cap)?;
-        let components_layout = Layout::array::<T>(cap)?;
-        entities_layout.extend(components_layout)
+    fn compute_layout<T>(cap: usize) -> (Layout, usize) {
+        fn compute_layout_impl<T>(cap: usize) -> Result<(Layout, usize), LayoutError> {
+            let entities_layout = Layout::array::<Entity>(cap)?;
+            let components_layout = Layout::array::<T>(cap)?;
+            entities_layout.extend(components_layout)
+        }
+
+        match compute_layout_impl::<T>(cap) {
+            Ok(result) => result,
+            Err(e) => panic!("Cannot compute sparse set data layout: {e}"),
+        }
     }
 }
 
@@ -371,7 +365,7 @@ impl fmt::Debug for ComponentSparseSet {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 struct ComponentSparseSetVtable {
     grow: unsafe fn(&mut ComponentSparseSet),
     swap: unsafe fn(&mut ComponentSparseSet, usize, usize),
