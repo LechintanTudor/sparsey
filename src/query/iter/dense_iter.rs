@@ -1,5 +1,6 @@
 use crate::entity::Entity;
 use crate::query::Query;
+use core::iter::FusedIterator;
 use core::ops::Range;
 use core::ptr::NonNull;
 
@@ -63,6 +64,22 @@ where
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        self.range.size_hint()
+        Iterator::size_hint(&self.range)
     }
+}
+
+impl<G> ExactSizeIterator for DenseIter<'_, G>
+where
+    G: Query,
+{
+    fn len(&self) -> usize {
+        ExactSizeIterator::len(&self.range)
+    }
+}
+
+impl<G> FusedIterator for DenseIter<'_, G>
+where
+    G: Query,
+{
+    // Empty
 }

@@ -69,13 +69,13 @@ pub unsafe trait Query {
     #[must_use]
     fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>);
 
-    /// Returns whether `entity` is present in all sparse vecs.
+    /// Returns whether the sparse index is present in all sparse vecs.
     #[must_use]
-    fn sparse_contains_all(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
+    fn sparse_contains_all(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool;
 
-    /// Returns whether `entity` is present in none of the sparse vecs.
+    /// Returns whether the sparse index is present in none of the sparse vecs.
     #[must_use]
-    fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
+    fn sparse_contains_none(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool;
 
     /// Splits the view into its entities, sparse vecs and data.
     #[must_use]
@@ -147,12 +147,12 @@ unsafe impl Query for () {
     }
 
     #[inline]
-    fn sparse_contains_all(_sparse: Self::Sparse<'_>, _entity: Entity) -> bool {
+    fn sparse_contains_all(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
         true
     }
 
     #[inline]
-    fn sparse_contains_none(_sparse: Self::Sparse<'_>, _entity: Entity) -> bool {
+    fn sparse_contains_none(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
         true
     }
 
@@ -228,12 +228,12 @@ where
         <Q as QueryPart>::split_sparse(view)
     }
 
-    fn sparse_contains_all(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
-        <Q as QueryPart>::sparse_contains(sparse, entity)
+    fn sparse_contains_all(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
+        <Q as QueryPart>::sparse_contains(sparse, sparse_index)
     }
 
-    fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
-        !<Q as QueryPart>::sparse_contains(sparse, entity)
+    fn sparse_contains_none(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
+        !<Q as QueryPart>::sparse_contains(sparse, sparse_index)
     }
 
     fn split_sparse_data<'a>(
@@ -247,7 +247,7 @@ where
         data: Self::Data<'a>,
         entity: Entity,
     ) -> Option<Self::Item<'a>> {
-        let key = <Q as QueryPart>::get_dense_key(sparse, entity)?;
+        let key = <Q as QueryPart>::get_sparse_key(sparse, entity)?;
         Some(<Q as QueryPart>::get_sparse(data, key))
     }
 
@@ -341,12 +341,12 @@ macro_rules! impl_query {
                 (entities, sparse)
             }
 
-            fn sparse_contains_all(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
-                $($Ty::sparse_contains(sparse.$idx, entity))&&+
+            fn sparse_contains_all(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
+                $($Ty::sparse_contains(sparse.$idx, sparse_index))&&+
             }
 
-            fn sparse_contains_none(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
-                $(!$Ty::sparse_contains(sparse.$idx, entity))&&+
+            fn sparse_contains_none(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
+                $(!$Ty::sparse_contains(sparse.$idx, sparse_index))&&+
             }
 
             fn split_sparse_data<'a>(
@@ -386,7 +386,7 @@ macro_rules! impl_query {
                 data: Self::Data<'a>,
                 entity: Entity,
             ) -> Option<Self::Item<'a>> {
-                let key = ($($Ty::get_dense_key(sparse.$idx, entity)?,)+);
+                let key = ($($Ty::get_sparse_key(sparse.$idx, entity)?,)+);
                 Some(($($Ty::get_sparse(data.$idx, key.$idx),)+))
             }
 

@@ -42,11 +42,13 @@ where
 
     #[must_use]
     unsafe fn get(&self, entity: Entity) -> Option<G::Item<'a>> {
-        if !E::sparse_contains_none(self.exclude_sparse, entity) {
+        let sparse = entity.sparse();
+
+        if !E::sparse_contains_none(self.exclude_sparse, sparse) {
             return None;
         }
 
-        if !I::sparse_contains_all(self.include_sparse, entity) {
+        if !I::sparse_contains_all(self.include_sparse, sparse) {
             return None;
         }
 

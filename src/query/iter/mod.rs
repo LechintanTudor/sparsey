@@ -5,6 +5,7 @@ pub use self::dense_iter::*;
 pub use self::sparse_iter::*;
 
 use crate::query::Query;
+use core::iter::FusedIterator;
 
 /// Sparse or dense iterator over all items that match the query.
 #[must_use]
@@ -70,6 +71,15 @@ where
             Self::Dense(iter) => iter.size_hint(),
         }
     }
+}
+
+impl<G, I, E> FusedIterator for Iter<'_, G, I, E>
+where
+    G: Query,
+    I: Query,
+    E: Query,
+{
+    // Empty
 }
 
 impl<'a, G, I, E> From<SparseIter<'a, G, I, E>> for Iter<'a, G, I, E>

@@ -25,7 +25,7 @@ pub unsafe trait QueryPart {
     type Sparse<'a>: Copy;
 
     /// Key used to access dense data.
-    type DenseKey;
+    type SparseKey;
 
     /// Data used for sparse and dense iteration.
     type Data<'a>: Copy;
@@ -50,9 +50,9 @@ pub unsafe trait QueryPart {
     #[must_use]
     fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>);
 
-    /// Returns whether `entity` is present in the sparse vecs.
+    /// Returns whether the sparse index is present in the sparse vecs.
     #[must_use]
-    fn sparse_contains(sparse: Self::Sparse<'_>, entity: Entity) -> bool;
+    fn sparse_contains(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool;
 
     /// Splits the view into its entities, sparse vecs and data.
     #[must_use]
@@ -60,13 +60,13 @@ pub unsafe trait QueryPart {
         view: &'a Self::View<'_>,
     ) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Data<'a>);
 
-    /// Returns the dense key extracted from the sparse vecs.
+    /// Returns the sparse key extracted from the sparse vecs.
     #[must_use]
-    fn get_dense_key(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::DenseKey>;
+    fn get_sparse_key(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey>;
 
     /// Returns the sparse data that can be accessed with the dense key.
     #[must_use]
-    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::DenseKey) -> Self::Item<'_>;
+    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_>;
 
     /// Splits the view into its entities and data.
     #[must_use]
@@ -90,7 +90,7 @@ unsafe impl QueryPart for Entity {
     type Item<'a> = Entity;
     type Slice<'a> = &'a [Entity];
     type Sparse<'a> = ();
-    type DenseKey = Entity;
+    type SparseKey = Entity;
     type Data<'a> = ();
 
     #[inline]
@@ -119,7 +119,7 @@ unsafe impl QueryPart for Entity {
     }
 
     #[inline]
-    fn sparse_contains(_sparse: Self::Sparse<'_>, _entity: Entity) -> bool {
+    fn sparse_contains(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
         true
     }
 
@@ -131,12 +131,12 @@ unsafe impl QueryPart for Entity {
     }
 
     #[inline]
-    fn get_dense_key<'a>(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::DenseKey> {
+    fn get_sparse_key<'a>(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(entity)
     }
 
     #[inline]
-    unsafe fn get_sparse(_data: Self::Data<'_>, key: Self::DenseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse(_data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
         key
     }
 
@@ -168,7 +168,7 @@ where
     type Item<'a> = &'a T;
     type Slice<'a> = &'a [T];
     type Sparse<'a> = &'a SparseVec;
-    type DenseKey = usize;
+    type SparseKey = usize;
     type Data<'a> = NonNull<T>;
 
     fn borrow(world: &World) -> Self::View<'_> {
@@ -198,8 +198,8 @@ where
         (Some(view.entities()), view.sparse())
     }
 
-    fn sparse_contains(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
-        sparse.contains(entity)
+    fn sparse_contains(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
+        sparse.contains_sparse(sparse_index)
     }
 
     fn split_sparse_data<'a>(
@@ -208,11 +208,11 @@ where
         (Some(view.entities()), view.sparse(), view.as_non_null_ptr())
     }
 
-    fn get_dense_key<'a>(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::DenseKey> {
+    fn get_sparse_key<'a>(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(sparse.get_sparse(entity.sparse())?.dense())
     }
 
-    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::DenseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
         data.add(key).as_ref()
     }
 
@@ -241,7 +241,7 @@ where
     type Item<'a> = &'a mut T;
     type Slice<'a> = &'a mut [T];
     type Sparse<'a> = &'a SparseVec;
-    type DenseKey = usize;
+    type SparseKey = usize;
     type Data<'a> = NonNull<T>;
 
     fn borrow(world: &World) -> Self::View<'_> {
@@ -271,8 +271,8 @@ where
         (Some(view.entities()), view.sparse())
     }
 
-    fn sparse_contains(sparse: Self::Sparse<'_>, entity: Entity) -> bool {
-        sparse.contains(entity)
+    fn sparse_contains(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
+        sparse.contains_sparse(sparse_index)
     }
 
     fn split_sparse_data<'a>(
@@ -281,11 +281,11 @@ where
         (Some(view.entities()), view.sparse(), view.as_non_null_ptr())
     }
 
-    fn get_dense_key(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::DenseKey> {
+    fn get_sparse_key(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(sparse.get_sparse(entity.sparse())?.dense())
     }
 
-    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::DenseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
         data.add(key).as_mut()
     }
 
@@ -314,7 +314,7 @@ where
     type Item<'a> = Option<&'a T>;
     type Slice<'a> = ();
     type Sparse<'a> = ();
-    type DenseKey = Entity;
+    type SparseKey = Entity;
     type Data<'a> = (&'a SparseVec, NonNull<T>);
 
     fn borrow(world: &World) -> Self::View<'_> {
@@ -337,7 +337,7 @@ where
         (None, ())
     }
 
-    fn sparse_contains(_sparse: Self::Sparse<'_>, _entity: Entity) -> bool {
+    fn sparse_contains(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
         true
     }
 
@@ -347,11 +347,11 @@ where
         (None, (), (view.sparse(), view.as_non_null_ptr()))
     }
 
-    fn get_dense_key(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::DenseKey> {
+    fn get_sparse_key(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(entity)
     }
 
-    unsafe fn get_sparse((sparse, ptr): Self::Data<'_>, entity: Self::DenseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse((sparse, ptr): Self::Data<'_>, entity: Self::SparseKey) -> Self::Item<'_> {
         sparse
             .get_sparse(entity.sparse())
             .map(|entity| ptr.add(entity.dense()).as_ref())
@@ -388,7 +388,7 @@ where
     type Item<'a> = Option<&'a mut T>;
     type Slice<'a> = ();
     type Sparse<'a> = ();
-    type DenseKey = Entity;
+    type SparseKey = Entity;
     type Data<'a> = (&'a SparseVec, NonNull<T>);
 
     fn borrow(world: &World) -> Self::View<'_> {
@@ -411,7 +411,7 @@ where
         (None, ())
     }
 
-    fn sparse_contains(_sparse: Self::Sparse<'_>, _entity: Entity) -> bool {
+    fn sparse_contains(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
         true
     }
 
@@ -421,11 +421,11 @@ where
         (None, (), (view.sparse(), view.as_non_null_ptr()))
     }
 
-    fn get_dense_key<'a>(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::DenseKey> {
+    fn get_sparse_key<'a>(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(entity)
     }
 
-    unsafe fn get_sparse((sparse, ptr): Self::Data<'_>, entity: Self::DenseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse((sparse, ptr): Self::Data<'_>, entity: Self::SparseKey) -> Self::Item<'_> {
         sparse
             .get_sparse(entity.sparse())
             .map(|entity| ptr.add(entity.dense()).as_mut())

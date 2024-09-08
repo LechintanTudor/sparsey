@@ -1,5 +1,6 @@
 use crate::entity::Entity;
 use crate::query::Query;
+use core::iter::FusedIterator;
 use core::slice::Iter as SliceIter;
 
 /// Sparse iterator over all items that match a query.
@@ -54,11 +55,13 @@ where
                 break None;
             };
 
-            if !E::sparse_contains_none(self.exclude_sparse, entity) {
+            let sparse = entity.sparse();
+
+            if !E::sparse_contains_none(self.exclude_sparse, sparse) {
                 continue;
             }
 
-            if !I::sparse_contains_all(self.include_sparse, entity) {
+            if !I::sparse_contains_all(self.include_sparse, sparse) {
                 continue;
             }
 
@@ -75,11 +78,13 @@ where
         F: FnMut(B, Self::Item) -> B,
     {
         for &entity in self.entities {
-            if !E::sparse_contains_none(self.exclude_sparse, entity) {
+            let sparse = entity.sparse();
+
+            if !E::sparse_contains_none(self.exclude_sparse, sparse) {
                 continue;
             }
 
-            if !I::sparse_contains_all(self.include_sparse, entity) {
+            if !I::sparse_contains_all(self.include_sparse, sparse) {
                 continue;
             }
 
@@ -92,4 +97,13 @@ where
 
         init
     }
+}
+
+impl<G, I, E> FusedIterator for SparseIter<'_, G, I, E>
+where
+    G: Query,
+    I: Query,
+    E: Query,
+{
+    // Empty
 }
