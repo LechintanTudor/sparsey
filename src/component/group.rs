@@ -143,8 +143,8 @@ unsafe fn get_group_status(
     let (first, others) = components.split_first_mut().unwrap_unchecked();
 
     let status = match first.get_mut().sparse().get(entity) {
-        Some(dense_entity) => {
-            if dense_entity.dense() < group_len {
+        Some(dense) => {
+            if (dense as usize) < group_len {
                 GroupStatus::Grouped
             } else {
                 GroupStatus::Ungrouped

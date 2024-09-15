@@ -209,7 +209,7 @@ where
     }
 
     fn get_sparse_key<'a>(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
-        Some(sparse.get_sparse(entity.sparse())?.dense())
+        Some(sparse.get_sparse(entity.sparse())? as usize)
     }
 
     unsafe fn get_sparse(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
@@ -282,7 +282,7 @@ where
     }
 
     fn get_sparse_key(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
-        Some(sparse.get_sparse(entity.sparse())?.dense())
+        Some(sparse.get_sparse(entity.sparse())? as usize)
     }
 
     unsafe fn get_sparse(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
@@ -354,7 +354,7 @@ where
     unsafe fn get_sparse((sparse, ptr): Self::Data<'_>, entity: Self::SparseKey) -> Self::Item<'_> {
         sparse
             .get_sparse(entity.sparse())
-            .map(|entity| ptr.add(entity.dense()).as_ref())
+            .map(|dense| ptr.add(dense as usize).as_ref())
     }
 
     fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
@@ -368,7 +368,7 @@ where
     ) -> Self::Item<'_> {
         sparse
             .get_sparse(entity.sparse())
-            .map(|entity| ptr.add(entity.dense()).as_ref())
+            .map(|dense| ptr.add(dense as usize).as_ref())
     }
 
     unsafe fn slice<'a>(
@@ -428,7 +428,7 @@ where
     unsafe fn get_sparse((sparse, ptr): Self::Data<'_>, entity: Self::SparseKey) -> Self::Item<'_> {
         sparse
             .get_sparse(entity.sparse())
-            .map(|entity| ptr.add(entity.dense()).as_mut())
+            .map(|dense| ptr.add(dense as usize).as_mut())
     }
 
     fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
@@ -442,7 +442,7 @@ where
     ) -> Self::Item<'_> {
         sparse
             .get_sparse(entity.sparse())
-            .map(|entity| ptr.add(entity.dense()).as_mut())
+            .map(|dense| ptr.add(dense as usize).as_mut())
     }
 
     unsafe fn slice<'a>(

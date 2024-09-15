@@ -1,4 +1,4 @@
-use crate::entity::{DenseEntity, Entity, SparseVec};
+use crate::entity::{Entity, SparseVec, SparseVecSlot};
 use alloc::vec::Vec;
 use core::{fmt, mem};
 
@@ -20,7 +20,7 @@ impl EntitySparseSet {
                 ))
             },
             None => {
-                *dense_entity = Some(DenseEntity {
+                *dense_entity = Some(SparseVecSlot {
                     index: self.entities.len() as u32,
                     version: entity.version,
                 });
@@ -32,17 +32,19 @@ impl EntitySparseSet {
     }
 
     pub fn remove(&mut self, entity: Entity) -> bool {
-        let Some(dense_entity) = self.sparse.remove(entity) else {
+        let Some(raw_dense) = self.sparse.remove(entity) else {
             return false;
         };
 
-        let dense_index = dense_entity.dense();
-        self.entities.swap_remove(dense_index);
+        let dense = raw_dense as usize;
+        self.entities.swap_remove(dense);
 
-        if let Some(entity) = self.entities.get(dense_index) {
+        if let Some(entity) = self.entities.get(dense) {
             unsafe {
-                *self.sparse.get_unchecked_mut(entity.sparse()) =
-                    Some(DenseEntity::new(dense_entity.index, entity.version));
+                *self.sparse.get_unchecked_mut(entity.sparse()) = Some(SparseVecSlot {
+                    index: raw_dense,
+                    version: entity.version,
+                });
             }
         }
 

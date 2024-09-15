@@ -1,5 +1,5 @@
 use crate::component::Component;
-use crate::entity::{DenseEntity, Entity, SparseVec};
+use crate::entity::{Entity, SparseVec, SparseVecSlot};
 use alloc::{alloc, Layout, LayoutError};
 use core::ptr::NonNull;
 use core::{fmt, mem, slice};
@@ -33,18 +33,18 @@ impl ComponentSparseSet {
     where
         T: Component,
     {
-        let dense_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
+        let slot = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
-        match dense_entity {
-            Some(dense_entity) => {
-                let index = dense_entity.dense();
+        match slot {
+            Some(slot) => {
+                let index = slot.dense();
 
                 // Replace existing entity and component.
                 *self.entities.add(index).as_mut() = entity;
                 Some(self.components.cast::<T>().add(index).replace(component))
             }
             None => {
-                *dense_entity = Some(DenseEntity {
+                *slot = Some(SparseVecSlot {
                     index: self.len as u32,
                     version: entity.version,
                 });
@@ -67,15 +67,16 @@ impl ComponentSparseSet {
     where
         T: Component,
     {
-        let index = self.sparse.remove(entity)?.dense();
+        let raw_index = self.sparse.remove(entity)?;
+        let index = raw_index as usize;
         self.len -= 1;
 
         let last_entity = *self.entities.add(self.len).as_ref();
         *self.entities.add(index).as_mut() = last_entity;
 
         if index < self.len {
-            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(DenseEntity {
-                index: index as u32,
+            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(SparseVecSlot {
+                index: raw_index,
                 version: last_entity.version,
             });
         }
@@ -93,19 +94,19 @@ impl ComponentSparseSet {
     where
         T: Component,
     {
-        let index = match self.sparse.remove(entity) {
-            Some(dense_entity) => dense_entity.dense(),
-            None => return,
+        let Some(raw_index) = self.sparse.remove(entity) else {
+            return;
         };
 
+        let index = raw_index as usize;
         self.len -= 1;
 
         let last_entity = *self.entities.add(self.len).as_ref();
         *self.entities.add(index).as_mut() = last_entity;
 
         if index < self.len {
-            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(DenseEntity {
-                index: index as u32,
+            *self.sparse.get_unchecked_mut(last_entity.sparse()) = Some(SparseVecSlot {
+                index: raw_index,
                 version: last_entity.version,
             });
         }
@@ -130,7 +131,7 @@ impl ComponentSparseSet {
     where
         T: Component,
     {
-        let dense = self.sparse.get(entity)?.dense();
+        let dense = self.sparse.get(entity)? as usize;
         Some(self.components.cast::<T>().add(dense).as_ref())
     }
 
@@ -140,7 +141,7 @@ impl ComponentSparseSet {
     where
         T: Component,
     {
-        let dense = self.sparse.get(entity)?.dense();
+        let dense = self.sparse.get(entity)? as usize;
         Some(self.components.cast::<T>().add(dense).as_mut())
     }
 
@@ -282,7 +283,8 @@ impl ComponentSparseSet {
         // Swap entities.
         let entity_a = self.entities.add(dense_a).as_mut();
         let entity_b = self.entities.add(dense_b).as_mut();
-        self.sparse.swap(entity_a.sparse(), entity_b.sparse());
+        self.sparse
+            .swap_nonoverlapping(entity_a.sparse(), entity_b.sparse());
         mem::swap(entity_a, entity_b);
 
         // Swap components.
