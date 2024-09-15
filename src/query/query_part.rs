@@ -42,9 +42,13 @@ pub unsafe trait QueryPart {
     #[must_use]
     fn contains(view: &Self::View<'_>, entity: Entity) -> bool;
 
-    /// Returns the item mapped to `entity`, if any.
+    /// Returns the sparse key mapped to `entity`, if any.
     #[must_use]
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>>;
+    fn get_sparse_key(view: &Self::View<'_>, entity: Entity) -> Option<Self::SparseKey>;
+
+    /// Returns the item mapped to `key`, if any.
+    #[must_use]
+    unsafe fn get_sparse<'a>(view: &'a mut Self::View<'_>, key: Self::SparseKey) -> Self::Item<'a>;
 
     /// Splits the view into its entities and sparse vecs.
     #[must_use]
@@ -62,11 +66,11 @@ pub unsafe trait QueryPart {
 
     /// Returns the sparse key extracted from the sparse vecs.
     #[must_use]
-    fn get_sparse_key(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey>;
+    fn get_sparse_key_raw(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey>;
 
     /// Returns the sparse data that can be accessed with the dense key.
     #[must_use]
-    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_>;
+    unsafe fn get_sparse_raw(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_>;
 
     /// Splits the view into its entities and data.
     #[must_use]
@@ -74,7 +78,7 @@ pub unsafe trait QueryPart {
 
     /// Returns the item at the given `index` or `entity`.
     #[must_use]
-    unsafe fn get_dense(data: Self::Data<'_>, index: usize, entity: Entity) -> Self::Item<'_>;
+    unsafe fn get_dense_raw(data: Self::Data<'_>, index: usize, entity: Entity) -> Self::Item<'_>;
 
     /// Slices the data at the given `range`.
     #[must_use]
@@ -109,8 +113,16 @@ unsafe impl QueryPart for Entity {
     }
 
     #[inline]
-    fn get<'a>(_view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
+    fn get_sparse_key(_view: &Self::View<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(entity)
+    }
+
+    #[inline]
+    unsafe fn get_sparse<'a>(
+        _view: &'a mut Self::View<'_>,
+        key: Self::SparseKey,
+    ) -> Self::Item<'a> {
+        key
     }
 
     #[inline]
@@ -131,12 +143,15 @@ unsafe impl QueryPart for Entity {
     }
 
     #[inline]
-    fn get_sparse_key<'a>(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
+    fn get_sparse_key_raw<'a>(
+        _sparse: Self::Sparse<'_>,
+        entity: Entity,
+    ) -> Option<Self::SparseKey> {
         Some(entity)
     }
 
     #[inline]
-    unsafe fn get_sparse(_data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse_raw(_data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
         key
     }
 
@@ -146,7 +161,11 @@ unsafe impl QueryPart for Entity {
     }
 
     #[inline]
-    unsafe fn get_dense(_part: Self::Data<'_>, _index: usize, entity: Entity) -> Self::Item<'_> {
+    unsafe fn get_dense_raw(
+        _part: Self::Data<'_>,
+        _index: usize,
+        entity: Entity,
+    ) -> Self::Item<'_> {
         entity
     }
 
@@ -190,8 +209,12 @@ where
         view.contains(entity)
     }
 
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        view.get(entity)
+    fn get_sparse_key(view: &Self::View<'_>, entity: Entity) -> Option<Self::SparseKey> {
+        view.sparse().get(entity).map(|i| i as usize)
+    }
+
+    unsafe fn get_sparse<'a>(view: &'a mut Self::View<'_>, key: Self::SparseKey) -> Self::Item<'a> {
+        view.as_non_null_ptr().add(key).as_ref()
     }
 
     fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
@@ -208,11 +231,11 @@ where
         (Some(view.entities()), view.sparse(), view.as_non_null_ptr())
     }
 
-    fn get_sparse_key<'a>(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
+    fn get_sparse_key_raw<'a>(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(sparse.get_sparse(entity.sparse())? as usize)
     }
 
-    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse_raw(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
         data.add(key).as_ref()
     }
 
@@ -220,7 +243,7 @@ where
         (Some(view.entities()), view.as_non_null_ptr())
     }
 
-    unsafe fn get_dense(ptr: Self::Data<'_>, index: usize, _entity: Entity) -> Self::Item<'_> {
+    unsafe fn get_dense_raw(ptr: Self::Data<'_>, index: usize, _entity: Entity) -> Self::Item<'_> {
         ptr.add(index).as_ref()
     }
 
@@ -263,8 +286,12 @@ where
         view.contains(entity)
     }
 
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        view.get_mut(entity)
+    fn get_sparse_key(view: &Self::View<'_>, entity: Entity) -> Option<Self::SparseKey> {
+        view.sparse().get(entity).map(|i| i as usize)
+    }
+
+    unsafe fn get_sparse<'a>(view: &'a mut Self::View<'_>, key: Self::SparseKey) -> Self::Item<'a> {
+        view.as_non_null_ptr().add(key).as_mut()
     }
 
     fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
@@ -281,11 +308,11 @@ where
         (Some(view.entities()), view.sparse(), view.as_non_null_ptr())
     }
 
-    fn get_sparse_key(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
+    fn get_sparse_key_raw(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(sparse.get_sparse(entity.sparse())? as usize)
     }
 
-    unsafe fn get_sparse(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse_raw(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_> {
         data.add(key).as_mut()
     }
 
@@ -293,7 +320,7 @@ where
         (Some(view.entities()), view.as_non_null_ptr())
     }
 
-    unsafe fn get_dense(ptr: Self::Data<'_>, index: usize, _entity: Entity) -> Self::Item<'_> {
+    unsafe fn get_dense_raw(ptr: Self::Data<'_>, index: usize, _entity: Entity) -> Self::Item<'_> {
         ptr.add(index).as_mut()
     }
 
@@ -329,8 +356,12 @@ where
         true
     }
 
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        Some(view.get(entity))
+    fn get_sparse_key(_view: &Self::View<'_>, entity: Entity) -> Option<Self::SparseKey> {
+        Some(entity)
+    }
+
+    unsafe fn get_sparse<'a>(view: &'a mut Self::View<'_>, key: Self::SparseKey) -> Self::Item<'a> {
+        view.get(key)
     }
 
     fn split_sparse<'a>(_view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
@@ -347,11 +378,14 @@ where
         (None, (), (view.sparse(), view.as_non_null_ptr()))
     }
 
-    fn get_sparse_key(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
+    fn get_sparse_key_raw(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
         Some(entity)
     }
 
-    unsafe fn get_sparse((sparse, ptr): Self::Data<'_>, entity: Self::SparseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse_raw(
+        (sparse, ptr): Self::Data<'_>,
+        entity: Self::SparseKey,
+    ) -> Self::Item<'_> {
         sparse
             .get_sparse(entity.sparse())
             .map(|dense| ptr.add(dense as usize).as_ref())
@@ -361,7 +395,7 @@ where
         (None, (view.sparse(), view.as_non_null_ptr()))
     }
 
-    unsafe fn get_dense(
+    unsafe fn get_dense_raw(
         (sparse, ptr): Self::Data<'_>,
         _index: usize,
         entity: Entity,
@@ -403,8 +437,12 @@ where
         true
     }
 
-    fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        Some(view.get_mut(entity))
+    fn get_sparse_key(_view: &Self::View<'_>, entity: Entity) -> Option<Self::SparseKey> {
+        Some(entity)
+    }
+
+    unsafe fn get_sparse<'a>(view: &'a mut Self::View<'_>, key: Self::SparseKey) -> Self::Item<'a> {
+        view.get_mut(key)
     }
 
     fn split_sparse<'a>(_view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
@@ -421,11 +459,17 @@ where
         (None, (), (view.sparse(), view.as_non_null_ptr()))
     }
 
-    fn get_sparse_key<'a>(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
+    fn get_sparse_key_raw<'a>(
+        _sparse: Self::Sparse<'_>,
+        entity: Entity,
+    ) -> Option<Self::SparseKey> {
         Some(entity)
     }
 
-    unsafe fn get_sparse((sparse, ptr): Self::Data<'_>, entity: Self::SparseKey) -> Self::Item<'_> {
+    unsafe fn get_sparse_raw(
+        (sparse, ptr): Self::Data<'_>,
+        entity: Self::SparseKey,
+    ) -> Self::Item<'_> {
         sparse
             .get_sparse(entity.sparse())
             .map(|dense| ptr.add(dense as usize).as_mut())
@@ -435,7 +479,7 @@ where
         (None, (view.sparse(), view.as_non_null_ptr()))
     }
 
-    unsafe fn get_dense(
+    unsafe fn get_dense_raw(
         (sparse, ptr): Self::Data<'_>,
         _index: usize,
         entity: Entity,

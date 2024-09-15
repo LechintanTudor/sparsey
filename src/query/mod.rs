@@ -221,7 +221,8 @@ where
     }
 
     fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-        <Q as QueryPart>::get(view, entity)
+        let key = <Q as QueryPart>::get_sparse_key(view, entity)?;
+        unsafe { Some(<Q as QueryPart>::get_sparse(view, key)) }
     }
 
     fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
@@ -247,8 +248,8 @@ where
         data: Self::Data<'a>,
         entity: Entity,
     ) -> Option<Self::Item<'a>> {
-        let key = <Q as QueryPart>::get_sparse_key(sparse, entity)?;
-        Some(<Q as QueryPart>::get_sparse(data, key))
+        let key = <Q as QueryPart>::get_sparse_key_raw(sparse, entity)?;
+        Some(<Q as QueryPart>::get_sparse_raw(data, key))
     }
 
     fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
@@ -256,7 +257,7 @@ where
     }
 
     unsafe fn get_dense(data: Self::Data<'_>, index: usize, entity: Entity) -> Self::Item<'_> {
-        <Q as QueryPart>::get_dense(data, index, entity)
+        <Q as QueryPart>::get_dense_raw(data, index, entity)
     }
 
     unsafe fn slice<'a>(
@@ -314,7 +315,8 @@ macro_rules! impl_query {
             }
 
             fn get<'a>(view: &'a mut Self::View<'_>, entity: Entity) -> Option<Self::Item<'a>> {
-                Some(($($Ty::get(&mut view.$idx, entity)?,)+))
+                let key = ($($Ty::get_sparse_key(&view.$idx, entity)?,)+);
+                unsafe { Some(($($Ty::get_sparse(&mut view.$idx, key.$idx),)+)) }
             }
 
             fn split_sparse<'a>(
@@ -386,8 +388,8 @@ macro_rules! impl_query {
                 data: Self::Data<'a>,
                 entity: Entity,
             ) -> Option<Self::Item<'a>> {
-                let key = ($($Ty::get_sparse_key(sparse.$idx, entity)?,)+);
-                Some(($($Ty::get_sparse(data.$idx, key.$idx),)+))
+                let key = ($($Ty::get_sparse_key_raw(sparse.$idx, entity)?,)+);
+                Some(($($Ty::get_sparse_raw(data.$idx, key.$idx),)+))
             }
 
             fn split_dense_data<'a>(
