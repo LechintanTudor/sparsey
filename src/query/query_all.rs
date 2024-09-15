@@ -101,14 +101,14 @@ where
     /// Returns an iterator over all items that match the query.
     pub fn iter(&mut self) -> Iter<'_, G, I, E> {
         if let Some(range) = self.get_group_range() {
-            let (get_entities, get_data) = G::split_dense_data(&self.get);
-            let (include_entities, _) = I::split_sparse(&self.include);
+            let (get_entities, get_data) = G::split_dense_parts(&self.get);
+            let (include_entities, _) = I::split_filter_parts(&self.include);
             let entities = get_entities.or(include_entities).unwrap();
             unsafe { Iter::Dense(DenseIter::new(range, entities, get_data)) }
         } else {
-            let (get_entities, get_sparse, get_data) = G::split_sparse_data(&self.get);
-            let (include_entities, include_sparse) = I::split_sparse(&self.include);
-            let (_, exclude_sparse) = E::split_sparse(&self.exclude);
+            let (get_entities, get_sparse, get_data) = G::split_sparse_parts(&self.get);
+            let (include_entities, include_sparse) = I::split_filter_parts(&self.include);
+            let (_, exclude_sparse) = E::split_filter_parts(&self.exclude);
 
             let entities = match (get_entities, include_entities) {
                 (Some(get_entities), Some(include_entities)) => {
@@ -191,10 +191,10 @@ where
     #[must_use]
     pub fn slice(&mut self) -> Option<G::Slice<'_>> {
         let range = self.get_group_range()?;
-        let (get_entities, get_parts) = G::split_dense_data(&self.get);
-        let (include_entities, _) = I::split_sparse(&self.include);
+        let (get_entities, get_parts) = G::split_dense_parts(&self.get);
+        let (include_entities, _) = I::split_filter_parts(&self.include);
         let entities = get_entities.or(include_entities).unwrap_or(&[]);
-        unsafe { Some(G::slice(get_parts, entities, range)) }
+        unsafe { Some(G::slice_raw(get_parts, entities, range)) }
     }
 
     #[must_use]

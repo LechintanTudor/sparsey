@@ -18,7 +18,7 @@ pub unsafe trait QueryPart {
     /// Item type returned by queries.
     type Item<'a>: Send;
 
-    /// Slice returned by [`slice`](Self::slice) operations.
+    /// Slice returned by [`slice`](Self::slice_raw) operations.
     type Slice<'a>;
 
     /// [`SparseVec`](crate::entity::SparseVec) type used for sparse iteration.
@@ -52,17 +52,22 @@ pub unsafe trait QueryPart {
 
     /// Splits the view into its entities and sparse vecs.
     #[must_use]
-    fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>);
-
-    /// Returns whether the sparse index is present in the sparse vecs.
-    #[must_use]
-    fn sparse_contains(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool;
+    fn split_filter_parts<'a>(view: &'a Self::View<'_>)
+        -> (Option<&'a [Entity]>, Self::Sparse<'a>);
 
     /// Splits the view into its entities, sparse vecs and data.
     #[must_use]
-    fn split_sparse_data<'a>(
+    fn split_sparse_parts<'a>(
         view: &'a Self::View<'_>,
     ) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Data<'a>);
+
+    /// Splits the view into its entities and data.
+    #[must_use]
+    fn split_dense_parts<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>);
+
+    /// Returns whether the sparse index is present in the sparse vecs.
+    #[must_use]
+    fn contains_raw(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool;
 
     /// Returns the sparse key extracted from the sparse vecs.
     #[must_use]
@@ -72,17 +77,13 @@ pub unsafe trait QueryPart {
     #[must_use]
     unsafe fn get_sparse_raw(data: Self::Data<'_>, key: Self::SparseKey) -> Self::Item<'_>;
 
-    /// Splits the view into its entities and data.
-    #[must_use]
-    fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>);
-
     /// Returns the item at the given `index` or `entity`.
     #[must_use]
     unsafe fn get_dense_raw(data: Self::Data<'_>, index: usize, entity: Entity) -> Self::Item<'_>;
 
     /// Slices the data at the given `range`.
     #[must_use]
-    unsafe fn slice<'a>(
+    unsafe fn slice_raw<'a>(
         data: Self::Data<'a>,
         entities: &'a [Entity],
         range: Range<usize>,
@@ -126,20 +127,27 @@ unsafe impl QueryPart for Entity {
     }
 
     #[inline]
-    fn split_sparse<'a>(_view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
+    fn split_filter_parts<'a>(
+        _view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
         (None, ())
     }
 
     #[inline]
-    fn sparse_contains(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
-        true
-    }
-
-    #[inline]
-    fn split_sparse_data<'a>(
+    fn split_sparse_parts<'a>(
         _view: &'a Self::View<'_>,
     ) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Data<'a>) {
         (None, (), ())
+    }
+
+    #[inline]
+    fn split_dense_parts<'a>(_view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
+        (None, ())
+    }
+
+    #[inline]
+    fn contains_raw(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
+        true
     }
 
     #[inline]
@@ -156,11 +164,6 @@ unsafe impl QueryPart for Entity {
     }
 
     #[inline]
-    fn split_dense_data<'a>(_view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
-        (None, ())
-    }
-
-    #[inline]
     unsafe fn get_dense_raw(
         _part: Self::Data<'_>,
         _index: usize,
@@ -170,7 +173,7 @@ unsafe impl QueryPart for Entity {
     }
 
     #[inline]
-    unsafe fn slice<'a>(
+    unsafe fn slice_raw<'a>(
         _data: Self::Data<'a>,
         entities: &'a [Entity],
         range: Range<usize>,
@@ -217,18 +220,24 @@ where
         view.as_non_null_ptr().add(key).as_ref()
     }
 
-    fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
+    fn split_filter_parts<'a>(
+        view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
         (Some(view.entities()), view.sparse())
     }
 
-    fn sparse_contains(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
-        sparse.contains_sparse(sparse_index)
-    }
-
-    fn split_sparse_data<'a>(
+    fn split_sparse_parts<'a>(
         view: &'a Self::View<'_>,
     ) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Data<'a>) {
         (Some(view.entities()), view.sparse(), view.as_non_null_ptr())
+    }
+
+    fn split_dense_parts<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
+        (Some(view.entities()), view.as_non_null_ptr())
+    }
+
+    fn contains_raw(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
+        sparse.contains_sparse(sparse_index)
     }
 
     fn get_sparse_key_raw<'a>(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
@@ -239,15 +248,11 @@ where
         data.add(key).as_ref()
     }
 
-    fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
-        (Some(view.entities()), view.as_non_null_ptr())
-    }
-
     unsafe fn get_dense_raw(ptr: Self::Data<'_>, index: usize, _entity: Entity) -> Self::Item<'_> {
         ptr.add(index).as_ref()
     }
 
-    unsafe fn slice<'a>(
+    unsafe fn slice_raw<'a>(
         data: Self::Data<'a>,
         _entities: &'a [Entity],
         range: Range<usize>,
@@ -294,18 +299,24 @@ where
         view.as_non_null_ptr().add(key).as_mut()
     }
 
-    fn split_sparse<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
+    fn split_filter_parts<'a>(
+        view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
         (Some(view.entities()), view.sparse())
     }
 
-    fn sparse_contains(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
-        sparse.contains_sparse(sparse_index)
-    }
-
-    fn split_sparse_data<'a>(
+    fn split_sparse_parts<'a>(
         view: &'a Self::View<'_>,
     ) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Data<'a>) {
         (Some(view.entities()), view.sparse(), view.as_non_null_ptr())
+    }
+
+    fn split_dense_parts<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
+        (Some(view.entities()), view.as_non_null_ptr())
+    }
+
+    fn contains_raw(sparse: Self::Sparse<'_>, sparse_index: usize) -> bool {
+        sparse.contains_sparse(sparse_index)
     }
 
     fn get_sparse_key_raw(sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
@@ -316,15 +327,11 @@ where
         data.add(key).as_mut()
     }
 
-    fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
-        (Some(view.entities()), view.as_non_null_ptr())
-    }
-
     unsafe fn get_dense_raw(ptr: Self::Data<'_>, index: usize, _entity: Entity) -> Self::Item<'_> {
         ptr.add(index).as_mut()
     }
 
-    unsafe fn slice<'a>(
+    unsafe fn slice_raw<'a>(
         data: Self::Data<'a>,
         _entities: &'a [Entity],
         range: Range<usize>,
@@ -364,18 +371,24 @@ where
         view.get(key)
     }
 
-    fn split_sparse<'a>(_view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
+    fn split_filter_parts<'a>(
+        _view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
         (None, ())
     }
 
-    fn sparse_contains(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
-        true
-    }
-
-    fn split_sparse_data<'a>(
+    fn split_sparse_parts<'a>(
         view: &'a Self::View<'_>,
     ) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Data<'a>) {
         (None, (), (view.sparse(), view.as_non_null_ptr()))
+    }
+
+    fn split_dense_parts<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
+        (None, (view.sparse(), view.as_non_null_ptr()))
+    }
+
+    fn contains_raw(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
+        true
     }
 
     fn get_sparse_key_raw(_sparse: Self::Sparse<'_>, entity: Entity) -> Option<Self::SparseKey> {
@@ -391,10 +404,6 @@ where
             .map(|dense| ptr.add(dense as usize).as_ref())
     }
 
-    fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
-        (None, (view.sparse(), view.as_non_null_ptr()))
-    }
-
     unsafe fn get_dense_raw(
         (sparse, ptr): Self::Data<'_>,
         _index: usize,
@@ -405,7 +414,7 @@ where
             .map(|dense| ptr.add(dense as usize).as_ref())
     }
 
-    unsafe fn slice<'a>(
+    unsafe fn slice_raw<'a>(
         _data: Self::Data<'_>,
         _entities: &'a [Entity],
         _range: Range<usize>,
@@ -445,18 +454,24 @@ where
         view.get_mut(key)
     }
 
-    fn split_sparse<'a>(_view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
+    fn split_filter_parts<'a>(
+        _view: &'a Self::View<'_>,
+    ) -> (Option<&'a [Entity]>, Self::Sparse<'a>) {
         (None, ())
     }
 
-    fn sparse_contains(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
-        true
-    }
-
-    fn split_sparse_data<'a>(
+    fn split_sparse_parts<'a>(
         view: &'a Self::View<'_>,
     ) -> (Option<&'a [Entity]>, Self::Sparse<'a>, Self::Data<'a>) {
         (None, (), (view.sparse(), view.as_non_null_ptr()))
+    }
+
+    fn split_dense_parts<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
+        (None, (view.sparse(), view.as_non_null_ptr()))
+    }
+
+    fn contains_raw(_sparse: Self::Sparse<'_>, _sparse_index: usize) -> bool {
+        true
     }
 
     fn get_sparse_key_raw<'a>(
@@ -475,10 +490,6 @@ where
             .map(|dense| ptr.add(dense as usize).as_mut())
     }
 
-    fn split_dense_data<'a>(view: &'a Self::View<'_>) -> (Option<&'a [Entity]>, Self::Data<'a>) {
-        (None, (view.sparse(), view.as_non_null_ptr()))
-    }
-
     unsafe fn get_dense_raw(
         (sparse, ptr): Self::Data<'_>,
         _index: usize,
@@ -489,7 +500,7 @@ where
             .map(|dense| ptr.add(dense as usize).as_mut())
     }
 
-    unsafe fn slice<'a>(
+    unsafe fn slice_raw<'a>(
         _data: Self::Data<'_>,
         _entities: &'a [Entity],
         _range: Range<usize>,

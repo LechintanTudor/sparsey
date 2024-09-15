@@ -45,7 +45,7 @@ where
 
         unsafe {
             let entity = *self.entities.add(i).as_ref();
-            Some(G::get_dense(self.get_data, i, entity))
+            Some(G::get_dense_raw(self.get_data, i, entity))
         }
     }
 
@@ -56,7 +56,7 @@ where
         for i in self.range {
             unsafe {
                 let entity = *self.entities.add(i).as_ref();
-                init = f(init, G::get_dense(self.get_data, i, entity));
+                init = f(init, G::get_dense_raw(self.get_data, i, entity));
             }
         }
 

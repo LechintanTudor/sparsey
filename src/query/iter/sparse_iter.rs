@@ -57,16 +57,16 @@ where
 
             let sparse = entity.sparse();
 
-            if !E::sparse_contains_none(self.exclude_sparse, sparse) {
+            if !E::contains_none_raw(self.exclude_sparse, sparse) {
                 continue;
             }
 
-            if !I::sparse_contains_all(self.include_sparse, sparse) {
+            if !I::contains_all_raw(self.include_sparse, sparse) {
                 continue;
             }
 
             unsafe {
-                if let Some(item) = G::get_sparse(self.get_sparse, self.get_data, entity) {
+                if let Some(item) = G::get_sparse_raw(self.get_sparse, self.get_data, entity) {
                     break Some(item);
                 };
             }
@@ -80,16 +80,16 @@ where
         for &entity in self.entities {
             let sparse = entity.sparse();
 
-            if !E::sparse_contains_none(self.exclude_sparse, sparse) {
+            if !E::contains_none_raw(self.exclude_sparse, sparse) {
                 continue;
             }
 
-            if !I::sparse_contains_all(self.include_sparse, sparse) {
+            if !I::contains_all_raw(self.include_sparse, sparse) {
                 continue;
             }
 
             unsafe {
-                if let Some(item) = G::get_sparse(self.get_sparse, self.get_data, entity) {
+                if let Some(item) = G::get_sparse_raw(self.get_sparse, self.get_data, entity) {
                     init = f(init, item);
                 };
             }
