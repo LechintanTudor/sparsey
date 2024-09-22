@@ -44,15 +44,15 @@ where
     unsafe fn get(&self, entity: Entity) -> Option<G::Item<'a>> {
         let sparse = entity.sparse();
 
-        if !E::sparse_contains_none(self.exclude_sparse, sparse) {
+        if !E::contains_none_raw(self.exclude_sparse, sparse) {
             return None;
         }
 
-        if !I::sparse_contains_all(self.include_sparse, sparse) {
+        if !I::contains_all_raw(self.include_sparse, sparse) {
             return None;
         }
 
-        unsafe { G::get_sparse(self.get_sparse, self.get_data, entity) }
+        unsafe { G::get_sparse_raw(self.get_sparse, self.get_data, entity) }
     }
 }
 

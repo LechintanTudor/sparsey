@@ -37,7 +37,7 @@ where
     #[must_use]
     unsafe fn get(&self, index: usize) -> G::Item<'a> {
         let entity = *self.entities.add(index).as_ref();
-        G::get_dense(self.get_data, index, entity)
+        G::get_dense_raw(self.get_data, index, entity)
     }
 }
 
