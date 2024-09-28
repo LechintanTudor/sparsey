@@ -1,3 +1,23 @@
+# 0.13.0 (2024-09-28)
+
+Major refactoring, adding new features and removing features outside the scope
+of the crate.
+
+## Added
+
+- Parallel iterators enabled by the `parallel` feature.
+- `#![no_std]` support by disabling the `std` feature.
+- `WorldBuilder` for creating worlds using the builder pattern.
+
+## Changed
+
+- All query operations are now performed via the `World::query_one` and
+  `World::query_all`.
+
+## Removed
+
+- `ResourceStorage`: outside the scope of the crate.
+
 # 0.12.1 (2024-06-29)
 
 ## Changed
