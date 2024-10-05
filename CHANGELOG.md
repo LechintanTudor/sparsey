@@ -1,3 +1,9 @@
+# 0.13.1 (2024-10-05)
+
+## Changed
+
+- Updated `hashbrown` to `v0.15.0`.
+
 # 0.13.0 (2024-09-28)
 
 Major refactoring, adding new features and removing features outside the scope
