@@ -1,3 +1,9 @@
+# 0.13.2 (2025-06-09)
+
+# Fixed
+
+- `World::maintain` now works correctly with recycled entities.
+
 # 0.13.1 (2024-10-05)
 
 ## Changed
