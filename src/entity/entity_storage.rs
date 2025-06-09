@@ -9,6 +9,10 @@ pub(crate) struct EntityStorage {
 impl EntityStorage {
     #[must_use]
     pub fn create(&mut self) -> Entity {
+        if self.allocator.should_maintain_recyled() {
+            self.maintain_recycled();
+        }
+
         let entity = self
             .allocator
             .allocate()
@@ -26,9 +30,8 @@ impl EntityStorage {
     }
 
     pub fn maintain(&mut self) {
-        self.allocator.maintain().for_each(|entity| {
-            self.entities.insert(entity);
-        });
+        self.maintain_recycled();
+        self.maintain_new();
     }
 
     #[must_use]
@@ -61,12 +64,26 @@ impl EntityStorage {
     }
 
     pub fn clear(&mut self) {
-        let _ = self.allocator.maintain();
+        let _ = self.allocator.maintain_new();
         self.entities.clear();
     }
 
     pub fn reset(&mut self) {
         self.allocator.reset();
         self.entities.clear();
+    }
+
+    #[cold]
+    fn maintain_recycled(&mut self) {
+        self.allocator
+            .maintain_recycled()
+            .for_each(|entity| self.entities.insert(entity));
+    }
+
+    #[cold]
+    fn maintain_new(&mut self) {
+        self.allocator
+            .maintain_new()
+            .for_each(|entity| self.entities.insert(entity));
     }
 }

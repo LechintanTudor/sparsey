@@ -116,7 +116,7 @@ impl SparseVec {
     #[cold]
     fn extend_to_index(&mut self, index: usize) {
         let extra_len = index.checked_next_power_of_two().unwrap_or(index) - self.slots.len() + 1;
-        self.slots.extend(iter::repeat(None).take(extra_len));
+        self.slots.extend(iter::repeat_n(None, extra_len));
     }
 }
 

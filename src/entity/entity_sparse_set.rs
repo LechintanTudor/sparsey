@@ -1,6 +1,6 @@
 use crate::entity::{Entity, SparseVec, SparseVecSlot};
 use alloc::vec::Vec;
-use core::{fmt, mem};
+use core::fmt;
 
 #[derive(Clone, Default)]
 pub(crate) struct EntitySparseSet {
@@ -9,26 +9,17 @@ pub(crate) struct EntitySparseSet {
 }
 
 impl EntitySparseSet {
-    pub fn insert(&mut self, entity: Entity) -> Option<Entity> {
-        let dense_entity = self.sparse.get_mut_or_allocate_at(entity.sparse());
+    pub fn insert(&mut self, entity: Entity) {
+        let slot = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
-        match dense_entity {
-            Some(dense_entity) => unsafe {
-                Some(mem::replace(
-                    self.entities.get_unchecked_mut(dense_entity.index as usize),
-                    entity,
-                ))
-            },
-            None => {
-                *dense_entity = Some(SparseVecSlot {
-                    index: self.entities.len() as u32,
-                    version: entity.version,
-                });
+        debug_assert!(slot.is_none());
 
-                self.entities.push(entity);
-                None
-            }
-        }
+        *slot = Some(SparseVecSlot {
+            index: self.entities.len() as u32,
+            version: entity.version,
+        });
+
+        self.entities.push(entity);
     }
 
     pub fn remove(&mut self, entity: Entity) -> bool {
