@@ -65,6 +65,7 @@ impl EntityStorage {
 
     pub fn clear(&mut self) {
         let _ = self.allocator.maintain_new();
+        let _ = self.allocator.maintain_recycled();
         self.entities.clear();
     }
 
