@@ -35,31 +35,28 @@ impl ComponentSparseSet {
     {
         let slot = self.sparse.get_mut_or_allocate_at(entity.sparse());
 
-        match slot {
-            Some(slot) => {
-                let index = slot.dense();
+        if let Some(slot) = slot {
+            let index = slot.dense();
 
-                // Replace existing entity and component.
-                *self.entities.add(index).as_mut() = entity;
-                Some(self.components.cast::<T>().add(index).replace(component))
+            // Replace existing entity and component.
+            *self.entities.add(index).as_mut() = entity;
+            Some(self.components.cast::<T>().add(index).replace(component))
+        } else {
+            *slot = Some(SparseVecSlot {
+                index: self.len as u32,
+                version: entity.version,
+            });
+
+            if self.len == self.cap {
+                self.grow();
             }
-            None => {
-                *slot = Some(SparseVecSlot {
-                    index: self.len as u32,
-                    version: entity.version,
-                });
 
-                if self.len == self.cap {
-                    self.grow();
-                }
+            // Write entity and component to uninitialized memory.
+            self.entities.add(self.len).write(entity);
+            self.components.cast::<T>().add(self.len).write(component);
 
-                // Write entity and component to uninitialized memory.
-                self.entities.add(self.len).write(entity);
-                self.components.cast::<T>().add(self.len).write(component);
-
-                self.len += 1;
-                None
-            }
+            self.len += 1;
+            None
         }
     }
 

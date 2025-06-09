@@ -92,7 +92,7 @@ where
     }
 }
 
-impl<'a, G, I, E> QueryAll<'a, G, I, E>
+impl<G, I, E> QueryAll<'_, G, I, E>
 where
     G: Query,
     I: Query,
