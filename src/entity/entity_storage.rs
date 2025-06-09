@@ -81,7 +81,6 @@ impl EntityStorage {
             .for_each(|entity| self.entities.insert(entity));
     }
 
-    #[cold]
     fn maintain_new(&mut self) {
         self.allocator
             .maintain_new()
