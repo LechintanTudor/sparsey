@@ -102,9 +102,17 @@ impl SparseVec {
         debug_assert!(b < self.slots.len());
         debug_assert_ne!(a, b);
 
-        let entity_a = &mut *self.slots.as_mut_ptr().add(a);
-        let entity_b = &mut *self.slots.as_mut_ptr().add(b);
-        mem::swap(entity_a, entity_b);
+        let index_a = &mut (*self.slots.as_mut_ptr().add(a))
+            .as_mut()
+            .unwrap_unchecked()
+            .index;
+
+        let index_b = &mut (*self.slots.as_mut_ptr().add(b))
+            .as_mut()
+            .unwrap_unchecked()
+            .index;
+
+        mem::swap(index_a, index_b);
     }
 
     /// Removes all entities from the storage.
