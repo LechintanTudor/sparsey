@@ -1,6 +1,6 @@
 # 0.13.3 (2025-06-19)
 
-# Fixed
+## Fixed
 
 - Fixed entity grouping problems caused by an incorrect `SparseVec`
   implementation.
