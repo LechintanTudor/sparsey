@@ -38,6 +38,7 @@
 //! create/read/update/delete (CRUD) operations, while an [`Entity`] is a
 //! versioned index used to reference components within a [`World`].
 
+#![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
