@@ -1,3 +1,12 @@
+# 0.13.3 (2025-06-19)
+
+# Fixed
+
+- Fixed entity grouping problems caused by an incorrect `SparseVec`
+  implementation.
+- Moved the missing docs warning to the crate root to avoid warnings showing up
+  in tests.
+
 # 0.13.2 (2025-06-09)
 
 ## Fixed
