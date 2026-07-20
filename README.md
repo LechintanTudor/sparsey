@@ -80,7 +80,7 @@ arrays.
 ```rust
 let mut world = World::builder()
     .add_group::<(A, B)>()
-    .add_group::<(A, B, C, D>)>()
+    .add_group::<(A, B, C, D)>()
     .build();
 ```
 
