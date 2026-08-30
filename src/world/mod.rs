@@ -181,7 +181,7 @@ impl World {
     }
 
     /// Queries an entity with the given components.
-    pub fn query_one<G>(&self) -> QueryOne<G, (), ()>
+    pub fn query_one<G>(&self) -> QueryOne<'_, G, (), ()>
     where
         G: Query,
     {
@@ -189,7 +189,7 @@ impl World {
     }
 
     /// Queries all entities with the given components.
-    pub fn query_all<G>(&self) -> QueryAll<G, (), ()>
+    pub fn query_all<G>(&self) -> QueryAll<'_, G, (), ()>
     where
         G: Query,
     {
@@ -260,7 +260,7 @@ impl World {
 
     /// Returns a shared view over all components of type `T`.
     #[must_use]
-    pub fn borrow<T>(&self) -> View<T>
+    pub fn borrow<T>(&self) -> View<'_, T>
     where
         T: Component,
     {
@@ -269,7 +269,7 @@ impl World {
 
     /// Returns an exclusive view over all components of type `T`.
     #[must_use]
-    pub fn borrow_mut<T>(&self) -> ViewMut<T>
+    pub fn borrow_mut<T>(&self) -> ViewMut<'_, T>
     where
         T: Component,
     {
@@ -279,7 +279,7 @@ impl World {
     /// Returns a shared view over all components of type `T`, along with
     /// grouping information.
     #[must_use]
-    pub fn borrow_with_group_info<T>(&self) -> (View<T>, Option<GroupInfo>)
+    pub fn borrow_with_group_info<T>(&self) -> (View<'_, T>, Option<GroupInfo>)
     where
         T: Component,
     {
@@ -289,7 +289,7 @@ impl World {
     /// Returns an exclusive view over all components of type `T`, along with
     /// grouping information.
     #[must_use]
-    pub fn borrow_with_group_info_mut<T>(&self) -> (ViewMut<T>, Option<GroupInfo>)
+    pub fn borrow_with_group_info_mut<T>(&self) -> (ViewMut<'_, T>, Option<GroupInfo>)
     where
         T: Component,
     {

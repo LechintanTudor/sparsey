@@ -134,6 +134,7 @@ impl ComponentSparseSet {
 
     #[inline]
     #[must_use]
+    #[allow(clippy::mut_from_ref)]
     pub unsafe fn get_mut<T>(&self, entity: Entity) -> Option<&mut T>
     where
         T: Component,

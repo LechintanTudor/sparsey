@@ -27,10 +27,10 @@ parallel = ["std", "dep:rayon"]
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
-cast-possible-truncation = "allow"
-missing-errors-doc = "allow"
-missing-panics-doc = "allow"
-missing-safety_doc = "allow"
-module-name-repetitions = "allow"
-needless-doctest-main = "allow"
-wildcard-imports = "allow"
+cast_possible_truncation = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+missing_safety_doc = "allow"
+module_name_repetitions = "allow"
+needless_doctest_main = "allow"
+wildcard_imports = "allow"

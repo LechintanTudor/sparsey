@@ -125,7 +125,7 @@ impl DoubleEndedIterator for BitIndexIter {
             return None;
         }
 
-        let index = 63 - self.0.leading_zeros();
+        let index = self.0.ilog2();
         self.0 &= !(1 << index);
         Some(index)
     }

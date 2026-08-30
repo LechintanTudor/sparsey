@@ -156,7 +156,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn borrow<T>(&self) -> View<T>
+    pub fn borrow<T>(&self) -> View<'_, T>
     where
         T: Component,
     {
@@ -174,7 +174,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn borrow_mut<T>(&self) -> ViewMut<T>
+    pub fn borrow_mut<T>(&self) -> ViewMut<'_, T>
     where
         T: Component,
     {
@@ -192,7 +192,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn borrow_with_group_info<T>(&self) -> (View<T>, Option<GroupInfo>)
+    pub fn borrow_with_group_info<T>(&self) -> (View<'_, T>, Option<GroupInfo>)
     where
         T: Component,
     {
@@ -212,7 +212,7 @@ impl ComponentStorage {
     }
 
     #[must_use]
-    pub fn borrow_with_group_info_mut<T>(&self) -> (ViewMut<T>, Option<GroupInfo>)
+    pub fn borrow_with_group_info_mut<T>(&self) -> (ViewMut<'_, T>, Option<GroupInfo>)
     where
         T: Component,
     {
