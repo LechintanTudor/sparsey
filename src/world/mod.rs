@@ -210,7 +210,7 @@ impl World {
     where
         G: Query,
     {
-        self.query_all().for_each(f);
+        self.query_all::<G>().for_each(f);
     }
 
     /// Iterates in parallel over all entities with the given components.
@@ -219,7 +219,7 @@ impl World {
     where
         G: Query,
     {
-        self.query_all().par_for_each(f);
+        self.query_all::<G>().par_for_each(f);
     }
 
     /// Returns whether the world contains the given `entity`.
