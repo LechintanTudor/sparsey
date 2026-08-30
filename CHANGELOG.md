@@ -1,3 +1,11 @@
+# 0.13.4 (2026-08-30)
+
+## Fixed
+
+- Fixed reliance on a type inference bug that prevented the crate from
+  building on nightly Rust versions.
+- Fixed various clippy warnings.
+
 # 0.13.3 (2025-06-19)
 
 ## Fixed
