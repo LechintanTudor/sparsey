@@ -68,7 +68,7 @@ where
             unsafe {
                 if let Some(item) = G::get_sparse_raw(self.get_sparse, self.get_data, entity) {
                     break Some(item);
-                };
+                }
             }
         }
     }
@@ -91,7 +91,7 @@ where
             unsafe {
                 if let Some(item) = G::get_sparse_raw(self.get_sparse, self.get_data, entity) {
                     init = f(init, item);
-                };
+                }
             }
         }
 

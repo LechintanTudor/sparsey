@@ -1,7 +1,7 @@
 [package]
 name = "sparsey"
 version = "0.13.4"
-edition = "2021"
+edition = "2024"
 description = "Entity Component System based on sparse sets"
 authors = ["Tudor-Cristian Lechințan <lechintantudor02@gmail.com>"]
 repository = "https://github.com/LechintanTudor/sparsey"
@@ -16,7 +16,7 @@ rayon = { version = "1.0", optional = true }
 rustc-hash = { version = "2.0", default-features = false }
 
 [dependencies.hashbrown]
-version = "0.15"
+version = "0.17"
 default-features = false
 features = ["inline-more"]
 
